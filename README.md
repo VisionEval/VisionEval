@@ -9,4 +9,4 @@ develop branch: [![Travis-CI Build Status](https://travis-ci.org/gregorbj/Vision
 
 ## Documentation
 
-https://github.com/gregorbj/VisionEval/wiki
+https://github.com/visioneval/VisionEval/wiki
