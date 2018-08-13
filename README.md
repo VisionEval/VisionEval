@@ -7,4 +7,4 @@ repository](https://github.com/visioneval/visioneval).
 
 For an understanding of how the public release repository and this development
 repository are related, please read
-[Repositoryi-Structure.md](Repository-Structure.md) in this branch. 
+[Repository-Structure.md](Repository-Structure.md) in this branch. 
