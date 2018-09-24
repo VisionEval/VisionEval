@@ -1,0 +1,22 @@
+Need to separate the "build" step from the "install" step.
+We want to build packages that we can put into an R repository.
+Then the installation for an end user just installs the packages
+	Ideally windows binaries
+	Otherwise from source
+	Installing from source requires knitr and its dependencies
+We want to have an online (and offline-able) repository with the built packages.
+We can have the user run a script from a remote website that will install the needed packages
+	Can work from the remote
+	If we can't access the remote via the Internet, then offer to search for a local download directory
+	Have download instructions on the website
+	Instructions should be at the VisionEval/install home page
+	Run R.  Source the installer.
+	Completely local installation (download miniCRAN)
+
+From the "built-packages" folder, this command installs visioneval and builds the Windows binary:
+R CMD INSTALL --build ../sources/framework/visioneval
+
+Behind the scenes have the ability to rebuild the installer (miniCRAN)
+Have simple instructions to erect an internet-accessible repository
+	
+Re-do the MiniCRAN build script.
