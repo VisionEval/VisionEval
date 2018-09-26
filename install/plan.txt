@@ -1,22 +1,68 @@
+Core installation steps:
+	1. Get the requisite version of R
+	2. Install the VE packages and dependencies
+	3. Launch VisionEval
+		VE GUI
+			Review instructions for selecting model
+			Review instructions for setting up model scenarios
+		Command line (R GUI)
+			Review instructions for selecting and running model
+			Review instructions for setting up model scenarios
+		R scripts
+			Pop up dialogs to configure necessary folders
+			Or have function parameters (model, scenario folder, etc.)
+	4. Visualizing VE results
+	5. VE scenario builder
+
+Minimal Installer
+	Install R base (online, or from downloaded installer)
+	Optionally download VE packages (local repository) via browser or USB
+	Download "InstallVisionEval.RData" to a folder of your choice
+		Double-click it to start R with proper working directory
+	Then run "visioneval.install()" (or just "install()")
+		Or figure out how to get them to also download .Rprofile with a .First function
+	Installation functions
+		Choose VE installation folder
+			vedir <- choose.dir(getwd())
+			setwd(vedir) # should open in current directory
+		Choose location of VE packages repository
+			Online - default to VisionEval.jeremyraw.com (may be version specific)
+			Offline - prompt user for folder (containing either repository or zip file)
+				If no repository file structure, unzip .zip file in subfolder
+				Then adjust reference to unzipped repository
+		Create a private library
+		Set the library location to the private library
+		Install the VE source packages (framework, modules, models)
+			Dependencies should come automatically
+		Open the "What Now?" page - jump start to using VE and models
+
 Need to separate the "build" step from the "install" step.
 We want to build packages that we can put into an R repository.
 Then the installation for an end user just installs the packages
-	Ideally windows binaries
+	Ideally windows binaries plus source
 	Otherwise from source
 	Installing from source requires knitr and its dependencies
+	knitr is used during installation (but may also appear in VERecports...)
 We want to have an online (and offline-able) repository with the built packages.
 We can have the user run a script from a remote website that will install the needed packages
-	Can work from the remote
+	Can work from the remote repository
 	If we can't access the remote via the Internet, then offer to search for a local download directory
 	Have download instructions on the website
 	Instructions should be at the VisionEval/install home page
 	Run R.  Source the installer.
 	Completely local installation (download miniCRAN)
+Ideally, there could be an online browser page for doing the installation.
+We need to run R to do the package installation.
+Consider "packaging" the models as well.
+
+Can we run "shiny" from RScript?  Then we could give the user clickable batch files to launch.
+Do the interactive file chooser etc. work from inside Rscript?
 
 From the "built-packages" folder, this command installs visioneval and builds the Windows binary:
 R CMD INSTALL --build ../sources/framework/visioneval
+We can specify a library to place the packages into...
 
 Behind the scenes have the ability to rebuild the installer (miniCRAN)
 Have simple instructions to erect an internet-accessible repository
 	
-Re-do the MiniCRAN build script.
+Re-do the MiniCRAN build script (in view of currently mined dependencies)
