@@ -1,3 +1,6 @@
+# Root level dependencies
+
+# CRAN packages (many lower level dependencies will be dredged up as well)
 car
 data.table
 DT
@@ -6,11 +9,10 @@ fields
 filesstrings
 future
 jsonlite
-namedCapture
+knitr # NOTE: only required for vignettes in source packages; Windows binaries will include the compiled Vignettes
 ordinal
 pscl
 rhandsontable
-rhdf5
 shiny
 shinyAce
 shinyBS
@@ -21,5 +23,15 @@ shinyTree
 stringr
 testit
 testthat
-VESyntheticFirms
+
+# Github packages
+namedCapture
+
+# BioConductor packages (may dredge up lower-level dependencies)
+rhdf5
+# zlibbioc # This didn't show up as a root level dependency on scanning the project tree
+
+# VisionEval packages (ultimately should just list framework, GUI, and Models; Modules will appear as lower-level dependencies)
 visioneval
+VESyntheticFirms # Used explicitly to implement another module - obviously a rare occurrence
+# Note that the models depend on the modules.  Models should be packaged and listed here, along with VEGUI and the models
