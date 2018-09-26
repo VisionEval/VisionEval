@@ -1,4 +1,4 @@
-Core installation steps:
+Core "installation" steps (installation includes installing scenarios...):
 	1. Get the requisite version of R
 	2. Install the VE packages and dependencies
 	3. Launch VisionEval
@@ -17,6 +17,7 @@ Core installation steps:
 Minimal Installer
 	Install R base (online, or from downloaded installer)
 	Optionally download VE packages (local repository) via browser or USB
+		These can be accessed online during the installation
 	Download "InstallVisionEval.RData" to a folder of your choice
 		Double-click it to start R with proper working directory
 	Then run "visioneval.install()" (or just "install()")
