@@ -1,6 +1,18 @@
 OMG: all the built package .rda files got checked into github!
 Core principle is not to check in anything that can be automatically regenerated.
 
+Consider using Inno Setup to build a single executable (online/offline).
+
+Stage at visioneval.jeremyraw.com (with miniCRAN at /R subfolder of
+that page).  Home page just points people at VisionEval, introduces
+the two installers (offline and online).  Keep R as a separate
+installation for now (convenience link to R for Windows Version 3.5.1
+download).  After unpacking anything, run R silently to setup local
+library and install packages using Rscript.  Install R in User Space,
+so we can control the version and library.  Create a Run-VisionEval
+shell script to load our local version of R and point at the library.
+Really could do this as a one-stop shop.
+
 Core "installation" steps (installation includes installing scenarios...):
 	1. Get the requisite version of R
 	2. Install the VE packages and dependencies
