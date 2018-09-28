@@ -2,4 +2,4 @@
 # Update to your local repository root location
 # If you are starting build from a running R session (instead of a new one), just source this file
 
-repo.root <- "c:\\Users\\jeremy.DESKTOP-OLMEAON\\Documents\\Git-Repos\\VisionEval-JR"
+ve.root <- "c:\\Users\\jeremy.DESKTOP-OLMEAON\\Documents\\Git-Repos\\VisionEval-JR"

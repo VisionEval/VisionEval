@@ -1,3 +1,6 @@
+OMG: all the built package .rda files got checked into github!
+Core principle is not to check in anything that can be automatically regenerated.
+
 Core "installation" steps (installation includes installing scenarios...):
 	1. Get the requisite version of R
 	2. Install the VE packages and dependencies
