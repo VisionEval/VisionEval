@@ -1,5 +1,11 @@
+Note for NamedCapture - write an R script to build/install with devtools
+(locally, not using cloud service).  However set up a throwaway libraty
+to install it into, as we're just interested in the side effect of
+creting the binary .zip package.
+
 OMG: all the built package .rda files got checked into github!
-Core principle is not to check in anything that can be automatically regenerated.
+Core principle is not to check in anything that can be automatically
+regenerated.
 
 Consider using Inno Setup to build a single executable (online/offline).
 

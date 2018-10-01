@@ -61,19 +61,18 @@ pkgs.CRAN <- c(
 pkgs.CRAN <- miniCRAN::pkgDep(pkgs.CRAN)
 pkgs.all <- setdiff(unique(c(pkgs.CRAN,pkgs.miniCRAN)),pkgs.BaseR)
 
-# TODO: include the install_github NamedCapture package
 # Possibly the easiest way - just grab the repository and build the package,
 # then place the built files directly in the "built" folders
 # Possibly a script to download the repository and build the package...
 # It is only used in VEGUI to report status messages - has to be an easier way
 
 # Now move all the CRAN packages into miniCRAN
-path.miniCRAN = "N:/Git-Repos/miniCRAN"
+path.miniCRAN = "../built/miniCRAN"
 dir.create(path.miniCRAN)
 miniCRAN::makeRepo(pkgs.all,path=path.miniCRAN,repos="https://cran.rstudio.org",type=c("source","win.binary"))
 
 # Finally, add the BioConductor packages to miniCRAN (this will pull a few additional dependencies from CRAN itself)
-pkgs.BioC <- c("rhdf5","zlibbioc")
+pkgs.BioC <- c("rhdf5")
 
 # Get the BioConductor magic that manages their repositories
 # They have their own installation program to manage dependencies across repositories
@@ -85,3 +84,10 @@ bioc <- local({
   biocinstallRepos()
 })
 miniCRAN::addPackage(pkgs.BioC,path=path.miniCRAN,repos=bioc,type=c("source","win.binary"))
+
+# Finally, add the local packages
+pkgs.LocalDir <- "../built"
+dir.src <- file.path(pkgs.LocalDir,"src")
+dir.bin <- file.path(pkgs.LocalDir,"bin")
+miniCRAN::addLocalPackage(dir(dir.src),pkgPath=dir.src,path=path.miniCRAN,type="source")
+miniCRAN::addLocalPackage(dir(dir.bin),pkgPath=dir.bin,path=path.miniCRAN,type="win.binary")

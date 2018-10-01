@@ -1,0 +1,24 @@
+# This profile should be located in the same folder as "VisionEval"
+
+# Locate the library of VisionEval packages
+ve.root <- "c:\\Users\\jeremy.DESKTOP-OLMEAON\\Documents\\Git-Repos\\VisionEval-JR"
+VE.pkgs <-
+c(	 "visioneval"
+	,"VE2001NHTS"
+	,"VESyntheticFirms"
+	,"VESimHouseholds"
+	,"VELandUse"
+	,"VETransportSupply"
+	,"VETransportSupplyUse"
+	,"VEHouseholdTravel"
+	,"VEHouseholdVehicles"
+	,"VEPowertrainsAndFuels"
+	,"VETravelPerformance"
+	,"VEReports"
+)
+install.packages(
+	VE.pkgs,
+	lib=file.path(ve.root,"install","demand","tmp"),
+	repos=file.path("file://", normalizePath("../built/miniCRAN",winslash="/")),
+	dependencies=TRUE)
+
