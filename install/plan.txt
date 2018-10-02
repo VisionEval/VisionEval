@@ -114,11 +114,4 @@ Consider "packaging" the models as well.
 Can we run "shiny" from RScript?  Then we could give the user clickable batch files to launch.
 Do the interactive file chooser etc. work from inside Rscript?
 
-From the "built-packages" folder, this command installs visioneval and builds the Windows binary:
-R CMD INSTALL --build ../sources/framework/visioneval
-We can specify a library to place the packages into...
-
-Behind the scenes have the ability to rebuild the installer (miniCRAN)
 Have simple instructions to erect an internet-accessible repository
-	
-Re-do the MiniCRAN build script (in view of currently mined dependencies)
