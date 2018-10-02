@@ -1,11 +1,45 @@
-Note for NamedCapture - write an R script to build/install with devtools
+Note for NamedCapture - write an R script to build/install with devtools
 (locally, not using cloud service).  However set up a throwaway libraty
 to install it into, as we're just interested in the side effect of
-creting the binary .zip package.
+creting the binary .zip package [Note that's now DONE.]
+
+Issues still in the emerging installer:
+Problems with stringi package wanting to build from source.
+Need to identify and ensure installation of dependent packages for:
+	VEGUI
+	VERSPM
+	VERPAT
+Set up the user workflow:
+	Download installer
+		Contains .RProfile
+			.First() loacs VisionEval.Rdata and runs installer
+		VisionEval.RData
+		(offline only) miniCRAN repository
+	Bring down VisionEval.RData
+		Contains visioneval()
+			Checks for installation
+			Runs installer if necessary
+			.RProfile contains online/offline indicator
+			Can test for "offline" just by looking for miniCRAN repository
+		Contains functions for
+			VEGUI
+				Need to change GUI to "auto-find" models as functions
+				Radio button asking which to run
+				Update Getting-Started.md to identify functions
+			VERSPM
+			VERPAT
+
+Consider these simplifying changes:
+	Package models in VE
+	Package GUI in VEGUI (Depends among others on VEModels)
+	Use a radio button to pick the model run script
 
 OMG: all the built package .rda files got checked into github!
 Core principle is not to check in anything that can be automatically
 regenerated.
+
+OMG: VERPAT and VERSPM are not actually models:  they're just hard-coded
+lists of demonstration files and cobbled up modules! Horrible!
 
 Consider using Inno Setup to build a single executable (online/offline).
 
