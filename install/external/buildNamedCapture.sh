@@ -1,5 +1,7 @@
 #!/bin/bash -x
 # Run in Git for Windows Bash shell
+# You can just clone https://github.com:/tdhock/namedCapture into this
+# external folder in order to have something to build!
 
 # Establish a temporary library in preparation for binary build
 TMP_LIBRARY="../tmp"
