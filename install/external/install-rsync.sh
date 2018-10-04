@@ -5,6 +5,7 @@
 # WARNING: you will need to visit repo.msys2.org/msys and pick the correct architecture
 # Almost every serious Windows developer will have a 64-bit architecture, so here goes...
 RSYNC_BIN=rsync-3.1.3-1-x86_64.pkg.tar.xz
+
 [ ! -f ${RSYNC_BIN} ] && wget http://repo.msys2.org/msys/x86_64/${RSYNC_BIN}
 [ -f "${RSYNC_BIN}" ] && tar xvf ${RSYNC_BIN} -C . --strip-components=2 usr/bin/rsync.exe
 if [ -f rsync.exe ]
