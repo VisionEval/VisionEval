@@ -2,6 +2,9 @@
 # This script will install R packages in a repository
 # MiniCRAN: https://docs.microsoft.com/en-us/sql/advanced-analytics/r/create-a-local-package-repository-using-minicran?view=sql-server-2017
 		
+# Build the miniCRAN in a web-ready location
+path.miniCRAN = "../www/R" # This directory already exists in the Github
+
 # Dependencies (need to keep this up to date: consider automating generation)
 # CRAN Dependencies
 pkgs.CRAN <- c(
@@ -41,8 +44,6 @@ pkgs.CRAN <- miniCRAN::pkgDep(pkgs.CRAN)
 pkgs.all <- setdiff(unique(c(pkgs.CRAN,pkgs.miniCRAN)),pkgs.BaseR)
 
 # Now move all the CRAN packages into miniCRAN
-path.miniCRAN = "../built/miniCRAN"
-dir.create(path.miniCRAN)
 miniCRAN::makeRepo(pkgs.all,path=path.miniCRAN,repos="https://cran.rstudio.org",type=c("source","win.binary"))
 
 # Get the BioConductor magic that manages their repositories
