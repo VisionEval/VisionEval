@@ -42,6 +42,7 @@ modules <- c(
 )
 build.modules <- file.path(modules.dir,modules)
 
+.libPaths()
 require(devtools)
 
 # Check the packages
