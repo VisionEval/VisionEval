@@ -5,6 +5,27 @@
 # This should really happen through a build system (Make, Maven, etc.) rather
 # than the all-or-nothing script here.
 
+# TODO: Ideally, we would build miniCRAN first (with all the externals), then
+# come here and use miniCRAN to install the developer dependencies, then
+# do the actual check/build process, and finally add the resulting packages
+# in a separate step to the miniCRAN.
+
+if ( ! require(rhdf5) ||
+	 ! require(knitr) ||
+	 ! require(filesstrings) ||
+	 ! require(devtools) ||
+	 ! require(reshape) ||
+	 ! require(car) ||
+	 ! require(pbkrtest)||
+	 ! require(quantreg) ) {
+	install.packages(
+		c("filesstrings","knitr","devtools","reshape","car","pbkrtest","quantreg"),
+		repos="https://cran.r-project.org"
+	)
+	source("https://bioconductor.org/biocLite.R")
+	biocLite(c("rhdf5","zlibbioc"), suppressUpdates=TRUE, quiet=TRUE)
+}
+
 if (interactive() && ( !exists("ve.root") || !file.exists(ve.root)) )
 	ve.root <- choose.dir(getwd(),caption="Locate Repository Root Directory")
 if (!exists("ve.root") || is.na(ve.root) || !file.exists(ve.root) ) { # NA generated if user cancels choose.dir

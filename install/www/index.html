@@ -18,9 +18,9 @@
 	  Windows installer</a> for the appropriate version of R</li>
 <li>Download and run one of the experimental installers:
 <dl>
-<dt><a href="VE-installer.exe" download>Online installer</a></dt>
+<dt><a href="VE-installer.zip" download>Online installer</a></dt>
 <dd>Use if your R installation can access repositories through the internet</dd>
-<dt><a href="VE-installer-windows-R3.5.1.exe" download>Windows installer</a></dt>
+<dt><a href="VE-installer-windows-R3.5.1.zip" download>Windows installer</a></dt>
 <dd>Download this version if your R installation cannot get on the internet</li>
 </dl>
 </li>
@@ -30,14 +30,15 @@ To use one of the installers:
 <li>Download it</li>
 <li>Unzip it into an empty folder</li>
 <li>Then either:
-<ul><li>Double-click <code>VisionEval.Rdata</code> from that folder</li></ul>
+<ul><li>Double-click <code>Install-VisionEval.Batch</code> from that folder</li></ul>
 or (if you have multiple versions of R installed, and the VisionEval version is not primary)
 <ol>
 <li>Start R</li>
 <li>Use File / Change dir... to navigate to the folder where you unzipped the installer</li>
-<li>Use File / Load workspace... to load <code>VisionEval.Rdata</code></li>
-<li>Enter the R function call: <code>visioneval()</code></li>
+<li>Enter the R function call: <code>source("Install-VisionEval.R")</code></li>
 </ol></li>
+<li>After that, you can sort of use the Getting Started instructions,
+or use the convenience functions <code>vegui()</code>, <code>verpat()</code> or <code>verspm()</code>
 </ol>
 <p>If you're stumped, get in touch with <code>"jeremy R"</code> at one of the usual places.</p>
 <p>The online installer uses this repository:  <a href="/R/">https://visioneval.jeremyraw.com/R/</a></p>

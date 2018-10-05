@@ -19,29 +19,8 @@ a web-accessible repository of all necessary VisionEval packages.
 	* The built packages are used to populate the miniCRAN (next step)
 2. Build the namedCapture package from Github
 	* Used only - and probably gratuitously - in VEGUI)
-	* Clone https://github.com/tdhock/nameCapture into install/external/namedCapture
 	* Run bash script in "install/external" to build: buildNamedCapture.sh
 	* Output packages are added to the built VE packages (source, binary)
-3. Create a miniCRAN repository
-	* Update dependencies in R script build-miniCRAN.R
-	* Then run the R script
-	* Output is placed in "../built/miniCRAN"
-	* If you want to update the web site, run shell script "publish-miniCRAN.sh"
-		* The script uses rsync and ssh to upload files to the remote web server
-4. Update the Install.R script (located next door in the "demand" subfolder) as necessary
-	* Build process places Install.R into an Rdata file, which will
-	  allow double-click starting from Windows and thus automatically make
-	  sure that correct directories are used for the miniCRAN and for
-	  VE install itself.
-	* Install.Rdata gets zipped up along with the local package repository
-4. Prepare the "Online" and "Offline" download files (zipped separately into "../demand/installers" subfolder)
-	* Online contains the Install.R script plus the VE miniCRAN
-	* Offline contains the Install.R script plus the full miniCRAN
-	* These are packaged in such a way that the user can follow these instructions:
-		1. Install R
-		2. Download either the "Offline" or "Online" installer zip file
-		3. Unzip into an empty directory
-		4. Start RGui by double clicking "Install.Rdata" (or loading it within an
-		   existing R session) from that folder (contains functions from Install.R
-		   script)
-		5. Run the function "install_visioneval" and respond to the prompts/popups
+
+
+Documentation lags.  Check one-stop-build.sh for almost-working directions...

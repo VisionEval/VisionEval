@@ -13,12 +13,15 @@
 # bash install-rsync.sh
 # popd
 
-Rscript build-packages.R    # Prepare installable visioneval
+Rscript build-miniCRAN.R    # the miniCRAN lives in a web-ready location under install/www/R
+Rscript build-packages.R    # Prepare installable visioneval; has a number of annoying user dependencies like rhdf5
+			    # Also, it won't currently work as a script, because the cross-dependencies in the
+			    # modules require them to be installed into the current session as they are compiled,
+			    # but batch operation puts them "out of the way".  Running it interactively should be fine
 bash unstage-built-files.sh # a lot of crud is checked in that never should have been
 pushd ../external
 bash buildNamedCapture.sh   # Prepare installable namedCapture Github package
 popd
-Rscript build-miniCRAN.R    # the miniCRAN lives in a web-ready location under install/www/R
 bash setup-sources.sh
 bash build-installers.sh    # these also landi n a web-ready location
 
