@@ -19,9 +19,11 @@
 <li>Download and run one of the experimental installers:
 <dl>
 <dt><a href="VE-installer.zip" download>Online installer</a></dt>
-<dd>Use if your R installation can access repositories through the internet</dd>
+<dd>Use if your R installation can access repositories through the internet (any OS/architecture, R 3.5.1)</dd>
 <dt><a href="VE-installer-windows-R3.5.1.zip" download>Windows installer</a></dt>
-<dd>Download this version if your R installation cannot get on the internet</li>
+<dd>Download this version for a ready-to-run Windows installation that requires no internet connection</li>
+<dt><strong>Offline source installer</strong></dt>
+<dd>(not available yet) Download this version for a cross-platform installer that requires no internet connection</li>
 </dl>
 </li>
 </ul>
@@ -30,8 +32,9 @@ To use one of the installers:
 <li>Download it</li>
 <li>Unzip it into an empty folder</li>
 <li>Then either:
-<ul><li>Double-click <code>Install-VisionEval.Batch</code> from that folder</li></ul>
-or (if you have multiple versions of R installed, and the VisionEval version is not primary)
+<ul><li>Double-click <code>Install-VisionEval.bat</code> from that folder</li></ul>
+or if you have multiple versions of R installed, and the VisionEval version is not primary, or
+if you're using the Online installer on a non-Windows architecture.
 <ol>
 <li>Start R</li>
 <li>Use File / Change dir... to navigate to the folder where you unzipped the installer</li>
@@ -42,5 +45,5 @@ or use the convenience functions <code>vegui()</code>, <code>verpat()</code> or 
 </ol>
 <p>If you're stumped, get in touch with <code>"jeremy R"</code> at one of the usual places.</p>
 <p>The online installer uses this repository:  <a href="/R/">https://visioneval.jeremyraw.com/R/</a></p>
-<p>Last Update: 2018-10-03</p>
+<p>Last Update: 2018-10-05</p>
 </body>
