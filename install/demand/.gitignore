@@ -1,4 +1,6 @@
-.RProfile
 models/
 tmp/
 VEGUI/
+lib/
+*.RData
+.RHistory

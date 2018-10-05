@@ -2,6 +2,9 @@
 # paramter "ve.root" should be set to the root folder of the current repository clone
 # Set up an .Rprofile in this folder and source it (e.g. by starting a fresh R)
 
+# This should really happen through a build system (Make, Maven, etc.) rather
+# than the all-or-nothing script here.
+
 if (!exists("ve.root") || !file.exists(ve.root) )
 	ve.root <- choose.dir(getwd(),caption="Locate Repository Root Directory")
 if (!exists("ve.root") || is.na(ve.root) || !file.exists(ve.root) ) # NA generated if user cancels choose.dir

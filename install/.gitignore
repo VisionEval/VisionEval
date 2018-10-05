@@ -1,3 +1,6 @@
 www/R/bin/
 www/R/src/
+www/*.zip
 built/
+dev-docs/
+plan.txt

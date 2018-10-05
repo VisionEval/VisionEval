@@ -1,5 +1,7 @@
 @echo off
 REM This batch file uses Rscript to bootstrap the local installation
+REM Identical logic can support a bash script that could run in Git
+REM for Windows Bash or on Linux.
 Rscript Install-VisionEval.R
 
 REM The rest of what is here is catching the error conditions...
