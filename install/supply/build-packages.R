@@ -5,10 +5,13 @@
 # This should really happen through a build system (Make, Maven, etc.) rather
 # than the all-or-nothing script here.
 
-if (!exists("ve.root") || !file.exists(ve.root) )
+if (interactive() && ( !exists("ve.root") || !file.exists(ve.root)) )
 	ve.root <- choose.dir(getwd(),caption="Locate Repository Root Directory")
-if (!exists("ve.root") || is.na(ve.root) || !file.exists(ve.root) ) # NA generated if user cancels choose.dir
+if (!exists("ve.root") || is.na(ve.root) || !file.exists(ve.root) ) { # NA generated if user cancels choose.dir
 	stop("Can't build packages without knowing the repository")
+} else {
+	cat("Building the VE packages...\n")
+}
 
 # Where to find the package sources
 framework.dir <- file.path(ve.root,"sources","framework")
@@ -42,19 +45,19 @@ build.modules <- file.path(modules.dir,modules)
 require(devtools)
 
 # Check the packages
-if (askYesNo("Comprehensively check packages (Warning: PAINFUL)",default=FALSE)) {
+if (interactive() && askYesNo("Comprehensively check packages (Warning: PAINFUL)",default=FALSE)) {
 	devtools::check(framework)
 	for (module in build.modules) devtools::check(module)
 }
 
 # Build the framework and modules as source packages
-if (askYesNo("Build source packages)",default=TRUE)) {
+if (!interactive() || askYesNo("Build source packages)",default=TRUE)) {
 	devtools::build(framework,path=built.path.src)
 	for (module in build.modules) devtools::build(module,path=built.path.src)
 }
 
 # Build the framework and modules as binary packages (note - side effect is to install them)
-if (askYesNo("Build binary packages (Warning: SLOW)",default=FALSE)) {
+if (!interactive() || askYesNo("Build binary packages (Warning: SLOW)",default=FALSE)) {
 	devtools::build(framework,path=built.path.binary,binary=TRUE)
 	for (module in build.modules) devtools::build(module,path=built.path.binary,binary=TRUE)
 }
