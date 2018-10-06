@@ -3,19 +3,21 @@
 </head>
 <body>
 <H1>VisionEval Test Installer</H1>
-<P>Through this page, you can:</P>
+<P>Through this page, you can interact with <a href="https://VisionEval.org" target="_blank">VisionEval</a>:</P>
 <ul>
 <li>Find links to the VisionEval git repository:
 <ul>
-<li><a href="https://github.com/jrawbits/VisionEval-JR">Test installer repository</a> (powering this site)</li>
-<li><a href="https://github.com/VisionEval/VisionEval">Release repository</a></li>
-<li><a href="https://github.com/VisionEval/VisionEval-dev">Pooled fund development repository</a></li>
-<li><a href="https://github.com/gregorbj/visioneval">AASHTO/ODOT development repository</a></li>
+<li><a href="https://github.com/jrawbits/VisionEval-JR" target="_blank">Test installer repository</a> (powering this site)</li>
+<li><a href="https://github.com/VisionEval/VisionEval" target="_blank">Release repository</a></li>
+<li><a href="https://github.com/VisionEval/VisionEval-dev" target="_blank">Pooled fund development repository</a></li>
+<li><a href="https://github.com/gregorbj/visioneval" target="_blank">AASHTO/ODOT development repository</a></li>
 </ul>
 </li>
+<li>Download an installer for the current release of VisionEval:
+<ul>
 <li>Before anything else, download and run
    <a href="https://cran.r-project.org/bin/windows/base/release.htm">the
-	  Windows installer</a> for the appropriate version of R</li>
+	  Windows installer</a> for the appropriate version of R (currently R 3.5.1)</li>
 <li>Download and run one of the experimental installers:
 <dl>
 <dt><a href="VE-installer.zip" download>Online installer</a></dt>
@@ -27,23 +29,30 @@
 </dl>
 </li>
 </ul>
-To use one of the installers:
+</li>
+<li>Use one of the installers:
 <ol>
 <li>Download it</li>
 <li>Unzip it into an empty folder</li>
 <li>Then either:
-<ul><li>Double-click <code>Install-VisionEval.bat</code> from that folder</li></ul>
+<ol>
+<li>Double-click <code>Install-VisionEval.bat</code> from that folder, and follow the instruction.</li>
+<li>Double-click <code>RunVisionEval.RData</code> to launch R running VisionEval</li>
+</ol>
 or if you have multiple versions of R installed, and the VisionEval version is not primary, or
 if you're using the Online installer on a non-Windows architecture.
 <ol>
 <li>Start R</li>
 <li>Use File / Change dir... to navigate to the folder where you unzipped the installer</li>
-<li>Enter the R function call: <code>source("Install-VisionEval.R")</code></li>
+<li>Enter the R function call: <code>source("Install-VisionEval.R")</code> to install</li>
+<li>Run the VisionEval startup R script: <code>load("RunVisionEval.Rdata")</code> to start VisionEval</li>
 </ol></li>
-<li>After that, you can sort of use the Getting Started instructions,
+<li>You will see "Welcome to VisionEval!" at the end of the R startup message stream if everything went well.</li>
+<li>After that, you can sort of use the <a href="https://github.com/gregorbj/VisionEval/wiki/Getting-Started" target="_blank">Getting Started</a> instructions,
 or use the convenience functions <code>vegui()</code>, <code>verpat()</code> or <code>verspm()</code>
 </ol>
+</li></ul>
 <p>If you're stumped, get in touch with <code>"jeremy R"</code> at one of the usual places.</p>
-<p>The online installer uses this repository:  <a href="/R/">https://visioneval.jeremyraw.com/R/</a></p>
-<p>Last Update: 2018-10-05</p>
+<p>The online installer uses this repository:  <a href="/R/" target="_blank">https://visioneval.jeremyraw.com/R/</a></p>
+<p>Last Update: 2018-10-06</p>
 </body>
