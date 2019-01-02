@@ -5,7 +5,7 @@ VisionEval is a model system and supporting software framework for building coll
 
 master branch: [![Travis-CI Build Status](https://travis-ci.org/VisionEval/VisionEval-Dev.svg?branch=master)](https://travis-ci.org/VisionEval/VisionEval-Dev)
 
-development branch: [![Travis-CI Build Status](https://travis-ci.org/VisionEval/VisionEval.svg?branch=development)](https://travis-ci.org/VisionEval/VisionEval-Dev)
+development branch: [![Travis-CI Build Status](https://travis-ci.org/VisionEval/VisionEval-Dev.svg?branch=development)](https://travis-ci.org/VisionEval/VisionEval-Dev)
 
 ## Documentation
 
