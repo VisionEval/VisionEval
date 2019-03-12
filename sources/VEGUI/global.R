@@ -9,7 +9,7 @@ suppressPackageStartupMessages({
   library(shinyFiles)
   library(data.table)
   library(shinyBS)
-  library(future)
+  library(future.callr)
   library(testit)
   library(jsonlite)
   library(DT)
@@ -36,11 +36,12 @@ options(DT.options = list(dom = 'tip', rownames = 'f'))
 
 # Set future processors
 
-planType <- 'multiprocess'  # Will VEGUI work at all with sequential?
+planType <- 'callr'  # Will VEGUI work at all with sequential?
 
-if ( exists('planType') && planType == 'multiprocess'){
+if ( exists('planType') && planType == 'callr'){
   NWorkers <- max(availableCores()-1, 1)
-  plan(multiprocess, workers = NWorkers, gc=TRUE)
+#  plan(callr, workers = NWorkers, gc=TRUE)
+  plan(callr, workers = NWorkers)
 } else {
   plan(sequential)
 }

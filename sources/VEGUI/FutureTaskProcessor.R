@@ -7,8 +7,8 @@
 # it is not required to specify workers -- if not then it will default to future::availableCores()
 # use myNumTasks+1 because future uses one process for itself.
 
-if (!require(future)) install.packages("future")
-library(future)
+if (!require(future.callr)) install.packages("future.callr")
+library(future.callr)
 
 
 asyncTasksRunning <- list()
@@ -261,9 +261,9 @@ fakeDataProcessing <- function(name, duration, sys_sleep = FALSE) {
 } #end fakeDataProcessing
 
 
-testAsync <- function(loops = future::availableCores() - 1) {
-  plan(multiprocess)
-  print(paste0("future::availableCores(): ", future::availableCores()))
+testAsync <- function(loops = future.callr::availableCores() - 1) {
+  plan(callr)
+  print(paste0("future.callr::availableCores(): ", future.callr::availableCores()))
   loops <- 10 #
   baseWait <- 3
   for (loopNumber in 1:loops) {
