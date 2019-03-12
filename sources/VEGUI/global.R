@@ -104,7 +104,12 @@ myFileTypes_ls <- list(
 
 # Get the volumes of local drive
 # Changes to this line may affect tests. See run_vegui_test.R
-volumeRoots = c('.' = '.', '..' = '..', getVolumes("")())
+# JR NOTE:
+# Should be fine, as long as the line starts with "volumeRoots = c("
+# Hacking on something un-parameterized like this violates the whole notion of
+# of what a "test" is.
+volumeRoots = c('Models' = '../models', '.' = '.', '..' = '..', getVolumes("")())
+if (length(volumeRoots)>3) names(volumeRoots)[c(2,3)] <- c( basename(getwd()), basename(normalizePath(file.path(getwd(),".."))) )
 
 # Define utility functions ----------------------------------------
 
