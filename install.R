@@ -35,6 +35,10 @@ source("https://bioconductor.org/biocLite.R")
 biocLite(c("rhdf5","zlibbioc"), suppressUpdates=TRUE, quiet=TRUE)
 
 #Download the VE repository
+host <- "https://api.github.com/repos/"
+repo <- "visioneval/visioneval/"
+ref <- "master"
+
 destfile <- tempfile(fileext = paste0(".zip"))
 destdir <- normalizePath(tempdir())
 cat("\nDownloading VE repository to", destdir, "\n")
