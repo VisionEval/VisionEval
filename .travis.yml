@@ -23,7 +23,7 @@ addons:
 # Set up the pair of cache areas
 install:
   - mkdir -p $TRAVIS_BUILD_DIR/ve-lib
-  - VE_DEPFILE=build/VE-dependencies.yml; Rscript build/install-deps.R
+  - export VE_DEPFILE=build/VE-dependencies.yml; Rscript build/install-deps.R
 
 # https://docs.travis-ci.com/user/build-stages#warming-up-a-cache-with-expensive-dependencies
 
@@ -50,7 +50,6 @@ jobs:
             - bash build/make-module.sh sources/modules/VESyntheticFirms
             - bash build/make-module.sh sources/modules/VETransportSupply
             - bash build/make-module.sh sources/modules/VETransportSupplyUse
-            - bash build/make-module.sh sources/modules/VETravelPerformance
         - stage: Group 2 Modules
           script:
             - bash build/make-module.sh sources/modules/VEHouseholdTravel
@@ -64,6 +63,7 @@ jobs:
         - stage: Group 4 Modules
           script:
             - bash build/make-module.sh sources/modules/VESimTransportSupply
+            - bash build/make-module.sh sources/modules/VETravelPerformance
         - stage: Models and VEGUI (parallel)
           script: bash build/run-model.sh sources/models/BaseYearVERPAT/run_model.R
         - script: bash build/run-model.sh sources/models/VERPAT/run_model.R
