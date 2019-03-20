@@ -104,8 +104,8 @@ Dependencies:
     Level: 4
     CRAN:
       - usethis
-		VE:
-			- VEPowerTrainsandFuels
+    VE:
+      - VEPowerTrainsandFuels
   VESimTransportSupply:
     Level: 4
     CRAN:
