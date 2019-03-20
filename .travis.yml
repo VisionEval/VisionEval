@@ -23,7 +23,7 @@ addons:
 # Set up the pair of cache areas
 install:
   - mkdir -p $TRAVIS_BUILD_DIR/ve-lib
-  - export VE_DEPFILE=build/VE-dependencies.yml; Rscript build/install-deps.R
+  - export VE_COMPONENTS=build/VE-components.yml; Rscript build/install-deps.R
 
 # https://docs.travis-ci.com/user/build-stages#warming-up-a-cache-with-expensive-dependencies
 
@@ -68,9 +68,11 @@ jobs:
           script: bash build/run-model.sh sources/models/BaseYearVERPAT/run_model.R
         - script: bash build/run-model.sh sources/models/VERPAT/run_model.R
         - script: bash build/run-model.sh sources/models/VERSPM/Test1/run_model.R
-        - script: bash build/run-model.sh sources/models/VE-State/run_model.R
-        - script: bash build/run-model.sh sources/models/VERPAT_Scenarios/run_model.R
-        - script: bash build/run-model.sh sources/models/VERSPM_Scenarios/run_model.R
+# Commenting out the following due to time-out problems
+# Explore the VE-State issue offline (may want to create a reduced test version so we can host datastore.R)
+#        - script: bash build/run-model.sh sources/models/VE-State/run_model.R # Over 10 mins no output: 'AssignHhVehiclePowertrain' for year '2010'."
+#        - script: bash build/run-model.sh sources/models/VERPAT_Scenarios/run_model.R # Too long for Travis
+#        - script: bash build/run-model.sh sources/models/VERSPM_Scenarios/run_model.R # Too long for Travis
         - script: bash build/run-model.sh sources/VEGUI/run_vegui_test.R
         - stage: Cleanup
           script: rm -rf $VE_LIBRARY/*
