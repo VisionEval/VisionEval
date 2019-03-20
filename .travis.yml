@@ -41,36 +41,36 @@ jobs:
           script: true
         - stage: VisionEval
           script: bash build/make-module.sh sources/framework/visioneval
-#         - stage: Group 1 Modules
-#           script:
-#             - bash build/make-module.sh sources/modules/VE2001NHTS
-#             - bash build/make-module.sh sources/modules/VEScenario
-#             - bash build/make-module.sh sources/modules/VESimHouseholds
-#             - bash build/make-module.sh sources/modules/VESimLandUseData
-#             - bash build/make-module.sh sources/modules/VESyntheticFirms
-#             - bash build/make-module.sh sources/modules/VETransportSupply
-#             - bash build/make-module.sh sources/modules/VETransportSupplyUse
-#             - bash build/make-module.sh sources/modules/VETravelPerformance
-#         - stage: Group 2 Modules
-#           script:
-#             - bash build/make-module.sh sources/modules/VEHouseholdTravel
-#             - bash build/make-module.sh sources/modules/VEHouseholdVehicles
-#             - bash build/make-module.sh sources/modules/VELandUse
-#         - stage: Group 3 Modules
-#           script:
-#             - bash build/make-module.sh sources/modules/VEPowertrainsAndFuels
-#             - bash build/make-module.sh sources/modules/VEReports
-#             - bash build/make-module.sh sources/modules/VESimLandUse
-#         - stage: Group 4 Modules
-#           script:
-#             - bash build/make-module.sh sources/modules/VESimTransportSupply
-#         - stage: Models and VEGUI (parallel)
-#           script: bash build/run-model.sh sources/models/BaseYearVERPAT/run_model.R
-#         - script: bash build/run-model.sh sources/models/VERPAT/run_model.R
-#         - script: bash build/run-model.sh sources/models/VERSPM/Test1/run_model.R
-#         - script: bash build/run-model.sh sources/models/VE-State/run_model.R
-#         - script: bash build/run-model.sh sources/models/VERPAT_Scenarios/run_model.R
-#         - script: bash build/run-model.sh sources/models/VERSPM_Scenarios/run_model.R
-#         - script: bash build/run-model.sh sources/VEGUI/run_vegui_test.R
+        - stage: Group 1 Modules
+          script:
+            - bash build/make-module.sh sources/modules/VE2001NHTS
+            - bash build/make-module.sh sources/modules/VEScenario
+            - bash build/make-module.sh sources/modules/VESimHouseholds
+            - bash build/make-module.sh sources/modules/VESimLandUseData
+            - bash build/make-module.sh sources/modules/VESyntheticFirms
+            - bash build/make-module.sh sources/modules/VETransportSupply
+            - bash build/make-module.sh sources/modules/VETransportSupplyUse
+            - bash build/make-module.sh sources/modules/VETravelPerformance
+        - stage: Group 2 Modules
+          script:
+            - bash build/make-module.sh sources/modules/VEHouseholdTravel
+            - bash build/make-module.sh sources/modules/VEHouseholdVehicles
+            - bash build/make-module.sh sources/modules/VELandUse
+        - stage: Group 3 Modules
+          script:
+            - bash build/make-module.sh sources/modules/VEPowertrainsAndFuels
+            - bash build/make-module.sh sources/modules/VEReports
+            - bash build/make-module.sh sources/modules/VESimLandUse
+        - stage: Group 4 Modules
+          script:
+            - bash build/make-module.sh sources/modules/VESimTransportSupply
+        - stage: Models and VEGUI (parallel)
+          script: bash build/run-model.sh sources/models/BaseYearVERPAT/run_model.R
+        - script: bash build/run-model.sh sources/models/VERPAT/run_model.R
+        - script: bash build/run-model.sh sources/models/VERSPM/Test1/run_model.R
+        - script: bash build/run-model.sh sources/models/VE-State/run_model.R
+        - script: bash build/run-model.sh sources/models/VERPAT_Scenarios/run_model.R
+        - script: bash build/run-model.sh sources/models/VERSPM_Scenarios/run_model.R
+        - script: bash build/run-model.sh sources/VEGUI/run_vegui_test.R
         - stage: Cleanup
           script: rm -rf $VE_LIBRARY/*

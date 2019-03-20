@@ -52,10 +52,6 @@ Dependencies:
     Level: 1
     CRAN:
       - usethis
-  VETravelPerformance:
-    Level: 1
-    CRAN:
-      - usethis
   VEHouseholdTravel:
     Level: 2
     CRAN:
@@ -83,7 +79,7 @@ Dependencies:
     VE:
       - VE2001NHTS
       - VESimHouseholds
-  VEPowertrainsAndFuels:
+  VEPowertrainsandFuels:
     Level: 3
     CRAN:
       - data.table
@@ -104,6 +100,12 @@ Dependencies:
     VE:
       - VELandUse
       - VESimLandUseData
+  VETravelPerformance:
+    Level: 4
+    CRAN:
+      - usethis
+		VE:
+			- VEPowerTrainsandFuels
   VESimTransportSupply:
     Level: 4
     CRAN:
