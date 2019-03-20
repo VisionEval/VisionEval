@@ -20,6 +20,6 @@ then
 else
 	echo ${TEST_SCRIPT} does not exist in $(pwd)
 fi
-echo Installing '$(basename $(pwd))' to ${BUILD_LIB}
+echo Installing "$(basename $(pwd))" to ${BUILD_LIB}
 R CMD INSTALL -l "${BUILD_LIB}" . # Save the installed package for later use
 popd
