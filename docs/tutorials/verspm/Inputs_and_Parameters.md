@@ -1,4 +1,5 @@
 # VERSPM Inputs and Parameters
+
 ----
 
 VERSPM data inputs are classified into two categories: Inputs and Model Parameters. It includes five definition files and dozens of input files, some of which the user must change and others which typically remain unchanged. This page provides guidance of these files to the end user and which files must be updated to implement RSPM in a new region.
@@ -37,7 +38,9 @@ ___
 
 ### model_parameters.json
 
-This file contains global parameters for a particular model configuration that may be used by multiple modules. A more detailed description of the file and its structure can be found [here](https://github.com/gregorbj/VisionEval/blob/master/api/model_system_design.md#61-model-directory-structure). The format of this file is as follows:
+This file contains global parameters for a particular model configuration that may be used by multiple modules. A more detailed description of the file and its structure can be found [here](https://github.com/gregorbj/VisionEval/blob/master/api/model_system_design.md#61-model-directory-structure). The source of the default $16/hr is per a Nov 2016 ODOT Report: ["The Value of Travel-Time: Estimates of the Hourly Value of Time for Vehicles in Oregon 2015"](https://www.oregon.gov/ODOT/Data/Documents/The-Value-of-Travel-Time-2015.pdf).
+
+The format of this file is as follows:
 
 ```json
 [
