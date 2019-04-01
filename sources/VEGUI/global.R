@@ -46,7 +46,7 @@ if ( exists('planType') && planType == 'callr'){
   plan(sequential)
 }
 
-# Set a global variable of the library paths so it can be passed to any 
+# Set a global variable of the library paths so it can be passed to any
 # child processes called with future
 libs <- .libPaths()
 
@@ -145,4 +145,3 @@ convertRunParam2Lst <- function(rp_df){
 
   lst2
 }
-
