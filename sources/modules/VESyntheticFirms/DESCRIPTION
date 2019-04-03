@@ -13,8 +13,7 @@ LazyData: TRUE
 Depends: R (>= 3.3.2)
 Imports:
     visioneval,
-    devtools,
-	usethis,
+    usethis,
     stats,
     reshape
 Suggests: knitr

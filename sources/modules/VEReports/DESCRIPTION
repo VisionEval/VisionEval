@@ -14,8 +14,7 @@ LazyData: TRUE
 Depends: R (>= 3.4.2)
 Imports:
     visioneval,
-    devtools,
-	usethis,
+    usethis,
     VEHouseholdTravel
 Suggests:
     knitr
