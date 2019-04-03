@@ -122,7 +122,7 @@ usethis::use_data(RunScenariosSpecifications, overwrite = TRUE)
 #' a value.
 #' @param debug A logical. TRUE if want to print more intermediate messages.
 #' @return A list containing all the parameters to the function.
-#' @import future
+#' @import future.callr
 startAsyncTask <-  function(asyncTasksRunning = vector(mode = "list"), asyncTaskName, futureObj,
                             callback = NULL, debug = FALSE){
   # Record start time
@@ -173,7 +173,7 @@ startAsyncTask <-  function(asyncTasksRunning = vector(mode = "list"), asyncTask
 #'
 #' @param asyncTasksRunning A list of asynchronous tasks running currently.
 #' @return An integer indicating the number of tasks currently running
-#' @import future
+#' @import future.callr
 getNumberOfRunningTasks <- function(asyncTasksRunning = vector(mode = "list")) {
   return(min(length(asyncTasksRunning)-1,nbrOfWorkers()))
 }
@@ -189,7 +189,7 @@ getNumberOfRunningTasks <- function(asyncTasksRunning = vector(mode = "list")) {
 #'
 #' @param asyncTasksRunning A list of asynchronous tasks running currently.
 #' @return A string indicating the status of the tasks running currently
-#' @import future
+#' @import future.callr
 getRunningTasksStatus <- function(asyncTasksRunning = vector(mode = "list")) {
   # Function to return the status of single task
   getRunningTaskStatus <- function(asyncTaskObject) {
@@ -238,7 +238,7 @@ getRunningTasksStatus <- function(asyncTasksRunning = vector(mode = "list")) {
 #' @param debug A logical. Set to TRUE if need to print intermediate results.
 #' @param maximumTaskToResolve An integer for the maximum number of tasks to resolve.
 #' @return An integer indicating the number of tasks currently running
-#' @import future
+#' @import future.callr
 processRunningTasks <- function(asyncTasksRunning = vector(mode = "list"),
                                 wait = FALSE, catchErrors = TRUE,
                                 debug = FALSE, maximumTasksToResolve = NULL){
@@ -404,7 +404,7 @@ processRunningTasks <- function(asyncTasksRunning = vector(mode = "list"),
 #' @return A list containing the components specified in the Set
 #' specifications for the module.
 #' @name RunScenarios
-#' @import future
+#' @import future.callr
 #' @export
 RunScenarios <- function(L){
   # Setup
@@ -421,10 +421,10 @@ RunScenarios <- function(L){
   ScenarioInProcess_ls <- list()
 
   # Set future processors
-  if ( exists('planType') && planType == 'multiprocess'){
+  if ( exists('planType') && planType == 'callr'){
     NWorkers <- L$Global$Model$NWorkers
     NWorkers <- min(max(availableCores()-1, 1), NWorkers)
-    plan(multiprocess, workers = NWorkers, gc=TRUE)
+    plan(callr, workers = NWorkers, gc=TRUE)
     message("Executing with ", NWorkers, " processors\n")
   } else {
     plan(sequential)

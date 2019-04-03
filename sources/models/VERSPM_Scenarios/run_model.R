@@ -8,7 +8,7 @@
 #--------------
 library(visioneval)
 
-planType <- 'multiprocess'
+planType <- 'callr'
 
 ptm <- proc.time()
 
