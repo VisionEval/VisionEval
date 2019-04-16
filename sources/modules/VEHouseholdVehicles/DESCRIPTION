@@ -23,7 +23,6 @@ Imports:
     visioneval,
     ordinal,
     reshape2,
-    stats,
     usethis,
     VE2001NHTS
 Suggests:
