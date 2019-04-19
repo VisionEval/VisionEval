@@ -123,9 +123,9 @@ Model cost parameters are estimated for maintenance, repair, and tire (MRT) cost
 
 A model is developed for calculating vehicle maintenance, repair, and tire cost as a function of the vehicle type and age using data from the American Automobile Association (AAA) and the Bureau of Labor Statistics (BLS). AAA publishes reports yearly on the cost of vehicle use by vehicle type over the first 5 years of the vehicle's life. The AAA vehicle types are small sedan, medium sedan, large sedan, small SUV, medium SUV, minivan, pickup truck, hybrid vehicle, electric vehicle. These reports, in addition to estimating the total cost per mile, split out cost estimates by category. Vehicle maintenance, repair, and tire (MRT) cost is one of the categories. The 2017 report, a copy of which is included as the '17-0013_Your-Driving-Costs-Brochure-2017-FNL-CX-1.pdf' file in the 'inst/extdata/sources' directory of this package, is used to calculate baseline MRT cost for the following vehicle and powertrain types by calculating mean values of corresponding AAA vehicle types as shown in the following table. Cost is shown to the nearest tenth of a cent.
 
-|Vehicle Type|Powertrain|AAA Types|Cents/Mile|
-|---|---|---|
-|Auto|ICEV|Small Sedan, Medium Sedan, Large Sedan|7.7|
+|Vehicle Type | Powertrain | AAA Types | Cents/Mile |
+|-------------|------------|-----------|------------|
+|Auto         |     ICEV   |Small Sedan, Medium Sedan, Large Sedan|7.7|
 |Light Truck|ICEV|Small SUV, Medium SUV, Minivan, Pickup Truck|8.1|
 |Auto, Light Truck|HEV, PHEV|Hybrid Vehicle|7.0|
 |Auto, Light Truck|BEV|Electric Vehicle|6.6|
