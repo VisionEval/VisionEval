@@ -14,9 +14,8 @@ LazyData: TRUE
 Depends: R (>= 3.4)
 Imports:
     visioneval,
-    devtools,
-	usethis,
-    future,
+    usethis,
+    future.callr,
     jsonlite,
     data.table
 Suggests:
