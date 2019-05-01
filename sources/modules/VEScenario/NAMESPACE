@@ -9,3 +9,5 @@ import(data.table)
 import(future.callr)
 import(jsonlite)
 import(visioneval)
+importFrom("utils", "browseURL", "capture.output",
+           "installed.packages", "read.csv", "untar", "write.csv")
