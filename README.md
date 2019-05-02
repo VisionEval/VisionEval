@@ -9,3 +9,9 @@ master branch: [![Travis-CI Build Status](https://travis-ci.org/VisionEval/Visio
 ## Documentation
 
 https://github.com/VisionEval/VisionEval/wiki
+
+## Issues
+
+Please submit issues, bugs, or feature requests about VisionEval on the [VisionEval-Dev issues page](https://github.com/VisionEval/VisionEval-Dev/issues). 
+
+Please submit issues or content change requests about the VisionEval.org website on the [VisionEval.org issues page](https://github.com/VisionEval/VisionEval.org/issues).
