@@ -64,6 +64,7 @@ jobs:
         - stage: Group 1 Modules
           script:
             - bash build/make-module.sh sources/modules/VE2001NHTS
+            - bash build/make-module.sh sources/modules/VEScenario
             - bash build/make-module.sh sources/modules/VESimHouseholds
             - bash build/make-module.sh sources/modules/VESyntheticFirms
             - bash build/make-module.sh sources/modules/VETransportSupply
