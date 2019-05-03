@@ -12,7 +12,7 @@ fi
 pushd $1
 TEST_SCRIPT=${2:-${VE_SCRIPT:-tests/scripts/test.R}}
 echo TEST_SCRIPT=${TEST_SCRIPT}
-Rscript -e "devtools::check('.')"
+Rscript -e "devtools::check('.',cran=FALSE,error_on='error')"
 if [ -f ${TEST_SCRIPT} ]
 then
 	echo Executing ${TEST_SCRIPT} in $(pwd)
