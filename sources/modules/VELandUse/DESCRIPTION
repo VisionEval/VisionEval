@@ -24,7 +24,6 @@ Imports:
     usethis,
     geosphere,
     fields,
-    stats,
     VE2001NHTS,
     VESimHouseholds
 Suggests:
