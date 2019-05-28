@@ -1,5 +1,5 @@
 language: r
-r: 3.5.1
+r: 3.6.0
 dist: xenial
 cache:
     - packages
