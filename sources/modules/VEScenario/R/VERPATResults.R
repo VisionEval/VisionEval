@@ -245,7 +245,7 @@ usethis::use_data(VERPATResultsSpecifications, overwrite = TRUE)
 #' @return A list containing the components specified in the Set
 #' specifications for the module.
 #' @name VERPATResults
-#' @import jsonlite future.callr data.table
+#' @import jsonlite future future.callr data.table
 #' @export
 VERPATResults <- function(L){
   # Setup
