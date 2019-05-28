@@ -1,0 +1,211 @@
+# Identify VisionEval Components and Dependencies
+
+Components:
+
+# "Type: install' components simply list "independent" R dependencies (for building modules)
+  install:
+    Type: install
+    Test: { Group: 0 }
+    CRAN:
+      - devtools
+      - knitr
+      - roxygen2
+      - yaml
+
+# "Type: module" components are built and installed as R packages
+# The test script relative path is copied to the "test" environment under the module name
+# The group captures the VE internal dependencies (see .travis.yml) but is unused
+  visioneval:
+    Type: module
+    Path: sources/framework
+    Test: { Script: tests/scripts/test.R, Group: 0 }
+    CRAN: 
+      - jsonlite
+      - stringr
+      - filesstrings
+      - knitr
+    BioC:
+      - rhdf5
+  VE2001NHTS:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - usethis
+  VEScenario:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - future.callr
+      - jsonlite
+      - usethis
+      - data.table
+  VESimHouseholds:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - usethis
+  VESimLandUseData:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - stringr
+      - tidycensus
+      - usethis
+  VESyntheticFirms:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - reshape
+      - usethis
+  VETransportSupply:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - usethis
+  VETransportSupplyUse:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - usethis
+  VEHouseholdTravel:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    CRAN:
+      - data.table
+      - pscl
+      - usethis
+    VE:
+      - VE2001NHTS
+  VEHouseholdVehicles:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    CRAN:
+      - ordinal
+      - reshape2
+      - usethis
+    VE:
+      - VE2001NHTS
+  VELandUse:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    CRAN:
+      - fields
+      - geosphere
+      - usethis
+    VE:
+      - VE2001NHTS
+      - VESimHouseholds
+  VEPowertrainsAndFuels:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 3 }
+    CRAN:
+      - data.table
+      - usethis
+    VE:
+      - VEHouseholdTravel
+  VEReports:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 3 }
+    CRAN:
+      - usethis
+    VE:
+      - VEHouseholdTravel
+  VESimLandUse:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 3 }
+    CRAN:
+      - plot3D
+      - usethis
+    VE:
+      - VELandUse
+      - VESimLandUseData
+  VETravelPerformance:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 4 }
+    CRAN:
+      - usethis
+    VE:
+      - VEPowertrainsAndFuels
+  VESimTransportSupply:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 4 }
+    CRAN:
+      - usethis
+    VE:
+      - VESimLandUse
+      - VETransportSupply
+
+# "Type: test" components are copied verbatim to "test" environment under its name
+  Test_Data:
+    Type: test
+    Path: sources/modules
+
+# "Type: model" components may have tests, and are copied to "models" folder of runtime under their name
+# The "group" is unused for testing - it is always the "last" group for the models
+# The test script relative path is copied to the "test" environment
+  BaseYearVERPAT:
+    Type: model
+    Path: sources/models
+    Test: { Script: run_model.R, Group: 5 }
+  VERPAT:
+    Type: model
+    Path: sources/models
+    Test: { Script: run_model.R, Group: 5 }
+  VERPAT_Scenarios:
+    Type: model
+    Path: sources/models
+  VERSPM:
+    Type: model
+    Path: sources/models
+    Test: { Script: Test1/run_model.R, Group: 5 }
+  VERSPM_Scenarios:
+    Type: model
+    Path: sources/models
+  VE-State:
+    Type: model
+    Path: sources/models
+  export_output_to_csv.R:
+    Type: model
+    Path: sources/models
+
+# "Type: script" components are copied to the runtime root under their name
+  LICENSE:
+    Type: script
+    Path: "."
+  VEScenarioViewer:
+    Type: script
+    Path: sources
+  VEGUI:
+    Type: script
+    Path: sources
+    Test: { Script: run_vegui_test.R, Group: 5 }
+    CRAN:
+      - DT
+      - envDocument
+      - rhandsontable
+      - shiny
+      - shinyBS
+      - shinyFiles
+      - shinyjs
+      - shinytest
+      - testit
+      - testthat
+    BioC:
+      - rhdf5
+    Github:
+      - tdhock/namedCapture

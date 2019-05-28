@@ -11,11 +11,10 @@ Description: This package contains modules that creates reports for various
              performance metrics using visioneval framework.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.4.2)
+Depends: R (>= 3.4.0)
 Imports:
     visioneval,
-    devtools,
-	usethis,
+    usethis,
     VEHouseholdTravel
 Suggests:
     knitr

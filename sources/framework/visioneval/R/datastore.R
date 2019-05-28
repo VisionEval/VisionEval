@@ -362,7 +362,7 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL) {
       )
     )
   } else {
-    Dataset <- readFromTableRD(Name, Table, Group)
+    Dataset <- readFromTableRD(Name, Table, Group, ReadAttr = TRUE)
     Attr_ls <- attributes(Dataset)
   }
   #Modify the loaded dataset

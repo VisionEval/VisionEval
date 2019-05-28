@@ -245,7 +245,7 @@ usethis::use_data(VERPATResultsSpecifications, overwrite = TRUE)
 #' @return A list containing the components specified in the Set
 #' specifications for the module.
 #' @name VERPATResults
-#' @import jsonlite future data.table
+#' @import jsonlite future.callr data.table
 #' @export
 VERPATResults <- function(L){
   # Setup
@@ -265,10 +265,10 @@ VERPATResults <- function(L){
   InputLabels_ar <- L$Global$Model$InputLabels
 
   # Set future processors
-  if ( exists('planType') && planType == 'multiprocess'){
+  if ( exists('planType') && planType == 'callr'){
     NWorkers <- L$Global$Model$NWorkers
     NWorkers <- min(max(availableCores()-1, 1), NWorkers)
-    plan(multiprocess, workers = NWorkers, gc=TRUE)
+    plan(callr, workers = NWorkers, gc=TRUE)
     message("Executing with ", NWorkers, " processors\n")
   } else {
     plan(sequential)

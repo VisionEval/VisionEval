@@ -10,12 +10,10 @@ URL: https://github.com/gregorbj/VisionEval/sources/modules/VESyntheticFirms
 Description: VisionEval Synthetic Firms module
 License: Apache License 2.0
 LazyData: TRUE
-Depends: R (>= 3.3.2)
+Depends: R (>= 3.3.0)
 Imports:
     visioneval,
-    devtools,
-	usethis,
-    stats,
+    usethis,
     reshape
 Suggests: knitr
 VignetteBuilder: knitr

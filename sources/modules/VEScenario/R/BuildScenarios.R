@@ -265,6 +265,21 @@ BuildScenarios <- function(L){
     #           file.path(RunDir, L$Global$Model$ScenarioOutputFolder))
     catconfig_ls <- fromJSON(file.path(ScenarioInputPath,"category_config.json"),
                               simplifyDataFrame = FALSE)
+    cat_list <- c("Community Design","Marketing/Incentive", "Pricing", "Vehicles/Fuels", "Fuel Price", "Income" )
+    cat_names <- do.call( function(x) x$NAME, catconfig_ls )
+    cat_diff <- setdiff(cat_list,cat_names)   
+    n = length(catconfig_ls)
+    if (length(cat_diff)>0) {
+      for ( i in ( n+1 ): (length(cat_list)) ){
+        LEVELSls= list()
+        INPUTSls= list()
+        INPUTSls[[1]] = list(NAME="A",LEVEL="1")
+        LEVELSls[[1]]= list(NAME= "1", INPUTS=INPUTSls )
+        catconfig_ls[[i]] = list (NAME = cat_diff[i-n], DESCRIPTION= "", LEVELS = LEVELSls)
+      }
+    }
+    
+    
     catconfig_ch <- paste0("var catconfig = ",
                             toJSON(catconfig_ls, pretty = TRUE), ";")
     write(catconfig_ch, file = file.path(RunDir,

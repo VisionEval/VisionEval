@@ -21,11 +21,9 @@ LazyData: TRUE
 Depends: R (>= 3.1.0)
 Imports:
     visioneval,
-    devtools,
     usethis,
     geosphere,
     fields,
-    stats,
     VE2001NHTS,
     VESimHouseholds
 Suggests:

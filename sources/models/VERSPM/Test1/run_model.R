@@ -7,10 +7,9 @@ cat('run_model.R: script entered\n')
 #Load libraries
 #--------------
 library(visioneval)
-#devtools::load_all('C:/Users/matt.landis/Git/VisionEval/sources/framework/visioneval/')
 cat('run_model.R: library visioneval loaded\n')
 
-planType <- 'multiprocess'
+planType <- 'callr'
 
 #Initialize model
 #----------------
