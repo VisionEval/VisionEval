@@ -477,11 +477,14 @@ CalculateAltModeTrips <- function(L) {
     IsMetro_ <- Hh_df$LocType == "Urban"
     Trips_[IsMetro_] <-
       applyHurdleTripModel(Hh_df[IsMetro_,], AltModeModels_ls$Metro[[Mode]])
+    
+    if (any(Hh_df$LocType!="Urban")) {
     Trips_[!IsMetro_] <-
       applyHurdleTripModel(Hh_df[!IsMetro_,], AltModeModels_ls$NonMetro[[Mode]])
-    Trips_
+    
   }
-
+    Trips_
+}
   #Calculate trips and return results
   #----------------------------------
   Out_ls <- initDataList()
