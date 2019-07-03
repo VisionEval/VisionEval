@@ -268,7 +268,7 @@ VERPATResults <- function(L){
   if ( exists('planType') && planType == 'callr'){
     NWorkers <- L$Global$Model$NWorkers
     NWorkers <- min(max(availableCores()-1, 1), NWorkers)
-    plan(callr, workers = NWorkers, gc=TRUE)
+    plan(callr, workers = NWorkers)
     message("Executing with ", NWorkers, " processors\n")
   } else {
     plan(sequential)
@@ -306,7 +306,7 @@ VERPATResults <- function(L){
 
   FinalResults_dt <- rbindlist(as.list(Results_env))
   rm(Results_env)
-  gc()
+  gc() # encourage R to release space we're done with
 
   ScenNames_ar <- basename(ScenariosPath_ar)
   ScenTab_dt <- data.table(Scenario = ScenNames_ar)
