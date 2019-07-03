@@ -572,7 +572,8 @@ AssignDrivers <- function(L) {
     HhIdx <- match(names(NumDrivers_Hh), L$Year$Household$HhId)
     Out_ls$Year$Household[[BinName]][HhIdx] <- unname(NumDrivers_Hh)
     rm(MetroPer_df, Driver_, NumDrivers_Hh, HhIdx)
-    # Run nonmetropolitan model
+    # Run nonmetropolitan model(if any)
+    if (any(Per_df$LocType!="Urban")) {
     NonMetroPer_df <- Per_df[Per_df$LocType != "Urban",]
     Driver_ <- applyBinomialModel(
       DriverModel_ls$NonMetro,
@@ -590,6 +591,7 @@ AssignDrivers <- function(L) {
     HhIdx <- match(names(NumDrivers_Hh), L$Year$Household$HhId)
     Out_ls$Year$Household[[BinName]][HhIdx] <- unname(NumDrivers_Hh)
     rm(NonMetroPer_df, Driver_, NumDrivers_Hh, HhIdx)
+    }
   }
 
   #Tabulate number of driving age persons in each household
