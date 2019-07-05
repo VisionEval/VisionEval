@@ -157,9 +157,9 @@ AutoOwnModels_ls$Stats$NonMetroZeroAnova <-
   capture.output(anova(AutoOwnModels_ls$NonMetro$Zero, test = "Chisq"))
 #Trim down model
 AutoOwnModels_ls$NonMetro$Zero[c("residuals", "fitted.values",
-                              "linear.predictors", "weights",
-                              "prior.weights", "y", "model",
-                              "data")] <- NULL
+                                 "linear.predictors", "weights",
+                                 "prior.weights", "y", "model",
+                                 "data")] <- NULL
 #Model number of vehicles of non-zero vehicle households
 EstData_df <- EstData_df[EstData_df$ZeroVeh == 0,]
 EstData_df$VehOrd <- EstData_df$NumVeh
@@ -409,7 +409,7 @@ AssignVehicleOwnership <- function(L) {
   Bz <- L$Year$Bzone$Bzone
   #Calculate number of households
   NumHh <- length(L$Year$Household[[1]])
-
+  
   #Set up data frame of household data needed for model
   #----------------------------------------------------
   Hh_df <- data.frame(L$Year$Household)
@@ -421,7 +421,7 @@ AssignVehicleOwnership <- function(L) {
   Hh_df$LogDensity <- log(Density_)
   TranRevMiPC_Bz <- L$Year$Marea$TranRevMiPC[match(L$Year$Bzone$Marea, L$Year$Marea$Marea)]
   Hh_df$TranRevMiPC <- TranRevMiPC_Bz[match(L$Year$Household$Bzone, L$Year$Bzone$Bzone)]
-
+  
   #Run the model
   #-------------
   #Probability no vehicles
@@ -430,25 +430,28 @@ AssignVehicleOwnership <- function(L) {
     predict(AutoOwnModels_ls$Metro$Zero,
             newdata = Hh_df[Hh_df$LocType == "Urban",],
             type = "response")
-  NoVehicleProb_[Hh_df$LocType %in% c("Town", "Rural")] <-
-    predict(AutoOwnModels_ls$NonMetro$Zero,
-            newdata = Hh_df[Hh_df$LocType %in% c("Town", "Rural"),],
-            type = "response")
+  if (any(Hh_df$LocType!="Urban")) {
+    NoVehicleProb_[Hh_df$LocType %in% c("Town", "Rural")] <-
+      predict(AutoOwnModels_ls$NonMetro$Zero,
+              newdata = Hh_df[Hh_df$LocType %in% c("Town", "Rural"),],
+              type = "response")
+  }
   #Vehicle counts
   Vehicles_ <- integer(NumHh)
   Vehicles_[Hh_df$LocType == "Urban"] <-
     as.integer(predict(AutoOwnModels_ls$Metro$Count,
-            newdata = Hh_df[Hh_df$LocType == "Urban",],
-            type = "class")$fit)
-  Vehicles_[Hh_df$LocType %in% c("Town", "Rural")] <-
-    as.integer(predict(AutoOwnModels_ls$NonMetro$Count,
-            newdata = Hh_df[Hh_df$LocType %in% c("Town", "Rural"),],
-            type = "class")$fit)
-  #Set count to zero for households modeled as having no vehicles
-  Vehicles_[NoVehicleProb_ >= runif(NumHh)] <- 0
-  #Set count to zero for households having no drivers
-  Vehicles_[L$Year$Household$Drivers == 0] <- 0
-
+                       newdata = Hh_df[Hh_df$LocType == "Urban",],
+                       type = "class")$fit)
+  if (any(Hh_df$LocType!="Urban")) {
+    Vehicles_[Hh_df$LocType %in% c("Town", "Rural")] <-
+      as.integer(predict(AutoOwnModels_ls$NonMetro$Count,
+                         newdata = Hh_df[Hh_df$LocType %in% c("Town", "Rural"),],
+                         type = "class")$fit)
+    #Set count to zero for households modeled as having no vehicles
+    Vehicles_[NoVehicleProb_ >= runif(NumHh)] <- 0
+    #Set count to zero for households having no drivers
+    Vehicles_[L$Year$Household$Drivers == 0] <- 0
+  }
   #Return the results
   #------------------
   #Initialize output list
