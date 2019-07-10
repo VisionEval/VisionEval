@@ -18,6 +18,7 @@ Imports:
     visioneval,
     usethis,
     VE2001NHTS,
+    VEHouseholdTravel,
     data.table
 Suggests:
     knitr
