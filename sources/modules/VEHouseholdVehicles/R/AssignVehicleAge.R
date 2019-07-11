@@ -184,7 +184,7 @@ AssignVehicleAgeSpecifications <- list(
       UNITS = "YR",
       NAVALUE = -1,
       SIZE = 0,
-      PROHIBIT = c("NA", "< 5", ">= 20"),
+      PROHIBIT = c("NA", "< 5", ">= 14"),
       ISELEMENTOF = "",
       UNLIKELY = "",
       TOTAL = "",
