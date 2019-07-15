@@ -637,7 +637,7 @@ PredictHousing <- function(L) {
   #Identify which households are group quarters
   IsGQ_Hh <- L$Year$Household$HhType == "Grp"
   HouseType_Hh[IsGQ_Hh] <- "GQ"
-
+  
   #Predict housing type for each household
   #---------------------------------------
   #Make data frame of household variables and split by Azone
@@ -663,7 +663,7 @@ PredictHousing <- function(L) {
     HouseType_Hh[names(HouseType_)] <- HouseType_
     rm(SFDU, MFDU, PropSFDU, HouseType_)
   }
-
+  
   #Tabulate households by house type, income quartile, and Azone
   #-------------------------------------------------------------
   #Calculate regional income quartiles for households
@@ -691,14 +691,14 @@ PredictHousing <- function(L) {
   Ht <- c("SF", "MF")
   HhTab_HtIq_Az <-
     lapply(Hh_df_Az, function(x) table(x$HouseType, x$IncQ)[Ht,Iq])
-
+  
   #Tabulate housing unit inputs by Bzone and housing type
   #------------------------------------------------------
   InitUnits_BzHt <-
     as.matrix(data.frame(L$Year$Bzone[c("SFDU", "MFDU")]))
   rownames(InitUnits_BzHt) <- L$Year$Bzone$Bzone
   colnames(InitUnits_BzHt) <- Ht
-
+  
   #Tabulate input assumptions of household income distribution for each Bzone
   #--------------------------------------------------------------------------
   #Extract matrix of input assumptions of Bzone unit proportions by income
@@ -711,7 +711,7 @@ PredictHousing <- function(L) {
   rownames(HhIqProp_BzIq) <- Bz
   #Make sure that rows add to 1
   HhIqProp_BzIq <- t(apply(HhIqProp_BzIq, 1, function(x) x / sum(x)))
-
+  
   #Balance housing units with housing demand and assign households to locations
   #----------------------------------------------------------------------------
   #Each Azone is a housing market. The number of housing units by type and
@@ -777,7 +777,7 @@ PredictHousing <- function(L) {
         rm(UnitDiff_By)
       }
       rm(i, BxPropUnits_BxHt)
-
+      
       #Create seed array for IPF balancing of units by Bzone, type, and income
       #-----------------------------------------------------------------------
       HhIqProp_BxIq <- HhIqProp_BzIq[Bx,]
@@ -787,7 +787,7 @@ PredictHousing <- function(L) {
         Seed_BxHtIq[bx,,] <- outer(UnitDemand_BxHt[bx,], HhIqProp_BxIq[bx,])
       }
       Seed_BxHtIq[Seed_BxHtIq == 0] <- 1e-6
-
+      
       #Balance unit demand for each Bzone by unit type and income quartile
       #-------------------------------------------------------------------
       #Use IPF to allocate unit demand to Bzones, unit types, and income quartile
@@ -842,7 +842,7 @@ PredictHousing <- function(L) {
       rm(Bzone_Hx)
     }
   }
-
+  
   #Assign group quarters households to Bzones
   #------------------------------------------
   #Iterate through Azones to assign Bzones
@@ -878,17 +878,41 @@ PredictHousing <- function(L) {
       }
     }
   }
-
+  
   #Tabulate households, population, workers, and units by Bzone
   #------------------------------------------------------------
   Bz <- L$Year$Bzone$Bzone
-  NumHh_Bz <- tapply(Bzone_Hh, Bzone_Hh, length)[Bz]
-  Pop_Bz <- tapply(L$Year$Household$HhSize, Bzone_Hh, sum)[Bz]
-  NumWkr_Bz <- tapply(L$Year$Household$Workers, Bzone_Hh, sum)[Bz]
-  SF_Bz <- tapply(HouseType_Hh == "SF", Bzone_Hh, sum)[Bz]
-  MF_Bz <- tapply(HouseType_Hh == "MF", Bzone_Hh, sum)[Bz]
-  GQ_Bz <- tapply(HouseType_Hh == "GQ", Bzone_Hh, sum)[Bz]
-
+  Bz_list <- setNames(rep(0,length(Bz)),Bz)
+  NumHh_Bz <- tapply(Bzone_Hh, Bzone_Hh, length)
+  t <- match(names(NumHh_Bz),names(Bz_list))
+  Bz_list[t] <- NumHh_Bz 
+  NumHh_Bz <- Bz_list
+  Bz_list <- setNames(rep(0,length(Bz)),Bz)
+  Pop_Bz <- tapply(L$Year$Household$HhSize, Bzone_Hh, sum)
+  t <- match(names(Pop_Bz),names(Bz_list))
+  Bz_list[t] <- Pop_Bz
+  Pop_Bz <- Bz_list  
+  Bz_list <- setNames(rep(0,length(Bz)),Bz)  
+  NumWkr_Bz <- tapply(L$Year$Household$Workers, Bzone_Hh, sum)
+  t <- match(names(NumWkr_Bz),names(Bz_list))
+  Bz_list[t] <- NumWkr_Bz
+  NumWkr_Bz <- Bz_list
+  Bz_list <- setNames(rep(0,length(Bz)),Bz)  
+  SF_Bz <- tapply(HouseType_Hh == "SF", Bzone_Hh, sum)
+  t <- match(names(SF_Bz),names(Bz_list))
+  Bz_list[t] <- SF_Bz 
+  SF_Bz  <- Bz_list
+  Bz_list <- setNames(rep(0,length(Bz)),Bz)  
+  MF_Bz <- tapply(HouseType_Hh == "MF", Bzone_Hh, sum)
+  t <- match(names(MF_Bz),names(Bz_list))
+  Bz_list[t] <- MF_Bz 
+  MF_Bz  <- Bz_list
+  Bz_list <- setNames(rep(0,length(Bz)),Bz)  
+  GQ_Bz <- tapply(HouseType_Hh == "GQ", Bzone_Hh, sum)
+  t <- match(names(GQ_Bz),names(Bz_list))
+  Bz_list[t] <- GQ_Bz 
+  GQ_Bz  <- Bz_list
+  
   #Return list of results
   #----------------------
   #Initialize output list

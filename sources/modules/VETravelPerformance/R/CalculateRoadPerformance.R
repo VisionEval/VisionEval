@@ -1733,7 +1733,7 @@ CalculateRoadPerformance <- function(L) {
     #Use binary search to find LambdaAdj factor for each marea
     for (ma in Ma[Ma != "None"]) {
       LambdaAdj_Ma[ma] <-
-        binarySearch(checkMatchLdvSplit, c(-1, 1), DoWtAve = TRUE, Tolerance = 0.01)
+        binarySearch(checkMatchLdvSplit, c(-3, 3), DoWtAve = TRUE, Tolerance = 0.01)
     }
     #Add to outputs list
     Out_ls$Global$Marea$LambdaAdj <- unattr(LambdaAdj_Ma)
