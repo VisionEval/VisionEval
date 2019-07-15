@@ -633,8 +633,10 @@ CalculateVehicleTrips <- function(L) {
   AveTrpLen_Hh[IsMetro] <-
     applyLinearModel(VehTrpLenModel_ls$Metro, Hh_df[IsMetro,])
   #Model average trip length for non-metropolitan households
+  if (any(Hh_df$LocType!="Urban")) {
   AveTrpLen_Hh[!IsMetro] <-
     applyLinearModel(VehTrpLenModel_ls$NonMetro, Hh_df[!IsMetro,])
+  }
   #Cap the maximum value at the 99th percentile value
   MaxAveTrpLen <- quantile(AveTrpLen_Hh, probs = 0.99)
   AveTrpLen_Hh[AveTrpLen_Hh > MaxAveTrpLen] <- MaxAveTrpLen

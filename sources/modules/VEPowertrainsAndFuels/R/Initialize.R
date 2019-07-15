@@ -387,6 +387,7 @@ usethis::use_data(InitializeSpecifications, overwrite = TRUE)
 #' Warnings component.
 #' @name Initialize
 #' @import visioneval
+#' @import VEHouseholdTravel
 #' @export
 Initialize <- function(L) {
   #Set up

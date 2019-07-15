@@ -186,11 +186,11 @@ BuildScenarios <- function(L){
     # LEVELS is a list of DF of LEVEL NAMES and INPUTS
     # INPUTS is a list of DF of Scenario NAMES and LEVEL
     CategoryLevels_df <- do.call(rbind,
-                                 lapply(CategoryConfig_ls$LEVELS, function(x) {
-                                   y <- lapply(seq_along(x$NAME),
+                                 lapply(CategoryConfig_ls$LEVELS, function(x189) {
+                                   y <- lapply(seq_along(x189$NAME),
                                                function(z) {
-                                                 inputtable <- x$INPUTS[[z]]
-                                                 inputtable$CATLEVEL <- x$NAME[[z]]
+                                                 inputtable <- x189$INPUTS[[z]]
+                                                 inputtable$CATLEVEL <- x189$NAME[[z]]
                                                  return(inputtable)
                                                })
                                    do.call(rbind, y)
@@ -228,8 +228,8 @@ BuildScenarios <- function(L){
     ScenarioDef_df <- expand.grid(LevelDef_ls, stringsAsFactors = FALSE)
   }
 
-  ScenarioNames_ar <- apply(ScenarioDef_df, 1, function(x) {
-    Name <- paste(x, collapse = "/")
+  ScenarioNames_ar <- apply(ScenarioDef_df, 1, function(x231) {
+    Name <- paste(x231, collapse = "/")
     gsub("/", "", Name)
   })
   rownames(ScenarioDef_df) <- ScenarioNames_ar
@@ -265,8 +265,8 @@ BuildScenarios <- function(L){
     #           file.path(RunDir, L$Global$Model$ScenarioOutputFolder))
     catconfig_ls <- fromJSON(file.path(ScenarioInputPath,"category_config.json"),
                               simplifyDataFrame = FALSE)
-    cat_list <- c("Community Design","Marketing/Incentive", "Pricing", "Vehicles/Fuels", "Fuel Price", "Income" )
-    cat_names <- do.call( function(x) x$NAME, catconfig_ls )
+    cat_list <- c("Community Design","Marketing/Incentive", "Pricing", "Vehicles/Fuels", "Fuel Price" )
+    cat_names <- sapply( catconfig_ls, function(x) x$NAME  )
     cat_diff <- setdiff(cat_list,cat_names)   
     n = length(catconfig_ls)
     if (length(cat_diff)>0) {
@@ -278,7 +278,6 @@ BuildScenarios <- function(L){
         catconfig_ls[[i]] = list (NAME = cat_diff[i-n], DESCRIPTION= "", LEVELS = LEVELSls)
       }
     }
-    
     
     catconfig_ch <- paste0("var catconfig = ",
                             toJSON(catconfig_ls, pretty = TRUE), ";")

@@ -332,9 +332,13 @@ AssignLocTypes <- function(L) {
     SplitInt_
   }
   #Calculate dwelling units by Bzone and housing type
-  DU_BzHt <- table(L$Year$Household$Bzone, L$Year$Household$HouseType)[Bz,Ht]
+  DU_BzHt_full <- matrix(0,nrow = length(Bz), ncol = length(Ht), dimnames = list(Bz,Ht))
+  DU_BzHt <- table(L$Year$Household$Bzone, L$Year$Household$HouseType)
+  rowmatch <- match(rownames(DU_BzHt),rownames(DU_BzHt_full))
+  colmatch <- match(colnames(DU_BzHt), colnames(DU_BzHt_full))
+  DU_BzHt_full[rowmatch, colmatch] <- DU_BzHt
   #Calculate dwelling units by Bzone, housing type and location type
-  DU_BzHtLt <- sweep(Props_BzHtLt, c(1,2), DU_BzHt, splitInt)
+  DU_BzHtLt <- sweep(Props_BzHtLt, c(1,2), DU_BzHt_full, splitInt)
   #Function to assign a location type to a set of households
   assignLocType <- function(HouseID_, NumDU_Lt) {
     Lt <- names(NumDU_Lt)
