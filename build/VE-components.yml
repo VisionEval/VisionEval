@@ -209,3 +209,8 @@ Components:
       - rhdf5
     Github:
       - tdhock/namedCapture
+  tools:
+    Type: script
+    Path: sources
+    CRAN:
+      - import
