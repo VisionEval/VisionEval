@@ -139,7 +139,7 @@ indexModelState <- function(modelState,quiet=FALSE) {
   list(GroupTableName=GroupTableName,Type=DatastoreType, BaseYear=BaseYear)
 }
 
-outputData <- function(Output) {
+outputData <- function(Output,quiet=FALSE) {
   # Pick appropriate data extractor
   # JR Note on visioneval Datastore handling: OMG. Quel Cauchemar! Please let us refactor this!
   readFromTable <- function(x) {
