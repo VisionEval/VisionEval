@@ -44,9 +44,9 @@ ve.export <- function (modelStateFile = "ModelState.Rda",
                        ) {
   owd <- getwd()
   # Do the actual export
-  msf <- getModelStateFile(modelStateFile)
-  idx <- indexModelState(msf)
-  odt <- outputData(idx)
+  msf <- getModelStateFile(modelStateFile,quiet=quiet)
+  idx <- indexModelState(msf,quiet=quiet)
+  odt <- outputData(idx,quiet=quiet)
   exportData(  outputFolder  = outputFolder,
                includeTables = includeTables,
                excludeTables = excludeTables,
@@ -60,7 +60,7 @@ ve.export <- function (modelStateFile = "ModelState.Rda",
 
 # Locate Model State File
 # See: https://stackoverflow.com/questions/48218491/os-independent-way-to-select-directory-interactively-in-r
-getModelStateFile <- function(modelState) {
+getModelStateFile <- function(modelState,quiet=FALSE) {
   if ( dir.exists(modelState) ) {
     model.dir <- modelState
   } else if ( file.exists(modelState) ) {
@@ -104,7 +104,7 @@ attributeExist <- function(variable, attr_name){
   FALSE
 }
 
-indexModelState <- function(modelState) {
+indexModelState <- function(modelState,quiet=FALSE) {
   # Check that there is a model state
   if ( nchar(modelState)==0 || !file.exists(modelState) ) stop("No Model State File to index\n")
 
@@ -134,6 +134,7 @@ indexModelState <- function(modelState) {
   # complete.cases blows away the rows that have any NA values
   # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each column)
   GroupTableName <- GroupTableName[complete.cases(GroupTableName),]
+  if ( ! quiet ) cat(nrow(GroupTableName),"rows in Group/Table/Name data.frame\n")
   # returns the basis for later output
   list(GroupTableName=GroupTableName,Type=DatastoreType, BaseYear=BaseYear)
 }
