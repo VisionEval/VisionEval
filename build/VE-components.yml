@@ -179,9 +179,6 @@ Components:
   VE-State:
     Type: model
     Path: sources/models
-  export_output_to_csv.R:
-    Type: model
-    Path: sources/models
 
 # "Type: script" components are copied to the runtime root under their name
   LICENSE:
