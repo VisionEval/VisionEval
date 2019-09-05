@@ -823,7 +823,7 @@ calcDensityDistribution <-
       }
     }
     AveDensity_Bz <- Activity_Bz / Area_Bz
-    D1Lvl_Bz <- cut(AveDensity_Bz, D1LvlBrk_)
+    D1Lvl_Bz <- cut(AveDensity_Bz, D1LvlBrk_, include.lowest = TRUE)
 
     #Return the results
     #------------------
