@@ -158,10 +158,6 @@ Components:
 # "Type: model" components may have tests, and are copied to "models" folder of runtime under their name
 # The "group" is unused for testing - it is always the "last" group for the models
 # The test script relative path is copied to the "test" environment
-  BaseYearVERPAT:
-    Type: model
-    Path: sources/models
-    Test: { Script: run_model.R, Group: 5 }
   VERPAT:
     Type: model
     Path: sources/models
