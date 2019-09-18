@@ -4,12 +4,15 @@
 \alias{initializeModel}
 \title{Initialize model.}
 \usage{
-initializeModel(ParamDir = "defs",
+initializeModel(ModelScriptFile = "run_model.R", ParamDir = "defs",
   RunParamFile = "run_parameters.json", GeoFile = "geo.csv",
   ModelParamFile = "model_parameters.json", LoadDatastore = FALSE,
   DatastoreName = NULL, SaveDatastore = TRUE)
 }
 \arguments{
+\item{ModelScriptFile}{A string identifying the path to the file that contains
+the steps in the model to run (i.e. the calls to \code{runModule})}
+
 \item{ParamDir}{A string identifying the relative or absolute path to the
 directory where the parameter and geography definition files are located.
 The default value is "defs".}
