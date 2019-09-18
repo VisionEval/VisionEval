@@ -6,8 +6,10 @@
 
 #Load libraries
 #--------------
+cat('run_model.R: script entered\n')
 library(visioneval)
 library(VESyntheticFirms)
+cat('run_model.R: libraries loaded\n')
 
 #Initialize model
 #----------------
@@ -47,5 +49,6 @@ for(Year in getYears()) {
     ) #Comment for parsing test purposes
 
 }
+cat('run_model.R: run complete.\n')
 
 

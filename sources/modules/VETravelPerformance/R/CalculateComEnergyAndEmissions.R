@@ -5,7 +5,7 @@
 #<doc>
 #
 ## CalculateComEnergyAndEmissions Module
-#### January 23, 2019
+#### August 5, 2019
 #
 #This module calculates the energy consumption and carbon emissions of heavy trucks and light-duty commercial service vehicles. It does not calculate the values for car service vehicles which are calculated as part of the household emissions. It also does not calculate public transit emissions which are calculated in the CalculatePtranEnergyAndEmissions module.
 #
@@ -512,10 +512,30 @@ CalculateComEnergyAndEmissions <- function(L) {
     #Calculate HvyTrk values
     HTChar_df <-
       EnergyEmissionsDefaults_ls$HvyTrkPowertrainCharacteristics_df
+    approxWithNaCheck <- function(Years_, Values_, Year) {
+      YearDiff_ <- abs(Years_ - Year)
+      if (any(YearDiff_ == 0)) {
+        Values_[which(YearDiff_ == 0)]
+      } else {
+        Min2Vals_ <-sort(YearDiff_)[1:2]
+        YearBnds_ <- which(YearDiff_ %in% Min2Vals_)
+        if (any(is.na(Values_[YearBnds_]))) {
+          BndValues_ <- Values_[YearBnds_]
+          if (all(is.na(BndValues_))) {
+            NA
+          } else {
+            BndValues_[!is.na(BndValues_)]
+          }
+          BndValues_[!is.na(BndValues_)]
+        } else {
+          approx(Years_, Values_, Year)$y
+        }
+      }
+    }
     HvyTrkMpgMpkwh_Pt <- c(
-      ICEV = approx(HTChar_df$Year, HTChar_df$HvyTrkIcevMpg, as.numeric(Year))$y,
-      HEV  = approx(HTChar_df$Year, HTChar_df$HvyTrkHevMpg, as.numeric(Year))$y,
-      BEV  = approx(HTChar_df$Year, HTChar_df$HvyTrkBevMpkwh, as.numeric(Year))$y
+      ICEV = approxWithNaCheck(HTChar_df$Year, HTChar_df$HvyTrkIcevMpg, as.numeric(Year)),
+      HEV  = approxWithNaCheck(HTChar_df$Year, HTChar_df$HvyTrkHevMpg, as.numeric(Year)),
+      BEV  = approxWithNaCheck(HTChar_df$Year, HTChar_df$HvyTrkBevMpkwh, as.numeric(Year))
     )
     #Return the results
     do.call(rbind, list(
@@ -612,6 +632,7 @@ CalculateComEnergyAndEmissions <- function(L) {
       HvyTrkMpgMpkwh_MaPt[,"ICEV"] * HvyTrkUrbanEcoSmooth_Ma
     #Calculate energy in GGE and KWH by Marea and powertrain
     HvyTrkEnergy_MaPt <- HvyTrkDvmt_MaPt / HvyTrkMpgMpkwh_MaPt
+    HvyTrkEnergy_MaPt[is.na(HvyTrkEnergy_MaPt)] <- 0
     #Calculate energy in GGE and KWH by Marea and energy type
     Et <- c("GGE", "KWH")
     HvyTrkEnergy_MaEt <-
@@ -653,7 +674,7 @@ CalculateComEnergyAndEmissions <- function(L) {
     #If no rural DVMT, return list containing 0 values
     if (is.na(HvyTrkDvmt)) {
       return(list(Energy_Et = c(GGE = 0, KWH = 0), CO2e = 0, Dvmt = 0))
-    #Otherwise calculate energy and emissions values
+      #Otherwise calculate energy and emissions values
     } else {
       HvyTrkDvmt_Pt <- HvyTrkDvmt * HvyTrkProp_Pt
       #Calculate average MPG and MPKWH by Marea and powertrain
@@ -665,6 +686,7 @@ CalculateComEnergyAndEmissions <- function(L) {
         HvyTrkMpgMpkwh_Pt["ICEV"] * AveHvyTrkEcoDriveFactor
       #Calculate energy in GGE and KWH by Marea and powertrain
       HvyTrkEnergy_Pt <- HvyTrkDvmt_Pt / HvyTrkMpgMpkwh_Pt
+      HvyTrkEnergy_Pt[is.na(HvyTrkEnergy_Pt)] <- 0
       #Calculate energy in GGE and KWH by Marea and energy type
       Et <- c("GGE", "KWH")
       HvyTrkEnergy_Et <-
@@ -674,7 +696,7 @@ CalculateComEnergyAndEmissions <- function(L) {
       HvyTrkEnergyMJ_Et <- c(
         convertUnits(HvyTrkEnergy_Et["GGE"], "energy", "GGE", "MJ")$Values,
         convertUnits(HvyTrkEnergy_Et["KWH"], "energy", "KWH", "MJ")$Values
-        )
+      )
       #Calculate CO2e
       HvyTrkCI_Et <- c(HvyTrkFuelCI, ElectricityCI)
       HvyTrkCO2e <- sum(HvyTrkEnergyMJ_Et * HvyTrkCI_Et)
