@@ -1,8 +1,8 @@
 Package: visioneval
 Type: Package
 Title: Software Framework for VisionEval Model System
-Version: 0.85
-Date: 2018-09-05
+Version: 0.86
+Date: 2019-09-18
 Author: Brian Gregor <gregorb@or-analytics.com>["aut", "cre"]
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: AASHTO
