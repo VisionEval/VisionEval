@@ -4,7 +4,7 @@
 \alias{parseModelScript}
 \title{Parse model script.}
 \usage{
-parseModelScript(FilePath = "run_model.R", TestMode = FALSE)
+parseModelScript(FilePath = "Run_Model.R", TestMode = FALSE)
 }
 \arguments{
 \item{FilePath}{A string identifying the relative or absolute path to the
