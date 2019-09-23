@@ -373,6 +373,10 @@ VERPATResults <- function(L){
   },
   by=c("Scenario", InputLabels_ar)]
 
+  write.csv(ScenTab_dt,
+            file.path(ModelPath, L$Global$Model$ScenarioOutputFolder, "VERPAT_scenario_results.csv"),
+            row.names = F)
+  
   # Write the output to JSON file
   JSON <- toJSON(ScenTab_dt)
   JSON <- paste("var data = ", JSON, ";", sep="")
