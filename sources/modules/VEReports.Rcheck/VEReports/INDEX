@@ -1,0 +1,10 @@
+ReportRPATMetrics       Function to calculate performance metrics.
+ReportRPATMetricsSpecifications
+                        Specifications list for ReportRPATMetrics
+                        module
+TruckBusAgeDist_mx      Truck and Bus age distribution data
+adjustHvyVehAgeDistribution
+                        Adjust cumulative age distribution to match
+                        target ratio for heavy vehicles
+assignHvyVehFuelEconomy
+                        Assignes mileage to heavy vehicles
