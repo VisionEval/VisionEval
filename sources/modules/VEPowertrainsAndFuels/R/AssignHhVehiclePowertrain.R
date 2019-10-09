@@ -253,7 +253,7 @@ usethis::use_data(PhevElecProp_ls, overwrite = TRUE)
 #------------------------------
 AssignHhVehiclePowertrainSpecifications <- list(
   #Level of geography module is applied at
-  RunBy = "Azone",
+  RunBy = "Region",
   #Specify new tables to be created by Inp if any
   #Specify new tables to be created by Set if any
   #Specify input data
@@ -360,6 +360,15 @@ AssignHhVehiclePowertrainSpecifications <- list(
       TYPE = "compound",
       UNITS = "GM/MJ",
       PROHIBIT = "< 0",
+      ISELEMENTOF = ""
+    ),
+    item(
+      NAME = "Azone",
+      TABLE = "Household",
+      GROUP = "Year",
+      TYPE = "character",
+      UNITS = "ID",
+      PROHIBIT = "NA",
       ISELEMENTOF = ""
     ),
     item(
@@ -727,12 +736,16 @@ AssignHhVehiclePowertrain <- function(L, M) {
   ModelYear_Ve <- as.character(ModelYear_Ve)
   #Identify availability of charging at home
   ChargeAvail_Ve <- local({
-    ChargeAvailProb_ <- c(
+    ChargeAvailProb_AzHt <- cbind(
       SF = L$Year$Azone$PropSFChargingAvail,
       MF = L$Year$Azone$PropMFChargingAvail,
       GQ = L$Year$Azone$PropGQChargingAvail
     )
-    ChargeAvailProb_Hh <- ChargeAvailProb_[L$Year$Household$HouseType]
+    ChargeAvailProbIdx_mx <- cbind(
+      match(L$Year$Household$Azone, L$Year$Azone$Azone),
+      match(L$Year$Household$HouseType, colnames(ChargeAvailProb_AzHt))
+    )
+    ChargeAvailProb_Hh <- ChargeAvailProb_AzHt[ChargeAvailProbIdx_mx]
     ChargeAvail_Hh <- runif(length(ChargeAvailProb_Hh)) < ChargeAvailProb_Hh
     ChargeAvail_Hh[HhToVehIdx_Ve]
   })
@@ -890,6 +903,7 @@ AssignHhVehiclePowertrain <- function(L, M) {
     PtProp_ <- PtProp_ / sum(PtProp_)
     MpgNames_ <- paste0(Type, c("IcevMpg", "HevMpg"))
     Mpg_ <- CarSvcChar_[MpgNames_]
+    Mpg_[PtProp_ == 0] <- 0
     sum(PtProp_ * Mpg_)
   }
   MPG_Ve[IsCarSvc_Ve & L$Year$Vehicle$Type == "Auto"] <- calcAveCarSvcMpg("Auto")
@@ -943,7 +957,10 @@ AssignHhVehiclePowertrain <- function(L, M) {
   KWHPM_Ve[MPKWH_Ve == 0] <- 0
   MJPM_Ve <- convertUnits(KWHPM_Ve, "compound", "KWH/MI", "MJ/MI")$Values
   #Calculate carbon intensity for electricity consumption
-  ElecCO2ePM_Ve <- MJPM_Ve * L$Year$Azone$ElectricityCI
+  ElectricityCI_Ve <- L$Year$Azone$ElectricityCI[
+    match(L$Year$Vehicle$Azone, L$Year$Azone$Azone)
+  ]
+  ElecCO2ePM_Ve <- MJPM_Ve * ElectricityCI_Ve
 
   #Calculate MPGe
   #--------------
