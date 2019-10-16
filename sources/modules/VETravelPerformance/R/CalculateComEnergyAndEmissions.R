@@ -585,6 +585,7 @@ CalculateComEnergyAndEmissions <- function(L) {
     }
     #Calculate energy consumed by powertrain, vehicle type, and Marea
     Energy_PtVtMa <- Dvmt_PtVtMa / MpgMpkwh_PtVtMa
+    Energy_PtVtMa[Dvmt_PtVtMa == 0] <- 0  #So no NaN values
     #Aggregate by energy type (fuel vs. electricity)
     Et <- c("GGE", "KWH")
     Energy_EtVtMa <-
@@ -776,16 +777,16 @@ documentModule("CalculateComEnergyAndEmissions")
 #   # SaveDatastore = TRUE
 #   SaveDatastore = FALSE
 # )
-# # setUpTests(TestSetup_ls)
-# #Run test module
-# TestDat_ <- testModule(
-#   ModuleName = "CalculateComEnergyAndEmissions",
-#   LoadDatastore = TRUE,
-#   SaveDatastore = FALSE,
-#   DoRun = FALSE,
-#   RequiredPackages = "VEPowertrainsAndFuels"
-# )
-# L <- TestDat_$L
+# setUpTests(TestSetup_ls)
+#Run test module
+TestDat_ <- testModule(
+  ModuleName = "CalculateComEnergyAndEmissions",
+  LoadDatastore = TRUE,
+  SaveDatastore = FALSE,
+  DoRun = FALSE,
+  RequiredPackages = "VEPowertrainsAndFuelsxAP"
+)
+L <- TestDat_$L
 # R <- CalculateComEnergyAndEmissions(L)
 #
 # TestDat_ <- testModule(
