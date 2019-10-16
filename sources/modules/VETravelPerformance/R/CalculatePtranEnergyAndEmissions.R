@@ -311,6 +311,7 @@ CalculatePtranEnergyAndEmissions <- function(L) {
       )
     }
     Energy_MaPt <- sweep(Dvmt_MaPt, 2, MpgMpkwh_Pt, "/")
+    Energy_MaPt[Dvmt_MaPt == 0] <- 0
     Et <- c("GGE", "KWH")
     Energy_MaEt <- array(0, dim = c(length(Ma), 2), dimnames = list(Ma, Et))
     for (ma in Ma) {
