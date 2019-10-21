@@ -980,7 +980,7 @@ adjustHvyVehAgeDistribution <- function( CumDist_, AdjRatio ) {
 #' @param AgeDist_Ag Age distribution of vehicle type.
 #' @param Mpg__Yr A data frame of mileage of vehicles by type and year.
 #' @param Type A string identifying the type of vehicle ("Truck" or "Bus").
-#' @param CurrentYear A integer indicating the current year.
+#' @param CurrYear A integer indicating the current year.
 #' @return A numeric vector that indicates the mileage of vehicles.
 #' @name assignHvyVehFuelEconomy
 #' @export

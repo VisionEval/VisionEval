@@ -14,7 +14,7 @@ assignHvyVehFuelEconomy(AgeDist_Ag, Mpg__Yr = TrkBusMpg__Yr, Type,
 
 \item{Type}{A string identifying the type of vehicle ("Truck" or "Bus").}
 
-\item{CurrentYear}{A integer indicating the current year.}
+\item{CurrYear}{A integer indicating the current year.}
 }
 \value{
 A numeric vector that indicates the mileage of vehicles.
