@@ -4,7 +4,7 @@
 
 #<doc>
 ## CreateSimBzones Module
-#### February 1, 2019
+#### October 23, 2019
 #
 #This module synthesizes Bzones and their land use attributes as a function of Azone characteristics as well as data derived from the US Environmental Protection Agency's Smart Location Database (SLD) augmented with US Census housing and household income data, and data from the National Transit Database. Details on these data are included in the VESimLandUseData package. The combined dataset contains a number of land use attributes at the US Census block group level. The goal of Bzone synthesis to generate a set of SimBzones in each Azone that reasonably represent block group land use characteristics given the characteristics of the Azone, the Marea that the Azone is a part of, and scenario inputs provided by the user.
 #
@@ -42,7 +42,7 @@
 #
 #3) **Create SimBzones by Azone and Location Type**: SimBzones are created to have roughly equal activity totals (households and jobs). The total activity (sum of households and jobs) in each Azone and location type (calculated in the previous step) is divided by median value calculated for block groups of that location type from the SLD data. The *Create SimBzones by Azone and Location Type* section of *CreateSimBzoneModel* module documentation describes this in more detail.
 #
-#4) **Assign an Activity Density to Each SimBzone**: A model is applied to calculate a likely distribution of SimBzone activity densities for each location type in each Azone. The density distribution is a function of the overall density calculated from user land area inputs for urban and town location types and average density for rural types, and the amount of activity by location type in the Azone. Model parameters vary by location type and urbanized area. The *Assign an Activity Density to Each SimBzone* section of the *CreateSimBzonesModel* module documentation describes these models in more detail. These distributions are used as sampling distributions to assign a preliminary activity density to each SimBzone in the Azone. The SimBzone densities are then adjusted to be consistent with the land area (urban and town) and density (rural) input assumptions.
+#4) **Assign an Activity Density to Each SimBzone**: A function is applied to calculate a likely distribution of SimBzone activity densities for each location type in each Azone. The density distribution is a function of the overall density calculated from user land area inputs for urban and town location types and average density for rural types, and the amount of activity by location type in the Azone. Model parameters vary by location type and urbanized area. The *Assign an Activity Density to Each SimBzone* section of the *CreateSimBzonesModel* module documentation describes these models in more detail.
 #
 #5) **Assign a Jobs and Housing Mix Level to Each SimBzone**: A household and jobs mixing category (primarily-hh, largely-hh, mixed, largely-jobs, primarily-jobs) is assigned to each SimBzone using the appropriate model described in the *Assign a Jobs and Housing Mix Level to Each SimBzone* section of the *CreateSimBzonesModel* module documentation.
 #
@@ -702,10 +702,10 @@ initSimBzones <-
 #' the location type. SimBzones are also assign activity density levels which
 #' are used in models to assign destination accessibility and activity diversity.
 #'
-#' @param Activity_Bz A numeric vector of the amount of activity assigned to
-#' each SimBzone for SimBzones assigned to a location type in an Azone.
-#' @param LocType A string identifying the location type (Urban, Town, Rural)
-#' that the SimBzones are assigned to.
+#' @param Bz_df A data frame containing synthetic Bzone data for Bzones for
+#' an Azone and location type (LocType).
+#' @param LocType A string identifying the location type: Urban, Town, or
+#' Rural.
 #' @param TargetArea A number identifying the area in acres that is assigned
 #' to accommodate the activity in the location type in the Azone. A value must
 #' be supplied if the LocType is Urban or Town and not supplied if the LocType
@@ -721,107 +721,193 @@ initSimBzones <-
 #' density level, and area of each SimBzone.
 #' @export
 calcDensityDistribution <-
-  function(Activity_Bz,
+  function(Bz_df,
            LocType,
            TargetArea = NULL,
            TargetDensity = NULL,
            UzaProfileName = NULL) {
+
     #Get initial values for density distribution, and average density by level
     #-------------------------------------------------------------------------
+    Bz <- Bz_df$Bzone
+    Activity_Bz <- setNames(Bz_df$Activity, Bz_df$Bzone)
     #If LocType is Rural
     if (LocType == "Rural") {
+      #Check that TargetDensity has been supplied
       if(is.null(TargetDensity)) {
         stop("TargetDensity must be supplied if LocType is Rural")
       }
-      DenDist_D1 <- SimBzone_ls$RuProfiles$D1DGrp_ls$PropActivity
-      AveDensity_D1 <- SimBzone_ls$RuProfiles$D1DGrp_ls$AveDensity
-      D1LvlBrk_ <- SimBzone_ls$RuProfiles$D1DGrpBrk_
       #Set target density to 0.01 if is less than 0.01
       if (TargetDensity < 0.01) TargetDensity <- 0.01
+      #Retrieve density level breaks
+      D1LvlBrk_ <- SimBzone_ls$RuProfiles$D1DGrpBrk_
+      #Retrieve density distribution
+      DenDist_D1 <- SimBzone_ls$RuProfiles$D1DGrp_ls$PropActivity
+      #Retrieve average density by level
+      AveDensity_D1 <- SimBzone_ls$RuProfiles$D1DGrp_ls$AveDensity
+      #Initial value of overall average density
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
     }
     #If LocType is Town
     if (LocType == "Town") {
+      #Check that TargetArea has been supplied
       if (is.null(TargetArea)) {
         stop("TargetArea must be supplied if LocType is Town")
       }
+      #Calculate TargetDensity
       TargetDensity <- sum(Activity_Bz) / TargetArea
-      DenDist_D1 <- SimBzone_ls$TnProfiles$D1DGrp_ls$PropActivity
-      AveDensity_D1 <- SimBzone_ls$TnProfiles$D1DGrp_ls$AveDensity
+      #Retrieve density level breaks
       D1LvlBrk_ <- SimBzone_ls$TnProfiles$D1DGrpBrk_
+      #Retrieve density distribution
+      DenDist_D1 <- SimBzone_ls$TnProfiles$D1DGrp_ls$PropActivity
+      #Retrieve average density by level
+      AveDensity_D1 <- SimBzone_ls$TnProfiles$D1DGrp_ls$AveDensity
+      #Initial value of overall average density
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
     }
     #If LocType is Urban
     if (LocType == "Urban") {
+      #Check that TargetArea has been supplied
       if (is.null(TargetArea)) {
         stop("TargetArea must be supplied if LocType is Urban")
       }
+      #Calculate TargetDensity
       TargetDensity <- sum(Activity_Bz) / TargetArea
+      #Retrieve density level breaks
+      D1LvlBrk_ <- SimBzone_ls$UaProfiles$D1DGrpBrk_
+      #Retrieve density distribution for the subject urbanized area
       DenDist_D1 <-
         SimBzone_ls$UaProfiles$D1DGrp_Ua_ls[[UzaProfileName]]$PropActivity
       DenDist_D1[is.na(DenDist_D1)] <- 0
+      InitDenDist_D1 <- DenDist_D1
+      #Average density by level
       AveDensity_D1 <-
         SimBzone_ls$UaProfiles$D1DGrp_Ua_ls[[UzaProfileName]]$AveDensity
       AveDensity_D1[is.na(AveDensity_D1)] <-
         SimBzone_ls$UaProfiles$D1DGrp_ls$AveDensity[is.na(AveDensity_D1)]
-      D1LvlBrk_ <- SimBzone_ls$UaProfiles$D1DGrpBrk_
+      #Initial value of overall average density
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
     }
-    #Initial calculation of average density
-    AveDensity <- sum(1 / sum(DenDist_D1 / AveDensity_D1))
 
-    #Adjust distribution and density to match target
-    #-----------------------------------------------
-    #Define a function to make an incremental adjustment in density distribution
-    makeAdj <- function(DenDist_D1, TargetDensity, AveDensity, AdjProp){
-      if (TargetDensity > AveDensity) {
-        ShiftDist_D1 <- c(0, DenDist_D1[-length(DenDist_D1)])
-      } else {
-        ShiftDist_D1 <- c(DenDist_D1[-1], 0)
-      }
-      AdjDenDist_D1 <- (1 - AdjProp) * DenDist_D1 + AdjProp * ShiftDist_D1
-      AdjDenDist_D1 / sum(AdjDenDist_D1)
+    #Adjust Urban density distribution and averages to match TargetDensity
+    #---------------------------------------------------------------------
+    if (LocType == "Urban") {
+      #Identify a starting density distribution that produces an average density
+      #near the target density and has density distribution that is most similar
+      #to the density distribution of the urban area
+      DenDist_D1 <- local({
+        #Retrieve average density of all urbanized areas
+        AveDensity_Ua <- sort(SimBzone_ls$UaProfiles$ActDen_Ua)
+        #Identify set of urbanized areas having average nearest the target density
+        NearestIdx <- min(which(AveDensity_Ua >= TargetDensity))
+        NearestIdx_ <- (NearestIdx - 10):(NearestIdx + 10)
+        MaxIdx <- length(AveDensity_Ua)
+        NearestIdx_ <- NearestIdx_[NearestIdx_ > 0 & NearestIdx_ <= MaxIdx]
+        SampleUa_ <- names(AveDensity_Ua[NearestIdx_])
+        #Make a matrix of the density distributions of the sample urbanized areas
+        D1DProp_D1Ma <- sapply(SampleUa_, function(x) {
+          SimBzone_ls$UaProfiles$D1DGrp_Ua_ls[[x]]$PropActivity
+        })
+        D1DProp_D1Ma[is.na(D1DProp_D1Ma)] <- 0
+        #Calculate weights for averaging distributions
+        Dist_Ma <- apply(D1DProp_D1Ma, 2, function(x) {
+          dist(rbind(InitDenDist_D1, x))})
+        if (any(Dist_Ma == 0)) {
+          #Dist_Ma[Dist_Ma == 0] <- min(Dist_Ma[Dist_Ma != 0])
+          D1DProp_D1Ma <- D1DProp_D1Ma[, Dist_Ma != 0]
+          Dist_Ma <- Dist_Ma[Dist_Ma != 0]
+        }
+        #Weight the distributions
+        Wts_Ma <- min(Dist_Ma) / Dist_Ma
+        WtD1DProp_D1Ma <- sweep(D1DProp_D1Ma, 2, Wts_Ma, "*")
+        #Calculate the density distribution
+        DenDist_D1 <- rowSums(WtD1DProp_D1Ma) / sum(WtD1DProp_D1Ma)
+        #Return the density distribution
+        DenDist_D1
+      })
+      #Make final adjustments to average density to match TargetDensity
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
+      AveDensity_D1 <- AveDensity_D1 * TargetDensity / AveDensity
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
     }
-    #Make incremental adjustments until target is approximately achieved
-    while (abs(1 - (TargetDensity / AveDensity)) > 0.01) {
-      TargetDiff <- abs(TargetDensity - AveDensity)
-      if (TargetDiff > 0.1) {
-        DenDist_D1 <- makeAdj(DenDist_D1, TargetDensity, AveDensity, 0.01)
-      } else {
-        DenDist_D1 <- makeAdj(DenDist_D1, TargetDensity, AveDensity, 0.001)
+
+    #Adjust Rural and Town density distribution and averages to match TargetDensity
+    #------------------------------------------------------------------------------
+    if (LocType %in% c("Rural", "Town")) {
+      #Define a function to make an incremental adjustment in density distribution
+      makeAdj <- function(DenDist_D1, TargetDensity, AveDensity, AdjProp){
+        if (TargetDensity > AveDensity) {
+          ShiftDist_D1 <- c(0, DenDist_D1[-length(DenDist_D1)])
+        } else {
+          ShiftDist_D1 <- c(DenDist_D1[-1], 0)
+        }
+        AdjDenDist_D1 <- (1 - AdjProp) * DenDist_D1 + AdjProp * ShiftDist_D1
+        AdjDenDist_D1 / sum(AdjDenDist_D1)
       }
-      AveDensity <- sum(1 / sum(DenDist_D1 / AveDensity_D1))
+      #Make incremental adjustments until target is approximately achieved
+      while (abs(1 - (TargetDensity / AveDensity)) > 0.01) {
+        TargetDiff <- abs(TargetDensity - AveDensity)
+        if (TargetDiff > 0.1) {
+          DenDist_D1 <- makeAdj(DenDist_D1, TargetDensity, AveDensity, 0.01)
+        } else {
+          DenDist_D1 <- makeAdj(DenDist_D1, TargetDensity, AveDensity, 0.001)
+        }
+        AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
+      }
+      #Make final adjustments to density bin averages
+      AveDensity_D1 <- AveDensity_D1 * TargetDensity / AveDensity
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
     }
-    #Make final adjustments to density bin averages
-    AveDensity_D1 <- AveDensity_D1 * TargetDensity / AveDensity
 
     #Apply the average density to SimBzones
     #--------------------------------------
-    ActProp_Bz <-Activity_Bz / sum(Activity_Bz)
-    InitD1Lvl_Bz <-
-      sample(names(DenDist_D1), length(Activity_Bz), replace = TRUE, prob = DenDist_D1)
-    AveDensity_Bz <- AveDensity_D1[InitD1Lvl_Bz]
+    # ActProp_Bz <-Activity_Bz / sum(Activity_Bz)
+    # InitD1Lvl_Bz <-
+    #   sample(names(DenDist_D1), length(Activity_Bz), replace = TRUE, prob = DenDist_D1)
+    # AveDensity_Bz <- AveDensity_D1[InitD1Lvl_Bz]
+    # Activity_D1 <- sum(Activity_Bz) * DenDist_D1
+    #Iterate through Bzones and assign density
+    Activity_D1 <- sum(Activity_Bz) * DenDist_D1
+    D1 <- names(Activity_D1)
+    ActDen_Bz <- setNames(numeric(length(Bz)), Bz)
+    AllocatedAct_ls <- list()
+    for (bz in Bz) {
+      AllocatedAct_D1 <- setNames(numeric(length(D1)), D1)
+      ActAmt <- Activity_Bz[bz]
+      for (d1 in rev(D1)) {
+        if (Activity_D1[d1] == 0) next()
+        if (Activity_D1[d1] >= ActAmt) {
+          AllocatedAct_D1[d1] <- ActAmt
+          Activity_D1[d1] <- Activity_D1[d1] - ActAmt
+          ActAmt <- 0
+          break()
+        }
+        if (Activity_D1[d1] < ActAmt) {
+          AllocatedAct_D1[d1] <- Activity_D1[d1]
+          ActAmt <- ActAmt - Activity_D1[d1]
+          Activity_D1[d1] <- 0
+          next()
+        }
+      }
+      AllocatedAct_ls[[bz]] <- AllocatedAct_D1
+    }
+    AllocatedAct_BzD1 <- do.call(rbind, AllocatedAct_ls)
+    ActDen_Bz <- apply(AllocatedAct_BzD1, 1, function(x) {
+      ActProp_D1 <- x / sum(x)
+      sum(AveDensity_D1 * ActProp_D1)
+    })
 
-    #Adjust SimBzone density to be consistent with target area
-    #---------------------------------------------------------
-    #Calculate target area for rural
+    #Adjust SimBzone density to be consistent with TargetDensity or TargetArea
+    #-------------------------------------------------------------------------
+    #Adjust for Rural LocType
     if (LocType == "Rural") {
       TargetArea <- sum(Activity_Bz) / TargetDensity
     }
     #Reconcile with target area
-    Area_Bz <- Activity_Bz / AveDensity_Bz
-    AreaDiff <- TargetArea - sum(Area_Bz)
-    if (AreaDiff >= 0) {
-      Area_Bz <- Area_Bz + AreaDiff * Area_Bz / sum(Area_Bz)
-    } else {
-      MinArea_Bz <- Activity_Bz / max(D1LvlBrk_)
-      Area_Bz <- Area_Bz + AreaDiff * Area_Bz / sum(Area_Bz)
-      TooMuch_Bz <- Area_Bz < MinArea_Bz
-      while (any(TooMuch_Bz)) {
-        AreaDiff <- TargetArea - sum(Area_Bz)
-        Area_Bz[!TooMuch_Bz] <-
-          Area_Bz[!TooMuch_Bz] + AreaDiff * Area_Bz[!TooMuch_Bz] / sum(Area_Bz[!TooMuch_Bz] )
-        TooMuch_Bz <- Area_Bz < MinArea_Bz
-        Area_Bz[TooMuch_Bz] <- MinArea_Bz[TooMuch_Bz]
-      }
-    }
+    Area_Bz <- Activity_Bz / ActDen_Bz
+    AreaRatio <- TargetArea / sum(Area_Bz)
+    Area_Bz <- Area_Bz * AreaRatio
     AveDensity_Bz <- Activity_Bz / Area_Bz
     D1Lvl_Bz <- cut(AveDensity_Bz, D1LvlBrk_, include.lowest = TRUE)
 
@@ -1238,7 +1324,7 @@ CreateSimBzones <- function(L) {
       if (any(Select_)) {
         Bz_df <- Bzones_df[Bzones_df$Azone == az & Bzones_df$LocType == lt,]
         D1D_ls <- calcDensityDistribution(
-          Activity_Bz = Bz_df$Activity,
+          Bz_df = Bz_df,
           LocType = lt,
           TargetArea = TargetArea,
           TargetDensity = TargetDensity,
