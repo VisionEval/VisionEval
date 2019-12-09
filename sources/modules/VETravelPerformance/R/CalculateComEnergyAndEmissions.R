@@ -779,14 +779,14 @@ documentModule("CalculateComEnergyAndEmissions")
 # )
 # setUpTests(TestSetup_ls)
 #Run test module
-TestDat_ <- testModule(
-  ModuleName = "CalculateComEnergyAndEmissions",
-  LoadDatastore = TRUE,
-  SaveDatastore = FALSE,
-  DoRun = FALSE,
-  RequiredPackages = "VEPowertrainsAndFuelsxAP"
-)
-L <- TestDat_$L
+# TestDat_ <- testModule(
+#   ModuleName = "CalculateComEnergyAndEmissions",
+#   LoadDatastore = TRUE,
+#   SaveDatastore = FALSE,
+#   DoRun = FALSE,
+#   RequiredPackages = "VEPowertrainsAndFuelsxAP"
+# )
+# L <- TestDat_$L
 # R <- CalculateComEnergyAndEmissions(L)
 #
 # TestDat_ <- testModule(
