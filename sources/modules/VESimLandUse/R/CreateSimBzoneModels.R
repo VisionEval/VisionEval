@@ -5,7 +5,7 @@
 
 #<doc>
 ## CreateSimBzoneModels Module
-#### October 25, 2019
+#### December 3, 2019
 #
 #This module estimates all the models for synthesizing Bzones and their land use attributes as a function of Azone characteristics as well as data derived from the US Environmental Protection Agency's Smart Location Database (SLD) augmented with US Census housing and household income data, and data from the National Transit Database. Details on these data are included in the VESimLandUseData package. The combined dataset contains a number of land use attributes at the US Census block group level. The goal of Bzone synthesis to generate a set of SimBzones in each Azone that reasonably represent block group land use characteristics given the characteristics of the Azone, the Marea that the Azone is a part of, and scenario inputs provided by the user.
 #
@@ -45,9 +45,9 @@
 #
 #This procedure is driven by user inputs and does not have any model parameters. The user specifies the proportions of households by location type (urban, town, rural) for each Azone. These proportions are used to calculate the number of households in the Azone that are assigned to each location type.
 #
-#### Calculate the Number of Jobs by Azone and Location Type
+#### Calculate the Number of Workers and Jobs by Azone and Location Type
 #
-#This procedure is driven by user inputs and does not have any model parameters. The user specifies where workers residing in the Azone work in terms of the proportional distribution of location types. Furthermore, the user specifies the proportion of urbanized area jobs in the Marea that the Azone is associated with that are in the Azone.
+#This procedure is driven by user inputs and does not have any model parameters. The user specifies where workers residing in the Azone work in terms of the proportional distribution of location types. The user also specifies the proportion of urbanized area jobs in the Marea that the Azone is associated with that are in the Azone. In addition, the user specifies the ratio of Town jobs to workers in the Azone where jobs are the number of jobs (employment) located in towns in the Azone and workers are the number of workers residing in the Azone who work at jobs in towns (in the Azone or any other Azone). This job/worker ratio recognizes that there may be a net outflow or net inflow of town workers to the Azone.
 #
 #### Create SimBzones by Azone and Location Type
 #
