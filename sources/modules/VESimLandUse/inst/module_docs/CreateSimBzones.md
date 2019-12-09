@@ -1,5 +1,5 @@
 # CreateSimBzones Module
-### October 23, 2019
+### October 25, 2019
 
 This module synthesizes Bzones and their land use attributes as a function of Azone characteristics as well as data derived from the US Environmental Protection Agency's Smart Location Database (SLD) augmented with US Census housing and household income data, and data from the National Transit Database. Details on these data are included in the VESimLandUseData package. The combined dataset contains a number of land use attributes at the US Census block group level. The goal of Bzone synthesis to generate a set of SimBzones in each Azone that reasonably represent block group land use characteristics given the characteristics of the Azone, the Marea that the Azone is a part of, and scenario inputs provided by the user.
 
@@ -90,6 +90,7 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |PropWkrInTownJobs  |Azone |Year   |double     |proportion |NA, < 0, > 1 |            |
 |PropWkrInRuralJobs |Azone |Year   |double     |proportion |NA, < 0, > 1 |            |
 |PropMetroJobs      |Azone |Year   |double     |proportion |NA, < 0, > 1 |            |
+|TownJobWkrRatio    |Azone |Year   |double     |proportion |NA, < 0      |            |
 |MetroLandArea      |Azone |Year   |area       |ACRE       |NA, < 0      |            |
 |TownLandArea       |Azone |Year   |area       |ACRE       |NA, < 0      |            |
 |RuralAveDensity    |Azone |Year   |compound   |HHJOB/ACRE |NA, < 0      |            |
@@ -113,23 +114,26 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 
 DESCRIPTION - A description of the data.
 
-|NAME      |TABLE |GROUP |TYPE       |UNITS      |PROHIBIT |ISELEMENTOF                  |DESCRIPTION                                                                                                          |
-|:---------|:-----|:-----|:----------|:----------|:--------|:----------------------------|:--------------------------------------------------------------------------------------------------------------------|
-|Bzone     |Bzone |Year  |character  |ID         |         |                             |Unique ID for SimBzone                                                                                               |
-|Azone     |Bzone |Year  |character  |ID         |         |                             |Azone that SimBzone is located in                                                                                    |
-|Marea     |Bzone |Year  |character  |ID         |         |                             |Marea associated with Azone that SimBzone is located in                                                              |
-|LocType   |Bzone |Year  |character  |category   |NA       |Urban, Town, Rural           |Location type (Urban, Town, Rural) of the place where the household resides                                          |
-|NumHh     |Bzone |Year  |households |HH         |NA, < 0  |                             |Number of households allocated to the SimBzone                                                                       |
-|TotEmp    |Bzone |Year  |people     |PRSN       |NA, < 0  |                             |Total number of jobs in zone                                                                                         |
-|RetEmp    |Bzone |Year  |people     |PRSN       |NA, < 0  |                             |Number of jobs in retail sector in zone                                                                              |
-|SvcEmp    |Bzone |Year  |people     |PRSN       |NA, < 0  |                             |Number of jobs in service sector in zone                                                                             |
-|OthEmp    |Bzone |Year  |people     |PRSN       |NA, < 0  |                             |Number of jobs in other than the retail and service sectors in zone                                                  |
-|AreaType  |Bzone |Year  |character  |category   |NA       |center, inner, outer, fringe |Area type (center, inner, outer, fringe) of the Bzone                                                                |
-|DevType   |Bzone |Year  |character  |category   |NA       |emp, mix, res                |Location type (Urban, Town, Rural) of the Bzone                                                                      |
-|D1D       |Bzone |Year  |compound   |HHJOB/ACRE |NA, < 0  |                             |Gross activity density (employment + households) on unprotected land in zone (Ref: EPA 2010 Smart Location Database) |
-|D5        |Bzone |Year  |double     |NA         |NA, < 0  |                             |Destination accessibility of zone calculated as harmonic mean of jobs within 2 miles and population within 5 miles   |
-|UrbanArea |Bzone |Year  |area       |ACRE       |NA, < 0  |                             |Area that is Urban and unprotected (i.e. developable) within the zone                                                |
-|TownArea  |Bzone |Year  |area       |ACRE       |NA, < 0  |                             |Area that is Town and unprotected (i.e. developable) within the zone                                                 |
-|RuralArea |Bzone |Year  |area       |ACRE       |NA, < 0  |                             |Area that is Rural and unprotected (i.e. developable) within the zone                                                |
-|SFDU      |Bzone |Year  |integer    |DU         |NA, < 0  |                             |Number of single family dwelling units (PUMS codes 01 - 03) in zone                                                  |
-|MFDU      |Bzone |Year  |integer    |DU         |NA, < 0  |                             |Number of multi-family dwelling units (PUMS codes 04 - 09) in zone                                                   |
+|NAME         |TABLE |GROUP |TYPE       |UNITS      |PROHIBIT |ISELEMENTOF                  |DESCRIPTION                                                                                                          |
+|:------------|:-----|:-----|:----------|:----------|:--------|:----------------------------|:--------------------------------------------------------------------------------------------------------------------|
+|Bzone        |Bzone |Year  |character  |ID         |         |                             |Unique ID for SimBzone                                                                                               |
+|Azone        |Bzone |Year  |character  |ID         |         |                             |Azone that SimBzone is located in                                                                                    |
+|Marea        |Bzone |Year  |character  |ID         |         |                             |Marea associated with Azone that SimBzone is located in                                                              |
+|LocType      |Bzone |Year  |character  |category   |NA       |Urban, Town, Rural           |Location type (Urban, Town, Rural) of the place where the household resides                                          |
+|NumHh        |Bzone |Year  |households |HH         |NA, < 0  |                             |Number of households allocated to the SimBzone                                                                       |
+|TotEmp       |Bzone |Year  |people     |PRSN       |NA, < 0  |                             |Total number of jobs in zone                                                                                         |
+|RetEmp       |Bzone |Year  |people     |PRSN       |NA, < 0  |                             |Number of jobs in retail sector in zone                                                                              |
+|SvcEmp       |Bzone |Year  |people     |PRSN       |NA, < 0  |                             |Number of jobs in service sector in zone                                                                             |
+|OthEmp       |Bzone |Year  |people     |PRSN       |NA, < 0  |                             |Number of jobs in other than the retail and service sectors in zone                                                  |
+|AreaType     |Bzone |Year  |character  |category   |NA       |center, inner, outer, fringe |Area type (center, inner, outer, fringe) of the Bzone                                                                |
+|DevType      |Bzone |Year  |character  |category   |NA       |emp, mix, res                |Location type (Urban, Town, Rural) of the Bzone                                                                      |
+|D1D          |Bzone |Year  |compound   |HHJOB/ACRE |NA, < 0  |                             |Gross activity density (employment + households) on unprotected land in zone (Ref: EPA 2010 Smart Location Database) |
+|D5           |Bzone |Year  |double     |NA         |NA, < 0  |                             |Destination accessibility of zone calculated as harmonic mean of jobs within 2 miles and population within 5 miles   |
+|UrbanArea    |Bzone |Year  |area       |ACRE       |NA, < 0  |                             |Area that is Urban and unprotected (i.e. developable) within the zone                                                |
+|TownArea     |Bzone |Year  |area       |ACRE       |NA, < 0  |                             |Area that is Town and unprotected (i.e. developable) within the zone                                                 |
+|RuralArea    |Bzone |Year  |area       |ACRE       |NA, < 0  |                             |Area that is Rural and unprotected (i.e. developable) within the zone                                                |
+|SFDU         |Bzone |Year  |integer    |DU         |NA, < 0  |                             |Number of single family dwelling units (PUMS codes 01 - 03) in zone                                                  |
+|MFDU         |Bzone |Year  |integer    |DU         |NA, < 0  |                             |Number of multi-family dwelling units (PUMS codes 04 - 09) in zone                                                   |
+|RuralWorkers |Azone |Year  |people     |PRSN       |NA, < 0  |                             |Number of workers residing in Azone who work at jobs in Rural location type                                          |
+|TownWorkers  |Azone |Year  |people     |PRSN       |NA, < 0  |                             |Number of workers residing in Azone who work at jobs in Town location type                                           |
+|UrbanWorkers |Azone |Year  |people     |PRSN       |NA, < 0  |                             |Number of workers residing in Azone who work at jobs in Urban location type                                          |

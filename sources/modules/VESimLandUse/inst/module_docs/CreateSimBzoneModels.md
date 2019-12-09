@@ -1,5 +1,5 @@
 # CreateSimBzoneModels Module
-### October 24, 2019
+### October 25, 2019
 
 This module estimates all the models for synthesizing Bzones and their land use attributes as a function of Azone characteristics as well as data derived from the US Environmental Protection Agency's Smart Location Database (SLD) augmented with US Census housing and household income data, and data from the National Transit Database. Details on these data are included in the VESimLandUseData package. The combined dataset contains a number of land use attributes at the US Census block group level. The goal of Bzone synthesis to generate a set of SimBzones in each Azone that reasonably represent block group land use characteristics given the characteristics of the Azone, the Marea that the Azone is a part of, and scenario inputs provided by the user.
 
@@ -327,7 +327,7 @@ LogTranRevMiPerAc             1.2519     0.2556   4.898  4.5e-06 ***
 LogAveD1D                     2.4247     0.7267   3.337  0.00125 ** 
 LogTranRevMiPerAc:LogAveD1D  -0.6370     0.1881  -3.386  0.00107 ** 
 ---
-Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 Residual standard error: 0.84 on 86 degrees of freedom
 Multiple R-squared:  0.3827,	Adjusted R-squared:  0.3611 
