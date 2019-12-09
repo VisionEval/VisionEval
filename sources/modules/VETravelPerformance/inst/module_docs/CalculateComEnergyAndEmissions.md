@@ -1,6 +1,6 @@
 
 # CalculateComEnergyAndEmissions Module
-### January 23, 2019
+### August 5, 2019
 
 This module calculates the energy consumption and carbon emissions of heavy trucks and light-duty commercial service vehicles. It does not calculate the values for car service vehicles which are calculated as part of the household emissions. It also does not calculate public transit emissions which are calculated in the CalculatePtranEnergyAndEmissions module.
 
