@@ -5,7 +5,7 @@
 #<doc>
 #
 ## SimulateEmployment Module
-#### February 5, 2019
+#### December 3, 2019
 #
 #This module assign workers SimBzone work locations. A worker table is created which identifies a unique worker ID, the household ID the worker is a part of, and the SimBzone, Azone, and Marea of the worker job location.
 #
@@ -123,6 +123,19 @@ SimulateEmploymentSpecifications <- list(
       TYPE = "character",
       UNITS = "ID",
       PROHIBIT = "",
+      ISELEMENTOF = ""
+    ),
+    item(
+      NAME =
+        items(
+          "RuralWorkers",
+          "TownWorkers",
+          "UrbanWorkers"),
+      TABLE = "Azone",
+      GROUP = "Year",
+      TYPE = "people",
+      UNITS = "PRSN",
+      PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     )
   ),
@@ -242,6 +255,7 @@ SimulateEmployment <- function(L) {
       x[L$Year$Household$Azone %in% Az]})
     Bzone_ls <- lapply(L$Year$Bzone, function(x) {
       x[L$Year$Bzone$Azone %in% Az]})
+    Azone_df <- data.frame(L$Year$Azone)[L$Year$Azone$Azone %in% Az,]
 
     #Create a list of workers
     #------------------------
@@ -263,19 +277,19 @@ SimulateEmployment <- function(L) {
     #-------------------------------
     #Bzone_df <- data.frame(L$Year$Bzone)
     #Tabulate Azone employment by location type
-    TotEmp_AzLt <- array(0, dim = c(length(Az), 3), dimnames = list(Az, Lt))
-    TotEmp_AxLx <- with(Bzone_ls, tapply(TotEmp, list(Azone, LocType), sum))
-    TotEmp_AzLt[rownames(TotEmp_AxLx),colnames(TotEmp_AxLx)] <- TotEmp_AxLx
-    TotEmp_AzLt[is.na(TotEmp_AzLt)] <- 0
-    rm(TotEmp_AxLx)
+    # TotEmp_AzLt <- array(0, dim = c(length(Az), 3), dimnames = list(Az, Lt))
+    # TotEmp_AxLx <- with(Bzone_ls, tapply(TotEmp, list(Azone, LocType), sum))
+    # TotEmp_AzLt[rownames(TotEmp_AxLx),colnames(TotEmp_AxLx)] <- TotEmp_AxLx
+    # TotEmp_AzLt[is.na(TotEmp_AzLt)] <- 0
+    # rm(TotEmp_AxLx)
     #Tabulate workers by Azone
-    NumWkr_Az <- with(Hh_ls, tapply(Workers, Azone, sum))
+    # NumWkr_Az <- with(Hh_ls, tapply(Workers, Azone, sum))
     #Tabulate worker job location types by Azone and location type
-    NumWkr_AzLt <- t(sapply(Az, function(x) {
-      Wkr_Lt <- c(Urban = 0, Town = TotEmp_AzLt[x,"Town"], Rural = TotEmp_AzLt[x,"Rural"])
-      Wkr_Lt["Urban"] <- NumWkr_Az[x] - sum(Wkr_Lt)
-      Wkr_Lt
-    }))
+    NumWkrByAzone_df <-
+      data.frame(L$Year$Azone[c("UrbanWorkers", "TownWorkers", "RuralWorkers")])
+    NumWkr_AzLt <- as.matrix(NumWkrByAzone_df[L$Year$Azone$Azone %in% Az,])
+    rownames(NumWkr_AzLt) <- Az
+    colnames(NumWkr_AzLt) <- c("Urban", "Town", "Rural")
     #Identify work location type
     Worker_ls$LocType <- character(length(Worker_ls$HhId))
     for (az in Az) {
@@ -292,6 +306,24 @@ SimulateEmployment <- function(L) {
         if (NumWkr_AzLt[az,lt] > 0) {
           Bx <- with(Bzone_ls, Bzone[Azone == az & LocType == lt])
           Emp_Bx <- with(Bzone_ls, TotEmp[Azone == az & LocType == lt])
+          names(Emp_Bx) <- 1:length(Emp_Bx)
+          #If is Town, adjust town employment to match town workers
+          if (lt == "Town") {
+            if (sum(Emp_Bx) != NumWkr_AzLt[az,lt]) {
+              RevEmp_Bx <- Emp_Bx * 0
+              AdjEmp_Bx <-
+                table(
+                  sample(names(Emp_Bx),
+                         NumWkr_AzLt[az,lt],
+                         replace = TRUE,
+                         prob = Emp_Bx / sum(Emp_Bx)
+                  )
+                )
+              RevEmp_Bx[names(AdjEmp_Bx)] <- AdjEmp_Bx
+              Emp_Bx <- RevEmp_Bx
+              rm(RevEmp_Bx, AdjEmp_Bx)
+            }
+          }
           Worker_ls$Bzone[Worker_ls$ResAzone == az & Worker_ls$LocType == lt] <-
             sample(rep(Bx, Emp_Bx))
           rm(Bx, Emp_Bx)
@@ -367,7 +399,7 @@ documentModule("SimulateEmployment")
 #   SaveDatastore = FALSE
 # )
 #setUpTests(TestSetup_ls)
-# #Run test module
+#Run test module
 # TestDat_ <- testModule(
 #   ModuleName = "SimulateEmployment",
 #   LoadDatastore = TRUE,
