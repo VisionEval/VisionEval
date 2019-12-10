@@ -1266,62 +1266,85 @@ simDataTransactions <- function(AllSpecs_ls) {
 
   #Add the working datastore inventory to the datastores list
   #----------------------------------------------------------
-  Dstores_ls[["Global"]][[G$DatastoreName]] <-
+  Dstores_ls[["Global"]] <-
     G$Datastore[grep("Global", G$Datastore$group),]
-  for (Year in RunYears_) {
-    Dstores_ls[[Year]][[G$DatastoreName]] <-
+  # for (Year in RunYears_) {
+  #   Dstores_ls[[Year]][[G$DatastoreName]] <-
+  #     G$Datastore[grep(Year, G$Datastore$group),]
+  # }
+  getDatastoreYears <- function() {
+    DstoreGroups_ls <- strsplit(G$Datastore$group, "/")
+    ToKeep_ <- unlist(lapply(DstoreGroups_ls, function(x) length(x) == 2))
+    DstoreGroups_ls <- DstoreGroups_ls[ToKeep_]
+    DstoreGroups_ <- unique(unlist(lapply(DstoreGroups_ls, function(x) x[2])))
+    DstoreGroups_[!(DstoreGroups_ %in% "Global")]
+  }
+  for (Year in getDatastoreYears()) {
+    Dstores_ls[[Year]] <-
       G$Datastore[grep(Year, G$Datastore$group),]
   }
 
-  #Function to get datastore inventory corresponding to datastore reference
-  #------------------------------------------------------------------------
-  getInventoryRef <- function(DstoreRef) {
-    SplitRef_ <- unlist(strsplit(DstoreRef, "/"))
-    RefHead <- paste(SplitRef_[-length(SplitRef_)], collapse = "/")
-    paste(RefHead, "ModelState.Rda", sep = "/")
-  }
-
-  #Get datastore inventories for datastore references
-  #--------------------------------------------------
-  if (!is.null(G$DatastoreReferences)) {
-    RefNames_ <- names(G$DatastoreReferences)
-    for (Name in RefNames_) {
-      Refs_ <- G$DatastoreReferences[[Name]]
-      for (Ref in Refs_) {
-        if (file.exists(Ref)) {
-          RefDstore_df <-
-            readModelState(FileName = getInventoryRef(Ref))$Datastore
-          RefDstore_df <- RefDstore_df[grep(Name, RefDstore_df$group),]
-          Dstores_ls[[Name]][[Ref]] <- RefDstore_df
-          rm(RefDstore_df)
-
-        } else {
-          Msg <-
-            paste0("The file '", Ref,
-                   "' included in the 'DatastoreReferences' in the ",
-                   "'run_parameters.json' file is not present.")
-          addError(Msg)
-        }
-      }
-    }
-  }
+  # #Function to get datastore inventory corresponding to datastore reference
+  # #------------------------------------------------------------------------
+  # getInventoryRef <- function(DstoreRef) {
+  #   SplitRef_ <- unlist(strsplit(DstoreRef, "/"))
+  #   RefHead <- paste(SplitRef_[-length(SplitRef_)], collapse = "/")
+  #   paste(RefHead, "ModelState.Rda", sep = "/")
+  # }
+  #
+  # #Get datastore inventories for datastore references
+  # #--------------------------------------------------
+  # if (!is.null(G$DatastoreReferences)) {
+  #   RefNames_ <- names(G$DatastoreReferences)
+  #   for (Name in RefNames_) {
+  #     Refs_ <- G$DatastoreReferences[[Name]]
+  #     for (Ref in Refs_) {
+  #       if (file.exists(Ref)) {
+  #         RefDstore_df <-
+  #           readModelState(FileName = getInventoryRef(Ref))$Datastore
+  #         RefDstore_df <- RefDstore_df[grep(Name, RefDstore_df$group),]
+  #         Dstores_ls[[Name]][[Ref]] <- RefDstore_df
+  #         rm(RefDstore_df)
+  #
+  #       } else {
+  #         Msg <-
+  #           paste0("The file '", Ref,
+  #                  "' included in the 'DatastoreReferences' in the ",
+  #                  "'run_parameters.json' file is not present.")
+  #         addError(Msg)
+  #       }
+  #     }
+  #   }
+  # }
 
   #Define function to add table reference to datastore inventory
   #-------------------------------------------------------------
-  addTableRef <- function(Dstore_df, TableSpec_) {
+  addTableRef <- function(Dstore_df, TableSpec_, IsBaseYear, MakeTableType) {
     Group <- TableSpec_$GROUP
     if (Group == "Year") Group <- Year
     Table <- TableSpec_$TABLE
     #Check if table already exists
     HasTable <- checkTableExistence(Table, Group, Dstore_df)
-    #If table exists then error, otherwise add reference to table
+    #If table exists then possible error, otherwise add reference to table
     if (HasTable) {
-      Msg <-
-        paste0("Error: MakeInpTable specification for module '", TableSpec_$MODULE,
-               "' will create an input table '", Table,
-               "' that already exists in the working datastore.")
-      addError(Msg)
-      return()
+      #Is not an error if the group is 'Global' and year is not the base year
+      #Because not a conflict between tables created by different modules
+      if (Group == "Global" & !IsBaseYear) {
+        NewDstore_df <- Dstore_df
+        #Otherwise is an error
+      } else {
+        if (MakeTableType == "Inp") {
+          MakeTableSpecName <- "MakeInpTable"
+        } else {
+          MakeTableSpecName <- "MakeSetTable"
+        }
+        Msg <-
+          paste0("Error: ", MakeTableSpecName, "specification for module '",
+                 TableSpec_$MODULE, "' will create a table '", Table,
+                 "' that already exists in the working datastore.")
+        addError(Msg)
+        NewDstore_df <- Dstore_df
+      }
     } else {
       NewDstore_df <- data.frame(
         group = c(Dstore_df$group, paste0("/", Group)),
@@ -1329,14 +1352,14 @@ simDataTransactions <- function(AllSpecs_ls) {
         groupname = c(Dstore_df$groupname, paste0(Group, "/", Table)),
         stringsAsFactors = FALSE
       )
+      NewDstore_df$attributes <- c(Dstore_df$attributes, list(TableSpec_))
     }
-    NewDstore_df$attributes <- c(Dstore_df$attributes, list(TableSpec_))
     NewDstore_df
   }
 
   #Define function to add dataset reference to datastore inventory
   #---------------------------------------------------------------
-  addDatasetRef <- function(Dstore_df, DatasetSpec_) {
+  addDatasetRef <- function(Dstore_df, DatasetSpec_, IsBaseYear) {
     Group <- DatasetSpec_$GROUP
     if (Group == "Year") Group <- Year
     Table <- DatasetSpec_$TABLE
@@ -1345,20 +1368,27 @@ simDataTransactions <- function(AllSpecs_ls) {
     HasDataset <- checkDataset(Name, Table, Group, Dstore_df)
     #If dataset exists then warn and check consistency of specifications
     if (HasDataset) {
-      #Add warning that existing dataset will be overwritten
-      Msg <-
-        paste0("Module '", Module, "' will overwrite dataset '", Name,
-               "' in table '", Table, "'.")
-      addWarning(Msg)
-      #Check attributes are consistent
-      DstoreDatasetAttr_ls <-
-        getDatasetAttr(Name, Table, Group, Dstore_df)
-      AttrConsistency_ls <-
-        checkSpecConsistency(DatasetSpec_, DstoreDatasetAttr_ls)
-      if (length(AttrConsistency_ls$Errors != 0)) {
-        addError(AttrConsistency_ls$Errors)
+      #No need to check if the group is 'Global' and year is not the base year
+      #Because not a conflict between datasets created by different modules
+      if (Group == "Global" & !IsBaseYear) {
+        NewDstore_df <- Dstore_df
+        #Otherwise issue a warning and check for consistent data specifications
+      } else {
+        #Add warning that existing dataset will be overwritten
+        Msg <-
+          paste0("Module '", Module, "' will overwrite dataset '", Name,
+                 "' in table '", Table, "'.")
+        addWarning(Msg)
+        #Check attributes are consistent
+        DstoreDatasetAttr_ls <-
+          getDatasetAttr(Name, Table, Group, Dstore_df)
+        AttrConsistency_ls <-
+          checkSpecConsistency(DatasetSpec_, DstoreDatasetAttr_ls)
+        if (length(AttrConsistency_ls$Errors != 0)) {
+          addError(AttrConsistency_ls$Errors)
+        }
+        NewDstore_df <- Dstore_df
       }
-      return(Dstore_df)
     } else {
       NewDstore_df <- data.frame(
         group = c(Dstore_df$group, paste0("/", Group)),
@@ -1369,8 +1399,8 @@ simDataTransactions <- function(AllSpecs_ls) {
       NewDstore_df$attributes <-
         c(Dstore_df$attributes,
           list(DatasetSpec_[c("NAVALUE", "SIZE", "TYPE", "UNITS")]))
-      NewDstore_df
     }
+    NewDstore_df
   }
 
   #Define function to check whether dataset is optional
@@ -1407,11 +1437,11 @@ simDataTransactions <- function(AllSpecs_ls) {
           } else {
             RefGroup <- Year
           }
-          Dstore_df <- Dstores_ls[[RefGroup]][[G$DatastoreName]]
-          if (!((RefGroup == "Global") & (Year != RunYears_[1]))) {
-            Dstores_ls[[RefGroup]][[G$DatastoreName]] <-
-            addTableRef(Dstore_df, Spec_ls)
-          }
+          #Get the datastore inventory for the group
+          Dstore_df <- Dstores_ls[[RefGroup]]
+          #Add the table reference and check for table add error
+          Dstores_ls[[RefGroup]] <-
+            addTableRef(Dstore_df, Spec_ls, Year == BaseYear, "Inp")
           rm(Spec_ls, RefGroup, Dstore_df)
         }
         rm(j)
@@ -1428,11 +1458,11 @@ simDataTransactions <- function(AllSpecs_ls) {
           } else {
             RefGroup <- Year
           }
-          Dstore_df <- Dstores_ls[[RefGroup]][[G$DatastoreName]]
-          if (!((RefGroup == "Global") & (Year != RunYears_[1]))) {
-            Dstores_ls[[RefGroup]][[G$DatastoreName]] <-
-              addDatasetRef(Dstore_df, Spec_ls)
-          }
+          #Get the datastore inventory for the group
+          Dstore_df <- Dstores_ls[[RefGroup]]
+          #Add the dataset reference and check for dataset add error
+          Dstores_ls[[RefGroup]] <-
+            addDatasetRef(Dstore_df, Spec_ls, Year == BaseYear)
           rm(Spec_ls, RefGroup, Dstore_df)
         }
         rm(j)
@@ -1457,23 +1487,21 @@ simDataTransactions <- function(AllSpecs_ls) {
             Group <- Year
           }
           DatasetFound <- FALSE
-          for (k in 1:length(Dstores_ls[[Group]])) {
-            Dstore_df <- Dstores_ls[[Group]][[k]]
-            DatasetInDstore <- checkDataset(Name, Table, Group, Dstore_df)
-            if (!DatasetInDstore) {
-              next()
-            } else {
-              DatasetFound <- TRUE
-              DstoreAttr_ <- getDatasetAttr(Name, Table, Group, Dstore_df)
-              AttrConsistency_ls <-
-                checkSpecConsistency(Spec_ls, DstoreAttr_)
-              if (length(AttrConsistency_ls$Errors != 0)) {
-                addError(AttrConsistency_ls$Errors)
-              }
-              rm(DstoreAttr_, AttrConsistency_ls)
+          Dstore_df <- Dstores_ls[[Group]]
+          DatasetInDstore <- checkDataset(Name, Table, Group, Dstore_df)
+          if (!DatasetInDstore) {
+            next()
+          } else {
+            DatasetFound <- TRUE
+            DstoreAttr_ <- getDatasetAttr(Name, Table, Group, Dstore_df)
+            AttrConsistency_ls <-
+              checkSpecConsistency(Spec_ls, DstoreAttr_)
+            if (length(AttrConsistency_ls$Errors != 0)) {
+              addError(AttrConsistency_ls$Errors)
             }
-            rm(Dstore_df, DatasetInDstore)
+            rm(DstoreAttr_, AttrConsistency_ls)
           }
+          rm(Dstore_df, DatasetInDstore)
           if (!DatasetFound & !isOptional(Spec_ls)) {
             Msg <-
               paste0("Module '", Module,
@@ -1482,6 +1510,7 @@ simDataTransactions <- function(AllSpecs_ls) {
                      "' that will not be present in the working datastore or ",
                      "any referenced datastores when it is needed.")
             addError(Msg)
+            stop("CheckError")
           }
         }
       }
@@ -1497,9 +1526,11 @@ simDataTransactions <- function(AllSpecs_ls) {
           } else {
             RefGroup <- Year
           }
-          Dstore_df <- Dstores_ls[[RefGroup]][[G$DatastoreName]]
-          Dstores_ls[[RefGroup]][[G$DatastoreName]] <-
-            addTableRef(Dstore_df, Spec_ls)
+          #Get the datastore inventory for the group
+          Dstore_df <- Dstores_ls[[RefGroup]]
+          #Add the table reference and check for table add error
+          Dstores_ls[[RefGroup]] <-
+            addTableRef(Dstore_df, Spec_ls, Year == BaseYear, "Set")
           rm(Spec_ls, RefGroup, Dstore_df)
         }
       }
@@ -1515,9 +1546,10 @@ simDataTransactions <- function(AllSpecs_ls) {
           } else {
             Group <- Year
           }
-          Dstore_df <- Dstores_ls[[Group]][[G$DatastoreName]]
-          Dstores_ls[[Group]][[G$DatastoreName]] <-
-            addDatasetRef(Dstore_df, Spec_ls)
+          #Get the datastore inventory for the group
+          Dstore_df <- Dstores_ls[[Group]]
+          Dstores_ls[[Group]] <-
+            addDatasetRef(Dstore_df, Spec_ls, Year == BaseYear)
           rm(Spec_ls, Group, Dstore_df)
         }
       }
@@ -1546,4 +1578,3 @@ simDataTransactions <- function(AllSpecs_ls) {
     stop(paste(Msg, "Check log for details."))
   }
 }
-
