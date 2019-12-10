@@ -118,16 +118,11 @@ InitializeSpecifications <- list(
       NAVALUE = "NA",
       SIZE = 2,
       PROHIBIT = "",
-      ISELEMENTOF = c(
-        "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI",
-        "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI",
-        "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC",
-        "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT",
-        "VT", "VA", "WA", "WV", "WI", "WY", "DC", "PR", NA),
+      ISELEMENTOF = "",
       UNLIKELY = "",
       TOTAL = "",
       DESCRIPTION =
-        "Postal code abbreviation of state where the region is located. It is recommended that the value be NA if the model is not a state model (i.e. is a model for a metropolitan area). See the module documentation for details."
+        "Postal code abbreviation of the 50 states, the District of Columbia (DC), or Puerto Rico (PR) where the region is located. It is recommended that the value be blank if the model is not a state model (i.e. is a model for a metropolitan area). See the module documentation for details."
     ),
     item(
       NAME = "HvyTrkDvmtGrowthBasis",
@@ -185,7 +180,7 @@ InitializeSpecifications <- list(
       UNITS = "ID",
       NAVALUE = "NA",
       SIZE = 50,
-      PROHIBIT = "NA",
+      PROHIBIT = "",
       ISELEMENTOF = "",
       UNLIKELY = "",
       TOTAL = "",
@@ -650,9 +645,14 @@ Initialize <- function(L) {
     rm(Msg)
   }
   #Check whether region heavy truck data are complete
+  St <- c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI",
+          "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI",
+          "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC",
+          "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT",
+          "VT", "VA", "WA", "WV", "WI", "WY", "DC", "PR")
+  IsValidLookup <- L$Data$Global$Region$StateAbbrLookup %in% St
   RegionHvyTrkDvmt <- L$Data$Global$Region$HvyTrkDvmt
-  State <- L$Data$Global$Region$StateAbbrLookup
-  if (is.na(RegionHvyTrkDvmt) & is.na(State) & !all(FullySpecdHvyTrk)) {
+  if (is.na(RegionHvyTrkDvmt) & !IsValidLookup & !all(FullySpecdHvyTrk)) {
     Msg <- paste0(
       "Region heavy truck DVMT can't be calculated from data in the ",
       "'region_base_year_hvytrk_dvmt.csv' file and the 'marea_base_year_dvmt.csv ",
