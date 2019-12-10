@@ -579,7 +579,7 @@ checkGeography <- function(Directory, Filename) {
 #' @return The function returns TRUE if the geographic tables and datasets are
 #'   sucessfully written to the datastore.
 #' @export
-initDatastoreGeography <- function() {
+initDatastoreGeography <- function(GroupNames = NULL) {
   G <- getModelState()
   #Make lists of zone specifications
   Mareas_ <- unique(G$Geo_df$Marea)
@@ -627,7 +627,7 @@ initDatastoreGeography <- function() {
                          SIZE = max(nchar(Czones_)))
   }
   #Initialize geography tables and zone datasets
-  GroupNames <- c("Global", G$Years)
+  if (is.null(GroupNames)) GroupNames <- c("Global", G$Years)
   for (GroupName in GroupNames) {
     initTable(Table = "Region", Group = GroupName, Length = 1)
     initTable(Table = "Azone", Group = GroupName, Length = length(Azones_))
