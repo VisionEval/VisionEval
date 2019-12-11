@@ -124,7 +124,7 @@ AdjustHhVehicleMpgMpkwhSpecifications <- list(
       GROUP = "Year",
       TYPE = "character",
       UNITS = "ID",
-      PROHIBIT = "NA",
+      PROHIBIT = "",
       ISELEMENTOF = ""
     ),
     item(
