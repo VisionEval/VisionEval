@@ -364,20 +364,23 @@ initializeModel <-
         }
         #Copy the datastore inventory to the ModelState_ls
         ModelState_ls$Datastore <- LoadModelState_ls$Datastore
+        setModelState(ModelState_ls)
         save(ModelState_ls, file = "ModelState.Rda")
         #Initialize geography for years not present in datastore
         RunYears_ <- ModelState_ls$Years
         LoadYears_ <- LoadModelState_ls$Years
-        NewYears_ <- RunYears_[!(RunYears_ %in% LoadYears_)]
-        for (year in NewYears_) {
-          YearGroup <- year
-          dir.create(file.path(ModelState_ls$DatastoreName, YearGroup))
-          listDatastore(
-            list(group = "/", name = YearGroup, groupname = YearGroup,
-                 attributes = list(NA))
-          )
+        if (!all(RunYears_ == LoadYears_)) {
+          NewYears_ <- RunYears_[!(RunYears_ %in% LoadYears_)]
+          for (year in NewYears_) {
+            YearGroup <- year
+            dir.create(file.path(ModelState_ls$DatastoreName, YearGroup))
+            listDatastore(
+              list(group = "/", name = YearGroup, groupname = YearGroup,
+                   attributes = list(NA))
+            )
+          }
+          initDatastoreGeography(GroupNames = NewYears_)
         }
-        initDatastoreGeography(GroupNames = NewYears_)
       }
       #-------------------------------------------
       #Initialize datastore if no datastore loaded
