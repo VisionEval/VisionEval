@@ -114,7 +114,7 @@ CalculatePtranEnergyAndEmissionsSpecifications <- list(
       GROUP = "Year",
       TYPE = "compound",
       UNITS = "MI/DAY",
-      PROHIBIT = "<= 0",
+      PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     ),
     item(
