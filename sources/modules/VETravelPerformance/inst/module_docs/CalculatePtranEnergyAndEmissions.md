@@ -57,9 +57,9 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |TransitVanFuelCI  |Marea |Year  |compound  |GM/MJ      |< 0          |            |
 |TransitBusFuelCI  |Marea |Year  |compound  |GM/MJ      |< 0          |            |
 |TransitRailFuelCI |Marea |Year  |compound  |GM/MJ      |< 0          |            |
-|BusDvmt           |Marea |Year  |compound  |MI/DAY     |<= 0         |            |
-|RailDvmt          |Marea |Year  |compound  |MI/DAY     |<= 0         |            |
-|VanDvmt           |Marea |Year  |compound  |MI/DAY     |<= 0         |            |
+|BusDvmt           |Marea |Year  |compound  |MI/DAY     |NA, < 0      |            |
+|RailDvmt          |Marea |Year  |compound  |MI/DAY     |NA, < 0      |            |
+|VanDvmt           |Marea |Year  |compound  |MI/DAY     |NA, < 0      |            |
 |BusPropBev        |Marea |Year  |double    |proportion |NA, < 0, > 1 |            |
 |BusPropHev        |Marea |Year  |double    |proportion |NA, < 0, > 1 |            |
 |BusPropIcev       |Marea |Year  |double    |proportion |NA, < 0, > 1 |            |

@@ -46,48 +46,48 @@ PROHIBIT - Values that are prohibited. Values in the datastore do not meet any o
 
 ISELEMENTOF - Categorical values that are permitted. Values in the datastore are one or more of the listed values.
 
-|NAME                       |TABLE     |GROUP  |TYPE      |UNITS      |PROHIBIT     |ISELEMENTOF                                                                                                                                                                                                        |
-|:--------------------------|:---------|:------|:---------|:----------|:------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|HvyTrkDvmtGrowthBasis      |Region    |Global |character |ID         |             |Income, Population                                                                                                                                                                                                 |
-|StateAbbrLookup            |Region    |Global |character |ID         |             |AL, AK, AZ, AR, CA, CO, CT, DE, FL, GA, HI, ID, IL, IN, IA, KS, KY, LA, ME, MD, MA, MI, MN, MS, MO, MT, NE, NV, NH, NJ, NM, NY, NC, ND, OH, OK, OR, PA, RI, SC, SD, TN, TX, UT, VT, VA, WA, WV, WI, WY, DC, PR, NA |
-|HvyTrkDvmt                 |Region    |Global |compound  |MI/DAY     |< 0          |                                                                                                                                                                                                                   |
-|ComSvcDvmtGrowthBasis      |Region    |Global |character |ID         |             |HhDvmt, Income, Population                                                                                                                                                                                         |
-|Marea                      |Marea     |Global |character |ID         |             |                                                                                                                                                                                                                   |
-|UzaNameLookup              |Marea     |Global |character |ID         |NA           |                                                                                                                                                                                                                   |
-|UrbanLdvDvmt               |Marea     |Global |compound  |MI/DAY     |< 0          |                                                                                                                                                                                                                   |
-|UrbanHvyTrkDvmt            |Marea     |Global |compound  |MI/DAY     |< 0          |                                                                                                                                                                                                                   |
-|LdvFwyDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|LdvArtDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|LdvOthDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|HvyTrkFwyDvmtProp          |Marea     |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|HvyTrkArtDvmtProp          |Marea     |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|HvyTrkOthDvmtProp          |Marea     |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|BusFwyDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|BusArtDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|BusOthDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|Marea                      |Marea     |Year   |character |ID         |             |                                                                                                                                                                                                                   |
-|VanDvmt                    |Marea     |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|BusDvmt                    |Marea     |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|RuralPop                   |Marea     |Year   |people    |PRSN       |NA, < 0      |                                                                                                                                                                                                                   |
-|TownPop                    |Marea     |Year   |people    |PRSN       |NA, < 0      |                                                                                                                                                                                                                   |
-|UrbanPop                   |Marea     |Year   |people    |PRSN       |NA, < 0      |                                                                                                                                                                                                                   |
-|RuralIncome                |Marea     |Year   |currency  |USD        |NA, < 0      |                                                                                                                                                                                                                   |
-|TownIncome                 |Marea     |Year   |currency  |USD        |NA, < 0      |                                                                                                                                                                                                                   |
-|UrbanIncome                |Marea     |Year   |currency  |USD        |NA, < 0      |                                                                                                                                                                                                                   |
-|UrbanHhDvmt                |Marea     |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|TownHhDvmt                 |Marea     |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|RuralHhDvmt                |Marea     |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|Marea                      |Household |Year   |character |ID         |             |                                                                                                                                                                                                                   |
-|LocType                    |Household |Year   |character |category   |NA           |Urban, Town, Rural                                                                                                                                                                                                 |
-|Dvmt                       |Household |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|HvyTrkDvmtIncomeFactor     |Region    |Global |compound  |MI/USD     |NA, < 0      |                                                                                                                                                                                                                   |
-|HvyTrkDvmtPopulationFactor |Region    |Global |compound  |MI/PRSN    |NA, < 0      |                                                                                                                                                                                                                   |
-|ComSvcDvmtHhDvmtFactor     |Marea     |Global |double    |proportion |NA, < 0      |                                                                                                                                                                                                                   |
-|ComSvcDvmtIncomeFactor     |Marea     |Global |compound  |MI/USD     |NA, < 0      |                                                                                                                                                                                                                   |
-|HvyTrkDvmtIncomeFactor     |Marea     |Global |compound  |MI/USD     |NA, < 0      |                                                                                                                                                                                                                   |
-|ComSvcDvmtPopulationFactor |Marea     |Global |compound  |MI/PRSN    |NA, < 0      |                                                                                                                                                                                                                   |
-|HvyTrkDvmtPopulationFactor |Marea     |Global |compound  |MI/PRSN    |NA, < 0      |                                                                                                                                                                                                                   |
-|LdvUrbanRoadProp           |Marea     |Global |double    |proportion |NA, < 0, > 1 |                                                                                                                                                                                                                   |
+|NAME                       |TABLE     |GROUP  |TYPE      |UNITS      |PROHIBIT     |ISELEMENTOF                |
+|:--------------------------|:---------|:------|:---------|:----------|:------------|:--------------------------|
+|HvyTrkDvmtGrowthBasis      |Region    |Global |character |ID         |             |Income, Population         |
+|StateAbbrLookup            |Region    |Global |character |ID         |             |                           |
+|HvyTrkDvmt                 |Region    |Global |compound  |MI/DAY     |< 0          |                           |
+|ComSvcDvmtGrowthBasis      |Region    |Global |character |ID         |             |HhDvmt, Income, Population |
+|Marea                      |Marea     |Global |character |ID         |             |                           |
+|UzaNameLookup              |Marea     |Global |character |ID         |             |                           |
+|UrbanLdvDvmt               |Marea     |Global |compound  |MI/DAY     |< 0          |                           |
+|UrbanHvyTrkDvmt            |Marea     |Global |compound  |MI/DAY     |< 0          |                           |
+|LdvFwyDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                           |
+|LdvArtDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                           |
+|LdvOthDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                           |
+|HvyTrkFwyDvmtProp          |Marea     |Global |double    |proportion |< 0, > 1     |                           |
+|HvyTrkArtDvmtProp          |Marea     |Global |double    |proportion |< 0, > 1     |                           |
+|HvyTrkOthDvmtProp          |Marea     |Global |double    |proportion |< 0, > 1     |                           |
+|BusFwyDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                           |
+|BusArtDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                           |
+|BusOthDvmtProp             |Marea     |Global |double    |proportion |< 0, > 1     |                           |
+|Marea                      |Marea     |Year   |character |ID         |             |                           |
+|VanDvmt                    |Marea     |Year   |compound  |MI/DAY     |NA, < 0      |                           |
+|BusDvmt                    |Marea     |Year   |compound  |MI/DAY     |NA, < 0      |                           |
+|RuralPop                   |Marea     |Year   |people    |PRSN       |NA, < 0      |                           |
+|TownPop                    |Marea     |Year   |people    |PRSN       |NA, < 0      |                           |
+|UrbanPop                   |Marea     |Year   |people    |PRSN       |NA, < 0      |                           |
+|RuralIncome                |Marea     |Year   |currency  |USD        |NA, < 0      |                           |
+|TownIncome                 |Marea     |Year   |currency  |USD        |NA, < 0      |                           |
+|UrbanIncome                |Marea     |Year   |currency  |USD        |NA, < 0      |                           |
+|UrbanHhDvmt                |Marea     |Year   |compound  |MI/DAY     |NA, < 0      |                           |
+|TownHhDvmt                 |Marea     |Year   |compound  |MI/DAY     |NA, < 0      |                           |
+|RuralHhDvmt                |Marea     |Year   |compound  |MI/DAY     |NA, < 0      |                           |
+|Marea                      |Household |Year   |character |ID         |             |                           |
+|LocType                    |Household |Year   |character |category   |NA           |Urban, Town, Rural         |
+|Dvmt                       |Household |Year   |compound  |MI/DAY     |NA, < 0      |                           |
+|HvyTrkDvmtIncomeFactor     |Region    |Global |compound  |MI/USD     |NA, < 0      |                           |
+|HvyTrkDvmtPopulationFactor |Region    |Global |compound  |MI/PRSN    |NA, < 0      |                           |
+|ComSvcDvmtHhDvmtFactor     |Marea     |Global |double    |proportion |NA, < 0      |                           |
+|ComSvcDvmtIncomeFactor     |Marea     |Global |compound  |MI/USD     |NA, < 0      |                           |
+|HvyTrkDvmtIncomeFactor     |Marea     |Global |compound  |MI/USD     |NA, < 0      |                           |
+|ComSvcDvmtPopulationFactor |Marea     |Global |compound  |MI/PRSN    |NA, < 0      |                           |
+|HvyTrkDvmtPopulationFactor |Marea     |Global |compound  |MI/PRSN    |NA, < 0      |                           |
+|LdvUrbanRoadProp           |Marea     |Global |double    |proportion |NA, < 0, > 1 |                           |
 
 ## Datasets Produced by the Module
 The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:

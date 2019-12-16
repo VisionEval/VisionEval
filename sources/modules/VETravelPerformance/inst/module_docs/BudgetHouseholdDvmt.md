@@ -152,7 +152,7 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |:--------------|:---------|:-----|:---------|:--------|:--------|:------------------|
 |Marea          |Marea     |Year  |character |ID       |         |                   |
 |Marea          |Household |Year  |character |ID       |         |                   |
-|HhId           |Household |Year  |character |ID       |NA       |                   |
+|HhId           |Household |Year  |character |ID       |         |                   |
 |HhSize         |Household |Year  |people    |PRSN     |NA, <= 0 |                   |
 |Income         |Household |Year  |currency  |USD.2001 |NA, < 0  |                   |
 |LocType        |Household |Year  |character |category |NA       |Urban, Town, Rural |
