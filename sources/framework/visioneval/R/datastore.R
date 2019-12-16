@@ -89,48 +89,101 @@ listDatastoreRD <- function(DataListing_ls = NULL) {
 #' datastore.
 #'
 #' This function creates the datastore for the model run with the initial
-#' structure for an RData (RD) type datastore.
+#' structure for an RData (RD) type datastore. Alternately, if the value of
+#' the AppendGroups parameter is not NULL the function will add the group or
+#' groups identified by this parameter to an existing datastore.
 #'
+#' @param AppendGroups a character string identifying the names of groups to add
+#'   to an existing datastore. The default value is NULL. If the value is NULL,
+#'   a new datastore will be created. If an existing datastore has the same name
+#'   as that defined for the model run, it will be deleted. The datastore will
+#'   have a 'Global' group established in it as well as a group for each year
+#'   identified in the model run years. If append is a character vector of group
+#'   names, the groups identified in the character string will be added to the
+#'   datastore.
 #' @return TRUE if datastore initialization is successful. Calls the
 #' listDatastore function which adds a listing of the datastore contents to the
 #' model state file.
 #' @export
 #' @import filesstrings stats utils
-initDatastoreRD <- function() {
+initDatastoreRD <- function(AppendGroups = NULL) {
   G <- getModelState()
   DatastoreName <- G$DatastoreName
-  #If datastore exists, delete
-  if (file.exists(DatastoreName)) {
-    dir.remove(DatastoreName)
-  }
-  #Create datastore
-  dir.create(DatastoreName)
-  #Initialize the DatastoreListing
-  Datastore_df <-
-     data.frame(
-      group = "/",
-      name = "",
-      groupname = "",
-      attributes = NA,
-      stringsAsFactors = FALSE)
-  Datastore_df$attributes <- as.list(Datastore_df$attributes)
-  setModelState(list(Datastore = Datastore_df))
-  #Create global group which stores data that is constant for all geography and
-  #all years
-  dir.create(file.path(DatastoreName, "Global"))
-  listDatastoreRD(
-    list(group = "/", name = "Global", groupname = "Global",
-         attributes = list(NA))
-  )
-  #Create groups for years
-  Years <- getYears()
-  for (year in Years) {
-    YearGroup <- year
-    dir.create(file.path(DatastoreName, YearGroup))
+  #If 'AppendGroups' is NULL initialize a new datastore
+  if (is.null(AppendGroups)) {
+    #If datastore exists, delete
+    if (file.exists(DatastoreName)) {
+      dir.remove(DatastoreName)
+    }
+    #Create datastore
+    dir.create(DatastoreName)
+    #Initialize the DatastoreListing
+    Datastore_df <-
+      data.frame(
+        group = "/",
+        name = "",
+        groupname = "",
+        attributes = NA,
+        stringsAsFactors = FALSE)
+    Datastore_df$attributes <- as.list(Datastore_df$attributes)
+    setModelState(list(Datastore = Datastore_df))
+    #Create global group which stores data that is constant for all geography and
+    #all years
+    dir.create(file.path(DatastoreName, "Global"))
     listDatastoreRD(
-      list(group = "/", name = YearGroup, groupname = YearGroup,
+      list(group = "/", name = "Global", groupname = "Global",
            attributes = list(NA))
     )
+    #Create groups for years
+    Years <- getYears()
+    for (year in Years) {
+      YearGroup <- year
+      dir.create(file.path(DatastoreName, YearGroup))
+      listDatastoreRD(
+        list(group = "/", name = YearGroup, groupname = YearGroup,
+             attributes = list(NA))
+      )
+    }
+    #If 'AppendGroups' is not NULL add listed groups to existing datastore
+  } else {
+    #If the datastore exists add the groups
+    if (file.exists(DatastoreName)) {
+      #Identify existing groups in the datastore
+      DstoreGroups_ <- local({
+        DstoreGroups_ls <- strsplit(G$Datastore$group, "/")
+        ToKeep_ <- unlist(lapply(DstoreGroups_ls, function(x) length(x) == 2))
+        DstoreGroups_ls <- DstoreGroups_ls[ToKeep_]
+        DstoreGroups_ <- unique(unlist(lapply(DstoreGroups_ls, function(x) x[2])))
+      })
+      #Add groups listed in 'AppendGroups' if none are present in datastore
+      if (!any(AppendGroups %in% DstoreGroups_)) {
+        for (Grp in AppendGroups) {
+          dir.create(file.path(DatastoreName, Grp))
+          listDatastoreRD(
+            list(group = "/", name = Grp, groupname = Grp,
+                 attributes = list(NA))
+          )
+        }
+        #Error if groups listed in 'AppendGroups' are present in datastore
+      } else {
+        DupGrp <- AppendGroups[AppendGroups %in% DstoreGroups_]
+        stop(paste(
+          "The following groups listed in the 'AppendGroups' argument are",
+          "present in the datastore:",
+          paste(DupGrp, collapse = ", "), ".",
+          "The names of these groups must be removed from the 'AppendGroups'",
+          "argument."
+        ))
+      }
+      #Error if the datastore does not exist
+    } else {
+      stop(paste(
+        "The datastore -", DatastoreName, "- identified in the model",
+        "'run_parameters.json' file does not exist.",
+        "In order for a datastore to be initialized with appended groups,",
+        "this datastore must be present."
+      ))
+    }
   }
   #Return TRUE if successful
   TRUE
@@ -257,7 +310,7 @@ initDatasetRD <- function(Spec_ls, Group) {
 #' @return A vector of the same type stored in the datastore and specified in
 #' the TYPE attribute.
 #' @export
-readFromTableRD <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, ReadAttr = FALSE) {
+readFromTableRD <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, ReadAttr = TRUE) {
   #Get the directory where the datastore is located from DstoreLoc
   if (is.null(DstoreLoc)) {
     DstoreDir <- ""
@@ -460,33 +513,82 @@ listDatastoreH5 <- function() {
 #' datastore.
 #'
 #' This function creates the datastore for the model run with the initial
-#' structure for an HDF5 (H5) type datastore.
+#' structure for an HDF5 (H5) type datastore. Alternately, if the value of
+#' the AppendGroups parameter is not NULL the function will add the group or
+#' groups identified by this parameter to an existing datastore.
 #'
+#' @param AppendGroups a character string identifying the names of groups to add
+#'   to an existing datastore. The default value is NULL. If the value is NULL,
+#'   a new datastore will be created. If an existing datastore has the same name
+#'   as that defined for the model run, it will be deleted. The datastore will
+#'   have a 'Global' group established in it as well as a group for each year
+#'   identified in the model run years. If append is a character vector of group
+#'   names, the groups identified in the character string will be added to the
+#'   datastore.
 #' @return TRUE if datastore initialization is successful. Calls the
 #' listDatastore function which adds a listing of the datastore contents to the
 #' model state file.
 #' @export
 #' @import rhdf5
-initDatastoreH5 <- function() {
+initDatastoreH5 <- function(AppendGroups = NULL) {
   G <- getModelState()
-  #If data store exists, delete
   DatastoreName <- G$DatastoreName
-  if (file.exists(DatastoreName)) {
-    file.remove(DatastoreName)
+  #If 'AppendGroups' is NULL initialize a new datastore
+  if (is.null(AppendGroups)) {
+    #If data store exists, delete
+    if (file.exists(DatastoreName)) {
+      file.remove(DatastoreName)
+    }
+    #Create data store file
+    H5File <- H5Fcreate(DatastoreName)
+    #Create global group which stores data that is constant for all geography and
+    #all years
+    h5createGroup(H5File, "Global")
+    #Create groups for years
+    for (year in as.character(G$Years)) {
+      YearGroup <- year
+      h5createGroup(H5File, YearGroup)
+    }
+    H5Fclose(H5File)
+    #If 'AppendGroups' is not NULL add listed groups to existing datastore
+  } else {
+    #If the datastore exists add the groups
+    if (file.exists(DatastoreName)) {
+      #Identify existing groups in the datastore
+      DstoreGroups_ <- local({
+        DstoreGroups_ls <- strsplit(G$Datastore$group, "/")
+        ToKeep_ <- unlist(lapply(DstoreGroups_ls, function(x) length(x) == 2))
+        DstoreGroups_ls <- DstoreGroups_ls[ToKeep_]
+        DstoreGroups_ <- unique(unlist(lapply(DstoreGroups_ls, function(x) x[2])))
+      })
+      #Add groups listed in 'AppendGroups' if none are present in datastore
+      if (!any(AppendGroups %in% DstoreGroups_)) {
+        for (Grp in AppendGroups) {
+          h5createGroup(DatastoreName, Grp)
+        }
+        #Error if groups listed in 'AppendGroups' are present in datastore
+      } else {
+        DupGrp <- AppendGroups[AppendGroups %in% DstoreGroups_]
+        stop(paste(
+          "The following groups listed in the 'AppendGroups' argument are",
+          "present in the datastore:",
+          paste(DupGrp, collapse = ", "), ".",
+          "The names of these groups must be removed from the 'AppendGroups'",
+          "argument."
+        ))
+      }
+      #Error if the datastore does not exist
+    } else {
+      stop(paste(
+        "The datastore -", DatastoreName, "- identified in the model",
+        "'run_parameters.json' file does not exist.",
+        "In order for a datastore to be initialized with appended groups,",
+        "this datastore must be present."
+      ))
+    }
   }
-  #Create data store file
-  H5File <- H5Fcreate(DatastoreName)
-  #Create global group which stores data that is constant for all geography and
-  #all years
-  h5createGroup(H5File, "Global")
-  #Create groups for years
-  for (year in as.character(G$Years)) {
-    YearGroup <- year
-    h5createGroup(H5File, YearGroup)
-  }
-  H5Fclose(H5File)
   listDatastoreH5()
-  TRUE
+  return(TRUE)
 }
 
 
@@ -603,21 +705,22 @@ initDatasetH5 <- function(Spec_ls, Group) {
 #'   dataset is located.
 #' @param Group a string representation of the name of the datastore group the
 #' data is to be read from.
-#' @param File a string representation of the file path of the datastore
+#' @param DstoreLoc a string representation of the file path of the datastore.
+#' NULL if the datastore is the current directory.
 #' @param Index A numeric vector identifying the positions the data is to be
 #'   written to. NULL if the entire dataset is to be read.
 #' @param ReadAttr A logical identifying whether to return the attributes of
-#' the stored dataset. The default value is FALSE.
+#' the stored dataset. The default value is TRUE.
 #' @return A vector of the same type stored in the datastore and specified in
 #'   the TYPE attribute.
 #' @export
 #' @import rhdf5
-readFromTableH5 <- function(Name, Table, Group, File = NULL, Index = NULL, ReadAttr = FALSE) {
-  #Get the directory where the datastore is located from File
-  if (is.null(File)) {
+readFromTableH5 <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, ReadAttr = TRUE) {
+  #Get the directory where the datastore is located from DstoreLoc
+  if (is.null(DstoreLoc)) {
     DstoreDir <- ""
   } else {
-    ParseDstoreLoc_ <- unlist(strsplit(File, "/"))
+    ParseDstoreLoc_ <- unlist(strsplit(DstoreLoc, "/"))
     DstoreDir <- paste(ParseDstoreLoc_[-length(ParseDstoreLoc_)], collapse = "/")
   }
   #Load the model state file
@@ -626,8 +729,8 @@ readFromTableH5 <- function(Name, Table, Group, File = NULL, Index = NULL, ReadA
   } else {
     G <- readModelState(FileName = file.path(DstoreDir, "ModelState.Rda"))
   }
-  #If File is NULL get the name of the datastore from the model state
-  if (is.null(File)) File <- G$DatastoreName
+  #If DstoreLoc is NULL get the name of the datastore from the model state
+  if (is.null(DstoreLoc)) DstoreLoc <- G$DatastoreName
   #Check that dataset exists to read from
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if (DatasetExists) {
@@ -654,16 +757,20 @@ readFromTableH5 <- function(Name, Table, Group, File = NULL, Index = NULL, ReadA
   }
   #Read data
   if (is.null(Index)) {
-    Data_ <- h5read(File, DatasetName, read.attributes = ReadAttr)
+    Data_ <- h5read(DstoreLoc, DatasetName, read.attributes = ReadAttr)
   } else {
     Data_ <-
-      h5read(File, DatasetName, index = list(Index), read.attributes = ReadAttr)
+      h5read(DstoreLoc, DatasetName, index = list(Index), read.attributes = ReadAttr)
   }
   #Convert NA values
   NAValue <- as.vector(attributes(Data_)$NAVALUE)
   Data_[Data_ == NAValue] <- NA
   #Return results
-  as.vector(Data_)
+  if (ReadAttr) {
+    Data_
+  } else {
+    as.vector(Data_)
+  }
 }
 
 
