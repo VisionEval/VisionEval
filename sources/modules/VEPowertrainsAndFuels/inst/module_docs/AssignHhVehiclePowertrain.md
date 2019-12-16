@@ -131,8 +131,8 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |PropMFChargingAvail |Azone     |Year  |double    |proportion |NA, < 0, > 1 |                           |
 |PropGQChargingAvail |Azone     |Year  |double    |proportion |NA, < 0, > 1 |                           |
 |ElectricityCI       |Azone     |Year  |compound  |GM/MJ      |< 0          |                           |
-|Azone               |Household |Year  |character |ID         |NA           |                           |
-|HhId                |Household |Year  |character |ID         |NA           |                           |
+|Azone               |Household |Year  |character |ID         |             |                           |
+|HhId                |Household |Year  |character |ID         |             |                           |
 |LocType             |Household |Year  |character |category   |NA           |Urban, Town, Rural         |
 |Vehicles            |Household |Year  |vehicles  |VEH        |NA, < 0      |                           |
 |NumAuto             |Household |Year  |vehicles  |VEH        |NA, < 0      |                           |
