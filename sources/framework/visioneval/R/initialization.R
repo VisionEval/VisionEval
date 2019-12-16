@@ -576,6 +576,12 @@ checkGeography <- function(Directory, Filename) {
 #' model state file. Upon successful completion, the function calls the
 #' listDatastore function to update the datastore listing in the global list.
 #'
+#' @param GroupNames a character vector of the names of groups to initialize
+#' the datastore groups to initialize with geography. The purpose of this
+#' parameter is to enable the loading of a datastore in a model run, in which
+#' case initialization of geography is only needed for new year groups for the
+#' model run. The default value is NULL, which is the case when a datastore
+#' is not being loaded.
 #' @return The function returns TRUE if the geographic tables and datasets are
 #'   sucessfully written to the datastore.
 #' @export
