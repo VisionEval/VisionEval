@@ -468,6 +468,7 @@ AdjustHhVehicleMpgMpkwh <- function(L, M) {
   NumVeh <- length(L$Year$Vehicle$VehId)
   #Powertrains of vehicles
   Powertrain_Ve <- L$Year$Vehicle$Powertrain
+  Powertrain_Ve[is.na(Powertrain_Ve)] <- "NA"
   #Load energy and emissions defaults
   EnergyEmissionsDefaults_ls <- loadPackageDataset("PowertrainFuelDefaults_ls")
 
