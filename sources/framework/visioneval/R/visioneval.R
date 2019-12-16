@@ -201,13 +201,13 @@ initializeModel <-
         LoadEnv <- new.env()
         load(file.path(LoadDstoreDir, "ModelState.Rda"), envir = LoadEnv)
         LoadDstoreType <- LoadEnv$ModelState_ls$DatastoreType
-        #Check that both datastore types are RD
-        if (RunDstoreType != "RD" | LoadDstoreType != "RD") {
+        #Check that run and load datastores are of same type
+        if (RunDstoreType != LoadDstoreType) {
           ErrMsg <- c(ErrMsg, paste(
             "In order for a datastore to be loaded, both the model run",
-            "datastore and the loaded datastore must be of type 'RD'.",
-            "Other types of datastores are not currently supported for",
-            "loading."
+            "datastore and the loaded datastore must be of same type.",
+            "Model run datastore is specified as type:", RunDstoreType, ".",
+            "Datastore to load is type:", LoadDstoreType, "."
           ))
         }
         #Check that geography, units, and deflators are consistent
@@ -371,14 +371,7 @@ initializeModel <-
         LoadYears_ <- LoadModelState_ls$Years
         if (!all(RunYears_ == LoadYears_)) {
           NewYears_ <- RunYears_[!(RunYears_ %in% LoadYears_)]
-          for (year in NewYears_) {
-            YearGroup <- year
-            dir.create(file.path(ModelState_ls$DatastoreName, YearGroup))
-            listDatastore(
-              list(group = "/", name = YearGroup, groupname = YearGroup,
-                   attributes = list(NA))
-            )
-          }
+          initDatastore(AppendGroups = NewYears_)
           initDatastoreGeography(GroupNames = NewYears_)
         }
       }
