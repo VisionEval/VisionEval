@@ -37,8 +37,11 @@ checked to determine that it has 'Year' and 'Geo' columns. The entries in the
 are no duplicates. Any file whose 'GROUP' specification is 'Global' or
 'BaseYear' and whose 'TABLE' specification is a geographic specification
 other than 'Region' is checked to determine if it has a 'Geo' column and the
-entries are checked for completeness. The data in each column are checked
-against specifications to determine conformance. The function returns a list
-which contains a list of error messages and a list of the data inputs. The
-function also writes error messages and warnings to the log file.
+entries are checked for completeness. Entries for years other than the
+specified model run years are ignored. Data from input files is sorted by
+years and geography as needed to assure that it is consistent even when user
+input files are not consistent. The data in each column are checked against
+specifications to determine conformance. The function returns a list which
+contains a list of error messages and a list of the data inputs. The function
+also writes error messages and warnings to the log file.
 }

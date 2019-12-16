@@ -5,7 +5,7 @@
 \title{Read from an RData (RD) type datastore table.}
 \usage{
 readFromTableRD(Name, Table, Group, DstoreLoc = NULL, Index = NULL,
-  ReadAttr = FALSE)
+  ReadAttr = TRUE)
 }
 \arguments{
 \item{Name}{A string identifying the name of the dataset to be read from.}

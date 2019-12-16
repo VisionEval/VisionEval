@@ -4,7 +4,15 @@
 \alias{initDatastoreGeography}
 \title{Initialize datastore geography.}
 \usage{
-initDatastoreGeography()
+initDatastoreGeography(GroupNames = NULL)
+}
+\arguments{
+\item{GroupNames}{a character vector of the names of groups to initialize
+the datastore groups to initialize with geography. The purpose of this
+parameter is to enable the loading of a datastore in a model run, in which
+case initialization of geography is only needed for new year groups for the
+model run. The default value is NULL, which is the case when a datastore
+is not being loaded.}
 }
 \value{
 The function returns TRUE if the geographic tables and datasets are

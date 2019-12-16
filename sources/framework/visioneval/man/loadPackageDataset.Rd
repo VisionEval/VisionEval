@@ -4,10 +4,13 @@
 \alias{loadPackageDataset}
 \title{Load a VisionEval package dataset}
 \usage{
-loadPackageDataset(DatasetName)
+loadPackageDataset(DatasetName, DefaultPackage = NULL)
 }
 \arguments{
 \item{DatasetName}{A string identifying the name of the dataset.}
+
+\item{DefaultPackage}{A string identifying the name of the package to
+retrieve the dataset from during module development and testing.}
 }
 \value{
 The identified dataset.
@@ -20,13 +23,20 @@ containing the dataset.
 \details{
 This function is used to load a dataset identified by name from the
 VisionEval package which contains the dataset. Using this function is the
-preferred alternative to hard-wiring the loading using package::dataset
-notation because it enables users to switch between module versions contained
-in different packages. For example, there may be different versions of the
-VEPowertrainsAndFuels package which have different default assumptions about
-light-duty vehicle powertrain mix and characteristics by model year. Using
-this function, the module developer only needs to identify the dataset name.
-The function uses DatasetsByPackage_df data frame in the model state list
-to identify the package which contains the dataset. It then retrieves and
-returns the dataset
+preferred alternative to hard-wiring the loading a dataset using the
+'package::dataset' notation because it enables users to switch between module
+versions contained in different packages. For example, there may be different
+versions of the VEPowertrainsAndFuels package which have different default
+assumptions about light-duty vehicle powertrain mix and characteristics by
+model year. Using this function, the module developer only needs to identify
+the dataset name. The module developer should also specify a 'DefaultPackage'
+name to simplify module development and testing. For example, the default
+'VEPowertrainsAndFuels' package can be specified. During module development
+and testing the dataset will be loaded from that package, but during a model
+run the dataset will be loaded from the package that is specified to be used
+in the model run. The function uses 'DatasetsByPackage_df' data frame in the
+model state list to identify the package which contains the dataset. If
+'DatasetsByPackage_df' is not present in the model state list, as is the case
+during module development and testing, the the dataset is retrieved from the
+'DefaultPackage'.
 }
