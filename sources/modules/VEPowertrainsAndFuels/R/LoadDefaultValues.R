@@ -189,10 +189,10 @@ if (any(abs(1 - rowSums(CarSvcFuel_df[LtTrkCols_])) > 0.01)) {
 CarSvcFuel_df[,LtTrkCols_] <-
   sweep(CarSvcFuel_df[,LtTrkCols_], 1, rowSums(CarSvcFuel_df[,LtTrkCols_]), "*")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(CarSvcFuel_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% CarSvcFuel_df$Year)) {
   stop(paste(
-    "File 'carsvc_fuel.csv' must have values for the years",
+    "File 'carsvc_fuel.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -250,10 +250,10 @@ if (any(abs(1 - rowSums(ComSvcFuel_df[LtTrkCols_])) > 0.01)) {
 ComSvcFuel_df[,LtTrkCols_] <-
   sweep(ComSvcFuel_df[,LtTrkCols_], 1, rowSums(ComSvcFuel_df[,LtTrkCols_]), "*")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(ComSvcFuel_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% ComSvcFuel_df$Year)) {
   stop(paste(
-    "File 'ComSvc_fuel.csv' must have values for the years",
+    "File 'ComSvc_fuel.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -312,10 +312,10 @@ if (any(abs(1 - rowSums(HhFuel_df[LtTrkCols_])) > 0.01)) {
 HhFuel_df[,LtTrkCols_] <-
   sweep(HhFuel_df[,LtTrkCols_], 1, rowSums(HhFuel_df[,LtTrkCols_]), "*")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(HhFuel_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% HhFuel_df$Year)) {
   stop(paste(
-    "File 'hh_fuel.csv' must have values for the years",
+    "File 'hh_fuel.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -354,10 +354,10 @@ LdvBiofuelMix_df <-
     "ldv_biofuel_mix.csv",
     "LoadDefaultValues.R")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(LdvBiofuelMix_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% LdvBiofuelMix_df$Year)) {
   stop(paste(
-    "File 'ldv_biofuel_mix.csv' must have values for the years",
+    "File 'ldv_biofuel_mix.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -408,9 +408,9 @@ LdvPowertrainCharacteristics_df <-
     "LoadDefaultValues.R")
 #Check whether all years are present
 Years_ <- 1975:2050
-if (!all(LdvPowertrainCharacteristics_df$ModelYear %in% Years_)) {
+if (!all(Years_ %in% LdvPowertrainCharacteristics_df$ModelYear)) {
   stop(paste(
-    "File 'ldv_powertrain_characteristics.csv' must have values for the years",
+    "File 'ldv_powertrain_characteristics.csv' must have values for at least the years",
     "from 1975 through 2050", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -456,9 +456,9 @@ HhPowertrain_df <-
     "LoadDefaultValues.R")
 #Check whether all years are present
 Years_ <- 1975:2050
-if (!all(HhPowertrain_df$ModelYear %in% Years_)) {
+if (!all(Years_ %in% HhPowertrain_df$ModelYear)) {
   stop(paste(
-    "File 'hh_powertrain_prop.csv' must have values for the years",
+    "File 'hh_powertrain_prop.csv' must have values for at least the years",
     "from 1975 through 2050", sep = " "))
 }
 #Check that powertrain proportion are 0 when powertrain characteristics are NA
@@ -540,10 +540,10 @@ CarSvcPowertrain_df[,LtTrkCols_] <-
   sweep(CarSvcPowertrain_df[,LtTrkCols_], 1,
         rowSums(CarSvcPowertrain_df[,LtTrkCols_]), "*")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(CarSvcPowertrain_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% CarSvcPowertrain_df$Year)) {
   stop(paste(
-    "File 'carsvc_powertrain_prop.csv' must have values for the years",
+    "File 'carsvc_powertrain_prop.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Check that powertrain proportion are 0 when powertrain characteristics are NA
@@ -631,10 +631,10 @@ ComSvcPowertrain_df[,LtTrkCols_] <-
   sweep(ComSvcPowertrain_df[,LtTrkCols_], 1,
         rowSums(ComSvcPowertrain_df[,LtTrkCols_]), "*")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(ComSvcPowertrain_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% ComSvcPowertrain_df$Year)) {
   stop(paste(
-    "File 'comsvc_fuel.csv' must have values for the years",
+    "File 'comsvc_fuel.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Check that powertrain proportion are 0 when powertrain characteristics are NA
@@ -710,10 +710,10 @@ if (any(abs(1 - rowSums(HvyTrkFuel_df[Cols_])) > 0.01)) {
 HvyTrkFuel_df[,Cols_] <-
   sweep(HvyTrkFuel_df[,Cols_], 1, rowSums(HvyTrkFuel_df[,Cols_]), "*")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(HvyTrkFuel_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% HvyTrkFuel_df$Year)) {
   stop(paste(
-    "File 'hvytrk_fuel.csv' must have values for the years",
+    "File 'hvytrk_fuel.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -752,10 +752,10 @@ HvyTrkBiofuelMix_df <-
     "hvytrk_biofuel_mix.csv",
     "LoadDefaultValues.R")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(HvyTrkBiofuelMix_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% HvyTrkBiofuelMix_df$Year)) {
   stop(paste(
-    "File 'hvytrk_biofuel_mix.csv' must have values for the years",
+    "File 'hvytrk_biofuel_mix.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -794,10 +794,10 @@ HvyTrkPowertrainCharacteristics_df <-
     "hvytrk_powertrain_characteristics.csv",
     "LoadDefaultValues.R")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(HvyTrkPowertrainCharacteristics_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% HvyTrkPowertrainCharacteristics_df$Year)) {
   stop(paste(
-    "File 'hvytrk_powertrain_characteristics.csv' must have values for the years",
+    "File 'hvytrk_powertrain_characteristics.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -846,10 +846,10 @@ HvyTrkPowertrain_df[,Cols_] <-
   sweep(HvyTrkPowertrain_df[,Cols_], 1,
         rowSums(HvyTrkPowertrain_df[,Cols_]), "*")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(HvyTrkPowertrain_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% HvyTrkPowertrain_df$Year)) {
   stop(paste(
-    "File 'hvytrk_powertrain_prop.csv' must have values for the years",
+    "File 'hvytrk_powertrain_prop.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Check that powertrain proportion are 0 when powertrain characteristics are NA
@@ -942,10 +942,10 @@ if (any(abs(1 - rowSums(TransitFuel_df[Cols_])) > 0.01)) {
 TransitFuel_df[,Cols_] <-
   sweep(TransitFuel_df[,Cols_], 1, rowSums(TransitFuel_df[,Cols_]), "*")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(TransitFuel_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% TransitFuel_df$Year)) {
   stop(paste(
-    "File 'transit_fuel.csv' must have values for the years",
+    "File 'transit_fuel.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -984,10 +984,10 @@ TransitBiofuelMix_df <-
     "transit_biofuel_mix.csv",
     "LoadDefaultValues.R")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(TransitBiofuelMix_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% TransitBiofuelMix_df$Year)) {
   stop(paste(
-    "File 'transit_biofuel_mix.csv' must have values for the years",
+    "File 'transit_biofuel_mix.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -1032,10 +1032,10 @@ TransitPowertrainCharacteristics_df <-
     "transit_powertrain_characteristics.csv",
     "LoadDefaultValues.R")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(TransitPowertrainCharacteristics_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% TransitPowertrainCharacteristics_df$Year)) {
   stop(paste(
-    "File 'transit_powertrain_characteristics.csv' must have values for the years",
+    "File 'transit_powertrain_characteristics.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Add to PowertrainFuelDefaults_ls and clean up
@@ -1108,10 +1108,10 @@ TransitPowertrain_df[,Cols_] <-
   sweep(TransitPowertrain_df[,Cols_], 1,
         rowSums(TransitPowertrain_df[,Cols_]), "*")
 #Check whether all years are present
-Years_ <- c(1990, 2000, 2005, 2010, 2020, 2030, 2040, 2050)
-if (!all(TransitPowertrain_df$Year %in% Years_)) {
+Years_ <- c(1990, 2000, 2010, 2020, 2030, 2040, 2050)
+if (!all(Years_ %in% TransitPowertrain_df$Year)) {
   stop(paste(
-    "File 'transit_powertrain_prop.csv' must have values for the years",
+    "File 'transit_powertrain_prop.csv' must have values for at least the years",
     "1990, 2000, 2010, 2020, 2030, 2040, 2050.", sep = " "))
 }
 #Check that powertrain proportion are 0 when powertrain characteristics are NA
