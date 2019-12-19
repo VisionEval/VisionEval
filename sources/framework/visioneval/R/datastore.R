@@ -767,8 +767,11 @@ readFromTableH5 <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, 
   Data_[Data_ == NAValue] <- NA
   #Return results
   if (ReadAttr) {
+    #If single value array, convert to vector but preserve attributes
+    if (all(dim(Data_) == 1)) dim(Data_) <- NULL
     Data_
   } else {
+    #Remove attributes
     as.vector(Data_)
   }
 }
