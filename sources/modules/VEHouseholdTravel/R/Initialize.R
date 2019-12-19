@@ -182,9 +182,12 @@ Initialize <- function(L) {
   #Check if Power Co2 value is in the model_fuel_co2.csv
   #------------------------------------------------------
   if(!"Electricity" %in% L$Global$Fuel$Fuel){
-    Msg <- paste("The value of carbon intensity for Electricity",
-                  "is not supplied in 'model_fuel_co2.csv' so",
-                  "using the default values for carbon intensity")
+    Msg <- paste(
+      "Warning message for VE-RPAT model only.",
+      "Does NOT apply to VE-RSPM or VE-State models:",
+      "The value of carbon intensity for Electricity",
+      "is not supplied in 'model_fuel_co2.csv' so",
+      "using the default values for carbon intensity")
     Warnings_ <- c(Warnings_, Msg)
     rm(Msg)
   }
