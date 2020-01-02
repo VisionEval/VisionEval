@@ -303,7 +303,7 @@ PredictWorkers <- function(L) {
     c("Age15to19", "Age20to29", "Age30to54", "Age55to64", "Age65Plus")
   Wk <- gsub("Age", "Wkr", Ag)
   Re <- gsub("Age", "RelEmp", Ag)
-  Az <- L$Year$Azone$Azone
+  Az <- as.vector(L$Year$Azone$Azone)
   #Fix seed as synthesis involves sampling
   set.seed(L$G$Seed)
   #Calculate total number of households
@@ -323,29 +323,65 @@ PredictWorkers <- function(L) {
     list(
       NumWkr = integer(length(L$Year$Azone))
     )
-  #Define function to predict total number of workers for a household age group
-  #N is a vector of the number of persons in the age group by household
-  #P is the the worker probability for the age group and household type by
-  #household
-  getNumWkr <- function(N, P) {
-    as.integer(sum(sample(c(1,0), size = N, replace = TRUE, prob = c(P, 1-P))))
+  #Initialize Errors vector
+  Errors_ <- character(0)
+  #Define function to predict total number of workers for by household given
+  #N_ is a vector of the number of persons in the age group by household
+  #P_ is the the worker probability for the age group
+  #W is the total number of workers
+  getNumWkr <- function(N_, P_, W) {
+    NumHh <- length(N_)
+    NumWkr_Hh <- setNames(integer(NumHh), 1:NumHh) #Initialize count of workers
+    HhIdx_Pr <- rep(1:length(N_), N_) #Vector of persons with household index
+    PrsnProb_Pr <- rep(P_, N_) #Probability that each person is a worker
+    WkrIdx_ <- sample(HhIdx_Pr, W, prob = PrsnProb_Pr ) #Sample household index
+    WkrTab_ <- table(WkrIdx_) #Tabulate household index
+    NumWkr_Hh[names(WkrTab_)] <- WkrTab_
+    NumWkr_Hh
   }
-  #Iterate through age groups and predict workers by age
+  #Iterate through age groups and Azones and identify number of workers by
+  #age group for each household
   for (i in 1:length(Ag)) {
-    NumPrsn_ <- L$Year$Household[[Ag[i]]]
-    Probs_ <- PropHhWkr_HtAg[L$Year$Household$HhType, Ag[i]]
-    if (!is.null(L$Year$Azone[[Re[i]]])) {
-      RelEmp <-
-        L$Year$Azone[[Re[i]]][match(L$Year$Household$Azone, L$Year$Azone$Azone)]
-    } else {
-      RelEmp <- rep(1, length(L$Year$Household$Azone))
+    NumWkr_Hh <- integer(NumHh)
+    for (az in Az) {
+      IsAz <- L$Year$Household$Azone == az
+      NumWkr_Hh[IsAz] <- local({
+        NumPrsn_ <- L$Year$Household[[Ag[i]]][IsAz]
+        HhType_ <- L$Year$Household$HhType[IsAz]
+        Probs_ <- PropHhWkr_HtAg[HhType_, Ag[i]]
+        TotPrsn <- sum(NumPrsn_)
+        RelEmp <- L$Year$Azone[[Re[i]]][L$Year$Azone$Azone == az]
+        if (is.null(RelEmp)) RelEmp <- 1
+        TotWkr <- round(sum(NumPrsn_ * Probs_) * RelEmp)
+        if (TotWkr > TotPrsn) {
+          #catch error
+          MaxVal <- TotPrsn / sum(NumPrsn_ * Probs_)
+          Msg <- paste0(
+            "Error during run of PredictWorkers module! ",
+            "The value of ", Re[i], " for Azone ", az, " in Year ", Year,
+            " will result in more workers than people in that age category. ",
+            "The maximum value of ", Re[i], " must be less than ",
+            round(MaxVal, 2), ".")
+          Errors_ <<- c(Errors_, Msg)
+          NA
+        } else {
+          NumWkr_ <- integer(length(NumPrsn_))
+          DoPredict_ <- NumPrsn_ > 0 & Probs_ > 0
+          NumWkr_[DoPredict_] <-
+            getNumWkr(NumPrsn_[DoPredict_], Probs_[DoPredict_], TotWkr)
+          NumWkr_
+        }
+      })
+      rm(IsAz)
     }
-    DoPredict_ <- NumPrsn_ > 0 & Probs_ > 0
-    Out_ls$Year$Household[[Wk[i]]][DoPredict_] <-
-      mapply(getNumWkr, NumPrsn_[DoPredict_], Probs_[DoPredict_] * RelEmp[DoPredict_])
-    rm(NumPrsn_, Probs_, DoPredict_)
+    Out_ls$Year$Household[[Wk[i]]] <- NumWkr_Hh
+    rm(az)
   }
   rm(i)
+  #Add error messages if any
+  if (length(Errors_) != 0) {
+    addErrorMsg("Out_ls", Errors_)
+  }
   #Calculate the total number of workers
   Out_ls$Year$Household$Workers <-
     mapply(sum,
