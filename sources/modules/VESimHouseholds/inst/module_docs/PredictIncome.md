@@ -88,7 +88,7 @@ An additional step must be carried out in order to predict household income. Bec
 |          | Dollars|
 |:---------|-------:|
 |Observed  |   51924|
-|Estimated |   52023|
+|Estimated |   51988|
 
 The following figure compares the distributions of the observed and predicted incomes of *regular* households.
 
@@ -100,7 +100,7 @@ Following is the comparison of mean values for the observed *group quarters* hou
 |          | Dollars|
 |:---------|-------:|
 |Observed  |    7504|
-|Estimated |    7617|
+|Estimated |    7645|
 
 The following figure compares the distributions of the observed and predicted incomes of *groups quarters* households.
 
