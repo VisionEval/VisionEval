@@ -5,7 +5,7 @@
 #<doc>
 #
 ## CreateVehicleTable Module
-#### September 10, 2018
+#### January 7, 2020
 #
 #This module creates a vehicle table and populates it with household ID and geography fields.
 #
@@ -121,6 +121,7 @@ CreateVehicleTableSpecifications <- list(
       NAME =
         items("HhId",
               "Azone",
+              "Bzone",
               "Marea"),
       TABLE = "Household",
       GROUP = "Year",
@@ -175,6 +176,7 @@ CreateVehicleTableSpecifications <- list(
         items("HhId",
               "VehId",
               "Azone",
+              "Bzone",
               "Marea"),
       TABLE = "Vehicle",
       GROUP = "Year",
@@ -291,6 +293,9 @@ CreateVehicleTable <- function(L) {
   #Add Azone ID to table
   Out_ls$Year$Vehicle$Azone <- rep(L$Year$Household$Azone, NumVeh_Hh)
   attributes(Out_ls$Year$Vehicle$Azone)$SIZE <- max(nchar(Out_ls$Year$Vehicle$Azone))
+  #Add Bzone ID to table
+  Out_ls$Year$Vehicle$Bzone <- rep(L$Year$Household$Bzone, NumVeh_Hh)
+  attributes(Out_ls$Year$Vehicle$Bzone)$SIZE <- max(nchar(Out_ls$Year$Vehicle$Bzone))
   #Add Marea ID to table
   Out_ls$Year$Vehicle$Marea <- rep(L$Year$Household$Marea, NumVeh_Hh)
   attributes(Out_ls$Year$Vehicle$Marea)$SIZE <- max(nchar(Out_ls$Year$Vehicle$Marea))
