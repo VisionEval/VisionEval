@@ -5,7 +5,7 @@
 #<doc>
 #
 ## CalculatePtranEnergyAndEmissions Module
-#### January 23, 2019
+#### January 12, 2020
 #
 #This module calculates the energy consumption and carbon emissions from public transportation vehicles in urbanized areas. Note that fuel consumption and emissions from car services (e.g. taxi, Uber, Lyft) are calculated in conjunction with the calculation of household vehicle emissions and are attributed to the household.
 #
@@ -147,7 +147,7 @@ CalculatePtranEnergyAndEmissionsSpecifications <- list(
       TABLE = "Marea",
       GROUP = "Year",
       TYPE = "energy",
-      UNITS = "GGE",
+      UNITS = "GGE/DAY",
       NAVALUE = -1,
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = "",
@@ -165,7 +165,7 @@ CalculatePtranEnergyAndEmissionsSpecifications <- list(
       TABLE = "Marea",
       GROUP = "Year",
       TYPE = "energy",
-      UNITS = "KWH",
+      UNITS = "KWH/DAY",
       NAVALUE = -1,
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = "",
@@ -183,7 +183,7 @@ CalculatePtranEnergyAndEmissionsSpecifications <- list(
       TABLE = "Marea",
       GROUP = "Year",
       TYPE = "mass",
-      UNITS = "GM",
+      UNITS = "GM/DAY",
       NAVALUE = -1,
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = "",
