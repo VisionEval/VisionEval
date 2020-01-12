@@ -1,6 +1,6 @@
 
 # CreateVehicleTable Module
-### September 10, 2018
+### January 7, 2020
 
 This module creates a vehicle table and populates it with household ID and geography fields.
 
@@ -62,6 +62,7 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |:-------------|:---------|:-----|:---------|:--------|:--------|:-----------|
 |HhId          |Household |Year  |character |ID       |         |            |
 |Azone         |Household |Year  |character |ID       |         |            |
+|Bzone         |Household |Year  |character |ID       |         |            |
 |Marea         |Household |Year  |character |ID       |         |            |
 |NumLtTrk      |Household |Year  |vehicles  |VEH      |NA, < 0  |            |
 |NumAuto       |Household |Year  |vehicles  |VEH      |NA, < 0  |            |
@@ -93,6 +94,7 @@ DESCRIPTION - A description of the data.
 |HhId          |Vehicle |Year  |character |ID       |         |                           |Unique household ID                                                                                                                                           |
 |VehId         |Vehicle |Year  |character |ID       |         |                           |Unique vehicle ID                                                                                                                                             |
 |Azone         |Vehicle |Year  |character |ID       |         |                           |Azone ID                                                                                                                                                      |
+|Bzone         |Vehicle |Year  |character |ID       |         |                           |Bzone ID                                                                                                                                                      |
 |Marea         |Vehicle |Year  |character |ID       |         |                           |Marea ID                                                                                                                                                      |
 |VehicleAccess |Vehicle |Year  |character |category |         |Own, LowCarSvc, HighCarSvc |Identifier whether vehicle is owned by household (Own), if vehicle is low level car service (LowCarSvc), or if vehicle is high level car service (HighCarSvc) |
 |Type          |Vehicle |Year  |character |category |NA       |Auto, LtTrk                |Vehicle body type: Auto = automobile, LtTrk = light trucks (i.e. pickup, SUV, Van)                                                                            |
