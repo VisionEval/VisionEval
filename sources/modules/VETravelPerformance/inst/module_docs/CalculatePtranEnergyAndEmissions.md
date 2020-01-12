@@ -1,6 +1,6 @@
 
 # CalculatePtranEnergyAndEmissions Module
-### January 23, 2019
+### January 12, 2020
 
 This module calculates the energy consumption and carbon emissions from public transportation vehicles in urbanized areas. Note that fuel consumption and emissions from car services (e.g. taxi, Uber, Lyft) are calculated in conjunction with the calculation of household vehicle emissions and are attributed to the household.
 
@@ -89,17 +89,17 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 
 DESCRIPTION - A description of the data.
 
-|NAME         |TABLE |GROUP |TYPE     |UNITS |PROHIBIT |ISELEMENTOF |DESCRIPTION                                                                                                                           |
-|:------------|:-----|:-----|:--------|:-----|:--------|:-----------|:-------------------------------------------------------------------------------------------------------------------------------------|
-|BusGGE       |Marea |Year  |energy   |GGE   |NA, < 0  |            |Average daily amount of hydrocarbon fuels consumed by bus transit vehicles in urbanized area in gas gallon equivalents                |
-|RailGGE      |Marea |Year  |energy   |GGE   |NA, < 0  |            |Average daily amount of hydrocarbon fuels consumed by rail transit vehicles in urbanized area in gas gallon equivalents               |
-|VanGGE       |Marea |Year  |energy   |GGE   |NA, < 0  |            |Average daily amount of hydrocarbon fuels consumed by van transit vehicles in urbanized area in gas gallon equivalents                |
-|BusKWH       |Marea |Year  |energy   |KWH   |NA, < 0  |            |Average daily amount of electricity consumed by bus transit vehicles in urbanized area in kilowatt-hours                              |
-|RailKWH      |Marea |Year  |energy   |KWH   |NA, < 0  |            |Average daily amount of electricity consumed by rail transit vehicles in urbanized area in kilowatt-hours                             |
-|VanKWH       |Marea |Year  |energy   |KWH   |NA, < 0  |            |Average daily amount of electricity consumed by van transit vehicles in urbanized area in kilowatt-hours                              |
-|BusCO2e      |Marea |Year  |mass     |GM    |NA, < 0  |            |Average daily amount of carbon-dioxide equivalents produced by bus transit vehicles in urbanized area in grams                        |
-|RailCO2e     |Marea |Year  |mass     |GM    |NA, < 0  |            |Average daily amount of carbon-dioxide equivalents produced by rail transit vehicles in urbanized area in grams                       |
-|VanCO2e      |Marea |Year  |mass     |GM    |NA, < 0  |            |Average daily amount of carbon-dioxide equivalents produced by van transit vehicles in urbanized area in grams                        |
-|BusCO2eRate  |Marea |Year  |compound |GM/MI |NA, < 0  |            |Average amount of carbon-dioxide equivalents produced by bus transit vehicles per mile of travel in urbanized area in grams per mile  |
-|RailCO2eRate |Marea |Year  |compound |GM/MI |NA, < 0  |            |Average amount of carbon-dioxide equivalents produced by rail transit vehicles per mile of travel in urbanized area in grams per mile |
-|VanCO2eRate  |Marea |Year  |compound |GM/MI |NA, < 0  |            |Average amount of carbon-dioxide equivalents produced by van transit vehicles per mile of travel in urbanized area in grams per mile  |
+|NAME         |TABLE |GROUP |TYPE     |UNITS   |PROHIBIT |ISELEMENTOF |DESCRIPTION                                                                                                                           |
+|:------------|:-----|:-----|:--------|:-------|:--------|:-----------|:-------------------------------------------------------------------------------------------------------------------------------------|
+|BusGGE       |Marea |Year  |energy   |GGE/DAY |NA, < 0  |            |Average daily amount of hydrocarbon fuels consumed by bus transit vehicles in urbanized area in gas gallon equivalents                |
+|RailGGE      |Marea |Year  |energy   |GGE/DAY |NA, < 0  |            |Average daily amount of hydrocarbon fuels consumed by rail transit vehicles in urbanized area in gas gallon equivalents               |
+|VanGGE       |Marea |Year  |energy   |GGE/DAY |NA, < 0  |            |Average daily amount of hydrocarbon fuels consumed by van transit vehicles in urbanized area in gas gallon equivalents                |
+|BusKWH       |Marea |Year  |energy   |KWH/DAY |NA, < 0  |            |Average daily amount of electricity consumed by bus transit vehicles in urbanized area in kilowatt-hours                              |
+|RailKWH      |Marea |Year  |energy   |KWH/DAY |NA, < 0  |            |Average daily amount of electricity consumed by rail transit vehicles in urbanized area in kilowatt-hours                             |
+|VanKWH       |Marea |Year  |energy   |KWH/DAY |NA, < 0  |            |Average daily amount of electricity consumed by van transit vehicles in urbanized area in kilowatt-hours                              |
+|BusCO2e      |Marea |Year  |mass     |GM/DAY  |NA, < 0  |            |Average daily amount of carbon-dioxide equivalents produced by bus transit vehicles in urbanized area in grams                        |
+|RailCO2e     |Marea |Year  |mass     |GM/DAY  |NA, < 0  |            |Average daily amount of carbon-dioxide equivalents produced by rail transit vehicles in urbanized area in grams                       |
+|VanCO2e      |Marea |Year  |mass     |GM/DAY  |NA, < 0  |            |Average daily amount of carbon-dioxide equivalents produced by van transit vehicles in urbanized area in grams                        |
+|BusCO2eRate  |Marea |Year  |compound |GM/MI   |NA, < 0  |            |Average amount of carbon-dioxide equivalents produced by bus transit vehicles per mile of travel in urbanized area in grams per mile  |
+|RailCO2eRate |Marea |Year  |compound |GM/MI   |NA, < 0  |            |Average amount of carbon-dioxide equivalents produced by rail transit vehicles per mile of travel in urbanized area in grams per mile |
+|VanCO2eRate  |Marea |Year  |compound |GM/MI   |NA, < 0  |            |Average amount of carbon-dioxide equivalents produced by van transit vehicles per mile of travel in urbanized area in grams per mile  |
