@@ -189,6 +189,7 @@ CreateVehicleTableSpecifications <- list(
         items("Unique household ID",
               "Unique vehicle ID",
               "Azone ID",
+              "Bzone ID",
               "Marea ID")
     ),
     item(
