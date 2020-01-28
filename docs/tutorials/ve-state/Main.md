@@ -1,4 +1,4 @@
-# VERSPM Tutorial
+# VE-STATE Tutorial
 ----
 
 ## Strategic Planning Introduction
@@ -9,20 +9,18 @@ VisionEval is an open source modeling framework intended to address these planni
  
 Please see [VisionEval.org](http://VisionEval.org) for additional details. You can also go [here](https://github.com/VisionEval/VisionEval/blob/master/api/model_system_design.md) if you would like to learn more about the model framework design.
 
-## What is RSPM?
-GreenSTEP was later modified for regional transportation agencies with broader measures such as health, household costs, and other outcomes and called the Regional Strategic Planning Model (RSPM).
 
-## VERSPM
-VERSPM is the implementation of the Regional Strategic Planning Model (RSPM) in the VisionEval model system. The model run files are organized into two directories to reflect how the RSPM model has been used in strategic assessments in which hundreds of model runs are carried out to explore the decision space. Typically several land use scenarios are developed and then a number of transportation scenarios are run for each land use scenarios. While the VisionEval framework is built to support that work flow, the initial testing of VERSPM modules runs all land use and transport modules in one sequence. This is done in the `../models/VERSPM/Test1` directory.
+## VESTATE
 
-Later testing will split apart land use and transport scenarios, splitting them into separate directories. VERSPM  operates largely at the zonal level in a manner similar to traditional travel model zones (i.e. inputs and outputs are zone-based). This results in improved spatial resolution of outputs, but which also increases the data development burden. The selection of the right tool therefore depends on a number of factors – available of data, project resources, desired spatial output detail, etc.
+VE-STATE is an extension of RSPM models, namely VERSPM, which enables users to apply the model for statewide applications. In order to develop VE-STATE, VE-RSPM modules has been tested and modified to confirm that they will work in a statewide application.
+The main difference between VE-RSPM models and VE-STATE models is that a number of VE-RSPM inputs are specified at the Bzone level. Examples include numbers of dwelling units by type and numbers of jobs by sector. VE-STATE models run at a higher level of abstraction than VE-RSPM models and don’t have Bzone level inputs.
 
 ## Sections
 This tutorial contains the following sections:
 
-* [Model Description](Model_Overview.md): a description of the VERSPM model;
+* [Model Description](Model_Overview.md): a description of the VESTATE model;
 * [Modules and Outputs](Modules_and_Outputs.md): a detailed identification Modules and their inputs and outputs
 * [Inputs and Parameters](Inputs_and_Parameters.md): a detailed descriptiopn of model inputs modification
-* [Running the Model](Running_VERSPM.md): step by step manual to run the model;
+* [Running the Model](Running_VESTATE.md): step by step manual to run the model;
 * [Performance Metrics](Performance.md): an overview of the model outcomes;
 

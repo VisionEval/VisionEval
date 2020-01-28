@@ -1,7 +1,7 @@
-# VERSPM Modules and Outputs
+# VESTATE Modules and Outputs
 ----
 
-The VERSPM model is a compilation of several modules, listed below:
+The VESTATE model is a compilation of several modules, listed below:
 
 |      MODULE                                                          |     PACKAGE           |
 |----------------------------------------------------------------------|-----------------------|
@@ -9,6 +9,7 @@ The VERSPM model is a compilation of several modules, listed below:
 |[PredictWorkers](#predictworkers)                                     |VESimHouseholds        |
 |[AssignLifeCycle](#assignlifecycle)                                   |VESimHouseholds        |
 |[PredictIncome](#predictincome)                                       |VESimHouseholds        |
+|[Initialize](#initialize)                                     		   |VESimLandUse           |
 |[CreatSimBzones](#creatsimbzones)                                     |VESimLandUse           |
 |[SimulateHousing](#simulatehousing)                                   |VESimLandUse           |
 |[SimulateEmployment](#simulateemployment)                             |VESimLandUse           |
@@ -207,81 +208,182 @@ For more information see [here](https://github.com/gregorbj/VisionEval/blob/898f
 [Top](#rspm-modules-and-outputs)
 ___
 
-## PredictHousing
-This module assigns a housing type, either single-family (`SF`) or multifamily (`MF`) to non-group quarters households based on the respective supplies of `SF` and `MF` dwelling units in the housing market to which the household is assigned (i.e. the `Azone` the household is assigned to) and household characteristics. The model then assigns each household to a `Bzone` based on the household's housing type and income quartile as well as the supply of housing by type and `Bzone` (an input), and the distribution of households by income quartile for each `Bzone` (an input). The module assigns non-institutional group quarters households to `Bzones` based on the supply of group quarters units by `Bzone`.
+
+
+
+## Initialize
+Modules in the VESimLandUse package synthesize Bzones and their land use attributes as a function of Azone characteristics as well as data derived from the US Environmental Protection Agency's Smart Location Database (SLD) augmented with US Census housing and household income data, and data from the National Transit Database. Details on these data are included in the VESimLandUseData package. The combined dataset contains a number of land use attributes at the US Census block group level. The goal of Bzone synthesis to generate a set of SimBzones in each Azone that reasonably represent block group land use characteristics given the characteristics of the Azone, the Marea that the Azone is a part of, and scenario inputs provided by the user.
+Many of the models and procedures used in Bzone synthesis pivot from profiles developed from these data sources for specific urbanized areas, as well as more general profiles for different urbanized area population size categories, towns, and rural areas. Using these specific and general profiles enables the simulated Bzones (SimBzones) to better represent the areas being modeled and the variety of conditions found in different states. Following is a listing of the urbanized areas for which profiles have been developed. Note that urbanized areas that cross state lines are split into the individual state components. This is done to faciliate the development of state models and to better reflect the characteristics of the urbanized area characteristics in each state.
+It is incumbent on the model user to identify the name of the urbanized area profile that will be used for each of the Mareas in the model. This module reads in the names assigned in the "marea_uza_profile_names.csv" file and checks their validity. If any are invalid, input processing will stop and error messages will be written to the log identifying the problem names. The following table identifies the names that may be used.
 
 ### User Input Files
-1. Dwelling units (**_bzone_dwelling_units.csv_**): This file contains the number single-family, multi-family and group-quarter dwelling units by `Bzone` for each of the base and future years.
+
+1. hh location type proportions (**_marea_uza_profile_names.csv_**): This file provides the name of a specific urbanized area for the urbanized area profile to use in SimBzone creation
+   * **UzaProfileName**: Name of a specific urbanized area for the urbanized area profile to use in SimBzone creation or one of the following: small, medium-small, medium, medium-large, large, very-large
 
    Here is a snapshot of the file:
-<img align="center" width="500" border=1 src="images/bzone_dwelling_units.PNG">
+<img align="center" width="400" border=1 src="images/uza.PNG">   
 
 
-2. Household proportion by income (**_bzone_hh_inc_qrtl_prop.csv_**): This file contains the proportion of `Bzone` non-group quarters households by quartile of `Azone` household income category for each of the base and future years.
+   
+2. hh location type proportions (**_azone_hh_loc_type_prop.csv_**): This file provides the proportions for households residing in the metropolitan, towns and rural part of the Azone
+   * **PropMetroHh**: Proportion of households residing in the metropolitan (i.e. urbanized) part of the Azone
+   * **PropTownHh**: Proportion of households residing in towns (i.e. urban-like but not urbanized) in the Azone
+   * **PropRuralHh**: Proportion of households residing in rural (i.e. not urbanized or town) parts of the Azone
 
    Here is a snapshot of the file:
-<img align="center" width="800" border=1 src="images/bzone_hh_inc_qrtl_prop.PNG">
+<img align="center" width="400" border=1 src="images/hh_loc_type.PNG">   
+   
+3. work location type proportions (**_azone_wkr_loc_type_prop.csv_**): This file provides the proportions for workers residing in Azone who works in the metropolitan, towns and rural part of the Azone
+   * **PropWkrInMetroJobs**: Proportion of workers residing in the Azone who work at jobs in the metropolitan (i.e. urbanized) area associated with the Azone
+   * **PropWkrInTownJobs**: Proportion of workers residing in the Azone who work at jobs in towns (i.e. urban-like but not urbanized) in the Azone
+   * **PropWkrInRuralJobs**: Proportion of workers residing in the Azone who work at jobs in rural (i.e. not urbanized or town) parts of the Azone
+   * **PropMetroJobs**: Proportion of the jobs of the metropolitan area that the Azone is associated with that are located in the metropolitan portion of the Azone
+   
+   Here is a snapshot of the file:
+<img align="center" width="400" border=1 src="images/wrk_loc_prop.PNG">
+   
+4. work location type proportions (**_azone_gq_pop-prop_by_area-type.csv_**): This file provides the proportions for groupquarters in different area types.
+   * **MetroLandArea**: Land area (excluding large water bodies and large tracts of undevelopable land) in the metropolitan (i.e. urbanized) portion of the Azone
+   * **TownLandArea**: Land area (excluding large water bodies and large tracts of undevelopable land) in towns (i.e. urban-like but not urbanized) in the Azone
+   * **RuralAveDensity**: Proportion of workers residing in the Azone who work at jobs in the metropolitan (i.e. urbanized) area associated with the Azone
+  
+  Here is a snapshot of the file:
+   <img align="center" width="400" border=1 src="images/loc_type_land.PNG"> 
  
+ 
+5. work location type proportions (**_azone_gq_pop-prop_by_area-type.csv_**): This file provides the average activity density in rural areas 
+   * **PropGQPopCenter**: Proportion of Azone non-institutional group quarters population located in center area type
+   * **PropGQPopInner**: Proportion of Azone non-institutional group quarters population located in inner area type
+   * **PropGQPopOuter**: Proportion of Azone non-institutional group quarters population located in outer area type
+   * **PropGQPopFringe**: Proportion of Azone non-institutional group quarters population located in fringe area type
+
+
+
+   Here is a snapshot of the file:
+<img align="center" width="400" border=1 src="images/gq_prop.PNG">
+ 
+### Internal Module Inputs
+
+
+### Module Outputs
+
+
+
+
+
+For more information see [here](https://github.com/VisionEval/VisionEval-Dev/blob/master/sources/modules/VESimLandUse/inst/module_docs/Initialize.md)
+)
+
+[Top](#rspm-modules-and-outputs)
+___
+## CreateSimBzones
+This module synthesizes Bzones and their land use attributes as a function of Azone characteristics as well as data derived from the US Environmental Protection Agency's Smart Location Database (SLD) augmented with US Census housing and household income data, and data from the National Transit Database. Details on these data are included in the VESimLandUseData package. The combined dataset contains a number of land use attributes at the US Census block group level. The goal of Bzone synthesis to generate a set of SimBzones in each Azone that reasonably represent block group land use characteristics given the characteristics of the Azone, the Marea that the Azone is a part of, and scenario inputs provided by the user.
+
+Many of the models and procedures used in Bzone synthesis pivot from profiles developed from these data sources for specific urbanized areas, as well as more general profiles for different urbanized area population size categories, towns, and rural areas. Using these specific and general profiles enables the simulated Bzones (SimBzones) to better represent the areas being modeled and the variety of conditions found in different states. The documentation for the `Initialize` module has a listing of urbanized area profile names.
+
+The models and procedures in this module create SimBzones within each Azone that simulate the land use characteristics of neighborhoods likely to be found in the Azone. The SimBzones are assigned quantities of households and jobs and are attributed with several land use measures in the process. The characteristics are:
+
+* **Location Type**: Identification of whether the SimBzone is located in an urbanized area, a town (i.e. an urban-type area that is not large enough to be urbanized), rural (i.e. dispersed low-density development)
+
+* **Households**: Number of households in each SimBzone
+
+* **Employment**: Number of jobs in each SimBzone
+
+* **Activity Density**: Number of households and jobs per acre
+
+* **Land Use Diversity**: Measures of the degree of mixing of households and jobs
+
+* **Destination Accessibility**: Measures of proximity to households and jobs
+
+* **Area Type and Development Type**: Categories which describe the relative urban nature of the SimBzone (area type) and the character of development in the SimBzone (development type).
+
+* **Employment Split**: Number of retail, service, and other jobs in each SimBzone.
+
+### User Input Files
+
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
 |--------------------|---------------------------------------|--------------|-------------------------------------------|
-| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**HHSize**    | Number of persons in the household        |
-| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**HHType**    | Coded household age composition           |
-| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**Age15to19** | Persons in 15 to 19 year old age group    |
-| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**Age20to29** | Persons in 20 to 29 year old age group    |
-| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**Age30to54** | Persons in 30 to 54 year old age group    |
-| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**Age55to64** | Persons in 55 to 64 year old age group    |
-| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**Age65Plus** | Persons in 65 or older age group          |
-| VESimHouseholds    | [PredictWorkers](#predictworkers)     |**Workers**   | Total workers in the household            |
-| VESimHouseholds    | [PredictIncome](#predictincome)       |**Income**    | Total annual income of household          |
+| VESimHouseholds    | [[PredictWorkers](#predictworkers)  |**NumWkr**    | see  [[PredictWorkers](#predictworkers)         |
+| VESimLandUse    | [Initialize](#initialize) |**PropMetroHh** | see  [Initialize](#initialize)        |
+| VESimLandUse    | [Initialize](#initialize)      |**PropTownHh**   | see  [Initialize](#initialize)         |
+| VESimLandUse    | [Initialize](#initialize)        |**PropRuralHh**    | see  [Initialize](#initialize)      |
+| VESimLandUse    | [Initialize](#initialize)   |**PropWkrInMetroJobs**    | see  [Initialize](#initialize)           |
+| VESimLandUse    | [Initialize](#initialize)  |**PropWkrInTownJobs** | see  [Initialize](#initialize)          |
+| VESimLandUse    | [Initialize](#initialize)     |**PropWkrInRuralJobs**   | see  [Initialize](#initialize)            |
+| VESimLandUse    | [Initialize](#initialize)       |**PropMetroJobs**    | see  [Initialize](#initialize)         |
+| VESimLandUse    | [Initialize](#initialize)   |**MetroLandArea**    | see  [Initialize](#initialize)           |
+| VESimLandUse    | [Initialize](#initialize)  |**TownLandArea** | see  [Initialize](#initialize)         |
+| VESimLandUse    | [Initialize](#initialize)      |**RuralAveDensity**   | see  [Initialize](#initialize)            |
 
 ### Module Outputs
-* **HouseType**: Type of dwelling unit of the household
-* **SF**: Number of households living in single family dwelling units in zone
-* **MF**: Number of households living in multi-family dwelling units in zone
-* **GQ**: Number of persons living in group quarters in zone
-* **Pop**: Population residing in zone
-* **NumHh**: Number of households in zone
-* **NumWkr**: Number of workers in zone
+* **LocType**: Location type (Urban, Town, Rural) of the place where the household resides
+* **NumHh**: Number of households allocated to the SimBzone
+* **TotEmp**: Total number of jobs in zone
+* **RetEmp**: Number of jobs in retail sector in zone
+* **SvcEmp**: Number of jobs in service sector in zone
+* **OthEmp**: Number of jobs in other than the retail and service sectors in zone
+* **AreaType**: Area type (center, inner, outer, fringe) of the Bzone
+* **DevType**: Location type (Urban, Town, Rural) of the Bzone
+* **D1D**: Gross activity density (employment + households) on unprotected land in zone (Ref: EPA 2010 Smart Location Database)
+* **D5**: Destination accessibility of zone calculated as harmonic mean of jobs within 2 miles and population within 5 miles
+* **UrbanArea**: Area that is Urban and unprotected (i.e. developable) within the zone
+* **TownArea**: Area that is Town and unprotected (i.e. developable) within the zone
+* **RuralArea**: Area that is Rural and unprotected (i.e. developable) within the zone
+* **SFDU**: Number of single family dwelling units (PUMS codes 01 - 03) in zone
+* **MFDU**: Number of multi-family dwelling units (PUMS codes 04 - 09) in zone
 
-For more information see [here](https://github.com/gregorbj/VisionEval/blob/898fc016893f5b7dd78507e101c37d04486826b3/sources/modules/VELandUse/inst/module_docs/PredictHousing.md)
+
+
+
+For more information see [here](https://github.com/VisionEval/VisionEval-Dev/blob/master/sources/modules/VESimLandUse/inst/module_docs/CreateSimBzones.md)
 
 [Top](#rspm-modules-and-outputs)
 ___
 
-## LocateEmployment    
-This module places employment in `Bzone`s based on input assumptions of employment by type and `Bzone`. The model adjusts the employment numbers to balance with the number of workers in the region. The module creates a worker table and assigns workers to `Bzone` employment locations as a function of the number of jobs in each `Bzone` and the distance between residence and employment `Bzone`s.
 
+## SimulateHousing    
+his module assigns a housing type, either single-family (SF) or multifamily (MF) to regular households based on the respective supplies of SF and MF dwelling units in the housing market to which the household is assigned (i.e. the Azone the household is assigned to) and on household characteristics. It then assigns each household to a SimBzone based on the household's housing type as well as the supply of housing by type and SimBzone. The module assigns non-institutional group quarters households to SimBzones randomly.
 ### User Input Files
-1. Employment data (**_bzone_employment.csv_**): This file contains the total, retail and service employment by zone for each of the base and future years.
-   * **TotEmp**: Total number of jobs in zone
-   * **RetEmp**: Number of jobs in retail sector in zone
-   * **SvcEmp**: Number of jobs in service sector in zone
-   
-   Here is a snapshot of the file:
-<img align="center" width="500" border=1 src="images/bzone_employment.PNG">
-
-
-2. Zonal latituted longitude (**_bzone_lat_lon.csv_**): This file contains the latitude and longitude of the centroid of the zone.
-
-   Here is a snapshot of the file:
-<img align="center" width="500" border=1 src="images/bzone_lat_lon.PNG">
 
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
 |--------------------|---------------------------------------|--------------|-------------------------------------------|
 | VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**HhId**      | Household id                              |
 | VESimHouseholds    | [PredictWorkers](#predictworkers)     |**Workers**   | Total workers in the household            |
-| VESimHouseholds    | [PredictWorkers](#predictworkers)     |**NumWkr**    | Number of workers residing in the zone    |
+| VESimLandUse    | [Initialize](#initialize)     |**PropGQPopCenter**    | see [Initialize](#initialize)   |
+| VESimLandUse    |[Initialize](#initialize) |**PropGQPopInner**      |see [Initialize](#initialize)                              |
+| VESimLandUse    | [Initialize](#initialize)    |**PropGQPopOuter**   | see [Initialize](#initialize)            |
+| VESimLandUse    | [Initialize](#initialize)     |**PropGQPopFringe**    | see [Initialize](#initialize)    |
+| VESimLandUse    | [CreatSimBzones](#creatsimbzones)  |**SFDU**      | see [CreatSimBzones](#creatsimbzones)                             |
+| VESimLandUse    | [CreatSimBzones](#creatsimbzones)      |**MFDU**   | see [CreatSimBzones](#creatsimbzones)             |
+| VESimLandUse    | [CreatSimBzones](#creatsimbzones)     |**LocType**    | see [CreatSimBzones](#creatsimbzones)     |
+| VESimLandUse    | [CreatSimBzones](#creatsimbzones)  |**AreaType**      | see [CreatSimBzones](#creatsimbzones)                              |
+| VESimHouseholds    | [CreateHouseholds](#createhouseholds)      |**HhSize**   | Total workers in the household            |
+| VESimHouseholds    | [CreateHouseholds](#createhouseholds)      |**Age15to19**    | Number of workers residing in the zone    |
+| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**Age20to29**      | Household id                              |
+| VESimHouseholds    | [CreateHouseholds](#createhouseholds)      |**Age30to54**   | Total workers in the household            |
+| VESimHouseholds    | [CreateHouseholds](#createhouseholds)      |**Age55to64**    | Number of workers residing in the zone    |
+| VESimHouseholds    | [CreateHouseholds](#createhouseholds)      |**Age65Plus**   | Total workers in the household            |
+| VESimHouseholds    | [CreateHouseholds](#createhouseholds)      |**HhType**    | Number of workers residing in the zone    |
 
 ### Module Outputs
-* **TotEmp**: Total number of jobs in zone
-* **RetEmp**: Number of jobs in retail sector in zone
-* **SvcEmp**: Number of jobs in service sector in zone
-* **WkrId**: Unique worker ID
-* **DistanceToWork**: Distance from home to work assuming location at `Bzone` centroid and 'Manhattan' distance
+* **HouseType**: Type of dwelling unit in which the household resides (SF = single family, MF = multi-family, GQ = group quarters
+* **LocType**: Location type (Urban, Town, Rural) of the place where the household resides
+* **Pop**: Total population residing in Bzone
+* **UrbanPop**: Urbanized area population in the Marea
+* **TownPop**: Town (i.e. urban but non-urbanized area) in the Marea
+* **RuralPop**: Rural (i.e. not urbanized and not town) population in the Marea
+* **NumWkr**: Number of jobs in retail sector in zone
+* **UrbanIncome**: Total household income of the urbanized area population in the Marea
+* **TownIncome**: Total household income of the town (i.e. urban but non-urbanized area) population in the Marea
+* **RuralIncome**: Total household income of the rural (i.e. not urbanized and not town) population in the Marea
 
-For more information see [here](https://github.com/gregorbj/VisionEval/blob/898fc016893f5b7dd78507e101c37d04486826b3/sources/modules/VELandUse/inst/module_docs/LocateEmployment.md)
+
+
+
+For more information see [here](https://github.com/VisionEval/VisionEval-Dev/blob/master/sources/modules/VESimLandUse/inst/module_docs/SimulateHousing.md)
 
 [Top](#rspm-modules-and-outputs)
 ___   
