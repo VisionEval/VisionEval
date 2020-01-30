@@ -274,7 +274,7 @@ AssignCarSvcAvailability <- function(L) {
     Ax <- names(Bx_At_df)
     HiBzones_ <- do.call(c, sapply(Ax, function(x) {
       getHiLvlBzones(Bx_At_df[[x]], PropHiSvc_MaAt[ma,x])
-    }))
+    }, simplify = FALSE))
     CarSvcLevel_Bz[HiBzones_] <- "High"
     rm(BzInMa, Bx, Fields_, Bx_df, Bx_At_df, Ax, HiBzones_)
   }
