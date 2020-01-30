@@ -1,6 +1,6 @@
 
 # SimulateEmployment Module
-### February 5, 2019
+### December 3, 2019
 
 This module assign workers SimBzone work locations. A worker table is created which identifies a unique worker ID, the household ID the worker is a part of, and the SimBzone, Azone, and Marea of the worker job location.
 
