@@ -22,7 +22,7 @@ The `VESTATE` directory serves the dual purposes of providing sample data and se
 
 The `../models/VESTATE/` directory contains sample input files for the Rogue Valley region in Oregon. These inputs can be modified or replaced to investigate the impacts of policy changes or to model a different region.  The folder contains multiple files and subfolders:
 
-<img align="center" width="800" border=1 src="images/vestate.PNG">
+<img align="center" width="500" border=1 src="images/vestate.PNG">
 
 `run_model.R` is the core script for running the model. It consists of calls to the modules that make up the model. The user may modify the script to call the  desired modules.
 
@@ -32,6 +32,7 @@ The `defs` directory contains five model definition files which is introduced in
 
 The `inputs` directory contains a number of `CSV` and `JSON` files that provide inputs for the modules. Each module specifies what input files it needs. If you would like to know 
 the description of each input file and how you can change those files for your desired testing see [Inputs_and_Parameters](Inputs_and_Parameters.md/#input-files)
+
 <img align="center" width="800" border=1 src="images/inputs.PNG">
 
 There is complete set of test data for RVMPO which you will find out in the Test1 folder. You can use those data to test VERRSPM run.
@@ -80,7 +81,7 @@ After running the script a new window will pop up:
 
 click the `Select Scenario run script` and choose ve-state to read the run.model script
 
-<img align="center" width="800" border=1 src="https://github.com/wsp-sag/client_fhwa_vision_eval/blob/rspm_tutorial_AA/documentation/tutorials/verspm/pics/run1.PNG">
+<img align="center" width="800" border=1 src="images/run1.PNG">
 
 Go to `Inputs` tab to view all the inputs.
 
