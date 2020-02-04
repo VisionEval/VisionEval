@@ -164,10 +164,10 @@ ___
 - **marea_dvmt_split_by_road_class.csv** This file is used to specify the dvmt split for different road classes and is optional. The file is used in the [Initialize (VETravelPerformance)](Modules_and_Outputs.md/#initialize-vetravelperformance) and [CalculateBaseRoadDvmt](Modules_and_Outputs.md/#calculatebaseroaddvmt) modules.         
 - **marea_d3bpo4_adj.csv** This file provides the D3bpo4 value for urban, town and rural areas from the EPA 2010 Smart Location Database and is used in the [Simulate4DMeasures](Modules_and_Outputs.md/#simulate4dmeasures) 
 - **marea_lane_miles.csv** This file contains inputs on the numbers of freeway lane-miles and arterial lane-miles and is used in the [AssignRoadMiles](Modules_and_Outputs.md/#assignroadmiles) module.                   
-- **marea_mix_targets.csv** his file represents Marea target for proportion of households located in mixed-use neighborhoods (or NA if no target) and is used in the [SimulateUrbanMixMeasure](Modules_and_Outputs.md/#simulateurbanmixmeasure) module.                   
+- **marea_mix_targets.csv** This file represents Marea target for proportion of households located in mixed-use neighborhoods (or NA if no target) and is used in the [SimulateUrbanMixMeasure](Modules_and_Outputs.md/#simulateurbanmixmeasure) module.                   
 - **marea_operations_deployment.csv** This file is used to specify the proportion of dvmt affected by operations for different road classes and is optional. The file is used in the [Initialize (VETravelPerformance)](Modules_and_Outputs.md/#initialize-vetravelperformance) and [CalculateRoadPerformance](Modules_and_Outputs.md/#calculateroadperformance) modules.        
 - **marea_parking-avail_by_area-type.csv** This file has the data for avereage number of parkings available to households and is used in the [AssignParkingRestrictions](Modules_and_Outputs.md/#assignparkingrestrictions)   
-- **marea_parking-cost_by_area-type.csv**This file has the data related to parking costs and population proportions paying the parking costs and is used in the [AssignParkingRestrictions](Modules_and_Outputs.md/#assignparkingrestrictions) 
+- **marea_parking-cost_by_area-type.csv** This file has the data related to parking costs and population proportions paying the parking costs and is used in the [AssignParkingRestrictions](Modules_and_Outputs.md/#assignparkingrestrictions) 
 
 
 - **marea_speed_smooth_ecodrive.csv** This input file supplies information of deployment of speed smoothing and ecodriving by road class and vehicle type and is used in the [CalculateMpgMpkwhAdjustments](Modules_and_Outputs.md/#calculatempgmpkwhadjustments) module.          
@@ -176,7 +176,7 @@ ___
 - **marea_transit_fuel.csv** This file is used to specify the transit fuel proportions and is optional. The file is used in the [Initialize (VETravelPerformance)](Modules_and_Outputs.md/#initialize-vetravelperformance) and [CalculateCarbonIntensity](Modules_and_Outputs.md/#calculatecarbonintensity) modules.                      
 - **marea_transit_powertrain_prop.csv** This file is used to specify the mixes of transit vehicle powertrains and is optional. The file is used in the [Initialize (VETravelPerformance)](Modules_and_Outputs.md/#initialize-vetravelperformance) and [CalculatePtranEnergyAndEmissions](Modules_and_Outputs.md/#calculateptranenergyandemissions) modules.     
 - **marea_transit_service.csv** This file contains annual revenue-miles for different transit modes for metropolitan area and is used in the [AssignTransitService](Modules_and_Outputs.md/#assigntransitservice) module.                   
-- **marea_travel-demand-mgt_by_area-type.csv**T his file has the data for proportions participating in demand management programs and is used in the [AssignDemandManagement](Modules_and_Outputs.md/#assigndemandmanagement) module.                   
+- **marea_travel-demand-mgt_by_area-type.csv** This file has the data for proportions participating in demand management programs and is used in the [AssignDemandManagement](Modules_and_Outputs.md/#assigndemandmanagement) module.                   
 - **marea_uza_profile_names.csv** his file provides the name of a specific urbanized area for the urbanized area profile to use in SimBzone creation and is used in the [Initialize](Modules_and_Outputs.md/#initialize) module.
 
 - **other_ops_effectiveness.csv** This file is used to specify the delay effects of operations in different road classes and is optional (only needed if user wants to modify the values). The file is used in the [Initialize (VETravelPerformance)](Modules_and_Outputs.md/#initialize-vetravelperformance) and [CalculateRoadPerformance](Modules_and_Outputs.md/#calculateroadperformance) modules. 
@@ -186,7 +186,7 @@ ___
 - **region_comsvc_lttrk_prop.csv** This file supplies data for the light truck proportion of commercial vehicles and is used in the [CalculateComEnergyAndEmissions](Modules_and_Outputs.md/#calculatecomenergyandemissions) module.              
 - **region_comsvc_powertrain_prop.csv** This file is used to specify the powertrain proportion of commercial vehicles and is optional. The file is used in the [Initialize (VEPowertrainsAndFuels)](Modules_and_Outputs.md/#initialize-vepowertrainsandfuels
 ) and [CalculateComEnergyAndEmissions](Modules_and_Outputs.md/#calculatecomenergyandemissions) modules.        
-- **region_comsvc_veh_mean_age.csv** TThis input file contains average age of commercial service vehicles and is used in the [CalculateComEnergyAndEmissions](Modules_and_Outputs.md/#calculatecomenergyandemissions) module.              
+- **region_comsvc_veh_mean_age.csv** This input file contains average age of commercial service vehicles and is used in the [CalculateComEnergyAndEmissions](Modules_and_Outputs.md/#calculatecomenergyandemissions) module.              
 
 
 - **region_hh_driver_adjust_prop.csv** This file specifies the relative driver licensing rate relative to the model estimation data year and is used in the [AssignDrivers](Modules_and_Outputs.md/#assigndrivers) module. 
