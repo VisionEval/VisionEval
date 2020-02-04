@@ -18,8 +18,7 @@ The main difference between VE-RSPM models and VE-STATE models is that a number 
 ## Sections
 This tutorial contains the following sections:
 
-* [Model Description](Model_Overview.md): a description of the VESTATE model;
-* [Model Comparison](Model_Comparison.md): a broad comparison of VESTATE and VERSPM model;
+* [Model Description](Model_Overview.md): a description of the VESTATE model and a broad comparison with VERSPM model;
 * [Modules and Outputs](Modules_and_Outputs.md): a detailed identification Modules and their inputs and outputs
 * [Inputs and Parameters](Inputs_and_Parameters.md): a detailed descriptiopn of model inputs modification
 * [Running the Model](Running_VESTATE.md): step by step manual to run the model;
