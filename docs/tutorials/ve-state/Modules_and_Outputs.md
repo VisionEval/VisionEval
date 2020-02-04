@@ -263,6 +263,16 @@ It is incumbent on the model user to identify the name of the urbanized area pro
    Here is a snapshot of the file:
 <img align="center" width="400" border=1 src="images/gq_prop.PNG">
  
+ 
+6. Land area for area types(**_azone_loc_type_land_area.csv_**): This file provides land area data for different area types
+   * **MetroLandArea**: Land area (excluding large water bodies and large tracts of undevelopable land) in the metropolitan (i.e. urbanized) portion of the Azone
+   * **TownLandArea**: Land area (excluding large water bodies and large tracts of undevelopable land) in towns (i.e. urban-like but not urbanized) in the Azone
+   * **RuralAveDensity**: Average activity density (households and jobs per acre) of rural (i.e. not metropolitan or town) portions of the Azone not including large waterbodies or large tracts of agricultural lands, forest lands, or otherwise protected lands
+
+
+
+   Here is a snapshot of the file:
+<img align="center" width="400" border=1 src="images/land_area.PNG">
 ### Internal Module Inputs
 
 
@@ -2061,7 +2071,42 @@ This module does not have user-supplied input files
 * **VehicleTrips**: Average number of vehicle trips per day by household members
 
 [Top](#rspm-modules-and-outputs)
+___
 
+## BalanceRoadCostsAndRevenues      
+
+This module calculates an extra mileage tax ($ per vehicle mile traveled) for household vehicles needed to make up any difference in the cost of constructing, maintaining, and operating roadways and the revenues from fuel, VMT, and congestion taxes.
+### User Input Files
+1. Road cost for the region (**region_road_cost.csv**): This file supplies data for different types of road costs
+
+   * **RoadBaseModCost**: Average base modernization cost per light-duty vehicle mile traveled (dollars per vehicle mile). Base modernization includes roadway improvements exclusive of addition of lanes.
+   * **RoadPresOpMaintCost**: Average road preservation, operations, and maintenance cost per light-duty vehicle mile traveled (dollars per vehicle mile).
+   * **RoadOtherCost**: Average other road cost (e.g. administration, planning, project development, safety) per light-duty vehicle mile traveled (dollars per vehicle mile).
+   * **FwyLnMiCost**: Average cost to build one freeway lane-mile (dollars per lane-mile)
+   * **ArtLnMiCost**: Average cost to build one arterial lane-mile (dollars per lane-mile)
+   * **HvyTrkPCE**: Passenger car equivalent (PCE) for heavy trucks. PCE indicates the number of light-duty vehicles a heavy truck is equivalent to in calculating road capacity.
+
+
+   Here is a snapshot of the file:	
+<img align="center" width="300" border=1 src="images/road_cost.PNG">
+
+ 
+### Internal Module Inputs
+|    Package         |      Module                           |   Outputs    | Description                               |
+|--------------------|---------------------------------------|--------------|-------------------------------------------|
+| VETravelPerformance    | [CalculateBaseRoadDvmt ](#calculatebaseroaddvmt) |**HvyTrkUrbanDvmt**      |  Base year Region heavy truck daily vehicle miles of travel in urbanized areas                             |
+| VETravelPerformance          | [CalculateBaseRoadDvmt](#CalculateBaseRoadDvmt)     |**ComSvcUrbanDvmt** | Commercial service daily vehicle miles of travel associated with Marea urbanized household activity    |
+| VETravelPerformance          | [CalculateBaseRoadDvmt](#CalculateBaseRoadDvmt)     |**ComSvcRuralDvmt**  | Commercial service daily vehicle miles of travel associated with Marea rural household activity             |
+| VETravelPerformance          | [CalculateBaseRoadDvmt](#CalculateBaseRoadDvmt)     |**ComSvcTownDvmt**  | Commercial service daily vehicle miles of travel associated with Marea town household activity             |
+| VETransportSupply          | [AssignRoadMiles](#assignroadmiles)     |**FwyLaneMi**  | Lane-miles of roadways functionally classified as freeways or expressways in the urbanized portion of the metropolitan area                 |
+| VETransportSupply     | [AssignRoadMiles](#assignroadmiles)  |**ArtLaneMi**      |  Lane-miles of roadways functionally classified as arterials (but not freeways or expressways) in the urbanized portion of the metropolitan area                             |
+| VETravelPerformance     | [CalculateVehicleOperatingCost](#calculatevehicleoperatingcost)  |**AveRoadUseTaxPM**      |  Average road use taxes in dollars collected per mile of vehicle travel                             |
+| VETravelPerformance          | [BudgetHouseholdDvmt](#budgethouseholddvmt)     |**Dvmt** | Average daily vehicle miles traveled by the household in autos or light trucks    |
+
+### Module Outputs
+* **ExtraVmtTax**: Added vehicle mile tax for household vehicle use to pay for any deficit between road costs and road revenues (dollars per vehicle mile)
+
+[Top](#rspm-modules-and-outputs)
 ___
 
 ## CalculateComEnergyAndEmissions      
@@ -2095,6 +2140,14 @@ This module calculates the energy consumption and carbon emissions of heavy truc
 
    Here is a snapshot of the file:	
 <img align="center" width="400" border=1 src="images/region_hvytrk_powertrain_prop.PNG">
+
+4. Heavy duty truck maean ages (**region_comsvc_veh_mean_age.csv**): This input file contains average age of commercial service vehicles
+
+   * **AveComSvcVehicleAge**: average age of commercial service vehicles
+ 
+   Here is a snapshot of the file:	
+<img align="center" width="400" border=1 src="images/age.PNG">
+
    
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
