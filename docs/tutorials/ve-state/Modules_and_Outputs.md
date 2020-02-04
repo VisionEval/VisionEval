@@ -249,7 +249,8 @@ It is incumbent on the model user to identify the name of the urbanized area pro
    * **RuralAveDensity**: Proportion of workers residing in the Azone who work at jobs in the metropolitan (i.e. urbanized) area associated with the Azone
   
   Here is a snapshot of the file:
-   <img align="center" width="400" border=1 src="images/loc_type_land.PNG"> 
+  
+ <img align="center" width="400" border=1 src="images/loc_type_land.PNG"> 
  
  
 5. work location type proportions (**_azone_gq_pop-prop_by_area-type.csv_**): This file provides the average activity density in rural areas 
@@ -515,7 +516,7 @@ This module identifies parking restrictions and prices affecting households at t
    * **OuterPkgSpacesPerGQ**: Average number of free parking spaces available to group quarters residents in outer area type
 
    Here is a snapshot of the file:
-<img align="center" width="500" border=1 src="images/park_availablity.PNG">   
+<img align="center" width="800" border=1 src="images/park_availablity.PNG">   
 
 2. Parking cost  (**_marea_parking-cost_by_area-type_**): This file has the data related to parking costs and population proportions paying the parking costs
    * **CenterPropWkrPay**: Proportion of workers who pay for parking in center area type
@@ -529,7 +530,7 @@ This module identifies parking restrictions and prices affecting households at t
    * **OuterPkgCost**: Average daily cost for long-term parking (e.g. paid on monthly basis) in outer area type
 
    Here is a snapshot of the file:
-<img align="center" width="500" border=1 src="images/park_cost.PNG">   
+<img align="center" width="800" border=1 src="images/park_cost.PNG">   
 
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
