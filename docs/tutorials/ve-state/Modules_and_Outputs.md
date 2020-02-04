@@ -10,7 +10,7 @@ The VESTATE model is a compilation of several modules, listed below:
 |[AssignLifeCycle](#assignlifecycle)                                   |VESimHouseholds        |
 |[PredictIncome](#predictincome)                                       |VESimHouseholds        |
 |[Initialize](#initialize)                                     		   |VESimLandUse           |
-|[CreatSimBzones](#creatsimbzones)                                     |VESimLandUse           |
+|[CreateSimBzones](#createsimbzones)                                     |VESimLandUse           |
 |[SimulateHousing](#simulatehousing)                                   |VESimLandUse           |
 |[SimulateEmployment](#simulateemployment)                             |VESimLandUse           |
 |[Simulate4DMeasures](#simulate4dmeasures)                             |VESimLandUse           |
@@ -356,10 +356,10 @@ his module assigns a housing type, either single-family (SF) or multifamily (MF)
 | VESimLandUse    |[Initialize](#initialize) |**PropGQPopInner**      |see [Initialize](#initialize)                              |
 | VESimLandUse    | [Initialize](#initialize)    |**PropGQPopOuter**   | see [Initialize](#initialize)            |
 | VESimLandUse    | [Initialize](#initialize)     |**PropGQPopFringe**    | see [Initialize](#initialize)    |
-| VESimLandUse    | [CreatSimBzones](#creatsimbzones)  |**SFDU**      | see [CreatSimBzones](#creatsimbzones)                             |
-| VESimLandUse    | [CreatSimBzones](#creatsimbzones)      |**MFDU**   | see [CreatSimBzones](#creatsimbzones)             |
-| VESimLandUse    | [CreatSimBzones](#creatsimbzones)     |**LocType**    | see [CreatSimBzones](#creatsimbzones)     |
-| VESimLandUse    | [CreatSimBzones](#creatsimbzones)  |**AreaType**      | see [CreatSimBzones](#creatsimbzones)                              |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**SFDU**      | see [CreateSimBzones](#createsimbzones)                             |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)      |**MFDU**   | see [CreateSimBzones](#createsimbzones)             |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**LocType**    | see [CreateSimBzones](#createsimbzones)     |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**AreaType**      | see [CreateSimBzones](#createsimbzones)                              |
 | VESimHouseholds    | [CreateHouseholds](#createhouseholds)      |**HhSize**   | Total workers in the household            |
 | VESimHouseholds    | [CreateHouseholds](#createhouseholds)      |**Age15to19**    | Number of workers residing in the zone    |
 | VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**Age20to29**      | Household id                              |
@@ -387,222 +387,241 @@ For more information see [here](https://github.com/VisionEval/VisionEval-Dev/blo
 
 [Top](#rspm-modules-and-outputs)
 ___   
-  
-## AssignLocTypes    
-This module assigns households to location types: `Urban` (located within an urbanized area boundary), `Town` (located in a smaller urban area that does not have enough population to qualify as an urbanized area), and `Rural` (located in an area characterized by low density dispersed development).
-
+## SimulateEmployment   
+This module assign workers SimBzone work locations. A worker table is created which identifies a unique worker ID, the household ID the worker is a part of, and the SimBzone, Azone, and Marea of the worker job location.
 ### User Input Files
-1. Urban dwelling proportion (**_bzone_urban-town_du_proportions.csv_**): This file contains proportion of SF, MF and GQ dwelling units within the urban portion of the zone.
-   * **PropUrbanSFDU**: Proportion of single family dwelling units located within the urban portion of the zone
-   * **PropUrbanMFDU**: Proportion of multi-family dwelling units located within the urban portion of the zone
-   * **PropUrbanGQDU**: Proportion of group quarters accommodations located within the urban portion of the zone
-   * **PropTownSFDU**: Proportion of single family dwelling units located within the town portion of the zone
-   * **PropTownMFDU**: Proportion of multi-family dwelling units located within the town portion of the zone
-   * **PropTownGQDU**: Proportion of group quarters accommodations located within the town portion of the zone
-   
-   Here is a snapshot of the file:
-<img align="center" width="800" border=1 src="images/bzone_urban-town_du_proportions.PNG">
-   
+
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
 |--------------------|---------------------------------------|--------------|-------------------------------------------|
 | VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**HhId**      | Household id                              |
-| VESimHouseholds    | [PredictWorkers](#predictworkers)     |**HhSize**    | Number of persons in household            |
-| VESimHouseholds    | [PredictIncome](#predictincome)       |**Income**    | Total annual income of household          |
-| VELandUse          | [PredictHousing](#predicthousing)     |**HouseType** | Type of dwelling unit of the household    |
+| VESimHouseholds    | [PredictWorkers](#predictworkers)     |**Workers**   | Total workers in the household            |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**TotEmp**    | see [CreateSimBzones](#createsimbzones)   |
+| VESimLandUse    |[CreateSimBzones](#createsimbzones) |**LocType**      |see [CreateSimBzones](#createsimbzones)                              |
 
 ### Module Outputs
-* **LocType**: Location type (Urban, Town, Rural) of the place where the household resides
-* **UrbanPop**: Urbanized area population
-* **RuralPop**: Rural (i.e. non-urbanized area) population
-* **TownPop**: Town (i.e. urban but non-urbanized area) population 
+* **WkrId**: Unique worker ID
+* **Bzone**: Bzone ID of worker job location
+* **Azone**: Azone ID of worker job location
+* **Marea**: Marea ID of worker job location
 
-* **UrbanIncome**: Total household income of the urbanized area population
-* **TownIncome**: Total household income of the town (i.e. urban but non-urbanized area) population 
-* **RuralIncome**: Total household income of the rural (i.e. non-urbanized area) population
 
-For more information see [here](https://github.com/gregorbj/VisionEval/blob/898fc016893f5b7dd78507e101c37d04486826b3/sources/modules/VELandUse/inst/module_docs/AssignLocTypes.md)
+
+
+For more information see [here](https://github.com/VisionEval/VisionEval/blob/master/sources/modules/VESimLandUse/inst/module_docs/SimulateEmployment.md)
 
 [Top](#rspm-modules-and-outputs)
-___
-       
-## Calculate4DMeasures      
-This module calculates several so-called '4D' measures by `Bzone` including density, diversity (i.e. mixing of land uses), transportation network design, and destination accessibility, i.e., the four 'Ds' of density, diversity, design, and destination accessibility. These measures are the same as or are similar to measures included in the Environmental Protection Agency's (EPA) [Smart Location Database](https://www.epa.gov/smartgrowth/smart-location-database-technical-documentation-and-user-guide)
+___     
 
+## Simulate4DMeasures   
+This module calculates several 4D measures by SimBzone including density, diversity (i.e. mixing of land uses), and pedestrian-orientedn transportation network design. These measures are the same as or are similar to measures included in the Environmental Protection Agency's (EPA)
 ### User Input Files
-1. Developable area (**_bzone_unprotected_area.csv_**): This file contains the information about unprotected (i.e., developable) area within the zone. 
-   * **UrbanArea**: Area that is `Urban` and unprotected (i.e. developable) within the zone (Acres)
-   * **TownArea**: Area that is `Town` and unprotected within the zone (Acres)
-   * **RuralArea**: Area that is `Rural` and unprotected within the zone (Acres)
+1. D3bpo4 value or differe location types (**_marea_d3bpo4_adj_**): This file provides the D3bpo4 value for urban, town and rural areas from the EPA 2010 Smart Location Database
+   * **UrbanD3bpo4Adj**: Proportion of base urban D3bpo4 value as tabulated from the EPA 2010 Smart Location Database for the urbanized portion of the marea
+   * **TownD3bpo4Adj**: Proportion of base town D3bpo4 value as tabulated from the EPA 2010 Smart Location Database for towns
+   * **RuralD3bpo4Adj**: Proportion of base town D3bpo4 value as tabulated from the EPA 2010 Smart Location Database for rural areas
 
    Here is a snapshot of the file:
-<img align="center" width="500" border=1 src="images/bzone_unprotected_area.PNG">
-   
-2. Network density (**_bzone_network_design.csv_**): This file contains the intersection density measured by the number of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database).
-
-   Here is a snapshot of the file:
-<img align="center" width="400" border=1 src="images/bzone_network_design.PNG">
+<img align="center" width="400" border=1 src="images/d3.PNG">   
 
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
 |--------------------|---------------------------------------|--------------|-------------------------------------------|
-| VELandUse          | [PredictHousing](#predicthousing)     |**Pop**       | Population residing in zone               |
-| VELandUse          | [PredictHousing](#predicthousing)     |**NumHh**     | Number of households in zone              |
-| VELandUse          | [PredictHousing](#predicthousing)     |**NumWkr**    | Number of workers in zone                 |
-| VELandUse          | [LocateEmployment](#locateemployment) |**TotEmp**    | Total number of jobs in zone              |
-| VELandUse          | [LocateEmployment](#locateemployment) |**RetEmp**    | Number of jobs in retail sector in zone   |
-| VELandUse          | [LocateEmployment](#locateemployment) |**SvcEmp**    | Number of jobs in service sector in zone  |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**TotEmp**    | see [CreateSimBzones](#createsimbzones)    |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**RetEmp**    | see [CreateSimBzones](#createsimbzones)    |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**SvcEmp**    | see [CreateSimBzones](#createsimbzones)    |
+| VESimLandUse    | [SimulateHousing](#simulatehousing)    |**Pop**   | see  [SimulateHousing](#simulatehousing)           |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**NumHh**    | see [CreateSimBzones](#createsimbzones)   |
+| VESimLandUse    | [SimulateHousing](#simulatehousing)  |**NumWkr**      | see [SimulateHousing](#simulatehousing)                             |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)      |**UrbanArea**   | see [CreateSimBzones](#createsimbzones)             |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**TownArea**    | see [CreateSimBzones](#createsimbzones)     |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**RuralArea**      | see [CreateSimBzones](#createsimbzones)                              |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**AreaType**      | see [CreateSimBzones](#createsimbzones)                              |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)       |**DevType**   | see [CreateSimBzones](#createsimbzones)              |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**LocType**      | see [CreateSimBzones](#createsimbzones)                                |
 
 ### Module Outputs
-* **D1B**: Gross population density (people/acre) on unprotected (i.e. developable) land in zone 
-* **D1C**: Gross employment density (jobs/acre) on unprotected land land in zone 
-* **D1D**: Gross activity density (employment + households) on unprotected land in zone 
-* **D2A_JPHH**: Ratio of jobs to households in zone
+* **D1B**: Gross population density (people/acre) on unprotected 
+* **D1C**: Gross employment density (jobs/acre) on unprotected land
+* **D2A_JPHH**: Ratio of jobs to households in zone 
 * **D2A_WRKEMP**: Ratio of workers to jobs in zone 
-* **D2A_EPHHM**: Employment and household entropy measure for zone considering numbers of households, retail jobs, service jobs, and other jobs
-* **D5**: Destination accessibility of zone calculated as harmonic mean of jobs within two (2) miles and population within five (5) miles
+* **D2A_EPHHM**: Employment and household entropy measure for zone considering numbers of households, retail jobs, service jobs, and other jobs  
+* **D3bpo4**: Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile
 
-For more information see [here](https://github.com/gregorbj/VisionEval/blob/898fc016893f5b7dd78507e101c37d04486826b3/sources/modules/VELandUse/inst/module_docs/Calculate4DMeasures.md)
+
+
+For more information see [here](https://github.com/VisionEval/VisionEval/blob/master/sources/modules/VESimLandUse/inst/module_docs/Simulate4DMeasures.md)
 
 [Top](#rspm-modules-and-outputs)
-___
 
-## CalculateUrbanMixMeasure 
-This module calculates an urban mixed-use measure based on the 2001 National Household Travel Survey (NHTS) measure of the tract level urban/rural indicator. This measure, developed by Claritas, uses the density of the tract and surrounding tracts to identify the urban/rural context of the tract. The categories include `urban`, `suburban`, `second city`, `town` and `rural`. Mapping of example metropolitan areas shows that places identified as `urban` correspond to central city and inner neighborhoods characterized by mixed use, higher levels of urban accessibility, and higher levels of walk/bike/transit accessibility.
+___     
+
+## SimulateUrbanMixMeasure   
+This module simulates an urban mixed-use measure based on the 2001 National Household Travel Survey measure of the tract level urban/rural indicator
 
 ### User Input Files
-1. Household neighborhood (**_bzone_urban-mixed-use_prop.csv_**): This file contains the target proportion of households located in mixed-used neighborhoods in each zone. 
-   
-   * **MixUseProp**: Target for proportion of households located in mixed-use neighborhoods in zone (or `NA` if no target)
+1. Target for proportion of households  (**_marea_mix_targets_**): This file represents Marea target for proportion of households located in mixed-use neighborhoods (or NA if no target)
+   * **UrbanMixProp**: Marea target for proportion of households located in mixed-use neighborhoods (or NA if no target)
+
 
    Here is a snapshot of the file:
-<img align="center" width="400" border=1 src="images/bzone_urban-mixed-use_prop.PNG">
+<img align="center" width="400" border=1 src="images/mix.PNG">   
 
-2. Developable area (**_bzone_unprotected_area.csv_**): This file contains the information about unprotected (i.e., developable) area within the zone. 
-   * **UrbanArea**: Area that is `Urban` and unprotected within the zone
-   * **TownArea**: Area that is `Town` and unprotected within the zone
-   * **RuralArea**: Area that is `Rural` and unprotected within the zone
-   
-   Here is a snapshot of the file:
-<img align="center" width="500" border=1 src="images/bzone_unprotected_area.PNG">
-   
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
 |--------------------|---------------------------------------|--------------|-------------------------------------------|
-| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**HhId**      | Household id                              |
-| VELandUse          | [PredictHousing](#predicthousing)     |**HouseType** | Type of dwelling unit of the household    |
-| VELandUse          | [PredictHousing](#predicthousing)     |**NumHh**     | Number of households in zone              |
-| VELandUse          | [AssignLocTypes](#assignloctypes)     |**UrbanPop**  | Urbanized area population                 |
-| VELandUse          | [AssignLocTypes](#assignloctypes)     |**RuralPop**  | Rural (i.e. non-urbanized area) population|
+|VESimLandUse    | [SimulateHousing](#simulatehousing)    |**Pop**   | see  [SimulateHousing](#simulatehousing)           |
+|VESimLandUse    | [SimulateHousing](#simulatehousing)    |**UrbanPop**   | see  [SimulateHousing](#simulatehousing)           |
+|VESimLandUse    | [SimulateHousing](#simulatehousing)    |**TownPop**   | see  [SimulateHousing](#simulatehousing)           |
+|VESimLandUse    | [SimulateHousing](#simulatehousing)    |**RuralPop**   | see  [SimulateHousing](#simulatehousing)           |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**NumHh**    | see [CreateSimBzones](#createsimbzones)   |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)      |**UrbanArea**   | see [CreateSimBzones](#createsimbzones)             |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**TownArea**    | see [CreateSimBzones](#createsimbzones)     |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**RuralArea**      | see [CreateSimBzones](#createsimbzones)                              |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**SFDU**      | see [CreateSimBzones](#createsimbzones)                              |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)       |**MFDU**   | see [CreateSimBzones](#createsimbzones)              |
 
 ### Module Outputs
-* **IsUrbanMixNbrhd**: Flag identifying whether household is (`1`) or is not (`0`) in an urban, mixed-use neighborhood
+* **IsUrbanMixNbrhd**: Flag identifying whether household is (1) or is not (0) in urban mixed-use neighborhood
 
-For more information see [here](https://github.com/gregorbj/VisionEval/blob/898fc016893f5b7dd78507e101c37d04486826b3/sources/modules/VELandUse/inst/module_docs/CalculateUrbanMixMeasure.md)
+
+
+For more information see [here](https://github.com/VisionEval/VisionEval/blob/master/sources/modules/VESimLandUse/inst/module_docs/SimulateUrbanMixMeasure.md)
 
 [Top](#rspm-modules-and-outputs)
-___
 
-## AssignParkingRestrictions
-This module identifies parking restrictions and prices affecting households at their residences, workplaces, and other places they are likely to visit in the urban area. The parking restriction/cost information is used by other modules in calculating the cost of vehicle ownership and the cost of vehicle use.
 
+___     
+
+## AssignParkingRestrictions   
+This module identifies parking restrictions and prices affecting households at their residences, workplaces, and other places they are likely to visit in the urban area. The module takes user inputs on parking restrictions and prices by Bzone and calculates for each household the number of free parking spaces available at the household's residence, which workers pay for parking and whether their payment is part of a cash-out-buy-back program, the cost of residential parking for household vehicles that can't be parked in a free space, the cost for workplace parking, and the cost of parking for other activities such as shopping. The parking restriction/cost information is used by other modules in calculating the cost of vehicle ownership and the cost of vehicle use.
 ### User Input Files
-1. Household neighborhood (**_bzone_parking.csv_**): This file contains the parking information by `Bzone` for each of the base and future years.
-   * **PkgSpacesPerSFDU**: Average number of free parking spaces available to residents of single-family dwelling units
-   * **PkgSpacesPerMFDU**: Average number of free parking spaces available to residents of multifamily dwelling units
-   * **PkgSpacesPerGQ**: Average number of free parking spaces available to group quarters residents
-   * **PropWkrPay**: Proportion of workers who pay for parking
-   * **PropCashOut**: Proportions of workers paying for parking in a cash-out-buy-back program
-   * **PkgCost**: Average daily cost for long-term parking (e.g. paid on monthly basis)
-   
+1. Parking availability  (**_marea_parking-avail_by_area-type_**): This file has the data for avereage number of parkings available to households
+   * **CenterPkgSpacesPerSFDU**: Average number of free parking spaces available to residents of single-family dwelling units in center area type
+   * **InnerPkgSpacesPerSFDU**: Average number of free parking spaces available to residents of single-family dwelling units in inner area type
+   * **OuterPkgSpacesPerSFDU**: Average number of free parking spaces available to residents of single-family dwelling units in outer area type
+   * **CenterPkgSpacesPerMFDU**: Average number of free parking spaces available to residents of multifamily dwelling units in center area type
+   * **InnerPkgSpacesPerMFDU**: Average number of free parking spaces available to residents of multifamily dwelling units in inner area type
+   * **OuterPkgSpacesPerMFDU**: Average number of free parking spaces available to residents of multifamily dwelling units in outer area type
+   * **CenterPkgSpacesPerGQ**: Average number of free parking spaces available to group quarters residents in center area type
+   * **InnerPkgSpacesPerGQ**: Average number of free parking spaces available to group quarters residents in inner area type
+   * **OuterPkgSpacesPerGQ**: Average number of free parking spaces available to group quarters residents in outer area type
+
    Here is a snapshot of the file:
-<img align="center" width="800" border=1 src="images/bzone_parking.PNG">
+<img align="center" width="400" border=1 src="images/park_availablity.PNG">   
+
+2. Parking cost  (**_marea_parking-cost_by_area-type_**): This file has the data related to parking costs and population proportions paying the parking costs
+   * **CenterPropWkrPay**: Proportion of workers who pay for parking in center area type
+   * **InnerPropWkrPay**: Proportion of workers who pay for parking in inner area type
+   * **OuterPropWkrPay**: Proportion of workers who pay for parking in outer area type
+   * **CenterPropCashOut**: Proportions of workers paying for parking in a cash-out-buy-back program in center area type
+   * **InnerPropCashOut**: Proportions of workers paying for parking in a cash-out-buy-back program in inner area type
+   * **OuterPropCashOut**: Proportions of workers paying for parking in a cash-out-buy-back program in outer area type
+   * **CenterPkgCost**: Average daily cost for long-term parking (e.g. paid on monthly basis) in center area type
+   * **InnerPkgCost**: Average daily cost for long-term parking (e.g. paid on monthly basis) in inner area type
+   * **OuterPkgCost**: Average daily cost for long-term parking (e.g. paid on monthly basis) in outer area type
+
+   Here is a snapshot of the file:
+<img align="center" width="400" border=1 src="images/park_cost.PNG">   
 
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
 |--------------------|---------------------------------------|--------------|-------------------------------------------|
-| VELandUse          | [PredictHousing](#predicthousing)     |**NumHh**     | Number of households in zone              |
-| VELandUse          | [PredictHousing](#predicthousing)     |**HouseType** | Type of dwelling unit of the household    |
-| VELandUse          | [LocateEmployment](#locateemployment) |**RetEmp**    | Number of jobs in retail sector in zone   |
-| VELandUse          | [LocateEmployment](#locateemployment) |**SvcEmp**    | Number of jobs in service sector in zone  |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**RetEmp**    | see [CreateSimBzones](#createsimbzones)    |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**SvcEmp**    | see [CreateSimBzones](#createsimbzones)    |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**NumHh**    | see [CreateSimBzones](#createsimbzones)   |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)      |**UrbanArea**   | see [CreateSimBzones](#createsimbzones)             |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**AreaType**      | see [CreateSimBzones](#createsimbzones)                              |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**LocType**      | see [CreateSimBzones](#createsimbzones)                                |
+| VESimLandUse    | [SimulateHousing](#simulatehousing)  |**HouseType**      | see [SimulateHousing](#simulatehousing)                                |
 
 ### Module Outputs
 * **FreeParkingSpaces**: Number of free parking spaces available to the household
-* **ParkingUnitCost**: Daily cost for long-term parking (e.g., parking paid for on a monthly basis)
-* **OtherParkingCost**: Daily cost for parking at shopping locations or other locations of paid parking not including work
-* **PaysForParking**: Does worker pay for parking: `1` = yes, `0` = no
-* **IsCashOut**: Is worker part of a cash-out-buy-back program: `1` = yes, `0` = no
-* **ParkingCost**: Daily cost for long-term parking (e.g., parking paid for on a monthly basis)
+* **ParkingUnitCost**: Daily cost for long-term parking (e.g. paid on monthly basis)
+* **OtherParkingCost**: Daily cost for parking at shopping locations or other locations of paid parking not including work (not adjusted for number of vehicle trips)
+* **PaysForParking**: Does worker pay for parking: 1 = yes, 0 = no
+* **IsCashOut**: Is worker paid parking in cash-out-buy-back program: 1 = yes, 0 = no
+* **ParkingCost**: Daily cost for long-term parking (e.g. paid on monthly basis)
 
-For more information see [here](https://github.com/gregorbj/VisionEval/blob/898fc016893f5b7dd78507e101c37d04486826b3/sources/modules/VELandUse/inst/module_docs/AssignParkingRestrictions.md)
+
+
+For more information see [here](https://github.com/VisionEval/VisionEval/blob/master/sources/modules/VESimLandUse/inst/module_docs/AssignParkingRestrictions.md)
 
 [Top](#rspm-modules-and-outputs)
-___
+
+___     
 
 ## AssignDemandManagement   
-This module assigns demand management program participation to households and to workers. Households are assigned to individualized marketing program participation. Workers are assigned to employee commute options participation. The module computes the net proportional reduction in household daily VMT (DVMT) based on the participation in travel demand management programs.
-
+This module assigns demand management program participation to households and to workers. Households are assigned to individualized marketing program participation. Workers are assigned to employee commute options participation. The module computes the net proportional reduction in household DVMT based on the participation in travel demand management programs.
 ### User Input Files
-1. Demand management (**_bzone_travel_demand_mgt.csv_**): This file contains the information about workers and households participating in demand management programs. 
-   * **EcoProp**: Proportion of workers working in `Bzone` who participate in strong employee commute options program
-   * **ImpProp**: Proportion of households residing in `Bzone` who participate in strong individualized marketing program
+1. travel demand management  (**_marea_travel-demand-mgt_by_area-type_**): This file has the data for proportions participating in demand management programs
+   * **CenterEcoProp**: Proportion of workers working in center area type in Marea who participate in strong employee commute options program
+   * **InnerEcoProp**: Proportion of workers working in inner area type in Marea who participate in strong employee commute options program
+   * **OuterEcoProp**: Proportion of workers working in outer area type in Marea who participate in strong employee commute options program
+   * **FringeEcoProp**: Proportion of workers working in fringe area type in Marea who participate in strong employee commute options program
+   * **CenterImpProp**: Proportion of households residing in center area type in Marea who participate in strong individualized marketing program
+   * **InnerImpProp**: Proportion of households residing in inner area type in Marea who participate in strong individualized marketing program
+   * **OuterImpProp**: Proportion of households residing in outer area type in Marea who participate in strong individualized marketing program
+   * **FringeImpProp**: Proportion of households residing in fringe area type in Marea who participate in strong individualized marketing program
 
    Here is a snapshot of the file:
-<img align="center" width="400" border=1 src="images/bzone_travel_demand_mgt.PNG">
+<img align="center" width="400" border=1 src="images/demand_management.PNG">   
+
+
 
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
 |--------------------|---------------------------------------|--------------|-------------------------------------------|
-| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**HhId**      | Household id                              |
-| VESimHouseholds    | [CreateHouseholds](#createhouseholds) |**HHSize**    | Number of persons in the household        |
-| VESimHouseholds    | [PredictWorkers](#predictworkers)     |**Workers**   | Total workers in the household            |
+| VESimHouseholds    | [CreateHouseholds](#createhouseholds)     |**HhSize**    | see [CreateHouseholds](#createhouseholds)    |
+| VESimHouseholds    | [PredictWorkers](#predictworkers)     |**workers** | see [PredictWorkers](#predictworkers)    |
+|
 
 ### Module Outputs
-* **IsIMP**: Identifies whether household is participant in travel demand management individualized marketing program (IMP): `1` = yes, `0` = no
+* **IsIMP**: dentifies whether household is participant in travel demand management individualized marketing program (IMP): 1 = yes, 0 = n
 * **PropTdmDvmtReduction**: Proportional reduction in household DVMT due to participation in travel demand management programs
-* **IsECO**: Identifies whether worker is a participant in travel demand management employee commute options program: `1` = yes, `0` = no
+* **IsECO**: Identifies whether worker is a participant in travel demand management employee commute options program: 1 = yes, 0 = no
 
-For more information see [here](https://github.com/gregorbj/VisionEval/blob/898fc016893f5b7dd78507e101c37d04486826b3/sources/modules/VELandUse/inst/module_docs/AssignDemandManagement.md)
+
+For more information see [here](https://github.com/VisionEval/VisionEval/blob/master/sources/modules/VESimLandUse/inst/module_docs/AssignDemandManagement.md)
 
 [Top](#rspm-modules-and-outputs)
-___
-
-## AssignCarSvcAvailability 
-This module reads in and assigns 'car service' availability in `Bzone`s. Car services include taxis, car sharing services (e.g. Car-To-Go, Zipcar), and future automated taxi services. A high level of car service is increases household car availability -- similar to owning a car. Low levels of car service does not have competitive access time and therefore does not increase household car availability.
-
+__
+## AssignCarSvcAvailability  
+This module assigns car service availability levels (Low, High) to Bzones and households. Car services include taxis, car sharing services (e.g. Car-To-Go, Zipcar), and future automated taxi services
 ### User Input Files
-1. Car service availability (**_bzone_carsvc_availability.csv_**): This file contains the information about level of car service availability for `Bzones`.
+1. Car service availability  (**_marea_carsvc_availability_**): This file has the data for acitivity proportions which are served by car services
+   * **CenterPropHighCarSvc**: Proportion of activity in center area type that is served by high level car service (i.e. service competitive with household owned car)
+   * **InnerPropHighCarSvc**: Proportion of activity in inner area type that is served by high level car service (i.e. service competitive with household owned car)
+   * **OuterPropHighCarSvc**: Proportion of activity in outer area type that is served by high level car service (i.e. service competitive with household owned car)
+   * **FringePropHighCarSvc**: Proportion of activity in fringe area type that is served by high level car service (i.e. service competitive with household owned car)
 
    Here is a snapshot of the file:
-<img align="center" width="400" border=1 src="images/bzone_carsvc_availability.PNG">
+<img align="center" width="400" border=1 src="images/car_service.PNG">   
+
+
 
 ### Internal Module Inputs
-This module does not have any internal module inputs
-
+|    Package         |      Module                           |   Outputs    | Description                               |
+|--------------------|---------------------------------------|--------------|-------------------------------------------|
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**NumHh**    | see [CreateSimBzones](#createsimbzones)   |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**AreaType**      | see [CreateSimBzones](#createsimbzones)                              |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**TotEmp**    | see [CreateSimBzones](#createsimbzones)    |
+| VESimLandUse    | [Calculate4DMeasures](#calculate4dmeasures)  |**D1D**      | see [Calculate4DMeasures](#calculate4dmeasures)                             |
+ 
 ### Module Outputs
-* **CarSvcLevel**: Level of car service availability for household. `High` means access is competitive with household owned car; `Low` is not competitive.
+* **IsIMP**: dentifies whether household is participant in travel demand management individualized marketing program (IMP): 1 = yes, 0 = n
+* **PropTdmDvmtReduction**: Proportional reduction in household DVMT due to participation in travel demand management programs
+* **IsECO**: Identifies whether worker is a participant in travel demand management employee commute options program: 1 = yes, 0 = no
 
-For more information see [here](https://github.com/gregorbj/VisionEval/blob/898fc016893f5b7dd78507e101c37d04486826b3/sources/modules/VELandUse/inst/module_docs/AssignCarSvcAvailability.md)
+
+For more information see [here](https://github.com/VisionEval/VisionEval/blob/master/sources/modules/VESimLandUse/inst/module_docs/AssignDemandManagement.md)
 
 [Top](#rspm-modules-and-outputs)
-___
-
-## AssignTransitService 
-This module assigns transit service level to the metropolitan area (`Marea`) and neighborhoods (`Bzones`). Annual revenue-miles (i.e. transit miles in revenue service) by transit mode type are read from an input file. The following eight modes are recognized:
-* `DR` = Demand-responsive
-* `VP` = Vanpool and similar
-* `MB` = Standard motor bus
-* `RB` = Bus rapid transit and commuter bus
-* `MG` = Monorail/automated guideway
-* `SR` = Streetcar/trolley bus/inclined plain
-* `HR` = Heavy Rail/Light Rail
-* `CR` = Commuter Rail/Hybrid Rail/Cable Car/Aerial Tramway
-
-Revenue miles are converted to bus (i.e., `MB`) equivalents using factors derived from urbanized area data from the National Transit Database (NTD). Bus-equivalent revenue miles are used in models which predict vehicle ownership and household DVMT.
-
-Revenue miles by mode type are also translated (using NTD data) into vehicle miles by three vehicle types: van, bus, and rail. Miles by vehicle type are used to calculate public transit energy consumption and emissions.
+__
 
 
+## SimulateTransitService 
+This module assigns transit service level to the urbanized portion of each Marea and to neighborhoods (SimBzones) within the urbanized area. Annual revenue-miles (i.e. transit miles in revenue service) by transit mode type are read from an input file
 ### User Input Files
 1. Transit service for Marea (**_marea_transit_service.csv_**): This file contains annual revenue-miles for different transit modes for metropolitan area.
    * **DRRevMi**: Annual revenue-miles of demand-responsive public transit service
@@ -617,32 +636,32 @@ Revenue miles by mode type are also translated (using NTD data) into vehicle mil
    Here is a snapshot of the file:
 <img align="center" width="800" border=1 src="images/marea_transit_service.PNG">
 
-2. Transit service for `Bzone` (**_bzone_transit_service.csv_**): This file supplies the data on relative public transit accessibility for `Bzone`s
-   * **D4c**: Aggregate frequency of transit service within 0.25 miles of block group boundary per hour during evening peak period (Ref: EPA 2010 Smart Location Database)
-   
-   Here is a snapshot of the file:
-<img align="center" width="400" border=1 src="images/barea_transit_service.PNG">
-   
+
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
 |--------------------|---------------------------------------|--------------|-------------------------------------------|
-| VELandUse          | [AssignLocTypes](#assignloctypes)     |**UrbanPop**  | Urbanized area population                 |
-
-
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**NumHh**    | see [CreateSimBzones](#createsimbzones)   |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)  |**AreaType**      | see [CreateSimBzones](#createsimbzones)                              |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)     |**TotEmp**    | see [CreateSimBzones](#createsimbzones)    |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)      |**UrbanArea**   | see [CreateSimBzones](#createsimbzones)             |
+| VESimLandUse    | [CreateSimBzones](#createsimbzones)       |**DevType**   | see [CreateSimBzones](#createsimbzones)              |
+|VESimLandUse    | [SimulateHousing](#simulatehousing)    |**UrbanPop**   | see  [SimulateHousing](#simulatehousing)           |
+ 
 ### Module Outputs
-* **TranRevMiPC**: Ratio of annual bus-equivalent revenue-miles (i.e., revenue-miles at the same productivity - passenger miles per revenue mile - as standard bus) to urbanized area population
+* **TranRevMiPC**: Ratio of annual bus-equivalent revenue-miles (i.e. revenue-miles at the same productivity - passenger miles per revenue mile - as standard bus) to urbanized area population
 * **VanDvmt**: Total daily miles traveled by vans of various sizes to provide demand responsive, vanpool, and similar services.
 * **BusDvmt**: Total daily miles traveled by buses of various sizes to provide bus service of various types.
 * **RailDvmt**: Total daily miles traveled by light rail, heavy rail, commuter rail, and similar types of vehicles.
+* **D4c**: Aggregate frequency of transit service within 0.25 miles of block group boundary per hour during evening peak period (Ref: EPA 2010 Smart Location Database)
 
-For more information see [here](https://github.com/gregorbj/VisionEval/blob/ve_rspm_state/sources/modules/VETransportSupply/inst/module_docs/AssignTransitService.md)
+
+For more information see [here](https://github.com/VisionEval/VisionEval/blob/master/sources/modules/VESimTransportSupply/inst/module_docs/SimulateTransitService.md)
 
 [Top](#rspm-modules-and-outputs)
-___
+__
 
-## AssignRoadMiles 
-This module assigns freeway and arterial lane-miles to metropolitan areas (`Marea`) and calculates freeway lane-miles per capita.
-
+## SimulateRoadMiles 
+This module assigns freeway and arterial lane-miles to metropolitan areas (Marea) and calculates freeway lane-miles per capita.
 ### User Input Files
 1. Lane-Miles for `Marea` (**_marea_lane_miles.csv_**): This file contains inputs on the numbers of freeway lane-miles and arterial lane-miles by `Marea` and year.
    * **FwyLaneMi**: Lane-miles of roadways functionally classified as freeways or expressways in the urbanized portion of the metropolitan area
@@ -651,17 +670,18 @@ This module assigns freeway and arterial lane-miles to metropolitan areas (`Mare
    Here is a snapshot of the file:
 <img align="center" width="400" border=1 src="images/marea_lane_miles.PNG">
 
-     
+
 ### Internal Module Inputs
 |    Package         |      Module                           |   Outputs    | Description                               |
 |--------------------|---------------------------------------|--------------|-------------------------------------------|
-| VELandUse          | [AssignLocTypes](#assignloctypes)     |**UrbanPop**     | Urbanized area population              |
-
-
+|VESimLandUse    | [SimulateHousing](#simulatehousing)    |**UrbanPop**   | see  [SimulateHousing](#simulatehousing)           |
+ 
 ### Module Outputs
 * **FwyLaneMiPC**: Ratio of urbanized area freeway and expressway lane-miles to urbanized area population
 
-For more information see [here](https://github.com/gregorbj/VisionEval/blob/ve_rspm_state/sources/modules/VETransportSupply/inst/module_docs/AssignRoadMiles.md)
+
+
+For more information see [here](https://github.com/VisionEval/VisionEval/blob/master/sources/modules/VESimTransportSupply/inst/module_docs/SimulateRoadMiles.md)
 
 [Top](#rspm-modules-and-outputs)
 

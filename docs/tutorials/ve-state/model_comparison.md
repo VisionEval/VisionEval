@@ -7,8 +7,8 @@
 The main difference between VE-RSPM models and VE-STATE models is that a number of VE-RSPM inputs are specified at the Bzone leve. The following diagrams show how these two model differes at the early stages.
 VESTATE uses simulation methods to generate land use and housing input in Bzone level.
 
-<img align="center" width="400" border=1 src="images/VE-RSPM.PNG">
-<img align="center" width="400" border=1 src="images/VE-State.PNG">
+<img align="center" width="400" border=1 src="images/VE-RSPM.png">
+<img align="center" width="400" border=1 src="images/VE-State.png">
 
 Bzone level attributes are required by a number of modules so methods need to be developed for synthesizing a representative set of Bzones and their characteristics from policies and attributes specified at the Azone and Marea levels. Something like this is done in the GreenSTEP model where a likely distribution of neighborhood population density is synthesized from the overall metropolitan area density. Azone level inputs are provided for base year population and area by development type (metropolitan, town, rural), population growth by development type, and the ratio of urban area growth to population growth. From these inputs, average density is calculated by Azone and development type and a model is applied to synthesize a distribution of neighborhood densities from the average density. 
 All of the VE-RSPM modules which assign Bzone characteristics are contained in the VELandUse package. The modules that are developed to synthesize Bzones and their characteristics will be placed in a VESimLandUse package. When a VE-STATE model is run, the modules in the VESimLandUse package will be run instead of the modules in the VELandUse package. Otherwise the model setup will be almost the same for VE-STATE and VE-RSPM.1 The use of the VESimLandUse modules will not be limited to statewide applications however. Users could simulate Bzones in an RSPM-type application that would enable metropolitan area planners to more easily define and model alternative land use scenarios as is done in RPAT (Rapid Policy Analysis Tool) applications.
