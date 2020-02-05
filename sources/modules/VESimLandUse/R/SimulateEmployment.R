@@ -150,7 +150,7 @@ SimulateEmploymentSpecifications <- list(
       TYPE = "character",
       UNITS = "ID",
       NAVALUE = -1,
-      PROHIBIT = "NA",
+      PROHIBIT = "",
       ISELEMENTOF = "",
       DESCRIPTION =
         items("Unique household ID",
