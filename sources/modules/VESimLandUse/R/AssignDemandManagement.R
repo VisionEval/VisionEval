@@ -173,7 +173,7 @@ AssignDemandManagementSpecifications <- list(
       GROUP = "Year",
       TYPE = "character",
       UNITS = "ID",
-      PROHIBIT = "",
+      PROHIBIT = "NA",
       ISELEMENTOF = ""
     ),
     item(
