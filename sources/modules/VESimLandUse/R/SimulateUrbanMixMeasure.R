@@ -158,7 +158,7 @@ SimulateUrbanMixMeasureSpecifications <- list(
       GROUP = "Year",
       TYPE = "people",
       UNITS = "PRSN",
-      PROHIBIT = c("NA", "<= 0"),
+      PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     ),
     item(
