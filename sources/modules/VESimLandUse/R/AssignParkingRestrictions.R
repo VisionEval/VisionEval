@@ -279,19 +279,27 @@ AssignParkingRestrictionsSpecifications <- list(
       ISELEMENTOF = ""
     ),
     item(
-      NAME = items(
-        "WkrId",
-        "Bzone",
-        "Marea"),
+      NAME = "WkrId",
       TABLE = "Worker",
       GROUP = "Year",
       TYPE = "character",
       UNITS = "ID",
-      PROHIBIT = "",
+      PROHIBIT = "NA",
       ISELEMENTOF = ""
-    )
-  ),
-  #Specify data to saved in the data store
+    ),
+  item(
+    NAME = items(
+      "Bzone",
+      "Marea"),
+    TABLE = "Worker",
+    GROUP = "Year",
+    TYPE = "character",
+    UNITS = "ID",
+    PROHIBIT = "",
+    ISELEMENTOF = ""
+  )
+),
+#Specify data to saved in the data store
   Set = items(
     item(
       NAME = "FreeParkingSpaces",
