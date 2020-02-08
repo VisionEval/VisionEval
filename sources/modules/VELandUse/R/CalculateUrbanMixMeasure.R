@@ -357,6 +357,7 @@ CalculateUrbanMixMeasure <- function(L) {
   matchMixTarget <- function(D_df, MixTarget) {
     D_df$Intercept <- 1
     Odds_ <- exp(eval(parse(text = UrbanMixModel_ls$Formula), envir = D_df))
+    Odds_[is.infinite(Odds_)] <- 1e6
     Prob_ <- Odds_ / (1 + Odds_)
     Rand_ <- runif(nrow(D_df))
     #Find out whether prediction is matching, under, or over
