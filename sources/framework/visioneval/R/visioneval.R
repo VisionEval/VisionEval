@@ -732,12 +732,18 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
     Errors_ <- c(Errors_, R$Errors)
     Warnings_ <- c(Errors_, R$Warnings)
     #Handle errors
-    if (!is.null(R$Errors) & StopOnErr) {
+    if (!is.null(R$Errors)) {
       writeLog(Errors_)
-      Msg <-
-        paste0("Module ", ModuleName, " has reported one or more errors. ",
-               "Check log for details.")
-      stop(Msg)
+      if(StopOnErr) {
+        Msg <-
+          paste0("Module ", ModuleName, " has reported one or more errors. ",
+                 "Check log for details.")
+        stop(Msg)
+      }
+    }
+    #Handle warnings
+    if (!is.null(R$Warnings)) {
+      writeLog(Warnings_)
     }
   } else {
     #Identify the units of geography to iterate over
@@ -776,12 +782,18 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
       Errors_ <- c(Errors_, R$Errors)
       Warnings_ <- c(Errors_, R$Warnings)
       #Handle errors
-      if (!is.null(R$Errors) & StopOnErr) {
+      if (!is.null(R$Errors)) {
         writeLog(Errors_)
-        Msg <-
-          paste0("Module ", ModuleName, " has reported one or more errors. ",
-                 "Check log for details.")
-        stop(Msg)
+        if(StopOnErr) {
+          Msg <-
+            paste0("Module ", ModuleName, " has reported one or more errors. ",
+                   "Check log for details.")
+          stop(Msg)
+        }
+      }
+      #Handle warnings
+      if (!is.null(R$Warnings)) {
+        writeLog(Warnings_)
       }
     }
   }
