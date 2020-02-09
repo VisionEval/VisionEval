@@ -419,7 +419,7 @@ Calculate4DMeasures <- function(L) {
     Msg <- paste0(
       "The following Bzones in the year ", L$G$Year, " ",
       "have population densities greater than ",
-      "100 persons per acre: ", HighDensityBzones_, ". ",
+      "100 persons per acre: ", paste(HighDensityBzones_, collapse = ", "), ". ",
       "This density is a relatively high level. ",
       "Check your Bzone area and housing inputs for these Bzones and make ",
       "sure that they are correct."
