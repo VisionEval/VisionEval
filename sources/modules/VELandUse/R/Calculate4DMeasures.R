@@ -413,7 +413,7 @@ Calculate4DMeasures <- function(L) {
   #Population density
   D1B_ <- with(D_df, Pop / Area)
   #Check for high population density values and add warning
-  IsHighDensity_ <- D1B_ / 640 > 100
+  IsHighDensity_ <- D1B_ > 100
   HighDensityBzones_ <- Bz[IsHighDensity_]
   if (any(IsHighDensity_)) {
     Msg <- paste0(
