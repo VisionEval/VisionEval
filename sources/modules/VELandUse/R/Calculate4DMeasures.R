@@ -405,11 +405,29 @@ Calculate4DMeasures <- function(L) {
   #Create data frame of Bzone data
   D_df <- data.frame(L$Year$Bzone)
   D_df$Area <- D_df$UrbanArea + D_df$TownArea + D_df$RuralArea
+  #Initialize list
+  Out_ls <- initDataList()
 
   #Calculate density measures
   #--------------------------
   #Population density
   D1B_ <- with(D_df, Pop / Area)
+  #Check for high population density values and add warning
+  IsHighDensity_ <- D1B_ / 640 > 100
+  HighDensityBzones_ <- Bz[IsHighDensity_]
+  if (any(IsHighDensity_)) {
+    Msg <- paste0(
+      "The following Bzones in the year ", L$G$Year, " ",
+      "have population densities greater than ",
+      "100 persons per acre: ", HighDensityBzones_, ". ",
+      "This density is a relatively high level. ",
+      "Check your Bzone area and housing inputs for these Bzones and make ",
+      "sure that they are correct."
+    )
+    addWarningMsg("Out_ls", Msg)
+    rm(Msg)
+  }
+  rm(IsHighDensity_, HighDensityBzones_)
   #Employment density
   D1C_ <- with(D_df, TotEmp / Area)
   #Activity density
@@ -463,8 +481,6 @@ Calculate4DMeasures <- function(L) {
 
   #Return list of results
   #----------------------
-  #Initialize list
-  Out_ls <- initDataList()
   #Populate with results
   Out_ls$Year$Bzone <- list(
     D1B = D1B_,
