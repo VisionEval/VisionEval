@@ -693,7 +693,7 @@ CreateHouseholds <- function(L) {
   #If values in Prsn_AzAp are not integers, round them and issue warning
   AllInt <- all(Prsn_AzAp == round(Prsn_AzAp))
   if (!AllInt) {
-    Prsn_AzAp == round(Prsn_AzAp)
+    Prsn_AzAp <- round(Prsn_AzAp)
     Msg <- paste(
       "Inputs for number of persons by age group in 'azone_hh_pop_by_age.csv'",
       "file include some non-integer values for the year", L$G$Year, ".",
@@ -716,7 +716,7 @@ CreateHouseholds <- function(L) {
   #If values in Prsn_AzAg are not integers, round them and issue warning
   AllInt <- all(Prsn_AzAg == round(Prsn_AzAg))
   if (!AllInt) {
-    Prsn_AzAg == round(Prsn_AzAg)
+    Prsn_AzAg <- round(Prsn_AzAg)
     Msg <- paste(
       "Inputs for number of persons by age group in 'azone_gq_pop_by_age.csv'",
       "file include some non-integer values for the year", L$G$Year, ".",
