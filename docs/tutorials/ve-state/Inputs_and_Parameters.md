@@ -88,34 +88,19 @@ This file describes all of the geographic relationships for the model and the na
 
 | Azone       | Bzone          | Czone      | Marea      |
 | ----------- | -------------- | ---------- | ---------- |
-| Baker
-       | NA  | NA         | None
-      |
-| Baker
-Benton
-       | NA  | NA         | Corvallis      |
-| Clackamas
-       | NA  | NA         | Portland      |
-| Clatsop
-       | NA  | NA         | None      |
-| Columbia
-       | NA  | NA         | Portland      |
-| Coos
-       | NA  | NA         | None      |
-| Crook
-       | NA  | NA         | None      |
-| Curry
-      | NA  | NA         | None      |
-| Deschutes
-       | NA  | NA         | Bend      |
-| Douglas
-       | NA  | NA         | None      |
-| Gilliam
-       | NA  | NA         | None      |
-| Grant
-       | NA  | NA         | None      |
-| Harney
-       | NA            | NA         | None      |
+| Baker       | NA  | NA         | None     |
+| Benton    | NA  | NA         | Corvallis      |
+| Clackamas      | NA  | NA         | Portland      |
+| Clatsop    | NA  | NA         | None      |
+| Columbia   | NA  | NA         | Portland      |
+| Coos  | NA  | NA         | None      |
+| Crook       | NA  | NA         | None      |
+| Curry      | NA  | NA         | None      |
+| Deschutes      | NA  | NA         | Bend      |
+| Douglas       | NA  | NA         | None      |
+| Gilliam       | NA  | NA         | None      |
+| Grant       | NA  | NA         | None      |
+| Harney      | NA            | NA         | None      |
 
 To learn more about VESTATE model geographic relationships see [here](docs/VisionEval_Inputs_by_Geo.docx)
 
