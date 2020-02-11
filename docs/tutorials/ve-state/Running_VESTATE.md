@@ -8,7 +8,7 @@ This section describes the installation and use of VESTATE.
 VESTATE and VisionEval framework are implemented in R, a statistical programming language and environment.  Both R and VisionEval are open source and freely available. For running VESTATE you need to follow these steps:
 
 1. [Install R](https://cran.r-project.org/) (users are encouraged to also install [RStudio](https://www.rstudio.com/products/rstudio/download/), a free and open-source integrated development environment for R)
-2. [Install VisionEval](https://download.visioneval.org/)
+2. [Install VisionEval](https://visioneval.org/category/download.html.)
 3. Run VESTATE
 
 The VisionEval installer is available [here](https://download.visioneval.org/). Follow the instructions on this page carefully to install the Visioneval on your system.

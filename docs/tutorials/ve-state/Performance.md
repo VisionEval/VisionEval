@@ -1,7 +1,7 @@
-# VERSPM Performance Metrics
+# VESTATE Performance Metrics
 ----
 
-A large number of performance metrics are produced during the run of the RPAT model, including environment and energy impacts, financial and economic impacts, and community impacts.
+A large number of performance metrics are produced during the run of the VESTATE model, including environment and energy impacts, financial and economic impacts, and community impacts.
 
 The full list of outputs available is as follows. Based on the geo level, you will find our these metrics in of the three files ( `Azone.csv` , `Bzone.csv` , `Marea.csv` ) in the `outputs` folder
 
