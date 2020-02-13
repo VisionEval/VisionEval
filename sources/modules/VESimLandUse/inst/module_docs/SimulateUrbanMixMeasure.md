@@ -114,9 +114,9 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |Bzone        |Bzone     |Year  |character  |ID         |         |            |
 |Marea        |Bzone     |Year  |character  |ID         |         |            |
 |NumHh        |Bzone     |Year  |households |HH         |NA, < 0  |            |
-|UrbanPop     |Bzone     |Year  |people     |PRSN       |NA, <= 0 |            |
-|TownPop      |Bzone     |Year  |people     |PRSN       |NA, <= 0 |            |
-|RuralPop     |Bzone     |Year  |people     |PRSN       |NA, <= 0 |            |
+|UrbanPop     |Bzone     |Year  |people     |PRSN       |NA, < 0  |            |
+|TownPop      |Bzone     |Year  |people     |PRSN       |NA, < 0  |            |
+|RuralPop     |Bzone     |Year  |people     |PRSN       |NA, < 0  |            |
 |UrbanArea    |Bzone     |Year  |area       |SQMI       |NA, < 0  |            |
 |TownArea     |Bzone     |Year  |area       |SQMI       |NA, < 0  |            |
 |RuralArea    |Bzone     |Year  |area       |SQMI       |NA, < 0  |            |
