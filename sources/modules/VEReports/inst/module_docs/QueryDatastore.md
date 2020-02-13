@@ -1,5 +1,5 @@
 # QueryDatastore Module
-### August 11, 2019
+### February 13, 2020
 
 This module defines functions used to query the Datastore and produce summary measures from the datastore. This documentation explains the overall approach to querying and summarization enabled by these functions, and the higher level functions to produce summaries. Refer to the function documentation for explanations of the lower level functions and details on all functions.
 
