@@ -1,8 +1,8 @@
 Package: VETravelPerformance
 Type: Package
 Title: Balances cost and travel and calculates travel performance measures
-Version: 0.9.0
-Date: 1/23/19
+Version: 0.9.5
+Date: 02/13/20
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: AASHTO
