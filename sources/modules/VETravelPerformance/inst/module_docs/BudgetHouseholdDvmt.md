@@ -162,7 +162,7 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |AveGPM         |Household |Year  |compound  |GGE/MI   |NA, < 0  |                   |
 |AveKWHPM       |Household |Year  |compound  |KWH/MI   |NA, < 0  |                   |
 |AveCO2ePM      |Household |Year  |compound  |GM/MI    |NA, < 0  |                   |
-|HhId           |Worker    |Year  |character |ID       |NA       |                   |
+|HhId           |Worker    |Year  |character |ID       |         |                   |
 |IsCashOut      |Worker    |Year  |integer   |binary   |         |0, 1               |
 |ParkingCost    |Worker    |Year  |currency  |USD.2001 |NA, < 0  |                   |
 |PaysForParking |Worker    |Year  |integer   |binary   |         |0, 1               |
