@@ -15,7 +15,7 @@
 #=============================================
 
 ## Suggest to do : Household allocation model estimation
-load("./data/HhAllocationModelCoeff.rda")
+load("./data-raw/HhAllocationModelCoeff.rda")
 HhAllocationModelCoeff_df <- HhAllocationModelCoeff
 rm(HhAllocationModelCoeff)
 
