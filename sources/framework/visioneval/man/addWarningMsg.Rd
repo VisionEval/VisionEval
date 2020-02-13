@@ -27,7 +27,7 @@ This function is a convenience function for module developers for passing
 warning messages back to the framework. The preferred method for handling
 warnings in module execution is for the module to handle the warning by
 passing one or more warning messages back to the framework. The framework
-will then write warning messages to the log and stop execution. Warning
+will then write warning messages to the log. Warning
 messages are stored in a component of the returned list called Warnings. This
 component is a string vector where each element is an warning message. The
 addWarningMsg will create the Warning component if it does not already exist
