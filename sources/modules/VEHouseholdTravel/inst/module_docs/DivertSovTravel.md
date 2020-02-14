@@ -1,6 +1,6 @@
 
 # DivertSovTravel Module
-### December 20, 2018
+### February 13, 2020
 
 This module reduces household single-occupant vehicle (SOV) travel to achieve goals that are inputs to the model. The purpose of this module is to enable users to do 'what if' analysis of the potential of light-weight vehicles (e.g. bicycles, electric bikes, electric scooters) and infrastructure to support their use to reduce SOV travel. The user inputs a goal for diverting a portion of SOV travel within a 20-mile tour distance (round trip distance). The module predicts the amount of each household's DVMT that occurs in SOV tours having round trip distances of 20 miles or less. It also predicts for each household the average length of trips that are in those SOV tours. It then reduces the SOV travel of each household to achieve the overall goal. The reductions are allocated to households as a function of the household's SOV DVMT and the inverse of SOV trip length (described in more detail below). The proportions of diverted DVMT are saved as are the average SOV trip length of diverted DVMT. These datasets are used in the ApplyDvmtReductions module to calculate reductions in household DVMT and to calculate trips to be added to the bike mode category trips. SOV DVMT reduction is only applied to households in urban and town location types (LocTypes) because it is unlikely that actions/services could be provided in rural areas that could significantly divert SOV DVMT to bicyles, electric bicycles, scooters or other similar modes.
 
@@ -57,17 +57,17 @@ lm(formula = PowSovDvmt ~ LogDensity + LogIncome + Drivers +
 
 Residuals:
      Min       1Q   Median       3Q      Max 
--2.26137 -0.50864  0.04221  0.51572  2.62255 
+-2.26138 -0.50857  0.04215  0.51565  2.62259 
 
 Coefficients:
                 Estimate Std. Error t value Pr(>|t|)    
-(Intercept)     1.108653   0.067726  16.370  < 2e-16 ***
-LogDensity     -0.006822   0.002866  -2.380  0.01731 *  
-LogIncome       0.031270   0.008084   3.868  0.00011 ***
-Drivers         0.155082   0.011837  13.101  < 2e-16 ***
-NumChild       -0.080317   0.005144 -15.612  < 2e-16 ***
-NumVehLtNumDvr -0.235950   0.016172 -14.590  < 2e-16 ***
-LogDvmt         0.173606   0.022665   7.660 1.92e-14 ***
+(Intercept)     1.109081   0.067716  16.378  < 2e-16 ***
+LogDensity     -0.006816   0.002868  -2.377  0.01747 *  
+LogIncome       0.031152   0.008098   3.847  0.00012 ***
+Drivers         0.155001   0.011855  13.075  < 2e-16 ***
+NumChild       -0.080279   0.005143 -15.608  < 2e-16 ***
+NumVehLtNumDvr -0.235950   0.016174 -14.588  < 2e-16 ***
+LogDvmt         0.173826   0.022718   7.651 2.05e-14 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -88,25 +88,25 @@ lm(formula = makeFormula(EndTerms_), data = EstData_df)
 
 Residuals:
      Min       1Q   Median       3Q      Max 
--1.37431 -0.03865  0.00383  0.04395  0.34042 
+-1.36294 -0.03841  0.00381  0.04360  0.31009 
 
 Coefficients:
                      Estimate Std. Error t value Pr(>|t|)    
-(Intercept)        -0.6605980  0.0107143  -61.66   <2e-16 ***
-LogDensity          0.1862789  0.0013027  142.99   <2e-16 ***
-IsSF                0.0614285  0.0007978   77.00   <2e-16 ***
-LogIncome           0.0382874  0.0005794   66.08   <2e-16 ***
-Drivers             0.4207702  0.0008926  471.38   <2e-16 ***
-NumChild           -0.1617684  0.0003712 -435.85   <2e-16 ***
-NumVehLtNumDvr     -0.5107438  0.0011418 -447.33   <2e-16 ***
-LogDvmt            -0.7248496  0.0032940 -220.05   <2e-16 ***
-LogDensity:LogDvmt -0.0274536  0.0003212  -85.48   <2e-16 ***
+(Intercept)        -0.6697101  0.0107138  -62.51   <2e-16 ***
+LogDensity          0.1874544  0.0013029  143.87   <2e-16 ***
+IsSF                0.0608623  0.0007971   76.35   <2e-16 ***
+LogIncome           0.0370481  0.0005801   63.87   <2e-16 ***
+Drivers             0.4190387  0.0008934  469.06   <2e-16 ***
+NumChild           -0.1618059  0.0003708 -436.38   <2e-16 ***
+NumVehLtNumDvr     -0.5099487  0.0011410 -446.93   <2e-16 ***
+LogDvmt            -0.7190418  0.0032971 -218.08   <2e-16 ***
+LogDensity:LogDvmt -0.0276759  0.0003211  -86.18   <2e-16 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Residual standard error: 0.06761 on 51915 degrees of freedom
-Multiple R-squared:  0.9791,	Adjusted R-squared:  0.9791 
-F-statistic: 3.035e+05 on 8 and 51915 DF,  p-value: < 2.2e-16
+Residual standard error: 0.06755 on 51915 degrees of freedom
+Multiple R-squared:  0.979,	Adjusted R-squared:  0.979 
+F-statistic: 3.029e+05 on 8 and 51915 DF,  p-value: < 2.2e-16
 
 ```
 
@@ -171,20 +171,20 @@ lm(formula = ModelFormula, data = Data_df)
 
 Residuals:
     Min      1Q  Median      3Q     Max 
--2.9966 -1.0398 -0.1819  0.8377  8.6031 
+-2.7596 -0.9247 -0.1417  0.7595  7.3272 
 
 Coefficients:
                 Estimate Std. Error t value Pr(>|t|)    
-(Intercept)     1.673463   0.155695  10.748   <2e-16 ***
-Drivers         0.146151   0.015947   9.165   <2e-16 ***
-LogIncome       0.136801   0.015132   9.040   <2e-16 ***
-LogDensity     -0.125897   0.005873 -21.435   <2e-16 ***
-NumVehLtNumDvr -0.339228   0.037182  -9.123   <2e-16 ***
+(Intercept)     1.580611   0.138674  11.398   <2e-16 ***
+Drivers         0.131508   0.014204   9.259   <2e-16 ***
+LogIncome       0.124028   0.013478   9.202   <2e-16 ***
+LogDensity     -0.110981   0.005231 -21.214   <2e-16 ***
+NumVehLtNumDvr -0.306224   0.033117  -9.247   <2e-16 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Residual standard error: 1.408 on 19021 degrees of freedom
-Multiple R-squared:  0.04443,	Adjusted R-squared:  0.04423 
+Residual standard error: 1.254 on 19021 degrees of freedom
+Multiple R-squared:  0.04444,	Adjusted R-squared:  0.04423 
 F-statistic: 221.1 on 4 and 19021 DF,  p-value: < 2.2e-16
 
 ```
@@ -200,24 +200,24 @@ lm(formula = makeFormula(EndTerms_), data = EstData_df)
 
 Residuals:
       Min        1Q    Median        3Q       Max 
--0.153575 -0.029696  0.000361  0.029183  0.185553 
+-0.161536 -0.026292  0.000387  0.026125  0.147309 
 
 Coefficients:
                   Estimate Std. Error t value Pr(>|t|)    
-(Intercept)      2.341e+00  7.395e-03  316.54   <2e-16 ***
-Drivers          1.764e-01  6.746e-04  261.45   <2e-16 ***
-NonDrivers      -4.008e-02  4.250e-04  -94.30   <2e-16 ***
-LogIncome        6.430e-02  6.326e-04  101.65   <2e-16 ***
-LogDensity      -1.084e-01  3.616e-04 -299.61   <2e-16 ***
-IsUrbanMixNbrhd -1.087e-01  1.216e-03  -89.34   <2e-16 ***
-FwyLaneMiPC      3.360e+02  2.415e+00  139.12   <2e-16 ***
-VehLtDvr        -3.553e-01  1.524e-03 -233.08   <2e-16 ***
+(Intercept)      2.230e+00  6.600e-03  337.90   <2e-16 ***
+Drivers          1.561e-01  6.021e-04  259.23   <2e-16 ***
+NonDrivers      -3.535e-02  3.793e-04  -93.19   <2e-16 ***
+LogIncome        5.756e-02  5.645e-04  101.96   <2e-16 ***
+LogDensity      -9.681e-02  3.227e-04 -299.98   <2e-16 ***
+IsUrbanMixNbrhd -9.806e-02  1.085e-03  -90.35   <2e-16 ***
+FwyLaneMiPC      3.031e+02  2.155e+00  140.63   <2e-16 ***
+VehLtDvr        -3.123e-01  1.360e-03 -229.53   <2e-16 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Residual standard error: 0.0434 on 9815 degrees of freedom
-Multiple R-squared:  0.979,	Adjusted R-squared:  0.979 
-F-statistic: 6.53e+04 on 7 and 9815 DF,  p-value: < 2.2e-16
+Residual standard error: 0.03873 on 9815 degrees of freedom
+Multiple R-squared:  0.9789,	Adjusted R-squared:  0.9789 
+F-statistic: 6.511e+04 on 7 and 9815 DF,  p-value: < 2.2e-16
 
 ```
 
@@ -227,22 +227,22 @@ Call:
 lm(formula = makeFormula(EndTerms_), data = EstData_df)
 
 Residuals:
-      Min        1Q    Median        3Q       Max 
--0.018257 -0.001996  0.000034  0.002022  0.011965 
+       Min         1Q     Median         3Q        Max 
+-0.0255722 -0.0034439 -0.0000008  0.0035053  0.0180089 
 
 Coefficients:
               Estimate Std. Error t value Pr(>|t|)    
-(Intercept)  1.131e+00  3.331e-04  3396.5   <2e-16 ***
-Drivers      8.986e-03  3.411e-05   263.5   <2e-16 ***
-LogIncome    8.764e-03  3.237e-05   270.7   <2e-16 ***
-LogDensity  -7.875e-03  1.261e-05  -624.7   <2e-16 ***
-VehLtDvr    -2.155e-02  7.953e-05  -271.0   <2e-16 ***
+(Intercept)  1.202e+00  5.770e-04  2082.6   <2e-16 ***
+Drivers      1.600e-02  5.908e-05   270.8   <2e-16 ***
+LogIncome    1.551e-02  5.607e-05   276.7   <2e-16 ***
+LogDensity  -1.366e-02  2.184e-05  -625.3   <2e-16 ***
+VehLtDvr    -3.836e-02  1.378e-04  -278.5   <2e-16 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Residual standard error: 0.003011 on 19021 degrees of freedom
-Multiple R-squared:  0.9755,	Adjusted R-squared:  0.9755 
-F-statistic: 1.893e+05 on 4 and 19021 DF,  p-value: < 2.2e-16
+Residual standard error: 0.005216 on 19021 degrees of freedom
+Multiple R-squared:  0.976,	Adjusted R-squared:  0.976 
+F-statistic: 1.938e+05 on 4 and 19021 DF,  p-value: < 2.2e-16
 
 ```
 
@@ -366,3 +366,4 @@ DESCRIPTION - A description of the data.
 |:-----------------|:---------|:-----|:--------|:----------|:------------|:-----------|:-----------------------------------------------------------------------------------------------------------------|
 |PropDvmtDiverted  |Household |Year  |double   |proportion |NA, < 0, > 1 |            |Proportion of household DVMT diverted to bicycling, electric bikes, or other 'low-speed' travel modes             |
 |AveTrpLenDiverted |Household |Year  |distance |MI         |NA, < 0      |            |Average length in miles of vehicle trips diverted to bicycling, electric bikes, or other 'low-speed' travel modes |
+|SovDvmtProp       |Household |Year  |double   |proportion |NA, < 0, > 1 |            |Proportion of household DVMT in single-occupant vehicle trips                                                     |
