@@ -5,7 +5,7 @@
 #<doc>
 #
 ## DivertSovTravel Module
-#### December 20, 2018
+#### February 13, 2020
 #
 #This module reduces household single-occupant vehicle (SOV) travel to achieve goals that are inputs to the model. The purpose of this module is to enable users to do 'what if' analysis of the potential of light-weight vehicles (e.g. bicycles, electric bikes, electric scooters) and infrastructure to support their use to reduce SOV travel. The user inputs a goal for diverting a portion of SOV travel within a 20-mile tour distance (round trip distance). The module predicts the amount of each household's DVMT that occurs in SOV tours having round trip distances of 20 miles or less. It also predicts for each household the average length of trips that are in those SOV tours. It then reduces the SOV travel of each household to achieve the overall goal. The reductions are allocated to households as a function of the household's SOV DVMT and the inverse of SOV trip length (described in more detail below). The proportions of diverted DVMT are saved as are the average SOV trip length of diverted DVMT. These datasets are used in the ApplyDvmtReductions module to calculate reductions in household DVMT and to calculate trips to be added to the bike mode category trips. SOV DVMT reduction is only applied to households in urban and town location types (LocTypes) because it is unlikely that actions/services could be provided in rural areas that could significantly divert SOV DVMT to bicyles, electric bicycles, scooters or other similar modes.
 #
@@ -827,6 +827,18 @@ DivertSovTravelSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0,
       DESCRIPTION = "Average length in miles of vehicle trips diverted to bicycling, electric bikes, or other 'low-speed' travel modes"
+    ),
+    item(
+      NAME = "SovDvmtProp",
+      TABLE = "Household",
+      GROUP = "Year",
+      TYPE = "double",
+      UNITS = "proportion",
+      NAVALUE = -1,
+      PROHIBIT = c("NA", "< 0", "> 1"),
+      ISELEMENTOF = "",
+      SIZE = 0,
+      DESCRIPTION = "Proportion of household DVMT in single-occupant vehicle trips"
     )
   )
 )
@@ -904,7 +916,11 @@ DivertSovTravel <- function(L) {
 
     #Calculate proportions of household DVMT in SOV tours of non-rural households
     #----------------------------------------------------------------------------
-    SovProp_ <- applyLinearModel(SovModel_ls$SovPropModel, Hh_df)[!IsRural]
+    #Calculate proportion of household DVMT in SOV tours
+    SovDvmtProp_Hh <- applyLinearModel(SovModel_ls$SovPropModel, Hh_df)
+    #Calculate proportion for non-rural households. Diversion to bike and
+    #similar modes only considered reasonable for non-rural households
+    SovProp_ <- SovDvmtProp_Hh[!IsRural]
 
     #Calculate total DVMT to be diverted from households that are not rural
     #----------------------------------------------------------------------
@@ -964,7 +980,8 @@ DivertSovTravel <- function(L) {
   Out_ls <- initDataList()
   Out_ls$Year$Household <-
     list(PropDvmtDiverted = AllPropDvmtDiverted_Hh,
-         AveTrpLenDiverted = AllSovTrpLen_Hh)
+         AveTrpLenDiverted = AllSovTrpLen_Hh,
+         SovDvmtProp = SovDvmtProp_Hh)
   #Return the outputs list
   Out_ls
 }
