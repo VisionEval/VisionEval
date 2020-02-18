@@ -37,10 +37,11 @@ Components:
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
     CRAN:
+      - data.table
+      - future
       - future.callr
       - jsonlite
       - usethis
-      - data.table
   VESimHouseholds:
     Type: module
     Path: sources/modules
@@ -113,12 +114,15 @@ Components:
       - data.table
       - usethis
     VE:
+      - VE2001NHTS
       - VEHouseholdTravel
   VEReports:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 3 }
     CRAN:
+      - filesstrings
+      - jsonlite
       - usethis
     VE:
       - VEHouseholdTravel
@@ -137,8 +141,11 @@ Components:
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 4 }
     CRAN:
+      - filesstrings
+      - stringr
       - usethis
     VE:
+      - VEHouseholdTravel
       - VEPowertrainsAndFuels
   VESimTransportSupply:
     Type: module
