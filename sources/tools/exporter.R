@@ -6,6 +6,8 @@ requireNamespace("data.table")
 # To use this in a visioneval runtime, just do this:
 #   import::here(ve.export,"tools/exporter.R")
 
+tool.contents <- "ve.export"
+
 # ve.export
 # Dump a model run Datastore to .csv files in an output folder
 #
