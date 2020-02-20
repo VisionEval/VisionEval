@@ -819,8 +819,10 @@ Initialize <- function(L) {
       rownames(HhPop_AzAg) <- L$Data$Year$Azone$Geo[IsYear]
       GqPop_AzAg <- as.matrix(data.frame(L$Data$Year$Azone)[IsYear, Gq])
       rownames(GqPop_AzAg) <- L$Data$Year$Azone$Geo[IsYear]
+      AveHhSize_Az <- L$Data$Year$Azone$AveHhSize[IsYear]
+      AveHhSize_Az[is.na(AveHhSize_Az)] <- 2.5
       NumHh_Az <- round(
-        rowSums(HhPop_AzAg) / L$Data$Year$Azone$AveHhSize[IsYear] + rowSums(GqPop_AzAg),
+        rowSums(HhPop_AzAg) / AveHhSize_Az + rowSums(GqPop_AzAg),
         0
       )
       #Estimate number of workers
