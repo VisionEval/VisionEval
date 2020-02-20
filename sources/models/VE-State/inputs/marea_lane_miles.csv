@@ -1,19 +1,19 @@
 Geo,Year,FwyLaneMi,ArtLaneMi
-Albany,2010,30,150
-Bend,2010,48,165
-Corvallis,2010,10,147
-Eugene,2010,131,482
-Grants Pass,2010,30,150
-Medford,2010,91,356
-Portland,2010,532,2247
-Salem,2010,123,422
-None,2010,0,0
-Albany,2040,30,150
-Bend,2040,50,169
-Corvallis,2040,10,150
-Eugene,2040,137,493
-Grants Pass,2040,30,150
-Medford,2040,97,371
-Portland,2040,561,2325
-Salem,2040,128,441
-None,2040,0,0
+Albany,2010,35,133
+Albany,2040,35,133
+Bend,2040,48,164
+Bend,2010,48,164
+Corvallis,2040,10,146
+Corvallis,2010,10,146
+EugeneSpringfield,2010,130,479
+EugeneSpringfield,2040,130,479
+GrantsPass,2010,100,158
+GrantsPass,2040,100,158
+Metro,2010,526,2232
+Metro,2040,526,2232
+None,2010,35,133
+None,2040,35,133
+RogueValley,2010,90,354
+RogueValley,2040,90,354
+SalemKeizer,2010,122,419
+SalemKeizer,2040,122,419
