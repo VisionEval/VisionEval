@@ -540,7 +540,7 @@ SimulateHousing <- function(L) {
       } else {
         GQBzones_ <- unname(sample(Bzones_, GQPop, replace = TRUE))
         Bzone_Hh[IsGQ_Hh] <- unname(GQBzones_)
-        rm(GQProps_, UseATProps, GQBzones_)
+        rm(GQProps_, GQBzones_)
       }
     }
 
