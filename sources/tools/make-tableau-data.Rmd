@@ -1,0 +1,111 @@
+---
+title: "Make Database for Tableau Prototype"
+output: html_document
+---
+
+# Overhead
+```{r overhead, include = FALSE}
+packages_vector <- c("tidyverse",
+                     "jsonlite",
+                     "visioneval")
+
+need_to_install <- packages_vector[!(packages_vector %in% installed.packages()[,"Package"])]
+
+if (length(need_to_install)) install.packages(need_to_install)
+
+for (package in packages_vector) {
+  library(package, character.only = TRUE)
+}
+
+# import::here(ve.export,.from="./exporter.R")
+```
+
+# Remote I/O
+```{r remote-io}
+viewer_dir <- "~/Documents/GitHub/VisionEval-Dev/sources/VEScenarioViewer/data/VERSPM/"
+output_dir <- "./example_dir/tableau_test/"
+
+viewer_file_name <- paste0(viewer_dir,  "verspm.js")
+
+scenario_config_file_name <- paste0(output_dir, "example_scenario_manage.csv")
+
+output_file_name <- paste0(output_dir, "database-for-tableau.csv")
+```
+
+# Convert Javascript data to CSV
+```{r convert-java}
+temp_out_name <- paste0(output_dir, "verspm.JSON")
+input  <- readLines(viewer_file_name)
+  step_1 <- gsub(pattern = "var data =", replace = "", x = input)
+  step_2 <- str_replace(step_1, ";", "")
+  writeLines(step_2, con = temp_out_name)
+  
+temp_df <- fromJSON(temp_out_name, flatten = TRUE)
+
+write_csv(temp_df, path = paste0(output_dir, "verspm.csv"))
+```
+
+# Prepare Tableau
+```{r prep-tableau}
+measure_names_vector <- c("GHGReduction", 
+                          "DVMTPerCapita",
+                          "WalkTravelPerCapita",
+                          "TruckDelay",
+                          "AirPollutionEm",
+                          "FuelUse",
+                          "VehicleCost",
+                          "VehicleCostLow")
+
+config_df <- read_csv(scenario_config_file_name, 
+                      col_types = cols(.default = col_character(), execute = col_logical()))
+
+category_name_dict_df <- distinct(config_df, category_name, category_label) %>%
+  mutate(category_label = str_replace(category_label, " ", "_")) %>%
+  select(short = category_name, long = category_label)
+
+level_name_dict_df <- distinct(config_df, category_name, level_name, level_label)
+  
+outcomes_df <- read_csv(paste0(output_dir, "verspm.csv"),
+                        col_types = cols(.default = col_character())) %>%
+  mutate_at(vars(measure_names_vector), as.numeric)
+
+working_df <- outcomes_df
+
+for (category in unique(level_name_dict_df$category_name)) {
+  
+  level_dict_df <- level_name_dict_df %>%
+    filter(category_name == category) %>%
+    distinct(level_name, level_label)
+  
+  new_category_name <- paste0(category, "_NAME")
+  
+  working_df <- working_df %>%
+    rename(subject := !!category) %>%
+    left_join(., level_dict_df, by = c("subject" = "level_name")) %>%
+    mutate(subject_copy = level_label) %>%
+    rename(!!new_category_name := subject_copy) %>%
+    rename(!!category := subject) %>%
+    select(-level_label)
+  
+}
+
+for (category in category_name_dict_df$short) {
+  
+  long_name <- filter(category_name_dict_df, short == category)$long
+  
+  new_category_name <- paste0(category, "_NAME")
+  
+  working_df <- working_df %>%
+    rename(!!long_name := !!new_category_name) 
+}
+
+output_df <- working_df %>%
+  mutate(scenario_index = row_number())
+
+```
+
+# Write
+```{r}
+write_csv(output_df, path = output_file_name)
+```
+
