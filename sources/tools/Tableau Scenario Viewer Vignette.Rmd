@@ -1,0 +1,54 @@
+---
+title: "Tableau Scenario Viewer Vignette"
+output:
+  html_document: 
+    theme: cosmo
+---
+
+*tableau_scenario_viewer.R (defines ve.scenario_management tools)*
+
+This file documents the `ve.tableau_scenario_viewer` tools for VisionEval, which allows the user to view scenarios in [Tableau](https://www.tableau.com/) rather than the custom JavaScript HTML viewer distributed as part of VisionEval.   
+
+## Background
+
+A powerful feature of VisionEval is the ability to quickly run 100s or even 1000s of scenarios. Background on running scenarios in VisionEval is available in the [project documentation](https://github.com/VisionEval/VisionEval/wiki/Multiple-Scenarios). Scenarios outcomes can be viewed in a web browser using a HTML viewer distributed as part of VisionEval. The advantages of the HTML viewer are that it is free and can be viewed in a web browser. The cons are that it is difficult to modify/customize.
+
+Tableau is a popular data visualization software product. The tool is expensive, but allows for a rich set of visualizations that can be quickly developed and modified. We have created a set of tools that allow users to explore VisionEval scenario outputs or in Tableau. 
+
+## Tableau Scenario Viewer  Demonstration
+As an alternative to the HTML viewer, we have created a method that creates a Tableau-ready database using the files created for the HTML viewer. Users can then import this database into Tableau to create their own visualizations, or start with the `Scenario Viewer Prototype.twb` Tableau workbook we have provided.  
+
+Here's how the tools work.
+
+To access the tools you must, let R know where they are. The code below sets the working directory to `VisionEval/sources/`. Please modify the code to point to where you have saved the `VisionEval/sources` folder.
+```{r setup}
+knitr::opts_knit$set(root.dir = "~/Documents/GitHub/VisionEval-Dev/sources/")
+```
+
+We can now load the VisionEval scenario management tools.
+```{r load-tools, message = FALSE}
+source("tools/tableau_scenario_viewer.R")
+```
+
+To convert the HTML viewer inputs into a Tableau-ready CSV database, the user must specify the following three inputs:
+1. The location of the HTML viewer inputs;
+2. Whether the outputs are specific to VERSPM or VERPAT; and,
+3. The location of the output Tableau-ready CSV database file.
+
+For example, these values can be:
+```{r set-inputs}
+viewer_dir <- "./VEScenarioViewer/data/VERSPM/"
+model_name <- "verspm"
+output_file_name <- paste0("./tools/example_dir/database-for-tableau.csv")
+```
+
+We can now call the `ve.tableau_scenario_viewer.MakeCSV` method, which returns a Tableau-ready dataframe and then write this dataframe to disk as follows.
+
+```{r method-write}
+output_df <- ve.tableau_scenario_viewer.MakeCSV(viewer_dir, model_name)
+readr::write_csv(output_df, path = output_file_name)
+```
+
+You can now open up the `Scenario Viewer Prototype.twb` Tableau workbook and point to the output data file.
+
+

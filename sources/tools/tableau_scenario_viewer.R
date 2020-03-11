@@ -1,40 +1,19 @@
----
-title: "Make Database for Tableau Prototype"
-output: html_document
----
+requireNamespace("magrittr")
+requireNamespace("dplyr")
+requireNamespace("tidyr")
+requireNamespace("readr")
+requireNamespace("jsonlite")
 
-# TODO: 
-# make a vignette, 
-# make a proper tool (in R)
+library(magrittr)
 
-# Overhead
-```{r overhead, include = FALSE}
-packages_vector <- c("tidyverse",
-                     "jsonlite")
+tool.contents <- c(
+  "ve.tableau_scenario_viewer.MakeCSV"
+)
 
-need_to_install <- packages_vector[!(packages_vector %in% installed.packages()[,"Package"])]
-
-if (length(need_to_install)) install.packages(need_to_install)
-
-for (package in packages_vector) {
-  library(package, character.only = TRUE)
-}
-
-```
-
-# Remote I/O
-```{r remote-io}
-viewer_dir <- "~/Documents/GitHub/VisionEval-Dev/sources/VEScenarioViewer/data/VERSPM/"
-output_dir <- "./example_dir/tableau_test/"
-
-output_file_name <- paste0(output_dir, "database-for-tableau.csv")
-```
-
-# Private Methods
-```{r methods}
+# private methods --------------------------------------------------------------
 .MakeDataframeFromJavaScript <- function(input_js_var_file_name, var_name_string) {
   
-  temp_out_name <-  paste0(output_dir, "temp.JSON")
+  temp_out_name <- "temp.JSON"
   input_line  <- readLines(input_js_var_file_name)
   step_1 <- stringr::str_replace(input_line, paste0("var ", var_name_string, " ="), "")
   step_2 <- stringr::str_replace(step_1, ";", "")
@@ -42,11 +21,18 @@ output_file_name <- paste0(output_dir, "database-for-tableau.csv")
   
   return_df <- jsonlite::fromJSON(temp_out_name, simplifyVector = TRUE, flatten = TRUE)
   
+  file.remove(temp_out_name)
+  
   return(return_df)
   
 }
 
 .MakeScenarioDataframes <- function(input_scenario_dir, model_name = "verspm") {
+  
+  if (!(model_name %in% c("verspm", "verpat"))) {
+    stop("model_name must be 'verspm' or 'verpat'")
+    return("Error")
+  }
   
   file_name <-  paste0(input_scenario_dir, model_name, ".js")
   results_df <- .MakeDataframeFromJavaScript(file_name, "data") 
@@ -92,11 +78,20 @@ output_file_name <- paste0(output_dir, "database-for-tableau.csv")
   
 } 
 
-```
 
-# Public Methods
-```{r public-methods}
-MakeTableauScenarioViewer <- function(input_scenario_dir,  model_name = "verspm") {
+# public methods ---------------------------------------------------------------
+# ve.tableau_scenario_viewer.MakeCSV
+# Create a Tableau-ready CSV database from the HTML Scenario Viewer inputs
+#
+# Parameters:
+#   input_scenario_dir:
+#     File directory of the Standard VisionEval scenario viewer output files, which
+#     are assumed to be named 'output-cgf.js', 'scenario-cfg.js', 'category-cfg.js',
+#     and either 'verspm.js' or 'verpat.js'.
+#   model_name:
+#     Either 'verspm' or 'verpat'. 
+ve.tableau_scenario_viewer.MakeCSV <- function(input_scenario_dir, model_name = "verspm") 
+{
   
   df_list <- .MakeScenarioDataframes(input_scenario_dir, model_name)
   
@@ -142,12 +137,12 @@ MakeTableauScenarioViewer <- function(input_scenario_dir,  model_name = "verspm"
     working_df <- working_df %>%
       dplyr::rename(!!long_name := !!new_category_name) 
   }
-    
+  
   strategy_name_df <- df_list$category_config %>%
     tidyr::pivot_wider(., names_from = category_name, values_from = level_name)
   
   for (strategy in unique(strategy_name_df$strategy_label)) {
-  
+    
     join_df <- dplyr::filter(strategy_name_df, strategy_label == strategy) %>%
       dplyr::select(-strategy_description) %>%
       dplyr::select_if(.notAllNA)
@@ -170,16 +165,5 @@ MakeTableauScenarioViewer <- function(input_scenario_dir,  model_name = "verspm"
   return(return_df)
   
 }
-```
 
-# Apply Method
-```{r apply-method}
-output_df <- MakeTableauScenarioViewer(viewer_dir, model_name = "verspm")
-```
-
-
-# Write
-```{r}
-write_csv(output_df, path = output_file_name)
-```
 
