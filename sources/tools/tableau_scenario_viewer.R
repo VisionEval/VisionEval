@@ -4,7 +4,7 @@ requireNamespace("tidyr")
 requireNamespace("readr")
 requireNamespace("jsonlite")
 
-library(magrittr)
+assign("%>%",getFromNamespace("%>%","magrittr"))
 
 tool.contents <- c(
   "ve.tableau_scenario_viewer.MakeCSV"

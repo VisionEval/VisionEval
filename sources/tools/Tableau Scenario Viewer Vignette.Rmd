@@ -39,7 +39,7 @@ For example, these values can be:
 ```{r set-inputs}
 viewer_dir <- "./VEScenarioViewer/data/VERSPM/"
 model_name <- "verspm"
-output_file_name <- paste0("./tools/example_dir/database-for-tableau.csv")
+output_file_name <- "./tools/example_dir/database-for-tableau.csv"
 ```
 
 We can now call the `ve.tableau_scenario_viewer.MakeCSV` method, which returns a Tableau-ready dataframe and then write this dataframe to disk as follows.
