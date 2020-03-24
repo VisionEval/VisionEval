@@ -13,7 +13,7 @@ LazyData: TRUE
 Encoding: UTF-8
 Depends:
     R (>= 3.4.0),
-    visioneval
+	visioneval
 Imports:
     devtools,
     dplyr,
@@ -23,13 +23,15 @@ Imports:
     MASS,
     pscl,
     rmarkdown,
-    usethis
+    usethis,
+	data.table,
+	VE2001NHTS
 Suggests:
     knitr,
     NHTS2009,
     SLD
 VignetteBuilder: knitr
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
 Remotes:
     VisionEval/VisionEval-Dev/sources/framework/visioneval@development,
     cities-lab/NHTS2009,

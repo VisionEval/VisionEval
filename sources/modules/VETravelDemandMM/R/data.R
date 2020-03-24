@@ -37,6 +37,25 @@
 #'
 "BikePMTModel_df"
 
+#' list-column data frame (tibble) with estimated model objects for household Biking TFL model
+#'
+#' list-column data frame (tibble) with estimated model objects for household Biking TFL model
+#' Estimated with the script in data-raw/BikeTFLModel_df.R
+#'
+#' @format The main data frame \code{BikeTFLModel_df} has 2 rows and 3 variables:
+#' \describe{
+#'   \item{metro}{metro or non-metro segment of the Biking TFL model}
+#'   \item{model}{the model objects stored in list-column of the data frame}
+#'   \item{post_func}{the function for post-processing model predictions}
+#'   }
+#'
+#' @examples
+#' str(BikeTFLModel_df)
+#' head(BikeTFLModel_df)
+#' summary(BikeTFLModel_df)
+#'
+"BikeTFLModel_df"
+
 #' list-column data frame (tibble) with estimated model objects for household drivers model
 #'
 #' list-column data frame (tibble) with estimated model objects for household drivers model
@@ -74,6 +93,25 @@
 #'
 "TransitPMTModel_df"
 
+#' list-column data frame (tibble) with estimated model objects for household Transit TFL model
+#'
+#' list-column data frame (tibble) with estimated model objects for household Transit TFL model
+#' Estimated with the script in data-raw/TransitTFLModel.R
+#'
+#' @format The main data frame \code{TransitTFLModel} has 2 rows and 3 variables:
+#' \describe{
+#'   \item{metro}{metro or non-metro segment of the Transit TFL model}
+#'   \item{model}{the model objects stored in list-column of the data frame}
+#'   \item{post_func}{the function for post-processing model predictions}
+#'   }
+#'
+#' @examples
+#' str(TransitTFLModel_df)
+#' head(TransitTFLModel_df)
+#' summary(TransitTFLModel_df)
+#'
+"TransitTFLModel_df"
+
 #' list-column data frame (tibble) with estimated model objects for household vehicles model
 #'
 #' list-column data frame (tibble) with estimated model objects for household vehicles model
@@ -110,3 +148,25 @@
 #' summary(WalkPMTModel_df)
 #'
 "WalkPMTModel_df"
+
+
+#' list-column data frame (tibble) with estimated model objects for household Walking TFL model
+#'
+#' list-column data frame (tibble) with estimated model objects for household Walking TFL model
+#' Estimated with the script in data-raw/WalkTFLModel.R
+#'
+#' @format The main data frame \code{WalkTFLModel} has 2 rows and 3 variables:
+#' \describe{
+#'   \item{metro}{metro or non-metro segment of the Walking TFL model}
+#'   \item{model}{the model objects stored in list-column of the data frames}
+#'   \item{post_func}{the function for post-processing model predictions}
+#'   }
+#'
+#' @examples
+#' str(WalkTFLModel_df)
+#' head(WalkTFLModel_df)
+#' summary(WalkTFLModel_df)
+#'
+"WalkTFLModel_df"
+
+

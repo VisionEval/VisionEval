@@ -3,7 +3,6 @@
 \docType{package}
 \name{VETravelDemandMM}
 \alias{VETravelDemandMM}
-\alias{VETravelDemandMM-package}
 \title{\code{VETravelDemandMM} package}
 \description{
 Simulate Multi-Modal Travel Demand for Households

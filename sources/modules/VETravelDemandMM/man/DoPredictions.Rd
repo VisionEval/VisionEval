@@ -4,8 +4,15 @@
 \alias{DoPredictions}
 \title{Helper functions for running predictions}
 \usage{
-DoPredictions(Model_df, Dataset_df, dataset_name, id_name, y_name,
-  SegmentCol_vc = NULL, combine_preds = FALSE)
+DoPredictions(
+  Model_df,
+  Dataset_df,
+  dataset_name,
+  id_name,
+  y_name,
+  SegmentCol_vc = NULL,
+  combine_preds = FALSE
+)
 }
 \arguments{
 \item{Model_df}{A list-column data_frame containing a 'model' list-column,

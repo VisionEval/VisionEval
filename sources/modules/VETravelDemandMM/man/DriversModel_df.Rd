@@ -4,11 +4,13 @@
 \name{DriversModel_df}
 \alias{DriversModel_df}
 \title{list-column data frame (tibble) with estimated model objects for household drivers model}
-\format{The main data frame \code{DriversModel} has 1 rows and 2 variables:
+\format{
+The main data frame \code{DriversModel} has 1 rows and 2 variables:
 \describe{
   \item{model}{the model objects stored in list-column of the data frame}
   \item{post_func}{the function for post-processing model predictions}
-  }}
+  }
+}
 \usage{
 DriversModel_df
 }

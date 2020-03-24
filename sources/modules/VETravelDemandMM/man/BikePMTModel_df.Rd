@@ -4,12 +4,14 @@
 \name{BikePMTModel_df}
 \alias{BikePMTModel_df}
 \title{list-column data frame (tibble) with estimated model objects for household Biking PMT model}
-\format{The main data frame \code{BikePMTModel_df} has 2 rows and 3 variables:
+\format{
+The main data frame \code{BikePMTModel_df} has 2 rows and 3 variables:
 \describe{
   \item{metro}{metro or non-metro segment of the Biking PMT model}
   \item{model}{the model objects stored in list-column of the data frame}
   \item{post_func}{the function for post-processing model predictions}
-  }}
+  }
+}
 \usage{
 BikePMTModel_df
 }
