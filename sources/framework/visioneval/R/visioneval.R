@@ -185,6 +185,7 @@ initializeModel <-
         })
       }
       #Initialize tables
+      
       TabInfo_df <-
         unique(do.call(rbind, lapply(RefCopyInfo_ls, function(x) x$Tables)))
       CopyInfo_df <- data.frame(
@@ -346,15 +347,17 @@ initializeModel <-
             }
             #Load and check the module specifications and add Get specs if
             #there are no specification errors
-            CallSpecs_ls <-
-              processModuleSpecs(getModuleSpecs(Call_[2], Call_[1]))
-            Err <- checkModuleSpecs(CallSpecs_ls, Call_[2])
-            if (length(Err) > 0) {
-              Errors_ <- c(Errors_, Err)
-              next()
-            } else {
-              AllSpecs_ls[[i]]$Specs$Get <-
-                c(AllSpecs_ls[[i]]$Specs$Get <- Specs_ls$Get)
+            for (i in 1: (length(Call_)-1)) {
+              CallSpecs_ls <-
+                processModuleSpecs(getModuleSpecs(Call_[length(Call_)], Call_[i]))
+              Err <- checkModuleSpecs(CallSpecs_ls, Call_[length(Call_)])
+              if (length(Err) > 0) {
+                Errors_ <- c(Errors_, Err)
+                next()
+              } else {
+                AllSpecs_ls[[i]]$Specs$Get <-
+                  c(AllSpecs_ls[[i]]$Specs$Get <- Specs_ls$Get)
+              }
             }
           }
         }
@@ -370,7 +373,6 @@ initializeModel <-
       writeLog(Errors_)
       stop(Msg)
     }
-
     #Simulate model run
     #------------------
     simDataTransactions(AllSpecs_ls)
@@ -501,10 +503,20 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
       Function <- M$Specs$Call[[Alias]]
       #Called module function when only module is specified
       if (length(unlist(strsplit(Function, "::"))) == 1) {
-        Pkg_df <- getModelState()$ModulesByPackage_df
-        Function <-
-          paste(Pkg_df$Package[Pkg_df$Module == Function], Function, sep = "::")
-        rm(Pkg_df)
+        Pkg_df <- getModelState()$ModuleCalls_df
+        if (sum (Pkg_df$Module == Function) != 0  ) {
+          Pkg_df <- getModelState()$ModulesByPackage_df
+          Function <-
+            paste(Pkg_df$Package[Pkg_df$Module == Function], Function, sep = "::")
+          
+          rm(Pkg_df)          
+        } else {
+          Pkg_df <- getModelState()$ModulesByPackage_df
+          Function <-
+            paste(Pkg_df$Package[Pkg_df$Module == Function], Function, sep = "::")
+          
+          rm(Pkg_df)
+        }
       }
       #Called module specifications
       Specs <- paste0(Function, "Specifications")
@@ -614,3 +626,4 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
 }
 
 # TODO: Run the steps from ModelScriptFile (equivalently getModelState()$ModuleCalls_df)
+
