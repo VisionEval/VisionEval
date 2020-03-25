@@ -179,14 +179,27 @@ makeDataFrame <- function(Table, Output){
     } else {
       orn <- paste0(Output$GroupTableName$Name[OutputIndex])
     }
-    names(OutputRows) <- orn
-    OutputRows <- data.frame(OutputRows, stringsAsFactors = FALSE)
+		if ( length(names(OutputRows)) == 0 ) next
 
-    # Do not output base year except for the Azone, Bzone and Marea Tables
-    if( Table %in% c('Azone', 'Bzone', 'Marea') || year != Output$BaseYear ){
-      OutputRows$Year <- year
-      OutputAllYr <- data.table::rbindlist(list(OutputAllYr, OutputRows), fill = TRUE)
-    }
+		names(OutputRows) <- orn
+		row_lengths <- sapply(OutputRows,length,simplify=TRUE)
+		row_names <- names(row_lengths)
+		row_sets <- unique(row_lengths);
+# 		if ( length(row_sets) > 1 ) {
+# 				cat("OutputRows has multiple lengths:\n")
+# 				print(unique(row_lengths))
+# 				print(row_names) # look in...
+# 		}
+		for ( rs in row_sets ) {
+				OutputRowSet <- OutputRows[ row_names[ which( row_lengths == rs ) ] ]
+				OutputRows_df <- data.frame(OutputRowSet, stringsAsFactors = FALSE)
+
+				# Do not output base year except for the Azone, Bzone and Marea Tables
+				if ( nrow(OutputRows_df)>0 && ( Table %in% c('Azone', 'Bzone', 'Marea') || year != Output$BaseYear ) ) {
+					OutputRows_df$Year <- year
+					OutputAllYr <- data.table::rbindlist(list(OutputAllYr, OutputRows_df), fill = TRUE)
+				}
+		}
   }
   OutputAllYr
 }
@@ -233,7 +246,11 @@ exportData <- function(Output,
     if ( tbl == "IncomeGroup" ) tbl <- "JobAccessibility"
 
     filename <- file.path(outputFolder, paste0(tbl, ".csv"))
-    data.table::fwrite(OutDf, file=filename)
-    if ( ! quiet ) cat("Done (as",basename(filename),")\n")
+		if ( ncol(OutDf) < 1 ) {
+				if ( ! quiet) cat("Warning: Not writing empty file",basename(filename),"\n")
+		} else {
+				data.table::fwrite(OutDf, file=filename)
+				if ( ! quiet ) cat("Done (as ",basename(filename),")\n",sep="")
+		}
   }
 }
