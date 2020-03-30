@@ -411,10 +411,11 @@ CalculateHouseholdDvmt <- function(L) {
            LifeCycle = ifelse(LifeCycle %in% c("09", "10"), "Empty Nester", LifeCycle)
     ) %>%
     left_join(Bzone_df, by="Bzone") %>%
-    crossing(Marea_df)
+    left_join(Marea_df, by="Marea")
   
   D_df <- D_df %>% mutate_if(is.factor, as.character)
-  
+ 
+   
   #D_df <- D_df %>%
   #  crossing(Marea_df, by="Marea")
   
