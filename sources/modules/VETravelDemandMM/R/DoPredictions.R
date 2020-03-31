@@ -36,6 +36,11 @@
 #'
 DoPredictions <- function(Model_df, Dataset_df,
                            dataset_name, id_name, y_name, SegmentCol_vc=NULL, combine_preds=FALSE) {
+  
+  ## change the old nest and unnest function to be compatible with new tidyr
+  nest <- nest_legacy
+  unnest <- unnest_legacy
+  
   #create household list-column data_frame and join with Model_df
   if (is.null(SegmentCol_vc)) {
     SegmentCol_vc <- setdiff(names(Model_df), c("model", "step", "post_func", "bias_adj"))
