@@ -178,6 +178,11 @@ rm(PredictDriversSpecifications)
 #' @importFrom MASS polr
 #' @export
 PredictDrivers <- function(L) {
+  
+   ## change the old nest and unnest function to be compatible with new tidyr
+  nest <- nest_legacy
+  unnest <- unnest_legacy
+  
   dataset_name <- "Household"
   id_name <- "HhId"
   y_name <- "Drivers"
