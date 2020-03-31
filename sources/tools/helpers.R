@@ -5,7 +5,7 @@
 # See VisionEval.R in the installation runtime (VE-Installer/boilerplate)
 # In particular, functions call models at locations relative to ve.root
 
-tool.contents <- c("vegui","verpat","verspm","vestate")
+tool.contents <- c("vegui","verpat","verspm","vestate","verspm_mm")
 
 # Function starts the VEGUI
 vegui <- function(root=ve.root) {
@@ -42,6 +42,15 @@ verspm <- function(scenarios=FALSE,root=ve.root) {
   } else {
     full.path <- file.path(root,"models/VERSPM_Scenarios")
   }
+  owd <- setwd(full.path)
+  source("run_model.R")
+  setwd(owd)
+}
+
+verspm_mm <- function(root=ve.root) {
+  full.path <- file.path(root,"models/VERSPM")
+  test.dir <- file.path(full.path,"Test1") # Older structure for VERSPM
+  if ( dir.exists(test.dir) ) full.path <- test.dir
   owd <- setwd(full.path)
   source("run_model.R")
   setwd(owd)
