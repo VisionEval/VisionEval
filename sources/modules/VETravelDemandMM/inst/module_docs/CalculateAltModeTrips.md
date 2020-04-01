@@ -29,10 +29,10 @@ See:
 
 ## How the Module Works
 
-This module includes 6 sub-modules for predicting alternative modes( Bike, Walk and Transit) person miles traveled and trip frequencies.
-If the users want to re-estimate the sub-modules for a nee region they can use the scripts in dara-raw folder to re-estimate the model. The model object will be save in data folder.
+This module includes 6 sub-modules for predicting alternative modes( Bike, Walk and Transit) person miles traveled, trip frequencies and trip lengths.
+If the users want to re-estimate the sub-modules for a new region, they can use the scripts in dara-raw folder to re-estimate the model. The model object will be saved in data folder.
 
-The module first uses a hurdle models to assign the alternative modes PMT to each household.
+The module first uses a hurdle model to assign the alternative modes PMT to each household.
 Then a trip frequency model is applied to estimate number of yearly alternative modes trips for each household.
 Finally a linear regression model will be applied to estimate the average trip length for alternatiev modes.
 All the models have two different parameters for metro and non-metro residents.
