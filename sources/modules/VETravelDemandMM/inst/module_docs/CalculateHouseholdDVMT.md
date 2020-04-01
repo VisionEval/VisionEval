@@ -6,12 +6,14 @@ This module predicts AADVMT for households. It uses the model object in data/AAD
 
 ## Model Parameter Estimation
 
-See data-raw/AADVMTModel_df.R.
+See data-raw/AADVMTModel_df.R in VETravelDemandMM package.
 
 ## How the Module Works
 
-The user specifies the model in data-raw/AADVMTModel_df.R and saves the estimation results in data/AADVMTModel_df.rda. If no model re-estimation is desired, the estimation process can be skipped. The module assigns AADVMT to each household using variables including household characteristics, built environment, and transportation supply.
-
+This models uses a Power-transformed linear regression model to directly estimates the household's annual average daily VMT.
+The module assigns AADVMT to each household using variables including household characteristics, built environment, and transportation supply.
+The module also computes the 95th percentile DVMT for each household from the household average DVMT using the 95th percentile model.This is the same model as in [CalculateHouseholdDVMT in VEHouseholdTravel package] (https://github.com/VisionEval/VisionEval-Dev/blob/mm_debug/sources/modules/VEHouseholdTravel/inst/module_docs/CalculateHouseholdDvmt.md)
+Finally, the module sums up the total DVMT of households located in the metropolitan (urbanized) area and located in the non-metropolitan (rural) area of each Marea.
 
 ## User Inputs
 The following table(s) document each input file that must be provided in order for the module to run correctly. User input files are comma-separated valued (csv) formatted text files. Each row in the table(s) describes a field (column) in the input file. The table names and their meanings are as follows:
