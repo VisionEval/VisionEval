@@ -29,8 +29,13 @@ See:
 
 ## How the Module Works
 
-The user specifies the model in the estimation scripts in data-raw folder and saves the estimation results in data folder. If no model re-estimation is desired, the estimation process can be skipped and the default model specification is used. The module assigns the alternative mode PMT and TFL to each household using variables from household characteristics and land use data. There are two different models for 
-metro and non-metro residents.
+This module includes 6 sub-modules for predicting alternative modes( Bike, Walk and Transit) person miles traveled and trip frequencies.
+If the users want to re-estimate the sub-modules for a nee region they can use the scripts in dara-raw folder to re-estimate the model. The model object will be save in data folder.
+
+The module first uses a hurdle models to assign the alternative modes PMT to each household.
+Then a trip frequency model is applied to estimate number of yearly alternative modes trips for each household.
+Finally a linear regression model will be applied to estimate the average trip length for alternatiev modes.
+All the models have two different parameters for metro and non-metro residents.
 
 
 ## User Inputs
@@ -68,7 +73,7 @@ DESCRIPTION - A description of the data.
 |:--|:------|:------|:-------------------------------------------------|:--------|:-----------|:--------|:---------------------------------------------------------------------------------------------------------------------------------------------------|
 |1  |Geo    |       |                                                  |         |Bzones      |         |Must contain a record for each Bzone and model run year.                                                                                            |
 |11 |Year   |       |                                                  |         |            |         |Must contain a record for each Bzone and model run year.                                                                                            |
-|3  |D3bmm4 |double multimodal intersections per square mile |NA       |            |         |Intersection density in terms of multimodal intersections having three legs per square mile.    |
+|D3bmm4 |double |pedestrian-oriented facility miles per square mile |NA       |            |         |Intersection density in terms of multimodal intersections having three legs per square mile |
 
 ## Datasets Used by the Module
 The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:
