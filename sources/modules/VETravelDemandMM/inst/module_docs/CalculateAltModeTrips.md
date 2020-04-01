@@ -3,26 +3,34 @@
 ### May 28, 2019
 
 This module predicts:
- 1- transit PMT for households. It uses the model object in data/TransitPMTModel_df.rda and variables and coefficients therein to predict TransitPMT.
- 2- transit trip frequency and average trip length for households. It uses the model object in data/TransitTFLModel_df.rda and variables and coefficients therein to predict TransitTFL.
- 3- walking PMT for households. It uses the model object in data/WalkPMTModel_df.rda and variables and coefficients therein to predict WalkPMT.
- 4- walking trip frequency and average walking trip length for households. It uses the model object in data/WalkTFLModel_df.rda and variables and coefficients therein to predict WalkTFL.
- 5- biking PMT for households. It uses the model object in data/BikePMTModel_df.rda and variables and coefficients therein to predict BikePMT.
- 6- trip frequency (BikeTrips) and average trip length (BikeAvgTripDist) for households. It uses the model object in data/BikeTFLModel_df.rda and variables and coefficients therein to predict BikeTFL.
+
+ 1- Transit PMT ( Person-Miles Traveled ) for households. It uses the model object in data/TransitPMTModel_df.rda and variables and coefficients therein to predict TransitPMT.
+ 
+ 2- Transit trip frequency and average transit trip length for households. It uses the model object in data/TransitTFLModel_df.rda and variables and coefficients therein to predict TransitTFL.
+
+ 3- Walking PMT for households. It uses the model object in data/WalkPMTModel_df.rda and variables and coefficients therein to predict WalkPMT.
+ 
+ 4- Walking trip frequency and average walking trip length for households. It uses the model object in data/WalkTFLModel_df.rda and variables and coefficients therein to predict WalkTFL.
+ 
+ 5- Biking PMT for households. It uses the model object in data/BikePMTModel_df.rda and variables and coefficients therein to predict BikePMT.
+ 
+ 6- Biking trip frequency and average bike trip length for households. It uses the model object in data/BikeTFLModel_df.rda and variables and coefficients therein to predict BikeTFL.
 
 
 ## Model Parameter Estimation
 See:
- data-raw/TransitPMTModel_df.R
- data-raw/TransitTFLModel_df.R
- data-raw/WalkPMTModel_df.R
- data-raw/WalkTFLModel_df.R
- data-raw/BikePMTModel_df.R
- data-raw/BikeTFLModel_df.R
+
+ * data-raw/TransitPMTModel_df.R
+ * data-raw/TransitTFLModel_df.R
+ * data-raw/WalkPMTModel_df.R
+ * data-raw/WalkTFLModel_df.R
+ * data-raw/BikePMTModel_df.R
+ * data-raw/BikeTFLModel_df.R
 
 ## How the Module Works
 
-The user specifies the model in the estimation scripts in data-raw folder and saves the estimation results in data folder. If no model re-estimation is desired, the estimation process can be skipped and the default model specification is then used. The module assigns the alternative mode PMT and TFL to each household using variables including household characteristics, built environment, and transportation supply.
+The user specifies the model in the estimation scripts in data-raw folder and saves the estimation results in data folder. If no model re-estimation is desired, the estimation process can be skipped and the default model specification is used. The module assigns the alternative mode PMT and TFL to each household using variables from household characteristics and land use data. There are two different models for 
+metro and non-metro residents.
 
 
 ## User Inputs
@@ -42,24 +50,25 @@ UNLIKELY - Values that are unlikely. Values that meet any of the listed conditio
 
 DESCRIPTION - A description of the data.
 
+### bzone_network_design.csv
+|NAME  |TYPE   |UNITS                                             |PROHIBIT |ISELEMENTOF |UNLIKELY |DESCRIPTION                                                                                                                                         |
+|:-----|:------|:-------------------------------------------------|:--------|:-----------|:--------|:---------------------------------------------------------------------------------------------------------------------------------------------------|
+|Geo   |       |                                                  |         |Bzones      |         |Must contain a record for each Bzone and model run year.                                                                                            |
+|Year  |       |                                                  |         |            |         |Must contain a record for each Bzone and model run year.                                                                                            |
+|D3bpo4 |double |pedestrian-oriented intersections per square mile |NA       |            |         |Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database) |
+
 ### bzone_network_design2.csv
 |NAME  |TYPE   |UNITS                                             |PROHIBIT |ISELEMENTOF |UNLIKELY |DESCRIPTION                                                                                                                                         |
 |:-----|:------|:-------------------------------------------------|:--------|:-----------|:--------|:---------------------------------------------------------------------------------------------------------------------------------------------------|
 |Geo   |       |                                                  |         |Bzones      |         |Must contain a record for each Bzone and model run year.                                                                                            |
 |Year  |       |                                                  |         |            |         |Must contain a record for each Bzone and model run year.                                                                                            |
-|D3apo |double |pedestrian-oriented intersections per square mile |NA       |            |         |Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database) |
+|D3apo |double |pedestrian-oriented facility miles per square mile |NA       |            |         |network density in terms of facility miles of pedestrian-oriented links per square mile |
 ### bzone_network_design3.csv
 |   |NAME   |TYPE   |UNITS                                             |PROHIBIT |ISELEMENTOF |UNLIKELY |DESCRIPTION                                                                                                                                         |
 |:--|:------|:------|:-------------------------------------------------|:--------|:-----------|:--------|:---------------------------------------------------------------------------------------------------------------------------------------------------|
 |1  |Geo    |       |                                                  |         |Bzones      |         |Must contain a record for each Bzone and model run year.                                                                                            |
 |11 |Year   |       |                                                  |         |            |         |Must contain a record for each Bzone and model run year.                                                                                            |
-|3  |D3bmm4 |double |pedestrian-oriented intersections per square mile |NA       |            |         |Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database) |
-### marea_census_r.csv
-|NAME     |TYPE      |UNITS    |PROHIBIT |ISELEMENTOF  |UNLIKELY |DESCRIPTION                                              |
-|:--------|:---------|:--------|:--------|:------------|:--------|:--------------------------------------------------------|
-|Geo      |          |         |         |Mareas       |         |Must contain a record for each Marea and model run year. |
-|Year     |          |         |         |             |         |Must contain a record for each Marea and model run year. |
-|CENSUS_R |character |category |         |NE, S, W, MW |         |CENSUS_R                                                 |
+|3  |D3bmm4 |double multimodal intersections per square mile |NA       |            |         |Intersection density in terms of multimodal intersections having three legs per square mile.    |
 
 ## Datasets Used by the Module
 The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:
