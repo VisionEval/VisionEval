@@ -12,7 +12,7 @@ See data-raw/AADVMTModel_df.R in VETravelDemandMM package.
 
 This models uses a Power-transformed linear regression model to directly estimates the household's annual average daily VMT.
 The module assigns AADVMT to each household using variables including household characteristics, built environment, and transportation supply.
-The module also computes the 95th percentile DVMT for each household from the household average DVMT using the 95th percentile model.This is the same model in [here] (https://github.com/VisionEval/VisionEval-Dev/blob/mm_debug/sources/modules/VEHouseholdTravel/inst/module_docs/CalculateHouseholdDvmt.md)
+The module also computes the 95th percentile DVMT for each household from the household average DVMT using the 95th percentile model.This is the same model in[here](https://github.com/gregorbj/VisionEval/blob/898fc016893f5b7dd78507e101c37d04486826b3/sources/modules/VESimHouseholds/inst/module_docs/CreateHouseholds.md)
 Finally, the module sums up the total DVMT of households located in the metropolitan (urbanized) area and located in the non-metropolitan (rural) area of each Marea.
 
 ## User Inputs
