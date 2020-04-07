@@ -48,7 +48,7 @@ verspm <- function(scenarios=FALSE,root=ve.root) {
 }
 
 verspm_mm <- function(root=ve.root) {
-  full.path <- file.path(root,"models/VERSPM")
+  full.path <- file.path(root,"models/VERSPM_MM")
   test.dir <- file.path(full.path,"Test1") # Older structure for VERSPM
   if ( dir.exists(test.dir) ) full.path <- test.dir
   owd <- setwd(full.path)
