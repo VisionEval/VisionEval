@@ -1434,33 +1434,44 @@ applyLinearModel <-
 #'
 #' @param ModuleName a string identifying the module name.
 #' @param PackageName a string identifying the package name.
+#' @param NameRegistryList, if FALSE read and write the NameRegistryFile, if TRUE just compose a list for this module
 #' @param NameRegistryDir a string identifying the path to the directory
 #' where the name registry file is located.
 #' @return TRUE if successful. Has a side effect of updating the VisionEval
 #' name registry.
 #' @export
 writeVENameRegistry <-
-  function(ModuleName, PackageName, NameRegistryDir = NULL) {
-    #Check whether the name registry file exists
-    if (is.null(NameRegistryDir)) {
-      NameRegistryFile <- "VENameRegistry.json"
-    } else {
-      NameRegistryFile <- file.path(NameRegistryDir, "VENameRegistry.json")
+  function(ModuleName, PackageName, NameRegistryList = FALSE, NameRegistryDir = NULL) {
+    if ( ! NameRegistryList ) {
+      #Check whether the name registry file exists
+      if (is.null(NameRegistryDir)) {
+        NameRegistryFile <- "VENameRegistry.json"
+      } else {
+        NameRegistryFile <- file.path(NameRegistryDir, "VENameRegistry.json")
+      }
+      if (!file.exists(NameRegistryFile)) {
+        cat("NameRegistryDir: ")
+        if ( ! is.null(NameRegistryDir) ) {
+          cat(NameRegistryDir)
+        } else {
+          cat(getwd())
+        }
+        cat("\n")
+        stop("VENameRegistry.json file is missing: cannot update.")
+      }
+      #Read in the name registry file as a list
+      NameRegistry_ls <-
+        fromJSON(readLines(NameRegistryFile), simplifyDataFrame = FALSE)
+      #Remove any existing registry entries for the module
+      for (x in c("Inp", "Set")) {
+        NameRegistry_df <- readVENameRegistry(NameRegistryDir)
+        ExistingModuleEntries_ <-
+          NameRegistry_df[[x]]$MODULE == ModuleName &
+          NameRegistry_df[[x]]$PACKAGE == PackageName
+        NameRegistry_ls[[x]] <- NameRegistry_ls[[x]][ -ExistingModuleEntries_ ]
+      }
     }
-    if (!file.exists(NameRegistryFile)) {
-      stop("VENameRegistry.json file is not present in the identified directory.")
-    }
-    #Read in the name registry file as a list
-    NameRegistry_ls <-
-      fromJSON(readLines(NameRegistryFile), simplifyDataFrame = FALSE)
-    #Remove any existing registry entries for the module
-    for (x in c("Inp", "Set")) {
-      NameRegistry_df <- readVENameRegistry()
-      ExistingModuleEntries_ <-
-        NameRegistry_df[[x]]$MODULE == ModuleName &
-        NameRegistry_df[[x]]$PACKAGE == PackageName
-      NameRegistry_ls[[x]] <- NameRegistry_ls[[x]][!ExistingModuleEntries_]
-    }
+
     #Define function to process module specifications
     processModuleSpecs <- function(Spec_ls) {
       #Define a function to expand a specification having multiple NAMEs
@@ -1523,12 +1534,14 @@ writeVENameRegistry <-
         x$MODULE <- ModuleName
         x
       })
-    #Add the the module specifications to the registry
-    NameRegistry_ls$Inp <- c(NameRegistry_ls$Inp, Inp_ls)
-    NameRegistry_ls$Set <- c(NameRegistry_ls$Set, Set_ls)
     #Save the revised name registry
-    writeLines(toJSON(NameRegistry_ls), NameRegistryFile)
-    TRUE
+    if ( ! NameRegistryList ) {
+      #Add the the module specifications to the registry
+      NameRegistry_ls$Inp <- c(NameRegistry_ls$Inp, Inp_ls)
+      NameRegistry_ls$Set <- c(NameRegistry_ls$Set, Set_ls)
+      writeLines(toJSON(NameRegistry_ls,pretty=TRUE), NameRegistryFile)
+    }
+    return(list(Inp=Inp_ls,Set=Set_ls))
   }
 
 
