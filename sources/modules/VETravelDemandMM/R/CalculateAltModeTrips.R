@@ -450,7 +450,7 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0,
       DESCRIPTION = items(
-        "Daily transit person miles traveled by all members of the household",
+        "Daily walking person miles traveled by all members of the household",
         "Daily biking person miles traveled by all members of the household",
         "Daily transit person miles traveled by all members of the household"
       )   
@@ -583,7 +583,7 @@ CalculateAltModeTrips <- function(L) {
     mutate(y=ifelse(is.na(y) | y < 0, 0, y))
   
   Out_ls <- initDataList()
-  Out_ls$Year$Household$WalkPMT <- Preds[["y"]] * 365
+  Out_ls$Year$Household$WalkPMT <- Preds[["y"]]
   
   
   # BikePMT
@@ -609,7 +609,7 @@ CalculateAltModeTrips <- function(L) {
   #   list(
   #     BikePMT = -1
   #   )
-  Out_ls$Year$Household$BikePMT <- Preds[["y"]] * 365
+  Out_ls$Year$Household$BikePMT <- Preds[["y"]]
   
   # TransitPMT
   
@@ -635,7 +635,7 @@ CalculateAltModeTrips <- function(L) {
   #   list(
   #     TransitPMT = -1
   #   )
-  Out_ls$Year$Household$TransitPMT <- Preds[["y"]] * 365
+  Out_ls$Year$Household$TransitPMT <- Preds[["y"]]
   
   #change the dataframe to be compatible with TFL models
  
@@ -663,7 +663,7 @@ CalculateAltModeTrips <- function(L) {
   #     WalkTrips = -1,
   #     WalkAvgTripDist = -1
   #   )
-  Out_ls$Year$Household$WalkTrips       <- Preds %>% filter(Step==1) %>% pull(y)
+  Out_ls$Year$Household$WalkTrips       <- (Preds %>% filter(Step==1) %>% pull(y))*365
   Out_ls$Year$Household$WalkAvgTripDist <- Preds %>% filter(Step==2) %>% pull(y)
   
   # BikeTFL
@@ -690,7 +690,7 @@ CalculateAltModeTrips <- function(L) {
   #     BikeTrips = -1,
   #     BikeAvgTripDist = -1
   #   )
-  Out_ls$Year$Household$BikeTrips       <- Preds %>% filter(Step==1) %>% pull(y)
+  Out_ls$Year$Household$BikeTrips       <- (Preds %>% filter(Step==1) %>% pull(y)) *365
   Out_ls$Year$Household$BikeAvgTripDist <- Preds %>% filter(Step==2) %>% pull(y)
   
   # TransitTFL
@@ -717,7 +717,7 @@ CalculateAltModeTrips <- function(L) {
   #     TransitTrips = -1,
   #     TransitAvgTripDist = -1
   #   )
-  Out_ls$Year$Household$TransitTrips       <- Preds %>% filter(Step==1) %>% pull(y)
+  Out_ls$Year$Household$TransitTrips       <- (Preds %>% filter(Step==1) %>% pull(y)) *365
   Out_ls$Year$Household$TransitAvgTripDist <- Preds %>% filter(Step==2) %>% pull(y)
   
   #Return the list
