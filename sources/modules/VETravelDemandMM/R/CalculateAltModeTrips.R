@@ -70,37 +70,37 @@ CalculateAltModeTripsSpecifications <- list(
       SIZE = 2,
       UNLIKELY = "",
       DESCRIPTION = "CENSUS_R"       
-    ),
-    item(
-      NAME = "D3apo",
-      FILE = "bzone_network_design2.csv",
-      TABLE = "Bzone",
-      GROUP = "Year",
-      TYPE = "double",
-      UNITS = "pedestrian-oriented intersections per square mile",
-      NAVALUE = -9999,
-      SIZE = 0,
-      PROHIBIT = "NA",
-      ISELEMENTOF = "",
-      UNLIKELY = "",
-      TOTAL = "",
-      DESCRIPTION = "Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database)"
-    ),
-    item(
-      NAME = "D3bmm4",
-      FILE = "bzone_network_design3.csv",
-      TABLE = "Bzone",
-      GROUP = "Year",
-      TYPE = "double",
-      UNITS = "pedestrian-oriented intersections per square mile",
-      NAVALUE = -9999,
-      SIZE = 0,
-      PROHIBIT = "NA",
-      ISELEMENTOF = "",
-      UNLIKELY = "",
-      TOTAL = "",
-      DESCRIPTION = "Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database)"
     )
+    # item(
+    #   NAME = "D3apo",
+    #   FILE = "bzone_network_design2.csv",
+    #   TABLE = "Bzone",
+    #   GROUP = "Year",
+    #   TYPE = "double",
+    #   UNITS = "pedestrian-oriented intersections per square mile",
+    #   NAVALUE = -9999,
+    #   SIZE = 0,
+    #   PROHIBIT = "NA",
+    #   ISELEMENTOF = "",
+    #   UNLIKELY = "",
+    #   TOTAL = "",
+    #   DESCRIPTION = "Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database)"
+    # ),
+    # item(
+    #   NAME = "D3bmm4",
+    #   FILE = "bzone_network_design3.csv",
+    #   TABLE = "Bzone",
+    #   GROUP = "Year",
+    #   TYPE = "double",
+    #   UNITS = "pedestrian-oriented intersections per square mile",
+    #   NAVALUE = -9999,
+    #   SIZE = 0,
+    #   PROHIBIT = "NA",
+    #   ISELEMENTOF = "",
+    #   UNLIKELY = "",
+    #   TOTAL = "",
+    #   DESCRIPTION = "Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database)"
+    # )
     # item(
     #   NAME =
     #     items(
@@ -274,17 +274,17 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
-      NAME = "D3apo",
-      TABLE = "Bzone",
-      GROUP = "Year",
-      TYPE = "double",
-      UNITS = "pedestrian-oriented intersections per square mile",
-      NAVALUE = -9999,
-      SIZE = 0,
-      PROHIBIT = "NA",
-      ISELEMENTOF = ""
-    ),
+    # item(
+    #   NAME = "D3apo",
+    #   TABLE = "Bzone",
+    #   GROUP = "Year",
+    #   TYPE = "double",
+    #   UNITS = "pedestrian-oriented intersections per square mile",
+    #   NAVALUE = -9999,
+    #   SIZE = 0,
+    #   PROHIBIT = "NA",
+    #   ISELEMENTOF = ""
+    # ),
 
     item(
       NAME = "D3bpo4",
@@ -297,17 +297,17 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = "NA",
       ISELEMENTOF = ""
     ),
-    item(
-      NAME = "D3bmm4",
-      TABLE = "Bzone",
-      GROUP = "Year",
-      TYPE = "double",
-      UNITS = "multimodal intersections per square mile",
-      NAVALUE = -9999,
-      SIZE = 0,
-      PROHIBIT = "NA",
-      ISELEMENTOF = ""
-    ),
+    # item(
+    #   NAME = "D3bmm4",
+    #   TABLE = "Bzone",
+    #   GROUP = "Year",
+    #   TYPE = "double",
+    #   UNITS = "multimodal intersections per square mile",
+    #   NAVALUE = -9999,
+    #   SIZE = 0,
+    #   PROHIBIT = "NA",
+    #   ISELEMENTOF = ""
+    # ),
     item(
       NAME = "D4c",
       TABLE = "Bzone",
@@ -537,6 +537,9 @@ CalculateAltModeTrips <- function(L) {
   
   
   Bzone_df <- data.frame(L$Year[["Bzone"]])
+  if ("D5" %in% colnames(Bzone_df)) {
+    Bzone_df$D5 = Bzone_df$D5 / 10000
+  }
   stopifnot("data.frame" %in% class(Bzone_df))
   
   Marea_df <- data.frame(L$Year[["Marea"]])
@@ -586,10 +589,10 @@ CalculateAltModeTrips <- function(L) {
   Out_ls$Year$Household$WalkPMT <- Preds[["y"]]
   
   
-  # BikePMT
+    # BikePMT
   
   #load("data/WalkPMTModel_df.rda")
-  Model_df <- loadPackageDataset("WalkPMTModel_df")
+  Model_df <- loadPackageDataset("BikePMTModel_df")
   y_name <- "BikePMT"
   
   # find cols used for segmenting households ("metro" by default)
@@ -600,6 +603,7 @@ CalculateAltModeTrips <- function(L) {
   
   Preds <- DoPredictions(Model_df, D_df,
                          dataset_name, id_name, y_name, SegmentCol_vc)
+  
   
   # fill NA with 0s - produced with negative predictions before inversing power transformation
   Preds <- Preds %>%
