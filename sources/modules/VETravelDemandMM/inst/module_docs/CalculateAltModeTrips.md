@@ -62,18 +62,6 @@ DESCRIPTION - A description of the data.
 |Year  |       |                                                  |         |            |         |Must contain a record for each Bzone and model run year.                                                                                            |
 |D3bpo4 |double |pedestrian-oriented intersections per square mile |NA       |            |         |Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database) |
 
-### bzone_network_design2.csv
-|NAME  |TYPE   |UNITS                                             |PROHIBIT |ISELEMENTOF |UNLIKELY |DESCRIPTION                                                                                                                                         |
-|:-----|:------|:-------------------------------------------------|:--------|:-----------|:--------|:---------------------------------------------------------------------------------------------------------------------------------------------------|
-|Geo   |       |                                                  |         |Bzones      |         |Must contain a record for each Bzone and model run year.                                                                                            |
-|Year  |       |                                                  |         |            |         |Must contain a record for each Bzone and model run year.                                                                                            |
-|D3apo |double |pedestrian-oriented facility miles per square mile |NA       |            |         |network density in terms of facility miles of pedestrian-oriented links per square mile |
-### bzone_network_design3.csv
-|NAME  |TYPE   |UNITS                                             |PROHIBIT |ISELEMENTOF |UNLIKELY |DESCRIPTION                                                                                                                                         |
-|:-----|:------|:-------------------------------------------------|:--------|:-----------|:--------|:---------------------------------------------------------------------------------------------------------------------------------------------------|
-|Geo   |       |                                                  |         |Bzones      |         |Must contain a record for each Bzone and model run year.                                                                                            |
-|Year  |       |                                                  |         |            |         |Must contain a record for each Bzone and model run year.                                                                                            |
-|D3bmm4 |double |multimodal intersections  per square mile |NA       |            |         |Intersection density in terms of multimodal intersections having three legs per square mile |
 
 ## Datasets Used by the Module
 The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:
