@@ -79,7 +79,6 @@ listDatastoreRD <- function(DataListing_ls = NULL) {
   TRUE
 }
 
-
 #INITIALIZE DATASTORE
 #====================
 #' Initialize Datastore for an RData (RD) type datastore.
@@ -397,6 +396,14 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL) {
   Table <- Spec_ls$TABLE
   #Check that dataset exists to write to and attempt to create if not
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
+  if ( DatasetExists ) {
+    # check for actual file, in case datset listing is obsolete
+    # It is fine to re-write a missing file
+    DatasetName <- paste0(Name, ".Rda")
+    DatasetPath <- file.path(G$DatastoreName, Group, Table, DatasetName)
+    DatasetExists <- file.exists(DatasetPath)
+  }
+
   if (!DatasetExists) {
     GroupName <- paste(Group, Spec_ls$TABLE, sep = "/")
     Length <-
