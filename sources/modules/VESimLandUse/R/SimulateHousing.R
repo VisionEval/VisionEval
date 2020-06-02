@@ -5,7 +5,7 @@
 #<doc>
 #
 ## SimulateHousing Module
-#### February 3, 2019
+#### June 1, 2020
 #
 #This module assigns a housing type, either single-family (SF) or multifamily (MF) to *regular* households based on the respective supplies of SF and MF dwelling units in the housing market to which the household is assigned (i.e. the Azone the household is assigned to) and on household characteristics. It then assigns each household to a SimBzone based on the household's housing type as well as the supply of housing by type and SimBzone. The module assigns non-institutional group quarters *households* to SimBzones randomly.
 #
@@ -530,6 +530,15 @@ SimulateHousing <- function(L) {
         GQPop_At <- splitIntegers(GQPop, GQProps_)
         At <- c("center", "inner", "outer", "fringe")
         names(GQPop_At) <- At
+        for (i in 1:length(At)) {
+          if (GQPop_At[At[i]] != 0) {
+            if (!(At[i] %in% AreaType_)) {
+              PopToShift <- GQPop_At[At[i]]
+              GQPop_At[At[i]] <- 0
+              GQPop_At[At[i + 1]] <- GQPop_At[At[i + 1]] + PopToShift
+            }
+          }
+        }
         GQBzones_ <- sample(unlist(sapply(At, function(x) {
           sample(Bzones_[AreaType_ == x],
                  GQPop_At[x],
