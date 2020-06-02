@@ -4,7 +4,7 @@
 
 #<doc>
 ## Initialize Module
-#### December 3, 2019
+#### June 1, 2020
 #
 #Modules in the VESimLandUse package synthesize Bzones and their land use attributes as a function of Azone characteristics as well as data derived from the US Environmental Protection Agency's Smart Location Database (SLD) augmented with US Census housing and household income data, and data from the National Transit Database. Details on these data are included in the VESimLandUseData package. The combined dataset contains a number of land use attributes at the US Census block group level. The goal of Bzone synthesis to generate a set of SimBzones in each Azone that reasonably represent block group land use characteristics given the characteristics of the Azone, the Marea that the Azone is a part of, and scenario inputs provided by the user.
 #
@@ -1092,7 +1092,7 @@ Initialize <- function(L) {
       if (all(is.na(unlist(Out_ls$Data$Year$Azone[Names_])))) {
         Out_ls$Data$Year$Azone[Names_] <- NULL
       } else {
-        Out_ls$Data$Year$Azone[Names_] <- checkProps(Names_, "Azone")
+        Out_ls$Data$Year$Azone[Names_] <- checkProps(Names_, "Azone", "azone_gq_pop-prop_by_area-type.csv")
       }
     } else {
       Msg <- paste0(
