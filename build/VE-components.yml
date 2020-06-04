@@ -13,11 +13,24 @@ Components:
       - yaml
 
 # "Type: module" components are built and installed as R packages
+# "Type: framework" works like a module, but is built first; also it has a different implied
+#        documentation location
 # The test script relative path is copied to the "test" environment under the module name
 # The group captures the VE internal dependencies (see .travis.yml) but is unused
+# Docs target is one (or a vector) of locations from which markdown files will be processed into PDFs
+#   Build target PDFs will be placed in a name derived (for the framework) from the first element in the  Docs path,
+#   and (for the modules) in a folder named after the module:
+#       framework [Type]:
+#       +api # contains any .md files found at the top level as PDFs
+#       +function_docs # contains any .md files found in the indicated folder as PDFs
+#       modules
+#       + [ModuleName] # contains inst/module_docs as PDFs
   visioneval:
-    Type: module
+    Type: framework
     Path: sources/framework
+    Docs:
+      - /api                            # absolute path means "relative to ve.root"
+      - function_docs/markdown_files    # relative path means "relative to package (ve.root/sources/framework/visioneval)"
     Test: { Script: tests/scripts/test.R, Group: 0 }
     CRAN: 
       - jsonlite
@@ -30,6 +43,8 @@ Components:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
+#    Docs: inst/module_docs     # always relative to module (ve.root/sources/modules/VE2001NHTS);
+#    if not supplied, then defaults as shown to "inst/module_docs"
     CRAN:
       - usethis
   VEScenario:
@@ -95,16 +110,17 @@ Components:
       - usethis
     VE:
       - VE2001NHTS
-  VEHouseholdVehiclesWithAdj:
-    Type: module
-    Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 2 }
-    CRAN:
-      - ordinal
-      - reshape2
-      - usethis
-    VE:
-      - VE2001NHTS
+#   Not yet ready for primetime:
+#   VEHouseholdVehiclesWithAdj:
+#     Type: module
+#     Path: sources/modules
+#     Test: { Script: tests/scripts/test.R, Group: 2 }
+#     CRAN:
+#       - ordinal
+#       - reshape2
+#       - usethis
+#     VE:
+#       - VE2001NHTS
   VELandUse:
     Type: module
     Path: sources/modules
@@ -167,7 +183,8 @@ Components:
       - VESimLandUse
       - VETransportSupply
 
-# "Type: test" components are copied verbatim to "test" environment under its name
+# "Type: test" components are copied verbatim to "src" environment under its name
+# May need to rethink this...
   Test_Data:
     Type: test
     Path: sources/modules
@@ -222,5 +239,6 @@ Components:
   tools:
     Type: script
     Path: sources
+    Docs: "."
     CRAN:
       - import
