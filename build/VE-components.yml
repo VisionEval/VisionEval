@@ -3,6 +3,7 @@
 Components:
 
 # "Type: install' components simply list "independent" R dependencies (for building modules)
+# Need to revisit whether this section is still needed, and what exactly should be in it (rmarkdown?)
   install:
     Type: install
     Test: { Group: 0 }
