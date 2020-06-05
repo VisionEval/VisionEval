@@ -5,7 +5,7 @@
 #<doc>
 #
 ## CreateVehicleTable Module
-#### January 7, 2020
+#### June 5, 2020
 #
 #This module creates a vehicle table and populates it with household ID and geography fields.
 #
