@@ -52,6 +52,9 @@
 #' loaded.
 #' @param SaveDatastore A string identifying whether if an existing datastore
 #' in the working directory should be saved rather than removed.
+#' @param SimulateRun A logical identifying whether the model run should be
+#' simulated: i.e. each step is checked to confirm that data of proper type
+#' will be present when the module is called.
 #' @return None. The function prints to the log file messages which identify
 #' whether or not there are errors in initialization. It also prints a success
 #' message if initialization has been successful.
@@ -65,7 +68,8 @@ initializeModel <-
     ModelParamFile = "model_parameters.json",
     LoadDatastore = FALSE,
     DatastoreName = NULL,
-    SaveDatastore = TRUE
+    SaveDatastore = TRUE,
+    SimulateRun = FALSE
   ) {
 
     #====================================================================
@@ -542,7 +546,9 @@ initializeModel <-
     #==================
     #SIMULATE MODEL RUN
     #==================
-    simDataTransactions(AllSpecs_ls)
+    if (SimulateRun) {
+      simDataTransactions(AllSpecs_ls)
+    }
 
     #===============================
     #CHECK AND PROCESS MODULE INPUTS
