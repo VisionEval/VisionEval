@@ -5,7 +5,7 @@
 #<doc>
 #
 ## CalculateRoadPerformance Module
-#### September 5, 2019
+#### June 5, 2020
 #
 #This module calculates freeway and arterial congestion level and the amounts of DVMT by congestion level. It also calculates the average speed and delay at each congestion level. In addition, it splits light-duty vehicle (LDV) DVMT between freeways and arterials as a function of relative speeds and congestion prices. The following performance measures are saved to the datastore:
 #
@@ -1548,12 +1548,15 @@ CalculateRoadPerformance <- function(L) {
   #---------------------------------------------
   #Calculate Lambda
   DvmtSplitData_df <- data.frame(
-    LogPop = log1p(sum(L$Year$Marea$UrbanPop)),
+    LogPop = log1p(L$Year$Marea$UrbanPop),
     LnMiRatio = L$Year$Marea$FwyLaneMi / L$Year$Marea$ArtLaneMi
   )
   Lambda_Ma <- unname(predict(DvmtSplit_LM, newdata = DvmtSplitData_df))
   names(Lambda_Ma) <- Ma
   Lambda_Ma[Ma == "None"] <- NA
+  #Change Lambda values that are outside expected range (0.1 - 1.5)
+  Lambda_Ma[Lambda_Ma < 0.1] <- 0.1
+  Lambda_Ma[Lambda_Ma > 1.5] <- 1.5
   #Load Lambda adjustments if they exist
   if (!is.null(L$Global$Marea$LambdaAdj)) {
     LambdaAdj_Ma <- L$Global$Marea$LambdaAdj
@@ -1866,6 +1869,9 @@ CalculateRoadPerformance <- function(L) {
     NonUrbanAveSpeed_Ma["None"] <- MaxSpeed
     rm(MaxSpeed)
   }
+  #If any NonUrbanAveSpeed is less than 0, then set to 60
+  #This condition exists when there is no urban population in the marea
+  NonUrbanAveSpeed_Ma[NonUrbanAveSpeed_Ma < 0] <- 60
 
   #Proportions of freeway and arterial DVMT by congestion level
   #------------------------------------------------------------
