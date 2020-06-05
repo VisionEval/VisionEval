@@ -2,7 +2,7 @@ Package: VEHouseholdVehicles
 Type: Package
 Title: Model household vehicles
 Version: 0.9.5
-Date: 11/6/18
+Date: 6/5/20
 Author: Brian Gregor [aut, cre], Aditya Gore <aditya.gore@rsginc.com> [cre]
 Maintainer: Brian Gregor <gregorb@or-analytics.com>, Aditya Gore <aditya.gore@rsginc.com>
 Copyright: AASHTO
