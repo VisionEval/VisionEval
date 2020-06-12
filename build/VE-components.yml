@@ -101,6 +101,20 @@ Components:
       - usethis
     VE:
       - VE2001NHTS
+  VETravelDemandMM:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    CRAN:
+      - devtools
+      - dplyr
+      - purrr
+      - tidyr
+      - splines
+      - MASS 
+      - pscl
+      - rmarkdown
+      - usethis               
   VEHouseholdVehicles:
     Type: module
     Path: sources/modules
@@ -143,6 +157,7 @@ Components:
     VE:
       - VE2001NHTS
       - VEHouseholdTravel
+      - VETravelDemandMM      
   VEReports:
     Type: module
     Path: sources/modules
@@ -153,6 +168,8 @@ Components:
       - usethis
     VE:
       - VEHouseholdTravel
+      - VETravelDemandMM
+
   VESimLandUse:
     Type: module
     Path: sources/modules
@@ -204,6 +221,10 @@ Components:
     Type: model
     Path: sources/models
     Test: { Script: Test1/run_model.R, Group: 5 }
+  VERSPM_MM:
+    Type: model
+    Path: sources/models
+    Test: { Script: Test1/run_model.R, Group: 5 }    
   VERSPM_Scenarios:
     Type: model
     Path: sources/models
