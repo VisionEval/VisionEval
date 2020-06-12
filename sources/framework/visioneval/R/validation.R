@@ -632,6 +632,12 @@ Types <- function(){
       ),
       mode = "double"
     ),
+    crash = list(
+      units = list(
+        CRASH = c(CRASH = 1)
+      ),
+      mode = "double"
+    ),
     people = list(
       units = list(
         PRSN = c(PRSN = 1)
