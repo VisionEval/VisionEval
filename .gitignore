@@ -1,9 +1,13 @@
 .Rprofile
 .Rproj.user
+.Renviron
 .Rhistory
 .RData
 .Ruserdata
 *.bak
 .DS_Store
-ve-lib
+built/
+build/*.make
+dev/
+external/
 Log_*.txt
