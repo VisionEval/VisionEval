@@ -188,6 +188,7 @@ Components:
       - filesstrings
       - stringr
       - usethis
+      - dplyr
     VE:
       - VEHouseholdTravel
       - VEPowertrainsAndFuels
