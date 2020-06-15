@@ -23,6 +23,17 @@ ve.root <- getwd()
 ve.root <- normalizePath(ve.root,winslash="/")
 }
 
+# In developer land, create a usable .Renviron that overrides the
+# one that would be built locally here.  Do not put Renviron in the
+# installer (it will get rebuilt by this script). Then we can just
+# let .Renviron set us up with the libraries so we're already
+# installed, and we just load the package and the helpers (which go
+# into the ve.env environment).  Starting from runtime or starting
+# from root should give the same experience for the user: looking at
+# root if not built, otherwise running in runtime with VE loaded.
+
+# Should use "ve.runtime", not "ve.root".
+
 ve.install <- function() {
 
   # Put the library directory into ve.lib

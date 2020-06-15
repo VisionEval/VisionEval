@@ -248,10 +248,19 @@ cat("ve.runtests is",ve.runtests,"\n")
 
 # Create the .Renviron file in ve.output so dev-lib is included
 # That way we can have things like miniCRAN that are not needed by the runtime
-# (see VE-installer .Rprofile for construction of dev-lib location)
 if ( ! exists("ve.lib") ) {
   stop("ve.lib must be defined in VE-config.yml")
 }
+
+# Put .Renviron in ve.root (where people will start from R or RStudio)
+# In addition to R_LIBS_USER, set the following:
+# VE_ROOT = ve.runtime
+# In the Github environment, load some helper functions
+# e.g. ve.run() # launches visioneval in the runtime for the
+# current branch and R version, changes to the runtime directory
+# ve.build() with parameters to actually build it (this is the
+# R version of "make"), the r-builder.R project.
+
 r.environ <- file.path(ve.root,".Renviron")
 r.ve.lib <-gsub(this.R,"%V",ve.lib)
 r.dev.lib <- gsub(this.R,"%V",dev.lib)

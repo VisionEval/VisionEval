@@ -42,7 +42,7 @@ Locations: # "Root" elements are variables defined in "Roots" section
         description: install bin tree here from ve.repository
     ve.src:           # Required
         root: ve.output
-        augment: branch
+        augment: version
         path: src
         description: build source packages here (plus tests, if requested)
     ve.docs:          # Required
