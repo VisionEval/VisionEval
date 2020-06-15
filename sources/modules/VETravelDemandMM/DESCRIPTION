@@ -15,17 +15,16 @@ Depends:
     R (>= 3.4.0),
 	visioneval
 Imports:
-    devtools,
     dplyr,
     purrr,
-    tidyr,
-    splines,
     MASS,
+    splines,
+    tidyr,
     pscl,
     rmarkdown,
     usethis,
-	data.table,
-	VE2001NHTS
+    data.table,
+    VE2001NHTS
 Suggests:
     knitr,
     NHTS2009,
