@@ -53,7 +53,9 @@ if ( length(bp.files) > 0 ) {
 }
 
 # Create the R version tag in the runtime folder
-cat(this.R,"\n",sep="",file=file.path(ve.runtime,"r.version"))
+cat("that.R:",this.R,"\n",sep="",file=file.path(ve.runtime,"r.version"))
+cat("ve.lib.name:",basename(ve.lib),"\n",sep="",file=file.path(ve.runtime,"r.version"),append=TRUE)
+cat("ve.pkgs.name:",basename(ve.pkgs),"\n",sep="",file=file.path(ve.runtime,"r.version"),append=TRUE)
 
 # Get the VisionEval sources, if any are needed
 # This will process the 'script' and 'model' items listed in dependencies/VE-dependencies.csv

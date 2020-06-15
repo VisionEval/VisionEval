@@ -30,28 +30,24 @@ if ( ! suppressWarnings(require(miniCRAN)) ) {
 
 cat("========================= BUILDING RUNTIME LIBRARY =========================\n")
 
-cat("pkgs.db$Package:\n")
-print(pkgs.db$Package)
-cat("pkgs.CRAN:\n")
-print(pkgs.CRAN)
-cat("pkgs.BioC:\n")
-print(pkgs.BioC)
-cat("c(pkgs.db$Package[pkgs.CRAN], pkgs.db$Package[pkgs.BioC])\n")
-print(c(pkgs.db$Package[pkgs.CRAN], pkgs.db$Package[pkgs.BioC]))
-
-sought.pkgs <- miniCRAN::pkgDep(c(pkgs.db$Package[pkgs.CRAN], pkgs.db$Package[pkgs.BioC]),
-                                repos=ve.deps.url, suggests=FALSE, type=ve.build.type)
 pkgs.BaseR <- as.vector(installed.packages(lib.loc=.Library,
                                            priority=c("base", "recommended"))[,"Package"])
-
+sought.pkgs <- setdiff(c(pkgs.db$Package[pkgs.CRAN], pkgs.db$Package[pkgs.BioC]),pkgs.BaseR)
+sought.pkgs <- miniCRAN::pkgDep(sought.pkgs,
+                                repos=ve.deps.url, suggests=FALSE, type=ve.build.type)
 sought.pkgs <- setdiff(sought.pkgs, pkgs.BaseR)
 
 new.pkgs <- sought.pkgs[ ! (sought.pkgs %in% installed.packages(lib.loc=ve.lib)[,"Package"]) ]
 
+unload.pkgs <- new.pkgs[which(new.pkgs %in% .packages())]
+
 if( length(new.pkgs) > 0 ) {
   cat("---Still missing these packages:\n")
   print(sort(new.pkgs))
-  print(ve.lib)
+  cat("---Unloading these packages:\n")
+  for ( p in unload.pkgs) {
+    detach(paste0("package:",p),character.only=TRUE)
+  }
   cat("---Installing missing packages---\n")
   install.packages(
       new.pkgs,

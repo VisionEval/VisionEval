@@ -3,7 +3,7 @@
 VE_CONFIG?=config/VE-config.yml
 VE_RUNTESTS?=Default
 ifeq ($(OS),Windows_NT)
-  VE_R_VERSION?=3.6.3
+  VE_R_VERSION?=4.0.1
   RSCRIPT:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
   WINDOWS=TRUE
 else
@@ -136,8 +136,7 @@ $(VE_LOGS)/velib.built: $(VE_LOGS)/repository.built scripts/build-velib.R
 modules: $(VE_LOGS)/modules.built
 
 $(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built scripts/build-modules.R
-	$(RSCRIPT) scripts/build-modules.R
-	touch $(VE_LOGS)/modules.built
+	$(RSCRIPT) scripts/build-modules.R && touch $(VE_LOGS)/modules.built
 
 # This rule and the following one will assemble the documentation
 docs: $(VE_LOGS)/docs.built

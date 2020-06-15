@@ -1,6 +1,6 @@
 # Get Epsilon editor to start with the right mode If you don't have any idea what the Epsilon editor
 # is, you can ignore this file.
-Extensions: .r|.R|.sh
+Extensions: .r|.R
 mode: R
 
 Modes: R
