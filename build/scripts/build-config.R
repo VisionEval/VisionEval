@@ -28,7 +28,7 @@ if ( ! exists("dev.lib") ) {
 # Bootstrap development packages by loading current CRAN version of yaml from cloud.r-project.org
 # r-versions.yml will override based on R version for subsequent loading
 # Probably best to install this in the user's environment...
-if ( ! suppressWarnings(require(yaml)) ) {
+if ( ! suppressWarnings(require(yaml,quietly=TRUE)) ) {
   install.packages("yaml", lib=dev.lib, repos="https://cloud.r-project.org", dependencies=NA, type=.Platform$pkgType )
 }
 
@@ -48,7 +48,7 @@ local({r <- getOption("repos")
       r["CRAN"] <- CRAN.mirror
       options(repos=r)})
 
-if ( ! suppressWarnings(require(git2r)) ) {
+if ( ! suppressWarnings(require(git2r,quietly=TRUE)) ) {
   install.packages("git2r", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
 }
 
@@ -234,6 +234,7 @@ invisible(sapply(locs.lst,FUN=makepath,venv=environment())) # venv is current en
 # VE-config.yml with different versions of R (e.g. 3.5.1 and 3.5.2)
 
 for ( loc in locs.lst ) dir.create( get(loc), recursive=TRUE, showWarnings=FALSE )
+ve.zipout <- dirname(ve.runtime) # Installer zip files always go next to ve.runtime
 
 # Determine whether build should include tests
 # Look at environment (possibly from Makefile) then at ve.cfg
@@ -244,7 +245,6 @@ ve.runtests <- switch(
   true=TRUE,
   ! is.null(ve.cfg[["RunTests"]]) && all(ve.cfg[["RunTests"]])
   )
-cat("ve.runtests is",ve.runtests,"\n")
 
 # Create the .Renviron file in ve.output so dev-lib is included
 # That way we can have things like miniCRAN that are not needed by the runtime
@@ -254,7 +254,7 @@ if ( ! exists("ve.lib") ) {
 
 # Put .Renviron in ve.root (where people will start from R or RStudio)
 # In addition to R_LIBS_USER, set the following:
-# VE_ROOT = ve.runtime
+# VE_RUNTIME = ve.runtime
 # In the Github environment, load some helper functions
 # e.g. ve.run() # launches visioneval in the runtime for the
 # current branch and R version, changes to the runtime directory
@@ -265,8 +265,9 @@ r.environ <- file.path(ve.root,".Renviron")
 r.ve.lib <-gsub(this.R,"%V",ve.lib)
 r.dev.lib <- gsub(this.R,"%V",dev.lib)
 r.libs.user <- paste0("R_LIBS_USER=",paste(r.ve.lib,r.dev.lib,sep=";"))
-write(r.libs.user,file=r.environ)
-rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib )
+r.runtime <- paste0("VE_RUNTIME=",ve.runtime)
+writeLines(r.libs.user,con=r.environ)
+rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib,r.runtime )
 
 # Convey key file locations to the 'make' environment
 default.config <- file.path(ve.logs,"dependencies.RData")
@@ -279,6 +280,7 @@ make.variables <- c(
   ,VE_PLATFORM       = ve.platform
   ,VE_INSTALLER      = ve.installer
   ,VE_OUTPUT         = ve.output
+  ,VE_ZIPOUT         = ve.zipout
   ,VE_LIB            = ve.lib
   ,VE_REPOS          = ve.repository
   ,VE_PKGS           = ve.pkgs
@@ -290,7 +292,6 @@ make.variables <- c(
   ,VE_ROOT           = ve.root
 )
 
-# Debugging
 writeLines( paste( names(make.variables), make.variables, sep="="),make.target)
 
 # The following are constructed in Locations above, and must be present
@@ -592,6 +593,7 @@ save(
   , ve.output
   , ve.logs
   , ve.installer
+  , ve.zipout
   , ve.platform
   , ve.build.type
   , ve.binary.build

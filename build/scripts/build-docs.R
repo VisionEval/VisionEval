@@ -7,7 +7,7 @@
 # Load runtime configuration
 source(file.path(getwd(),"scripts/get-runtime-config.R"))
 
-if ( ! suppressWarnings(require(rmarkdown)) ) {
+if ( ! suppressWarnings(require(rmarkdown,quietly=TRUE)) ) {
   install.packages("rmarkdown", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
 }
 

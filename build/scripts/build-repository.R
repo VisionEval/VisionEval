@@ -17,7 +17,7 @@ source(file.path(getwd(),"scripts/get-runtime-config.R"))
 options(install.packages.compile.from.source="never")
 
 # Load required libraries
-if ( ! suppressWarnings(require(miniCRAN)) ) {
+if ( ! suppressWarnings(require(miniCRAN,quietly=TRUE)) ) {
   install.packages("miniCRAN", lib=dev.lib, dependencies=NA, type=.Platform$pkgType)
 }
 

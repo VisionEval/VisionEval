@@ -10,11 +10,9 @@ set MACHINE_KEY="HKLM%ROOT_KEY%"
 set USER_KEY="HKCU%ROOT_KEY%"
 set VALUE_NAME=InstallPath
 if NOT [!R_BASE_USER!] == [] (
-	echo R Version from filesystem via R_BASE_USER 1>&2
 	set R_HOME=!R_BASE_USER!\R-%R_VERSION%
 	if NOT EXIST !R_HOME! (
-		set "R_HOME="
-		echo R %R_VERSION% not found under !R_BASE_USER! 1>&2
+		set R_HOME=
 	) else (
 		echo R_HOME = !R_HOME! 1>&2
 	)
@@ -33,6 +31,6 @@ if [!R_HOME!] == [] (
 ) else (
 	echo !R_HOME!\bin\Rscript.exe
 	set RSCRIPT=!R_HOME!\bin\Rscript.exe
-	"!RSCRIPT!" --version 1>&2
+rem	"!RSCRIPT!" --version 1>&2
 	EXIT /B 0
 )

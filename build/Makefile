@@ -36,8 +36,8 @@ export VE_RUNTIME_CONFIG
 
 .PHONY: configure repository modules binary runtime installers docs all\
 	clean lib-clean module-clean runtime-clean build-clean test-clean\
-	dev-clean really-clean docs-clean installer-clean\
-        module-list runtime-packages\
+	dev-clean really-clean docs-clean installer-clean inventory-clean\
+        inventory runtime-packages\
 	docker-clean docker-output-clean docker
 
 all: configure repository binary modules runtime # docs - need that for installer, but not for local runtime
@@ -77,7 +77,7 @@ lib-clean: $(VE_MAKEVARS) # Reset installed package library for complete rebuild
 	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/*
 
 runtime-clean: $(VE_MAKEVARS) # Reset all models and scripts for complete rebuild
-	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/*
+	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/* && rm -rf $(VE_RUNTIME)/.* 2>/dev/null || echo "Runtime Clean."
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/runtime.built
 
 src-clean: $(VE_MAKEVARS) # Reset the build source directory for the packages
@@ -89,9 +89,12 @@ docs-clean: $(VE_MAKEVARS) # Clear the docs
 
 installer-clean: $(VE_MAKEVARS) # Reset the installers for rebuild
 	# installers have the R version coded in their .zip name
-	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -f $(VE_OUTPUT)/$(VE_R_VERSION)/*.zip
+	[[ -n "$(VE_ZIPOUT)" ]] && rm -f $(VE_ZIPOUT)/*.zip
 	[[ -n "$(VE_PKGS)" ]] && rm -rf $(VE_PKGS)/*
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
+
+inventory-clean:
+	rm -f $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv
 
 repository-clean: clean # Reset the CRAN, BioConductor and Github dependency packages for fresh download
 	[[ -n "$(VE_DEPS)" ]] && rm -rf $(VE_DEPS)/*
@@ -108,6 +111,7 @@ really-clean: clean depends-clean dev-clean # Scorched earth: reset all VE-Insta
 
 # Make sure configuration is up to date
 configure: $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG)
+	@echo Configuration complete
 
 # This rule reads the configuration about what to build. Use build-clean to reset
 # Note: build-config.R identifies VE_CONFIG via the exported environment variable
@@ -119,7 +123,8 @@ $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG): scripts/build-config.R $(VE_CONFIG) R-versi
 repository: $(VE_LOGS)/repository.built
 
 $(VE_LOGS)/repository.built: $(VE_RUNTIME_CONFIG) scripts/build-repository.R scripts/build-external.R
-	$(RSCRIPT) scripts/build-repository.R && $(RSCRIPT) scripts/build-external.R && touch $(VE_LOGS)/repository.built
+	$(RSCRIPT) scripts/build-repository.R && $(RSCRIPT) scripts/build-external.R
+	@touch $(VE_LOGS)/repository.built
 
 # This rule and the following one rebuild the installed library of dependencies and VE packages
 # Will skip if velib.built is up to date with the repository build and with the script itself
@@ -128,22 +133,24 @@ binary: $(VE_LOGS)/velib.built
 
 $(VE_LOGS)/velib.built: $(VE_LOGS)/repository.built scripts/build-velib.R
 	$(RSCRIPT) scripts/build-velib.R
-	touch $(VE_LOGS)/velib.built
+	@touch $(VE_LOGS)/velib.built
 
 # This rule and the following one will check the VE modules and rebuild as needed
 # We'll almost always "build" the modules but only out-of-date stuff gets built
 # (File time stamps are checked in the R scripts)
 modules: $(VE_LOGS)/modules.built
 
-$(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built scripts/build-modules.R
-	$(RSCRIPT) scripts/build-modules.R && touch $(VE_LOGS)/modules.built
+$(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
+        scripts/build-modules.R Makefile
+	$(RSCRIPT) scripts/build-modules.R
+	@touch $(VE_LOGS)/modules.built
 
 # This rule and the following one will assemble the documentation
 docs: $(VE_LOGS)/docs.built
 
 $(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/velib.built scripts/build-docs.R
 	$(RSCRIPT) scripts/build-docs.R
-	touch $(VE_LOGS)/docs.built
+	@touch $(VE_LOGS)/docs.built
 
 # This rule and the following one will (re-)copy out of date scripts and models to the runtime
 # We'll almost always "build" the runtime, but only out-of-date stuff gets built
@@ -152,7 +159,7 @@ runtime: $(VE_LOGS)/runtime.built
 
 $(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/*
 	$(RSCRIPT) scripts/build-runtime.R
-	touch $(VE_LOGS)/runtime.built
+	@touch $(VE_LOGS)/runtime.built
 
 # The next two rules will build the VisionEval Name Registry (listing
 # all the modules and packages, and what their Inp and Set
@@ -161,7 +168,7 @@ $(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/*
 # programmatically from the VisionEval source tree.
 # Results are place in VE_SRC
 
-module-list: $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv #  $(VE_SRC)/module_status.csv
+inventory: $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv #  $(VE_SRC)/module_status.csv
 
 $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv: scripts/build-inventory.R $(VE_LOGS)/modules.built
 	$(RSCRIPT) scripts/build-inventory.R
@@ -170,24 +177,24 @@ $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv: scripts/build-inven
 # 'bin' is the binary installer for the local architecture (e.g. Windows or MacOSX)
 #     (also package source as a separate zip file)
 # 'src' is install-from-source installer (source packages for everything, including dependencies)
-installers: installer-bin installer-src
+installers: installer-bin installer-full
 
 installer installer-bin: $(VE_LOGS)/installer-bin.built
 
 $(VE_LOGS)/installer-bin.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/docs.built $(VE_LOGS)/runtime.built  \
             scripts/build-runtime-packages-bin.R scripts/build-installer-base.R scripts/build-installer-bin.R
 	$(RSCRIPT) scripts/build-runtime-packages-bin.R
-        $(RSCRIPT) scripts/build-installer-base.R
+	$(RSCRIPT) scripts/build-installer-base.R
 	$(RSCRIPT) scripts/build-installer-bin.R
-	touch $(VE_LOGS)/installer-bin.built
+	@touch $(VE_LOGS)/installer-bin.built
 
-installer-src: $(VE_LOGS)/installer-src.built
+installer-full: $(VE_LOGS)/installer-full.built
 
-$(VE_LOGS)/installer-src.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/installer-bin.built \
+$(VE_LOGS)/installer-full.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/installer-bin.built \
             scripts/build-runtime-packages-full.R scripts/build-installer-full.R
 	$(RSCRIPT) scripts/build-runtime-packages-full.R
-	$(RSCRIPT) scripts/build-installers-full.R
-	touch $(VE_LOGS)/installer-src.built
+	$(RSCRIPT) scripts/build-installer-full.R
+	@touch $(VE_LOGS)/installer-full.built
 
 # Experimental Docker installation
 # This will run, but the resulting images probably won't work (2019-05-24)

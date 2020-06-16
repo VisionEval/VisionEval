@@ -17,8 +17,10 @@ cat("========================= BUILDING PACKAGE SPEC INVENTORY =================
 .libPaths( c(ve.lib, .libPaths()) ) # push runtime library onto path stack
 
 # Libraries from ve.lib:
-require(visioneval)
-require(jsonlite)
+require(visioneval,quietly=TRUE)
+if ( ! suppressWarnings(require(jsonlite,quietly=TRUE)) ) {
+  install.packages("jsonlite", lib=dev.lib, type=.Platform$pkgType)
+}
 
 # Need to work in ve.src to support visioneval structure
 setwd(ve.src)

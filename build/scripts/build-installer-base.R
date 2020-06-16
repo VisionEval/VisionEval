@@ -9,24 +9,21 @@ source(file.path(getwd(),"scripts/get-runtime-config.R"))
 
 cat("==================== BUILDING INSTALLER BASE (.zip files) ====================\n")
 
-require(utils)
-
 # Set up .zip file names
 # Need the ".zip" extension?
 build.date <- Sys.Date()
 
-# TESTING
-ve.zipout <- file.path(ve.output,this.R)
-
+ve.zipout <- dirname(ve.runtime)
 installer.base   <- paste0(file.path(ve.zipout,paste0("VE-Runtime-R",this.R,"_",build.date)),".zip")
+cat("Base Installer:",installer.base)
+cat("Building base installer...")
 
 owd <- getwd()
-
-cat("Building runtime base...")
 setwd(ve.runtime) # Always set up installer.base
 unlink( installer.base ) # Always start fresh
+
 zip(installer.base,".",
-  flags="-r9Xq", # recurse diretories, maximum compression, discard fancy attributes
+  flags="-r9Xq", # recurse diretories, maximum compression, discard fancy attributes, don't echo all the filenames
   extras=c("-x",        # leave out a bunch of undesirable stuff
     # WARNING: each pattern is an occult incantation
     # No explanation, e.g., why "*.gitignore*" or "*.Rbuildignore" finds them in all subdirectories

@@ -12,17 +12,17 @@
 source(file.path(getwd(),"scripts/get-runtime-config.R"))
 
 # Build tool dependencies
-require(tools)
-if ( ! suppressWarnings(require(devtools)) ) {
+require(tools,quietly=TRUE)
+if ( ! suppressWarnings(require(devtools,quietly=TRUE)) ) {
   install.packages("devtools", lib=dev.lib, type=.Platform$pkgType )
 }
-if ( ! suppressWarnings(require(roxygen2)) ) {
+if ( ! suppressWarnings(require(roxygen2,quietly=TRUE)) ) {
   install.packages("roxygen2", lib=dev.lib, type=.Platform$pkgType )
 }
-if ( ! suppressWarnings(require(rcmdcheck)) ) {
+if ( ! suppressWarnings(require(rcmdcheck,quietly=TRUE)) ) {
   install.packages("rcmdcheck", lib=dev.lib, type=.Platform$pkgType )
 }
-if ( ! suppressWarnings(require(rmarkdown)) ) {
+if ( ! suppressWarnings(require(rmarkdown,quietly=TRUE)) ) {
   install.packages("rmarkdown", lib=dev.lib, type=.Platform$pkgType )
 }
 
@@ -251,9 +251,9 @@ for ( module in seq_along(package.names) ) {
     # Run the tests on build.dir if requested
     if ( ve.runtests ) {
       test.script <- file.path(build.dir,ve.packages$Test[module])
-      cat("Executing tests from ",test.script,"\n")
+      message("Executing tests from ",test.script,"\n")
       callr::rscript(script=test.script,wd=build.dir,libpath=.libPaths(),fail_on_status=FALSE)
-      cat("Completed test script.\n")
+      message("Completed test script.\n")
     }
   }
 

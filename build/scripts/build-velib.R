@@ -24,7 +24,7 @@ source(file.path(getwd(),"scripts/get-runtime-config.R"))
 options(install.packages.compile.from.source="never")
 
 # you will need miniCRAN and dependencies installed in your local R environment
-if ( ! suppressWarnings(require(miniCRAN)) ) {
+if ( ! suppressWarnings(require(miniCRAN,quiety=TRUE)) ) {
   install.packages("miniCRAN", lib=dev.lib, type=.Platform$pkgType )
 }
 

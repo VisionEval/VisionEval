@@ -8,7 +8,7 @@
 tool.contents <- c("vegui","verpat","verspm","vestate")
 
 # Function starts the VEGUI
-vegui <- function(ve.root=ve.root) {
+vegui <- function(ve.root=ve.runtime) {
   library("shiny")
   full.path <- file.path(ve.root,"VEGUI")
   owd <- setwd(full.path) 
@@ -19,7 +19,7 @@ vegui <- function(ve.root=ve.root) {
 # The following two functions run the command line model versions per the
 # Getting Started document.  Optional "scenarios" argument, if TRUE, will
 # run the scenarios version of the test models.
-verpat <- function(scenarios=FALSE,baseyear=FALSE,ve.root=ve.root) {
+verpat <- function(scenarios=FALSE,baseyear=FALSE,ve.root=ve.runtime) {
   if ( ! scenarios ) {
     if ( ! baseyear ) {
       full.path <- file.path(ve.root,"models/VERPAT")
@@ -34,7 +34,7 @@ verpat <- function(scenarios=FALSE,baseyear=FALSE,ve.root=ve.root) {
   setwd(owd)
 }
 
-verspm <- function(scenarios=FALSE) {
+verspm <- function(scenarios=FALSE,ve.root=ve.runtime) {
   if ( ! scenarios ) {
     full.path <- file.path(ve.root,"models/VERSPM")
     test.dir <- file.path(full.path,"Test1") # Older structure for VERSPM
@@ -47,7 +47,16 @@ verspm <- function(scenarios=FALSE) {
   setwd(owd)
 }
 
-vestate <- function() {
+verspm_mm <- function(ve.root=ve.runtime) {
+  full.path <- file.path(ve.root,"models/VERSPM_MM")
+  test.dir <- file.path(full.path,"Test1") # Older structure for VERSPM
+  if ( dir.exists(test.dir) ) full.path <- test.dir
+  owd <- setwd(full.path)
+  source("run_model.R")
+  setwd(owd)
+}
+
+vestate <- function(ve.root=ve.runtime) {
   full.path <- file.path(ve.root,"models/VE-State")
   owd <- setwd(full.path)
   source("run_model.R")

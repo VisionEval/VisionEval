@@ -9,17 +9,12 @@ source(file.path(getwd(),"scripts/get-runtime-config.R"))
 
 cat("==================== BUILDING BINARY INSTALLERS (.zip files) ====================\n")
 
-require(utils)
-
 # Short circuit if platform is Windows (we'll be using "ve-lib")
 request.build = "binary"
 
 # Set up .zip file names
 # Need the ".zip" extension?
 build.date <- Sys.Date()
-
-# TESTING
-ve.zipout <- file.path(ve.output,this.R)
 
 installer.base   <- paste0(file.path(ve.zipout,paste0("VE-Runtime-R",this.R,"_",build.date)),".zip")
 if ( ! file.exists(installer.base) ) {
