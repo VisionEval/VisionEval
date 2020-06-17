@@ -62,9 +62,9 @@ show-defaults: $(VE_MAKEVARS)
 	: VE_SRC       $(VE_SRC)        # Location of source folder
 	: VE_PKGS      $(VE_PKGS)       # Location of runtime packages (for installer/docker)
 
-# Should have the "clean" target depend on $(VE_MAKEVARS) if it uses
-# any of the folders like VE_OUTPUT that are read in from there.
-build-clean: # Resets the built status of all the targets
+# clean targets to remove built artifacts, triggering full rebuild
+
+build-clean: # Resets the built status of all the targets (but doesn't touch outputs)
 	[[ -n "$(VE_LOGS)" ]] && rm -rf $(VE_LOGS)/*
 	rm -f $(VE_MAKEVARS)
 

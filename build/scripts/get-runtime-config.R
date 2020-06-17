@@ -16,7 +16,7 @@ local(
       ve.runtime.config <- Sys.getenv("VE_RUNTIME_CONFIG","")
       if ( !exists("no.config.msg",as.environment("ve.builder")) ) {
         assign(
-          no.config.msg,
+          "no.config.msg",
           "Build the 'configure' step to set up build environment",
           envir=as.environment("ve.builder")
         )
