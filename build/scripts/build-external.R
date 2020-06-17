@@ -5,7 +5,7 @@
 # Build any Github packages (e.g. namedCapture).
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
 
 # uncomment the following line on Windows if you just want the pre-compiled
 # binaries otherwise, if RTools is installed the newer sources packages will be
@@ -21,7 +21,7 @@ if ( ! suppressWarnings(require(git2r,quietly=TRUE)) ) {
 }
 require(tools,quietly=TRUE) # for write_PACKAGES below
 
-cat("========================= BUILDING EXTERNAL (GITHUB) DEPENDENCIES =========================\n")
+cat("========== BUILDING EXTERNAL (GITHUB) DEPENDENCIES ==========\n")
 
 # relay dependencies
 load(ve.all.dependencies) # use all.dependencies

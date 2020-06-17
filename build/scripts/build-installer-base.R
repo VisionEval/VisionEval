@@ -5,9 +5,9 @@
 # Builds .zip files for installers
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
 
-cat("==================== BUILDING INSTALLER BASE (.zip files) ====================\n")
+cat("========== BUILDING INSTALLER BASE (.zip files) ==========\n")
 
 # Set up .zip file names
 # Need the ".zip" extension?

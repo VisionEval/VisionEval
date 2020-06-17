@@ -14,7 +14,7 @@
 # environment since you will not easily be able to tell if you missed one
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
 
 # uncomment the following line on Windows if you just want the pre-compiled
 # binaries otherwise, if RTools is installed the newer sources packages will be
@@ -24,11 +24,11 @@ source(file.path(getwd(),"scripts/get-runtime-config.R"))
 options(install.packages.compile.from.source="never")
 
 # you will need miniCRAN and dependencies installed in your local R environment
-if ( ! suppressWarnings(require(miniCRAN,quiety=TRUE)) ) {
+if ( ! suppressWarnings(require(miniCRAN,quietly=TRUE)) ) {
   install.packages("miniCRAN", lib=dev.lib, type=.Platform$pkgType )
 }
 
-cat("========================= BUILDING RUNTIME LIBRARY =========================\n")
+cat("========== BUILDING RUNTIME LIBRARY ==========\n")
 
 pkgs.BaseR <- as.vector(installed.packages(lib.loc=.Library,
                                            priority=c("base", "recommended"))[,"Package"])

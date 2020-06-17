@@ -5,13 +5,13 @@
 # Build the package inventory and model usage tables (in ve.src)
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
 
 if ( ! dir.exists(ve.src) ) {
   stop("Need to make modules before building inventory.\n")
 }
 
-cat("========================= BUILDING PACKAGE SPEC INVENTORY =========================\n")
+cat("========== BUILDING PACKAGE SPEC INVENTORY ==========\n")
 
 # Reach for ve.lib first when seeking packages used by the ones we're building
 .libPaths( c(ve.lib, .libPaths()) ) # push runtime library onto path stack

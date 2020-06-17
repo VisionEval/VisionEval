@@ -23,7 +23,7 @@ then
     echo Starting build for \'${VE_BRANCH}\'
     echo Building \(mostly\) into \'${VE_OUTPUT}\'
     echo Logging to \`${VE_MAKEOUT}\`
-    make "$@" # >${VE_MAKEOUT} 2>&1
+    make "$@" >${VE_MAKEOUT} 2>&1
     echo "tail -f ${VE_MAKEOUT}"
   else
     echo No log directory defined in ${VE_MAKEVARS}

@@ -9,7 +9,7 @@
 # VisionEval-dev).
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
 
 # Build tool dependencies
 require(tools,quietly=TRUE)
@@ -26,7 +26,7 @@ if ( ! suppressWarnings(require(rmarkdown,quietly=TRUE)) ) {
   install.packages("rmarkdown", lib=dev.lib, type=.Platform$pkgType )
 }
 
-cat("========================= BUILDING MODULES =========================\n")
+cat("========== BUILDING MODULES ==========\n")
 
 # Reach for ve.lib first when seeking packages used by the ones we're
 # building

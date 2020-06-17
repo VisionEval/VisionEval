@@ -7,9 +7,9 @@
 # are not in packages.
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
 
-cat("==================== BUILDING RUNTIME ENVIRONMENT (scripts, models) ====================\n")
+cat("========== BUILDING RUNTIME ENVIRONMENT (scripts, models) ==========\n")
 
 # Copy the runtime boilerplate
 

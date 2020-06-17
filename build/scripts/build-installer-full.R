@@ -5,9 +5,9 @@
 # Builds .zip files for installers
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
 
-cat("==================== BUILDING FULL SOURCE INSTALLER (.zip files) ====================\n")
+cat("========== BUILDING FULL SOURCE INSTALLER (.zip files) ==========\n")
 
 ve.build.type = "source"
 

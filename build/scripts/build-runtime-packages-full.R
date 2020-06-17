@@ -7,7 +7,7 @@
 # If the current platform is Unix, build a repository of source packages
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
   
 # Relay dependency list
 
@@ -25,7 +25,7 @@ if ( ! exists("all.dependencies") ) {
 # Load required Library
 require(tools)
 
-cat("========================= BUILDING PACKAGES ( for Full Source Installation) =========================\n")
+cat("========== BUILDING PACKAGES ( for Full Source Installation) ==========\n")
 
 # Prepare package names and output repository contriburl
 

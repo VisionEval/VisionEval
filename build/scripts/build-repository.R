@@ -7,7 +7,7 @@
 # binary on the current architecture (the one on which the build is running)
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
 
 # uncomment the following line on Windows if you just want the pre-compiled
 # binaries otherwise, if RTools is installed the newer sources packages will be

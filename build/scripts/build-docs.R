@@ -5,13 +5,13 @@
 # Assemble .md documentation files and compile to PDF in docs folder
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
 
 if ( ! suppressWarnings(require(rmarkdown,quietly=TRUE)) ) {
   install.packages("rmarkdown", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
 }
 
-cat("========================= BUILDING DOCS =========================\n")
+cat("========== BUILDING DOCS ==========\n")
 
 doc.file.pattern <- "\\.[Mm]d$"
 
@@ -159,6 +159,6 @@ for ( i in 1:nrow(ve.getdocs) ) {
         cat("Up to date: ",sub(file.path(ve.output,this.R),"",expected.of),"\n")
       }
     }
-    cat("======================\n")
+    cat("==========\n")
   }
 }

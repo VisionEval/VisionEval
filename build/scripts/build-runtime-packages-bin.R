@@ -7,7 +7,7 @@
 # If the current platform is Unix, build a repository of source packages
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
   
 # Relay dependency list
 
@@ -27,7 +27,7 @@ if ( ve.build.type == "win.binary" ) {
   # Load required Library
   require(tools)
 
-  cat("========================= BUILDING RUNTIME PACKAGES ( for",ve.build.type,") =========================\n")
+  cat("========== BUILDING RUNTIME PACKAGES ( for",ve.build.type,") ==========\n")
 
   # Prepare package names and output repository contriburl
 

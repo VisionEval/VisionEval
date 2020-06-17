@@ -5,9 +5,9 @@
 # Builds .zip files for installers
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts/get-runtime-config.R"))
+source(file.path(getwd(),"scripts","get-runtime-config.R"))
 
-cat("==================== BUILDING BINARY INSTALLERS (.zip files) ====================\n")
+cat("========== BUILDING BINARY INSTALLERS (.zip files) ==========\n")
 
 # Short circuit if platform is Windows (we'll be using "ve-lib")
 request.build = "binary"

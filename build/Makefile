@@ -35,7 +35,7 @@ include $(VE_MAKEVARS)
 export VE_RUNTIME_CONFIG
 
 .PHONY: configure repository modules binary runtime installers docs all\
-	clean lib-clean module-clean runtime-clean build-clean test-clean\
+	clean lib-clean module-clean runtime-clean build-clean\
 	dev-clean really-clean docs-clean installer-clean inventory-clean\
         inventory runtime-packages\
 	docker-clean docker-output-clean docker
@@ -68,16 +68,17 @@ build-clean: # Resets the built status of all the targets
 	[[ -n "$(VE_LOGS)" ]] && rm -rf $(VE_LOGS)/*
 	rm -f $(VE_MAKEVARS)
 
-module-clean: $(VE_MAKEVARS) test-clean # Reset all VE modules for complete rebuild
+module-clean: $(VE_MAKEVARS) # Reset all VE modules for complete rebuild
 	[[ -n "$(VE_REPOS)" ]] && rm -rf $(VE_REPOS)/*
 	rm -rf $(VE_LIB)/visioneval $(VE_LIB)/VE*
 	rm -f $(VE_LOGS)/modules.built
 
 lib-clean: $(VE_MAKEVARS) # Reset installed package library for complete rebuild
 	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/*
+	rm -f $(VE_LOGS)/velib.built
 
 runtime-clean: $(VE_MAKEVARS) # Reset all models and scripts for complete rebuild
-	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/* && rm -rf $(VE_RUNTIME)/.* 2>/dev/null || echo "Runtime Clean."
+	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/* && rm -rf $(VE_RUNTIME)/.* 2>/dev/null
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/runtime.built
 
 src-clean: $(VE_MAKEVARS) # Reset the build source directory for the packages
@@ -90,7 +91,6 @@ docs-clean: $(VE_MAKEVARS) # Clear the docs
 installer-clean: $(VE_MAKEVARS) # Reset the installers for rebuild
 	# installers have the R version coded in their .zip name
 	[[ -n "$(VE_ZIPOUT)" ]] && rm -f $(VE_ZIPOUT)/*.zip
-	[[ -n "$(VE_PKGS)" ]] && rm -rf $(VE_PKGS)/*
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
 
 inventory-clean:
@@ -100,10 +100,10 @@ repository-clean: clean # Reset the CRAN, BioConductor and Github dependency pac
 	[[ -n "$(VE_DEPS)" ]] && rm -rf $(VE_DEPS)/*
 
 dev-clean: $(VE_MAKEVARS) # Reset the developer packages for VE-Installer itself
-	[[ -n "$(VE_R_VERSION)" ]] && rm -rf dev-lib/$(VE_R_VERSION)
+	[[ -n "$(VE_DEVLIB)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_DEVLIB)/$(VE_R_VERSION)*
 
-clean: $(VE_MAKEVARS) build-clean test-clean # Reset everything except developer packages
-	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_OUTPUT)/$(VE_R_VERSION)
+clean: $(VE_MAKEVARS) build-clean # Reset everything except developer packages
+	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_BRANCH)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_OUTPUT)/$(VE_BRANCH)/$(VE_R_VERSION)
 
 really-clean: clean depends-clean dev-clean # Scorched earth: reset all VE-Installer artifacts
 
@@ -123,7 +123,8 @@ $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG): scripts/build-config.R $(VE_CONFIG) R-versi
 repository: $(VE_LOGS)/repository.built
 
 $(VE_LOGS)/repository.built: $(VE_RUNTIME_CONFIG) scripts/build-repository.R scripts/build-external.R
-	$(RSCRIPT) scripts/build-repository.R && $(RSCRIPT) scripts/build-external.R
+	$(RSCRIPT) scripts/build-repository.R
+	$(RSCRIPT) scripts/build-external.R
 	@touch $(VE_LOGS)/repository.built
 
 # This rule and the following one rebuild the installed library of dependencies and VE packages
@@ -157,7 +158,7 @@ $(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/velib.built scripts/b
 # (File time stamps are checked in the R scripts)
 runtime: $(VE_LOGS)/runtime.built
 
-$(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/*
+$(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/* $(VE_RUNTIME_CONFIG)
 	$(RSCRIPT) scripts/build-runtime.R
 	@touch $(VE_LOGS)/runtime.built
 
@@ -195,24 +196,3 @@ $(VE_LOGS)/installer-full.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/installer-bin.b
 	$(RSCRIPT) scripts/build-runtime-packages-full.R
 	$(RSCRIPT) scripts/build-installer-full.R
 	@touch $(VE_LOGS)/installer-full.built
-
-# Experimental Docker installation
-# This will run, but the resulting images probably won't work (2019-05-24)
-ifeq ($(WINDOWS),TRUE)
-docker-output-clean docker-clean docker:
-	echo Docker building is not available on Windows
-else
-export VE_OUTPUT VE_RUNTIME
-export VE_DOCKER_IN=$(VE_INSTALLER)/docker
-export VE_DOCKER_OUT=$(VE_OUTPUT)/$(VE_R_VERSION)/docker
-export DOCKERFILE=$(VE_DOCKER_IN)/Dockerfile
-
-docker-output-clean:
-	sudo rm -rf ${VE_DOCKER_OUT}/Data # Files within are owned by 'root'
-docker-clean: docker-output-clean
-	rm -rf $(VE_DOCKER_OUT)/home
-	
-docker: $(VE_LOGS)/repository.built $(DOCKERFILE) $(VE_DOCKER_IN)/.dockerignore
-	$(RSCRIPT) scripts/build-runtime-packages.R source
-	bash scripts/build-docker.sh
-endif
