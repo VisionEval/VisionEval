@@ -78,7 +78,7 @@ lib-clean: $(VE_MAKEVARS) # Reset installed package library for complete rebuild
 	rm -f $(VE_LOGS)/velib.built
 
 runtime-clean: $(VE_MAKEVARS) # Reset all models and scripts for complete rebuild
-	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/* && rm -rf $(VE_RUNTIME)/.* 2>/dev/null
+	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/* && rm -rf $(VE_RUNTIME)/.Rprofile $(VE_RUNTIME)/.Rprof.user
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/runtime.built
 
 src-clean: $(VE_MAKEVARS) # Reset the build source directory for the packages
@@ -102,7 +102,7 @@ repository-clean: clean # Reset the CRAN, BioConductor and Github dependency pac
 dev-clean: $(VE_MAKEVARS) # Reset the developer packages for VE-Installer itself
 	[[ -n "$(VE_DEVLIB)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_DEVLIB)/$(VE_R_VERSION)*
 
-clean: $(VE_MAKEVARS) build-clean # Reset everything except developer packages
+clean: $(VE_MAKEVARS) build-clean # Reset everything except developer packages; won't clean docs
 	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_BRANCH)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_OUTPUT)/$(VE_BRANCH)/$(VE_R_VERSION)
 
 really-clean: clean depends-clean dev-clean # Scorched earth: reset all VE-Installer artifacts

@@ -149,14 +149,14 @@ for ( i in 1:nrow(ve.getdocs) ) {
           , quiet=TRUE
           # , param=value # do it like this and you can drop options in and out with a single #
         )
-        cat("\nDone as",sub(file.path(ve.output,this.R),"",of),"\n")
+        cat("\nDone as",sub(file.path(ve.docs),"",of),"\n")
         if ( of != expected.of ) {
           cat("DIFFERENT NAME\n")
           cat(of,"\n")
           cat(expected.of,"\n")
         }
       } else {
-        cat("Up to date: ",sub(file.path(ve.output,this.R),"",expected.of),"\n")
+        cat("Up to date: ",sub(file.path(ve.docs),"",expected.of),"\n")
       }
     }
     cat("==========\n")
