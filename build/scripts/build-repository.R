@@ -7,7 +7,8 @@
 # binary on the current architecture (the one on which the build is running)
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts","get-runtime-config.R"))
+if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
+source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 # uncomment the following line on Windows if you just want the pre-compiled
 # binaries otherwise, if RTools is installed the newer sources packages will be
@@ -86,12 +87,15 @@ findMissingPackages <- function( required.packages ) {
 }
 
 cat("\nComputing dependencies.\n")
-pkgs.CRAN.all <- pkgs.CRAN.lst <- miniCRAN::pkgDep(pkgs.db$Package[pkgs.CRAN], repos=CRAN.mirror, suggests=FALSE)
-pkgs.CRAN.lst <-  setdiff(pkgs.CRAN.lst, pkgs.BaseR) # don't keep base packages
+pkgs.CRAN.lst <- pkgs.db$Package[pkgs.CRAN]
+pkgs.CRAN.lst <- setdiff(pkgs.CRAN.lst, pkgs.BaseR) # don't search for base package dependencies
+pkgs.CRAN.all <- pkgs.CRAN.lst <- miniCRAN::pkgDep( pkgs.CRAN.lst, repos=CRAN.mirror, suggests=FALSE)
+pkgs.CRAN.lst <- setdiff(pkgs.CRAN.lst, pkgs.BaseR) # don't keep base packages
 cat("pkgs.CRAN.all\n")
 print(sort(pkgs.CRAN.all))
 
-pkgs.BioC.all <- pkgs.BioC.lst <- miniCRAN::pkgDep(pkgs.db$Package[pkgs.BioC], repos=bioc, suggests=FALSE)
+pkgs.BioC.lst <- pkgs.db$Package[pkgs.BioC]
+pkgs.BioC.all <- pkgs.BioC.lst <- miniCRAN::pkgDep( pkgs.BioC.lst, repos=bioc, suggests=FALSE)
 pkgs.BioC.lst <- setdiff( pkgs.BioC.lst, pkgs.CRAN.lst ) # Possible risk here: don't double-install packages
 cat("pkgs.BioC.all\n")
 print(sort(pkgs.BioC.all))

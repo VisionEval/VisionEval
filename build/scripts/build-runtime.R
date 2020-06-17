@@ -7,7 +7,8 @@
 # are not in packages.
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts","get-runtime-config.R"))
+if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
+source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 cat("========== BUILDING RUNTIME ENVIRONMENT (scripts, models) ==========\n")
 
@@ -62,12 +63,12 @@ cat("ve.pkgs.name:",basename(ve.pkgs),"\n",sep="",file=file.path(ve.runtime,"r.v
 
 cat("Script sources...\n")
 
-pkgs.script <- pkgs.db[pkgs.script,c("Root","Path","Package")]
-copy.paths <- file.path(pkgs.script$Root, pkgs.script$Path, pkgs.script$Package)
+copy.scripts <- pkgs.db[pkgs.script,c("Root","Path","Package")]
+copy.paths <- file.path(copy.scripts$Root, copy.scripts$Path, copy.scripts$Package)
 if ( length(copy.paths) > 0 ) {
   any.newer <- FALSE
   for ( f in seq_along(copy.paths) ) {
-    target <- file.path(ve.runtime,pkgs.script$Package[f])
+    target <- file.path(ve.runtime,copy.scripts$Package[f])
     newer <- newerThan(copy.paths[f], target)
     any.newer <- any( any.newer, newer )
   }
@@ -81,13 +82,13 @@ if ( length(copy.paths) > 0 ) {
 
 cat("Model sources...\n")
 
-pkgs.model <- pkgs.db[pkgs.model,c("Root","Path","Package")]
-copy.paths <- file.path(pkgs.model$Root, pkgs.model$Path, pkgs.model$Package)
+copy.models <- pkgs.db[pkgs.model,c("Root","Path","Package")]
+copy.paths <- file.path(copy.models$Root, copy.models$Path, copy.models$Package)
 model.path <- file.path(ve.runtime,"models")
 if ( length(copy.paths) > 0 ) {
   any.newer <- FALSE
   for ( f in seq_along(copy.paths) ) {
-    target <- file.path(model.path,pkgs.model$Package[f])
+    target <- file.path(model.path,copy.models$Package[f])
     newer <- newerThan(copy.paths[f], target)
     any.newer <- any( any.newer, newer )
   }

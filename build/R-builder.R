@@ -133,7 +133,7 @@ evalq(
     ve.build <- function(
       steps="runtime",   # list of build steps (no special order); explicit names get automatically reset
       build=TRUE,        # if FALSE, just reset steps and process clean lists (don't build)
-      reset=FALSE,       # if TRUE, automatically add "config" step
+      reset=FALSE,       # if TRUE, automatically add "configure" step
       clean=steps,       # list of build steps whose artifacts we should remove (implies reset)
       dependencies=TRUE) # add dependencies to build steps (otherwise just rebuild the explicit step)
       {
@@ -156,7 +156,7 @@ evalq(
         # Create the builder environment for VisionEval
         # We will re-create this when we build different branches or R versions
         if ( length(grep("^ve.builder$",search()))>0 ) {
-          cat("Using existing build environment: 've.builder'")
+          cat("Using existing build environment: 've.builder'\n")
         } else {
           cat("Creating new build environment.\n")
           attach(NULL,name="ve.builder")
@@ -205,7 +205,7 @@ evalq(
         built.pattern <- paste0("^",gsub("\\.","\\\\.",built.prefix))
 
         getBuiltSteps <- function(steps=character(0)) {
-          built.steps <- ls("ve.bld",pattern=built.pattern)
+          built.steps <- ls("ve.builder",pattern=built.pattern)
           if ( length(built.steps)>0 && all(nzchar(built.steps)) ) {
             names(built.steps) <- gsub(built.pattern,"",built.steps)
             if ( any(nzchar(steps)) ) {
@@ -226,11 +226,9 @@ evalq(
         clean.set <- unique(clean)
         clean.set <- ve.build.sequence[ ve.build.sequence %in% clean.set ]
         if ( any( nzchar(clean.set) ) ) { # use 'any' to force logical if nzchar returns nothing
-          cat("Cleaning steps:\n")
-          print(clean.set)
           # Perform reset 
           to.reset <- getBuiltSteps(clean.set)
-          if (length(to.reset)>0) rm(list=getBuiltSteps(clean.set))
+          if (length(to.reset)>0) rm(list=getBuiltSteps(clean.set),envir=as.environment("ve.builder"))
           for ( m in clean.set ) {
             m.config <- ve.build.steps[[m]]
             if ( "Clean" %in% names(m.config) ) {
@@ -281,9 +279,9 @@ evalq(
         # remaining explicit build steps will be reset (not dependencies)
         if ( reset ) {
           cat("Resetting build status for Build Set.\n")
-          rm(list=getBuiltSteps(build.set))
+          rm(list=getBuiltSteps(build.set),envir=as.environment("ve.builder"))
         } else {
-          rm(list=getBuiltSteps(steps)) # only the named ones
+          rm(list=getBuiltSteps(steps),envir=as.environment("ve.builder")) # only the named ones
           build.set <- build.set [ ! ( build.set %in% names(getBuiltSteps(build.set)) ) ]
         }
 
@@ -302,13 +300,13 @@ evalq(
             sys.source(s.path,envir=as.environment("ve.builder"))
             build.success <- TRUE
           },
-            error=function(e) print(e),
+            error=function(e) { print(e) },
             finally=setwd(ve.root)
           )
           if ( ! build.success ) {
             stop("Build step failure in ",step)
           } else {
-            assign(paste0(built.prefix,step), Sys.time())
+            assign(paste0(built.prefix,step), Sys.time(),envir=as.environment("ve.builder"))
           }
         }
       }
@@ -319,7 +317,7 @@ evalq(
       ve.runtime <- Sys.getenv("VE_RUNTIME","") # built in previous session
       if ( ! nzchar(ve.runtime) ) {             # built in this session
         if ( "ve.builder" %in% search() &&
-          exists("ve.runtime",pos=as.environment("ve.builder") ) {
+          exists("ve.runtime",pos=as.environment("ve.builder") ) ) {
           ve.runtime <- get("ve.runtime",pos=as.environment("ve.builder"))
         }
       }
@@ -327,7 +325,7 @@ evalq(
     }
 
     ve.run <- function() {
-      ve.runtime <- getRuntime()
+      ve.runtime <- get.ve.runtime()
       if (
         dir.exists(ve.runtime) &&
         file.exists(file.path(ve.runtime,"VisionEval.R"))

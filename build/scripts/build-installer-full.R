@@ -5,7 +5,8 @@
 # Builds .zip files for installers
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts","get-runtime-config.R"))
+if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
+source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 cat("========== BUILDING FULL SOURCE INSTALLER (.zip files) ==========\n")
 

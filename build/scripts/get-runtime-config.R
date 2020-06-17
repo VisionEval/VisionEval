@@ -9,13 +9,18 @@ options(repos=r)
 # Check if "ve.builder" is on the search path
 # Create the build environment for VisionEval
 
-no.config.msg <- "Build the 'configure' step to set up build environment"
-
 local(
   {
     if ( length(grep("^ve.builder$",search()))==0 ) {
       attach(NULL,name="ve.builder")
       ve.runtime.config <- Sys.getenv("VE_RUNTIME_CONFIG","")
+      if ( !exists("no.config.msg",as.environment("ve.builder")) ) {
+        assign(
+          no.config.msg,
+          "Build the 'configure' step to set up build environment",
+          envir=as.environment("ve.builder")
+        )
+      }
       if (
         length(ve.runtime.config)==0 ||
         ! nzchar(ve.runtime.config[1]) ||

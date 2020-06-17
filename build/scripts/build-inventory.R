@@ -5,7 +5,8 @@
 # Build the package inventory and model usage tables (in ve.src)
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts","get-runtime-config.R"))
+if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
+source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 if ( ! dir.exists(ve.src) ) {
   stop("Need to make modules before building inventory.\n")

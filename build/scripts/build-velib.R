@@ -14,7 +14,8 @@
 # environment since you will not easily be able to tell if you missed one
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts","get-runtime-config.R"))
+if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
+source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 # uncomment the following line on Windows if you just want the pre-compiled
 # binaries otherwise, if RTools is installed the newer sources packages will be

@@ -7,7 +7,8 @@
 # If the current platform is Unix, build a repository of source packages
 
 # Load runtime configuration
-source(file.path(getwd(),"scripts","get-runtime-config.R"))
+if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
+source(file.path(ve.installer,"scripts","get-runtime-config.R"))
   
 # Relay dependency list
 

@@ -16,7 +16,9 @@ if ( length(grep("^ve.builder$",search()))==0 ) {
 } else {
   blow.away <- ls("ve.builder")
   blow.away <- setdiff(blow.away,c("ve.root","ve.build.dir","ve.dev","dev.lib","this.R"))
-  rm(list=blow.away,all=TRUE) # blow away all but basic build elements
+  if ( length(blow.away) > 0 ) {
+    rm(list=blow.away) # blow away all but basic build elements
+  }
 }
 
 evalq(
