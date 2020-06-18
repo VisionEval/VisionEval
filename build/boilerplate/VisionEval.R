@@ -24,7 +24,7 @@ assign("ve.RData","VisionEval.RData",pos=env.loc)
 local({
   ve.incomplete <- "VisionEval environment is unavailable; please re-install."
   if ( ! file.exists("r.version") ) {
-    message("Missing r.version file.\n")
+    message("Missing r.version file.")
     stop(ve.incomplete)
   }
   ve.vars <- data.frame(
@@ -36,7 +36,7 @@ local({
   )
   this.R <- paste(R.version[c("major","minor")],collapse=".")
   if ( nrow(ve.vars)==0 ) {
-    message("r.version is empty\n")
+    message("r.version is empty")
     stop(ve.incomplete)
   }
 
@@ -51,7 +51,7 @@ local({
   if ( this.R != that.R ) {
     stop("Incorrect R version for this VisionEval installation: expecting R",that.R)
   } else {
-    message("Loading VisionEval for R",this.R,"\n")
+    message("Loading VisionEval for R",this.R,"")
   }
 })
 
@@ -91,15 +91,15 @@ local( {
         ve.lib.local <- normalizePath(file.path(ve.runtime,"..",ve.lib.name),winslash="/",mustWork=FALSE)
         if ( dir.exists(ve.lib.local) && (ve.len <- length(grep("visioneval",dir(ve.lib.local)))>0) ) {
           ve.lib <- ve.lib.local # Use the build environment installed library
-          message("Development environment detected\n")
+          message("Development environment detected")
         } else {
           # See if ve-lib is set through .libPaths (and thus in .Renviron)
           ve.lib <- .libPaths()[grep(ve.lib.name,.libPaths(),fixed=TRUE)]
           if ( length(ve.lib)==1 && length(grep("visioneval",dir(ve.lib)))>0 ) {
-            message("Using pre-established environment.\n")
+            message("Using pre-established environment.")
           } else {
             # Look for source or mac.binary packages to install
-            message("Installing from ve-pkg.\n")
+            message("Installing from ve-pkg.")
             if ( ! exists("ve.pkg.name") ) ve.pkg.name <- "ve-pkg"
             ve.lib <- ve.lib.base
             ve.pkg <- file.path(ve.runtime,ve.pkg.name)

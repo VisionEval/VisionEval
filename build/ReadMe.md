@@ -1,33 +1,36 @@
 # Building and Installing VisionEval
 
-`VE-Installer` is a build system that makes a VisionEval Githb source tree "installable", and that
-facilitates development and testing of VisionEval.
+The separate `VE-Installer` project has been deprecated. Future installation
 
 <hr/>
 
 # Critical Update June, 2020
 
-## Winter is Coming!
-### (for the old ways of installing and hacking VisionEval)
-
 As of the June 2020 release of VisionEval, the only supported way to build a running instance of VisionEval from the
-Github canonical source code is with VE-Installer. Other methods for turning the VisionEval source code tree into a
-runtime environment are deprecated and will fail to work with the next release.
+Github canonical source code is with the installation process incorporated in the Github code. The previous
+`VE-Installer` proejct is retired.
 
-However, all is not lost! We have also introduced a new optional binary download of the "almost-built" VisionEval source
-packages to accompany the VisionEval runtime installer. If you install those packages (creating a "src" directory within
-your runtime) you have full access to the VisionEval package source code in a form that will allow you to inspect, step
-through, debug, and rebuild the binary packages in your installation.
+To create a runnable version of the Github, you should simply open the VisionEval-dev.RProj file in RStudio. You'll
+get two helper functions:
 
-In practice, that means that even power users of VisionEval will not have to interact with Github. The only people who
-will need Github are those who are working on or contributing to the VisionEval core release. It is possible to modify
-VisionEval locally (including adding new module packages) just with the runtime distribution and the "almost-built"
-sources. If you want to contribute those back to Github, you will need to clone the VisionEval or VisionEval-dev
-repository and copy your changes over to the relevant places on Github. The next release of VisionEval will include
-tools for synchronizing loal package source code and data changes with the repository.
+* `ve.build()` will build everything into a runtime folder
+* `ve.run()` will run VisionEval from that runtime folder
+
+VisionEval will be built with the current version of R attached to your RStudio. If you have more than one version of R
+installed, you can start RStudio with an alternate version by holding down the Ctrl key when you start RStudio.
 
 For information on debugging and developing VisionEval using the "almost-built" sources, see the separate RStudio.md
-file here in VE-Installer (that document should be subtitled "How to Work on VisionEval without Setting Up VE-Installer").
+file here in VE-Installer (that document should be subtitled "How to Work on VisionEval without the Github").
+
+You can also use the full Makefile that was available in VE-Installer. Instructions for setting that up are below. Since
+RTools40 (the R 4.0.x version of the venerable RTools package) now works more seamlessly with development tools in a
+number of standard environments (including RStudio), there is very little setup necessary to make it all work. You'll
+want a Git environment (e.g. Git for Windows) so you can push and pull the repository code, but you don't need to use
+the Git or RTools shell or commend line.
+
+Make can be run within RStudio, though it's a little different than doing a standard package build. You need to
+configure the RStudio build process if you're building anything other than the streamlined local runtime.  But
+otherwise, you can use it for any of the purposes described below.
 
 <hr/>
 

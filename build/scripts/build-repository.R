@@ -18,16 +18,16 @@ source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 options(install.packages.compile.from.source="never")
 
 # Load required libraries
-if ( ! suppressWarnings(require(miniCRAN,quietly=TRUE)) ) {
+if ( ! suppressWarnings(require("miniCRAN",quietly=TRUE)) ) {
   install.packages("miniCRAN", lib=dev.lib, dependencies=NA, type=.Platform$pkgType)
 }
 
 require(tools)
 
-cat("========== BUILDING DEPENDENCY REPOSITORY (CRAN / BioConductor ==========\n")
+message("========== GATHER DEPENDENCIES (CRAN / BioConductor) ==========")
 
 # BioConductor setup
-# if ( ! requireNamespace("BiocManager") ) {
+# if ( ! require("BiocManager") ) {
 #     install.packages("BiocManager", repos=CRAN.mirror)
 # }
 # bioc <- BiocManager::repositories()
@@ -86,7 +86,7 @@ findMissingPackages <- function( required.packages ) {
   return( setdiff( required.packages, apb[,"Package"]) )
 }
 
-cat("\nComputing dependencies.\n")
+cat("Computing dependencies.\n")
 pkgs.CRAN.lst <- pkgs.db$Package[pkgs.CRAN]
 pkgs.CRAN.lst <- setdiff(pkgs.CRAN.lst, pkgs.BaseR) # don't search for base package dependencies
 pkgs.CRAN.all <- pkgs.CRAN.lst <- miniCRAN::pkgDep( pkgs.CRAN.lst, repos=CRAN.mirror, suggests=FALSE)
@@ -147,7 +147,6 @@ if ( ve.build.type != "source" ) {
     dir.create( src.contrib, recursive=TRUE, showWarnings=FALSE )
   }
 }
-
 
 
 # Verify the VE Repository with the following independent cross-check of dependencies

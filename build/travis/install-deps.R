@@ -2,7 +2,7 @@
 
 # Load and install R package dependencies
 
-if ( ! suppressWarnings(require(yaml)) ) {
+if ( ! suppressWarnings(require("yaml")) ) {
   cat("Installing YAML package\n")
   install.packages("yaml", repos="https://cloud.r-project.org", dependencies=NA)
 }

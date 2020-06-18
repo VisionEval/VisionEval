@@ -8,7 +8,7 @@
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
-cat("========== BUILDING FULL SOURCE INSTALLER (.zip files) ==========\n")
+message("========== BUILD FULL SOURCE INSTALLER (.zip files) ==========")
 
 ve.build.type = "source"
 

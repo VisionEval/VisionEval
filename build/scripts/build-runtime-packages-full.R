@@ -10,6 +10,8 @@
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
   
+message("========== BUILD PACKAGES ( for Full Source Installation) ==========")
+
 # Relay dependency list
 
 load(ve.all.dependencies) # use all.dependencies
@@ -25,8 +27,6 @@ if ( ! exists("all.dependencies") ) {
 
 # Load required Library
 require(tools)
-
-cat("========== BUILDING PACKAGES ( for Full Source Installation) ==========\n")
 
 # Prepare package names and output repository contriburl
 

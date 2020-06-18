@@ -10,7 +10,7 @@
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
-cat("========== BUILDING RUNTIME ENVIRONMENT (scripts, models) ==========\n")
+message("========== BUILD RUNTIME ENVIRONMENT (scripts, models) ==========")
 
 # Copy the runtime boilerplate
 

@@ -12,13 +12,15 @@ options(repos=r)
 local(
   {
     if ( length(grep("^ve.builder$",search()))==0 ) {
-      attach(NULL,name="ve.builder")
+      env.builder <- attach(NULL,name="ve.builder")
+      # Makefile will export VE_RUNTIME_CONFIG
+      # R builder will have created "ve.builder" environment on search path
       ve.runtime.config <- Sys.getenv("VE_RUNTIME_CONFIG","")
-      if ( !exists("no.config.msg",as.environment("ve.builder")) ) {
+      if ( !exists("no.config.msg",env.builder) ) {
         assign(
           "no.config.msg",
           "Build the 'configure' step to set up build environment",
-          envir=as.environment("ve.builder")
+          envir=env.builder
         )
       }
       if (
@@ -29,14 +31,14 @@ local(
         stop(no.config.msg,"\nMissing VE_RUNTIME_CONFIG ",ve.runtime.config,
           no.config.msg,call.=FALSE)
       }
-      load(ve.runtime.config,envir=as.environment("ve.builder"))
+      load(ve.runtime.config,envir=env.builder)
     }
   }
 )
 
 if ( exists("dev.lib") ) {
   .libPaths(c(dev.lib,.libPaths()))
-  if ( ! suppressWarnings(require(git2r,quietly=TRUE)) ) {
+  if ( ! suppressWarnings(require("git2r",quietly=TRUE)) ) {
     install.packages("git2r",
       lib=dev.lib,
       dependencies=NA, type=.Platform$pkgType )

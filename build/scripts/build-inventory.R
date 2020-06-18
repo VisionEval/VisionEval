@@ -12,14 +12,14 @@ if ( ! dir.exists(ve.src) ) {
   stop("Need to make modules before building inventory.\n")
 }
 
-cat("========== BUILDING PACKAGE SPEC INVENTORY ==========\n")
+message("========== BUILD PACKAGE SPEC INVENTORY ==========")
 
 # Reach for ve.lib first when seeking packages used by the ones we're building
 .libPaths( c(ve.lib, .libPaths()) ) # push runtime library onto path stack
 
 # Libraries from ve.lib:
 require(visioneval,quietly=TRUE)
-if ( ! suppressWarnings(require(jsonlite,quietly=TRUE)) ) {
+if ( ! suppressWarnings(require("jsonlite",quietly=TRUE)) ) {
   install.packages("jsonlite", lib=dev.lib, type=.Platform$pkgType)
 }
 
@@ -63,15 +63,15 @@ for ( m in registry ) {
 }
 
 NameRegistryFile <- file.path(ve.src,"VENameRegistry.json")
-json <- toJSON(NameRegistry_ls,pretty=TRUE)
+json <- jsonlite::toJSON(NameRegistry_ls,pretty=TRUE)
 writeLines(json,NameRegistryFile)
-json <- readLines(NameRegistryFile) # Can't use it directly since it won't make Inp or Set into data.frames otherwise
-reg <- fromJSON(json)
+# json <- readLines(NameRegistryFile) # Can't use it directly since it won't make Inp or Set into data.frames otherwise
+# reg <- jsonlite::fromJSON(json)
 
 model.path <- file.path(ve.runtime,"models")
 model.mods <- list()
 models <- lapply(ve.models,FUN=function(model) {
-  script <- parseModelScript(file.path(model.path,model,"run_model.R"),TestMode=TRUE)
+  script <- visioneval::parseModelScript(file.path(model.path,model,"run_model.R"),TestMode=TRUE)
   df <- data.frame(MODULE=script$ModuleName,PACKAGE=script$PackageName,MODEL=TRUE)
   names(df)[3] <- model
   return(df)

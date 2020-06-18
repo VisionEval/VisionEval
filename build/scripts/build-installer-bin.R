@@ -8,7 +8,7 @@
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
-cat("========== BUILDING BINARY INSTALLERS (.zip files) ==========\n")
+message("========== BUILD BINARY INSTALLERS (.zip files) ==========")
 
 # Short circuit if platform is Windows (we'll be using "ve-lib")
 request.build = "binary"

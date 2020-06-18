@@ -9,7 +9,7 @@
 # installation
 options(install.packages.compile.from.source="never")
 
-cat("========== BUILDING CONFIGURATION ==========\n")
+message("========== BUILD CONFIGURATION ==========")
 
 if ( length(grep("^ve.builder$",search()))==0 ) {
   attach(NULL,name="ve.builder")
@@ -45,7 +45,7 @@ evalq(
 
   # Bootstrap development packages by loading current CRAN version of yaml from cloud.r-project.org
   # r-versions.yml will override based on R version for visioneval packages themselves
-  if ( ! suppressWarnings(require(yaml,quietly=TRUE)) ) {
+  if ( ! suppressWarnings(require("yaml",quietly=TRUE)) ) {
     install.packages("yaml", lib=dev.lib, repos="https://cloud.r-project.org", dependencies=NA, type=.Platform$pkgType )
   }
 
@@ -84,7 +84,7 @@ evalq(
 
   # ========== CREATE HELPER FUNCTIONS ==========
 
-  if ( ! suppressWarnings(require(git2r,quietly=TRUE)) ) {
+  if ( ! suppressWarnings(require("git2r",quietly=TRUE)) ) {
     install.packages("git2r", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
   }
 
@@ -125,7 +125,7 @@ evalq(
             } else {
               "is bad for an unknown reason"
             }
-            cat("Branch",paste0("'",br,"'"),"specified, but",repopath,end.message,".\n")
+            cat("Branch",paste0("'",br,"'"),"specified, but",repopath,end.message,".")
             return(FALSE)
           }
         }
@@ -140,25 +140,25 @@ evalq(
     # Check for situational awareness, and report if we are lost
     # Returns 0 or 1
     if ( ! exists("ve.installer") || is.na(ve.installer) || ! file.exists(ve.installer) ) {
-      message("Missing ve.installer; run build-config.R\n")
+      message("Missing ve.installer; run build-config.R")
       return(FALSE)
     } else if ( ! exists("ve.repository") || is.na(ve.repository) ) {
-      message("Missing ve.repository definition; run build-config.R\n")
+      message("Missing ve.repository definition; run build-config.R")
       return(FALSE)
     } else if ( ! exists("ve.dependencies") || is.na(ve.dependencies) ) {
-      message("Missing ve.dependencies definition; run build-config.R\n")
+      message("Missing ve.dependencies definition; run build-config.R")
       return(FALSE)
     } else if ( ! exists("ve.runtime") || is.na(ve.runtime) ) {
-      message("Missing ve.runtime definition; run build-config.R\n")
+      message("Missing ve.runtime definition; run build-config.R")
       return(FALSE)
     } else if ( ! exists("ve.pkgs") || is.na(ve.pkgs) ) {
-      message("Missing ve.pkgs definition; run build-config.R\n")
+      message("Missing ve.pkgs definition; run build-config.R")
       return(FALSE)
     } else if ( ! exists("ve.lib") || is.na(ve.lib) ) {
-      message("Missing ve.lib definition; run build-config.R\n")
+      message("Missing ve.lib definition; run build-config.R")
       return(FALSE)
     } else if ( ! exists("ve.roots") || ! exists("ve.branches") || ! checkBranchOnRoots(ve.roots,ve.branches) ) {
-      message("Missing roots, or incorrect branches\n")
+      message("Missing roots, or incorrect branches")
       return(FALSE)
     }
     return(TRUE)
@@ -378,9 +378,14 @@ evalq(
   rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib,r.runtime )
 
   # Convey key file locations to the 'make' environment
-  default.config <- file.path(ve.logs,"dependencies.RData")
-  ve.runtime.config <- Sys.getenv("VE_RUNTIME_CONFIG",default.config)
-  make.target <- Sys.getenv("VE_MAKEVARS",unset=file.path(ve.installer,"ve-output.make"))
+  ve.runtime.config <- file.path(ve.logs,"dependencies.RData")
+  make.target <- Sys.getenv(
+    "VE_MAKEVARS",
+    unset=file.path(
+      ve.installer, # ve.installer is already normalized
+      paste0(paste0("ve-output",ve.branch,this.R,sep="-"),".make")
+    )
+  )
   make.variables <- c(
      VE_R_VERSION      = this.R
     ,VE_LOGS           = ve.logs
@@ -406,18 +411,10 @@ evalq(
   r.ve.lib <-gsub(this.R,"%V",ve.lib)
   r.dev.lib <- gsub(this.R,"%V",dev.lib)
   r.libs.user <- paste0("R_LIBS_USER=",paste(r.ve.lib,r.dev.lib,sep=";"))
-  r.runtime <- paste0("VE_RUNTIME=",ve.runtime)
-  r.runtime.config <- paste0("VE_RUNTIME_CONFIG=",ve.runtime.config)
-  writeLines(c(r.libs.user,r.runtime,r.runtime.config),con=r.environ)
-  rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib,r.runtime )
+  writeLines(c(r.libs.user),con=r.environ)
+  rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib )
 
   writeLines( paste( names(make.variables), make.variables, sep="="),make.target)
-
-  # Also set up current environment (for R builder rather than Make)
-  Sys.setenv(
-    VE_RUNTIME=ve.runtime,
-    VE_RUNTIME_CONFIG=ve.runtime.config
-  )
 
   # The following are constructed in Locations above, and must be present
   # ve.runtime <- file.path(ve.output, "runtime")

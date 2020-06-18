@@ -14,20 +14,20 @@ source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 # Build tool dependencies
 require(tools,quietly=TRUE)
-if ( ! suppressWarnings(require(devtools,quietly=TRUE)) ) {
+if ( ! suppressWarnings(require("devtools",quietly=TRUE)) ) {
   install.packages("devtools", lib=dev.lib, type=.Platform$pkgType )
 }
-if ( ! suppressWarnings(require(roxygen2,quietly=TRUE)) ) {
+if ( ! suppressWarnings(require("roxygen2",quietly=TRUE)) ) {
   install.packages("roxygen2", lib=dev.lib, type=.Platform$pkgType )
 }
-if ( ! suppressWarnings(require(rcmdcheck,quietly=TRUE)) ) {
+if ( ! suppressWarnings(require("rcmdcheck",quietly=TRUE)) ) {
   install.packages("rcmdcheck", lib=dev.lib, type=.Platform$pkgType )
 }
-if ( ! suppressWarnings(require(rmarkdown,quietly=TRUE)) ) {
+if ( ! suppressWarnings(require("rmarkdown",quietly=TRUE)) ) {
   install.packages("rmarkdown", lib=dev.lib, type=.Platform$pkgType )
 }
 
-cat("========== BUILDING MODULES ==========\n")
+message("========== BUILD MODULES ==========")
 
 # Reach for ve.lib first when seeking packages used by the ones we're
 # building
@@ -254,7 +254,7 @@ for ( module in seq_along(package.names) ) {
       test.script <- file.path(build.dir,ve.packages$Test[module])
       message("Executing tests from ",test.script,"\n")
       callr::rscript(script=test.script,wd=build.dir,libpath=.libPaths(),fail_on_status=FALSE)
-      message("Completed test script.\n")
+      message("Completed test script.")
     }
   }
 

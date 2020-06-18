@@ -11,12 +11,14 @@ local({
   # Establish visioneval R developer environment on the R search path
   env.loc <- grep("^ve.bld$",search(),value=TRUE)
   if ( length(env.loc)==0 ) {
-    env.loc <- "ve.bld"
-    attach(NULL,name=env.loc)
+    env.loc <- attach(NULL,name="ve.bld")
+  } else {
+    env.loc <- as.environment(env.loc)
+    rm(list=ls(env.loc,all=T),pos=env.loc)
   }
 
   # Establish the VisionEval development tree root
-  assign("ve.root",getwd(),pos=env.loc)
+  assign("ve.root",getwd(),pos=env.loc) # VE-config.yml could override, but not tested for R builder
 })
 
 evalq(
@@ -28,68 +30,55 @@ evalq(
     ve.build.steps <- list(
       configure=list(   # name "configure" needs to match ve.config.step
         Path="build-config.R",
-        Deps=character(0),
-        Clean=""
+        Deps=character(0)
         ),
       repository=list(
         Path="build-repository.R",
-        Deps="configure",
-        Clean=""
+        Deps="configure"
         ),
       external=list(
         Path="build-external.R",
-        Deps="repository",
-        Clean=""
+        Deps="repository"
         ),
       velib=list(
         Path="build-velib.R",
-        Deps="repository",
-        Clean=""
+        Deps="repository"
         ),
       modules=list(
         Path="build-modules.R",
-        Deps="velib",
-        Clean=""
+        Deps="velib"
         ),
       runtime=list(
         Path="build-runtime.R",
-        Deps="modules",
-        Clean=""
+        Deps="modules"
         ),
       docs=list(
         Path="build-docs.R",
-        Deps="modules",
-        Clean=""
+        Deps="modules"
         ),
       inventory=list(
         Path="build-inventory.R",
-        Deps=c("modules"),
-        Clean=""
+        Deps=c("modules")
         ),
       runtime.pkg.bin=list(
         Path="build-runtime-packages-bin.R",
-        Deps="modules",
-        Clean=""
+        Deps="modules"
         ),
       installer.base=list(
         Path="build-installer-base.R",
-        Deps=c("runtime","docs"),
-        Clean=""
+        Deps=c("runtime","docs")
       ),
-      installer.bin=list(
+      installer=list(
         Path="build-installer-bin.R",
-        Deps=c("inventory", "runtime.pkg.bin","installer.base"),
-        Clean=""
+        Deps=c("inventory", "runtime.pkg.bin","installer.base")
         ),
       runtime.pkg.src=list(
         Path="build-runtime-packages-full.R",
-        Deps=c("inventory"),
-        Clean=""
+        Deps=c("inventory")
         ),
       installer.full=list(
         Path="build-installer-full.R",
-        Deps=c("installer.base","runtime.pkg.src"),
-        Clean=""
+        Deps=c("installer.base","runtime.pkg.src")
         )
     )
 
@@ -104,7 +93,7 @@ evalq(
       "inventory",
       "runtime.pkg.bin",
       "installer.base",
-      "installer.bin",
+      "installer",
       "runtime.pkg.src",
       "installer.full"
     )
@@ -132,72 +121,86 @@ evalq(
 
     ve.build <- function(
       steps="runtime",   # list of build steps (no special order); explicit names get automatically reset
-      build=TRUE,        # if FALSE, just reset steps and process clean lists (don't build)
       reset=FALSE,       # if TRUE, automatically add "configure" step
-      clean=steps,       # list of build steps whose artifacts we should remove (implies reset)
       dependencies=TRUE) # add dependencies to build steps (otherwise just rebuild the explicit step)
       {
         # run this function from ve.root
-        # build and clean scripts may change to another location
+        ve.root <- getwd()
+        assign("ve.root",ve.root,pos=as.environment("ve.bld")) # VE-config.yml could override, but not tested for R builder
         setwd(ve.root)
 
         # ========================= CONSISTENCY CHECKS =========================
 
-        # Check for errors in steps and clean vectors
+        # Check for errors in steps
         bad.steps <- ! steps %in% ve.build.sequence
         if ( any(bad.steps) ) stop("Build steps provided but not in sequence: ",steps[bad.steps])
-        bad.clean <- ! clean %in% ve.build.sequence
-        if ( any(bad.clean) ) stop("Clean steps provided but not in sequence: ",clean[bad.clean])
-        bad.clean <- ! clean %in% steps
-        if ( any(bad.clean) ) message("Steps will be cleaned but not rebuilt: ",clean[bad.clean])
 
         # ========================= BUILD ENVIRONMENT =========================
 
         # Create the builder environment for VisionEval
         # We will re-create this when we build different branches or R versions
-        if ( length(grep("^ve.builder$",search()))>0 ) {
-          cat("Using existing build environment: 've.builder'\n")
+        env.builder <- if ( length(grep("^ve.builder$",search()))>0 ) {
+          as.environment("ve.builder")
         } else {
-          cat("Creating new build environment.\n")
+          reset = TRUE
           attach(NULL,name="ve.builder")
-          ve.runtime.config <- Sys.getenv("VE_RUNTIME_CONFIG","")
-          if (
-            length(ve.runtime.config)==1 &&
-            nzchar(ve.runtime.config) &&
-            file.exists(normalizePath(ve.runtime.config,winslash="/"))
-          ) {
-            load(ve.runtime.config,envir=as.environment("ve.builder"))
-          }
         }
 
-        # Establish the root and build folders
-        ve.build.dir <- file.path(ve.root,"build")
-        assign("ve.build.dir",ve.build.dir,envir=as.environment("ve.builder"))
-        assign("ve.root",ve.root,envir=as.environment("ve.builder"))
+        # Now get the ve.builder environment set up
+        current.R <- paste(R.version[c("major","minor")],collapse=".")
+        current.dev <- normalizePath(file.path(ve.root,"dev"),winslash="/",mustWork=FALSE)
+        current.dev.lib <- normalizePath(file.path(current.dev,"lib",current.R),winslash="/",mustWork=FALSE)
+        if ( ! dir.exists(current.dev.lib) ) dir.create(current.dev.lib, recursive=TRUE, showWarnings=FALSE )
+        .libPaths(current.dev.lib)
+
+        # Figure out R version and branch
+        # Construct ve.dev, dev.lib, ve.logs (all of which live outside the "built" folder)
+        # Look in ve.logs for the ve.runtime.configuration (for this branch and version)
+        # If it exists, then load it into "ve.builder"
+        if ( ! suppressWarnings(require("git2r",quietly=TRUE)) ) {
+          require("utils")
+          utils::install.packages("git2r",
+            lib=current.dev.lib,
+            dependencies=NA, type=.Platform$pkgType )
+        }
+        current.branch <- if ( git2r::in_repository(ve.root) ) {
+          localbr <- git2r::branches(ve.root,flags="local")
+          hd <- which(sapply(localbr,FUN=git2r::is_head,simplify=TRUE))
+          localbr[[hd]]$name
+        }  else "visioneval"
+        if ( exists("localbr") ) rm(localbr) 
+        if ( exists("hd") )      rm(hd)
+
+        if (
+          (
+            exists("this.R",envir=env.builder) &&
+            get("this.R",envir=env.builder) != current.R
+          ) ||
+          (
+            exists("ve.branch",envir=env.builder) &&
+            get("ve.branch",envir=env.builder) != current.branch
+          )
+        ) {
+          rm(list=ls(env.builder,all=T),pos=env.builder)
+          assign("this.R",current.R,envir=env.builder)
+          assign("ve.branch",current.branch,envir=env.builder)
+        }
 
         # Set up the "developer" elements of the builder environment
-        # These elements are not part of "configure" step because they depend
-        # on the running R environment, not on the particular
-        # VisionEval we're building
-
-        evalq(
-          envir=as.environment("ve.builder"),
-          expr={
-
-            if ( ! exists("this.R") ) {
-              this.R <- paste(R.version[c("major","minor")],collapse=".")
-            }
-            if ( ! exists("ve.dev") ) {
-              ve.dev <- normalizePath(file.path(ve.root,"dev"),winslash="/",mustWork=FALSE)
-            }
-            if ( ! exists("dev.lib") ) {
-              dev.lib <- normalizePath(file.path(ve.dev,"lib",this.R),winslash="/",mustWork=FALSE)
-              dir.create(dev.lib, recursive=TRUE, showWarnings=FALSE )
-            } else {
-              if ( ! dir.exists(dev.lib) ) dir.create(dev.lib, recursive=TRUE, showWarnings=FALSE )
-            }
-            .libPaths(dev.lib)
-          })
+        # Key elements are always be reset)
+        current.logs <- file.path(current.dev,"logs",current.branch,current.R)
+        ve.build.dir <- file.path(getwd(),"build")
+        ve.runtime.config <- file.path(current.logs,"dependencies.RData")
+        if ( file.exists(ve.runtime.config) && ! reset ) {
+          load(ve.runtime.config,envir=env.builder)
+        } else {
+          reset = TRUE # need to rebuild
+        }
+        assign("ve.build.dir",ve.build.dir,envir=env.builder)
+        assign("ve.root",getwd(),envir=env.builder)
+        assign("ve.dev",current.dev,envir=env.builder)
+        assign("dev.lib",current.dev.lib,envir=env.builder)
+        assign("ve.logs",current.logs,envir=env.builder)
 
         # ========== IDENTIFY ALREADY-BUILT STEPS ==========
 
@@ -219,30 +222,6 @@ evalq(
           return(built.steps) # names are steps, values are built flag variable names
         }
         isBuilt <- function(step) return( length(getBuiltSteps(step))>0 )
-
-        # ========================= CLEAN STEPS =========================
-
-        # Perform the clean operations (remove artifacts by running script)
-        clean.set <- unique(clean)
-        clean.set <- ve.build.sequence[ ve.build.sequence %in% clean.set ]
-        if ( any( nzchar(clean.set) ) ) { # use 'any' to force logical if nzchar returns nothing
-          # Perform reset 
-          to.reset <- getBuiltSteps(clean.set)
-          if (length(to.reset)>0) rm(list=getBuiltSteps(clean.set),envir=as.environment("ve.builder"))
-          for ( m in clean.set ) {
-            m.config <- ve.build.steps[[m]]
-            if ( "Clean" %in% names(m.config) ) {
-              for ( cln in m.config$Clean ) { # Allow for multiple scripts, but one or zero
-                if ( nzchar(cln) ) {
-                  cat("Would run:",cln,"in ve.builder\n")
-                  # Would run: clean.result <- try(sys.source(cln,envir="ve.builder") )
-                }
-              }
-            }
-          }
-        } else {
-          message("No steps to clean.")
-        }
 
         # ========================= CONSTRUCT BUILD STEPS =========================
 
@@ -275,7 +254,6 @@ evalq(
 
         # ========================= PERFORM RESET =========================
 
-        # clean steps were automatically reset (above)
         # remaining explicit build steps will be reset (not dependencies)
         if ( reset ) {
           cat("Resetting build status for Build Set.\n")
@@ -312,7 +290,6 @@ evalq(
       }
 
     # Run the resultant runtime
-    # Environment variable set in .Renviron if we have run build successfully
     get.ve.runtime <- function() {
       ve.runtime <- Sys.getenv("VE_RUNTIME","") # built in previous session
       if ( ! nzchar(ve.runtime) ) {             # built in this session
@@ -334,7 +311,7 @@ evalq(
         setwd(ve.runtime)
         source("VisionEval.R")
       } else {
-        message("Runtime not built. Run ve.build()\n")
+        message("Runtime not built. Run ve.build()")
       }
     }
     message("ve.build() to (re)build VisionEval")

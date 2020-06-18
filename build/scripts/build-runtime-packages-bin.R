@@ -6,6 +6,8 @@
 # If the current platform is Mac, build a repository of mac binary packages
 # If the current platform is Unix, build a repository of source packages
 
+message ("========== BUILD RUNTIME PACKAGES ( for",ve.build.type,") ==========")
+
 # Load runtime configuration
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
@@ -27,8 +29,6 @@ if ( ve.build.type == "win.binary" ) {
 
   # Load required Library
   require(tools)
-
-  cat("========== BUILDING RUNTIME PACKAGES ( for",ve.build.type,") ==========\n")
 
   # Prepare package names and output repository contriburl
 

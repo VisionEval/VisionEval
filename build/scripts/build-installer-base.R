@@ -8,7 +8,7 @@
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
-cat("========== BUILDING INSTALLER BASE (.zip files) ==========\n")
+message("========== BUILD INSTALLER BASE (.zip files) ==========")
 
 # Set up .zip file names
 # Need the ".zip" extension?

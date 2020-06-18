@@ -24,12 +24,12 @@ source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 # installation
 options(install.packages.compile.from.source="never")
 
+message("========== BUILD RUNTIME LIBRARY ==========")
+
 # you will need miniCRAN and dependencies installed in your local R environment
-if ( ! suppressWarnings(require(miniCRAN,quietly=TRUE)) ) {
+if ( ! suppressWarnings(require("miniCRAN",quietly=TRUE)) ) {
   install.packages("miniCRAN", lib=dev.lib, type=.Platform$pkgType )
 }
-
-cat("========== BUILDING RUNTIME LIBRARY ==========\n")
 
 pkgs.BaseR <- as.vector(installed.packages(lib.loc=.Library,
                                            priority=c("base", "recommended"))[,"Package"])
@@ -40,16 +40,35 @@ sought.pkgs <- setdiff(sought.pkgs, pkgs.BaseR)
 
 new.pkgs <- sought.pkgs[ ! (sought.pkgs %in% installed.packages(lib.loc=ve.lib)[,"Package"]) ]
 
+# MiniCRAN has a bunch of dependencies that may collide with loading below
+# Can't install into a different library (ve.lib) if already loaded from dev.lib
+get.rid <- miniCRAN::pkgDep("miniCRAN")
+detach("package:miniCRAN",character.only=TRUE)
+for ( p in get.rid ) {
+  unloadNamespace(p)
+}
 unload.pkgs <- new.pkgs[which(new.pkgs %in% .packages())]
 
 if( length(new.pkgs) > 0 ) {
   cat("---Still missing these packages:\n")
   print(sort(new.pkgs))
-  cat("---Unloading these packages:\n")
-  for ( p in unload.pkgs) {
-    detach(paste0("package:",p),character.only=TRUE)
+  if ( length(unload.pkgs)>0 ) {
+    cat("---Unloading these packages:\n")
+    loaded <- search()
+    for ( p in unload.pkgs) {
+      pos <- grep(p,loaded)
+      if ( length(pos)>0 ) {
+        cat(p,"at",pos,"(",loaded[pos],")\n")
+        detach(pos=pos,character.only=TRUE)
+      }
+    }
   }
   cat("---Installing missing packages---\n")
+  envs <- search()
+  for ( p in new.pkgs)  {
+    p <- paste0("package:",p)
+    if ( p %in% envs ) detach(p,character.only=TRUE)
+  }
   install.packages(
       new.pkgs,
       lib=ve.lib,

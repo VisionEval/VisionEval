@@ -8,11 +8,11 @@
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
-if ( ! suppressWarnings(require(rmarkdown,quietly=TRUE)) ) {
+if ( ! suppressWarnings(require("rmarkdown",quietly=TRUE)) ) {
   install.packages("rmarkdown", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
 }
 
-cat("========== BUILDING DOCS ==========\n")
+message("========== BUILD DOCS ==========")
 
 doc.file.pattern <- "\\.[Mm]d$"
 
@@ -136,7 +136,7 @@ for ( i in 1:nrow(ve.getdocs) ) {
     }
   }
   if ( length(doc.files)>0 ) {
-    cat("Rendering docs for '",docs$Package,"' (as '",type,"'):\n",sep="")
+    cat("=== Rendering docs for '",docs$Package,"' (as '",type,"'):\n",sep="")
     for ( f in doc.files ) {
       # Note that rmarkdown will create output_dir and its components if they
       # do not already exist, so we don't need
@@ -160,6 +160,5 @@ for ( i in 1:nrow(ve.getdocs) ) {
         cat("Up to date: ",sub(file.path(ve.docs),"",expected.of),"\n")
       }
     }
-    cat("==========\n")
   }
 }
