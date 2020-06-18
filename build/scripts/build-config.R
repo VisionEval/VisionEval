@@ -11,6 +11,11 @@ options(install.packages.compile.from.source="never")
 
 message("========== BUILD CONFIGURATION ==========")
 
+# Set a default repository for non-interactive installation of packages
+r <- getOption("repos")
+r["CRAN"] <- "https://cloud.r-project.org"
+options(repos=r)
+
 if ( length(grep("^ve.builder$",search()))==0 ) {
   attach(NULL,name="ve.builder")
 } else {

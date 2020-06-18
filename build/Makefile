@@ -8,7 +8,9 @@ ifeq ($(OS),Windows_NT)
   WINDOWS=TRUE
 else
   # If you change the PATH to point at a different Rscript, you can
-  # support multiple R versions on Linux, but it's done outside the Makefile
+  # support multiple R versions on Linux, but it's done outside the
+  # Makefile
+  $(info Non-Windows Rscript)
   RSCRIPT:="$(shell which Rscript)"
   override VE_R_VERSION:=$(shell $(RSCRIPT) --no-init-file scripts/find-R.R)
   WINDOWS=FALSE
@@ -100,7 +102,7 @@ repository-clean: clean # Reset the CRAN, BioConductor and Github dependency pac
 	[[ -n "$(VE_DEPS)" ]] && rm -rf $(VE_DEPS)/*
 
 dev-clean: $(VE_MAKEVARS) # Reset the developer packages for VE-Installer itself
-	[[ -n "$(VE_DEVLIB)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_DEVLIB)/$(VE_R_VERSION)*
+	[[ -n "$(VE_DEVLIB)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_DEVLIB)/*
 
 clean: $(VE_MAKEVARS) build-clean # Reset everything except developer packages; won't clean docs
 	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_BRANCH)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_OUTPUT)/$(VE_BRANCH)/$(VE_R_VERSION)
