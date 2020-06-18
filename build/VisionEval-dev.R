@@ -108,12 +108,18 @@ evalq(
       stop("Sequence steps listed with no module configuration")
     } else rm(unconf)
 
-    ve.outdated <- function(step)
-    {
-      # check step for its artifacts (appeal to VE-Components.yml for
-      # the ones configured there)
-      # Explain in build steps above how to deal with non-components
-      # (e.g. installers)
+    ve.make <- function(
+      targets=character(0),
+      r.version=paste(R.version[c("major","minor")],collapse="."),
+      flags=character(0)
+    ) {
+      owd<-setwd(file.path(ve.root,"build"))
+      if ( length(r.version)>0 ) {
+        r.version=paste0("VE_R_VERSION=",r.version)
+      }
+      make.me <- paste("make",flags,r.version,targets)
+      shell(make.me)
+      setwd(owd)
     }
 
     # ve.build : Helper function to run the build process
@@ -314,7 +320,8 @@ evalq(
         message("Runtime not built. Run ve.build()")
       }
     }
-    message("ve.build() to (re)build VisionEval")
+    message("ve.make() to (re)build VisionEval")
+    message("ve.build() is experimental R re-implementation")
     message("ve.run() to run VisionEval (once it is built)")
   }
 )

@@ -318,14 +318,14 @@ for ( module in seq_along(package.names) ) {
 warnings()
 if ( num.src > 0 ) {
   cat("Writing source PACKAGES file\n")
-  write_PACKAGES(built.path.src, type="source")
+  tools::write_PACKAGES(built.path.src, type="source")
 } else {
   cat("No source packages needed to be built\n")
 }
 if ( ve.binary.build ) {
   if ( num.bin > 0 ) {
     cat("Writing binary PACKAGES file\n")
-    write_PACKAGES(built.path.binary, type=ve.build.type)
+    tools::write_PACKAGES(built.path.binary, type=ve.build.type)
   } else {
     cat("No binary packages needed to be built.\n")
   }

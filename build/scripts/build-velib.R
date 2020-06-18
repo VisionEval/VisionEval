@@ -27,27 +27,35 @@ options(install.packages.compile.from.source="never")
 message("========== BUILD RUNTIME LIBRARY ==========")
 
 # you will need miniCRAN and dependencies installed in your local R environment
-if ( ! suppressWarnings(require("miniCRAN",quietly=TRUE)) ) {
+if ( ! suppressWarnings(requireNamespace("miniCRAN",quietly=TRUE)) ) {
   install.packages("miniCRAN", lib=dev.lib, type=.Platform$pkgType )
 }
+requireNamespace("tools",quietly=TRUE)
 
 pkgs.BaseR <- as.vector(installed.packages(lib.loc=.Library,
                                            priority=c("base", "recommended"))[,"Package"])
-sought.pkgs <- setdiff(c(pkgs.db$Package[pkgs.CRAN], pkgs.db$Package[pkgs.BioC]),pkgs.BaseR)
-sought.pkgs <- miniCRAN::pkgDep(sought.pkgs,
+root.pkgs <- setdiff(c(pkgs.db$Package[pkgs.CRAN], pkgs.db$Package[pkgs.BioC]),pkgs.BaseR)
+sought.pkgs <- miniCRAN::pkgDep(root.pkgs,
                                 repos=ve.deps.url, suggests=FALSE, type=ve.build.type)
 sought.pkgs <- setdiff(sought.pkgs, pkgs.BaseR)
 
 new.pkgs <- sought.pkgs[ ! (sought.pkgs %in% installed.packages(lib.loc=ve.lib)[,"Package"]) ]
 
-# MiniCRAN has a bunch of dependencies that may collide with loading below
-# Can't install into a different library (ve.lib) if already loaded from dev.lib
-get.rid <- miniCRAN::pkgDep("miniCRAN")
-detach("package:miniCRAN",character.only=TRUE)
-for ( p in get.rid ) {
-  unloadNamespace(p)
-}
 unload.pkgs <- new.pkgs[which(new.pkgs %in% .packages())]
+
+mc.deps <- setdiff(tools::package_dependencies("miniCRAN")$miniCRAN,pkgs.BaseR)
+unloadNamespace("miniCRAN")
+for ( mcd in mc.deps ) try(unloadNamespace(mcd))
+unloadNamespace("git2r")
+
+backstop <- 5
+while ( backstop>0 && length(root.pkgs <- intersect(loadedNamespaces(),sought.pkgs))>0 ) {
+  for ( rp in root.pkgs ) {
+    try(unloadNamespace(rp))
+  }
+  backstop <- backstop - 1
+}
+cat("backstop==",backstop,"\n")
 
 if( length(new.pkgs) > 0 ) {
   cat("---Still missing these packages:\n")

@@ -379,12 +379,14 @@ evalq(
 
   # Convey key file locations to the 'make' environment
   ve.runtime.config <- file.path(ve.logs,"dependencies.RData")
+  make.target <- file.path(
+      ve.installer, # ve.installer is already normalized
+      paste0(paste("ve-output",ve.branch,this.R,sep="-"),".make")
+    )
+  cat("make.target:",make.target,"\n")
   make.target <- Sys.getenv(
     "VE_MAKEVARS",
-    unset=file.path(
-      ve.installer, # ve.installer is already normalized
-      paste0(paste0("ve-output",ve.branch,this.R,sep="-"),".make")
-    )
+    unset=make.target
   )
   make.variables <- c(
      VE_R_VERSION      = this.R
