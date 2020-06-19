@@ -23,7 +23,7 @@ addons:
 # Set up the pair of cache areas
 install:
   - mkdir -p $TRAVIS_BUILD_DIR/ve-lib
-  - export VE_COMPONENTS=build/VE-components.yml; Rscript build/travis/install-deps.R
+  - export VE_COMPONENTS=build/config/VE-components.yml; Rscript build/travis/install-deps.R
 
 # https://docs.travis-ci.com/user/build-stages#warming-up-a-cache-with-expensive-dependencies
 
