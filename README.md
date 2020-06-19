@@ -1,5 +1,6 @@
-
 # VisionEval Repositories
+
+## Documentation Branch
 
 There are three repositories to serve different purposes:
  - **[VisionEval](https://github.com/VisionEval/VisionEval)**: Public release version of VisionEval. There is one master branch only. This wiki is associated with the VisionEval repository. If you have a bug report or other issue, create an issue instead in the VisionEval-Dev repository ([here](https://github.com/VisionEval/VisionEval-Dev/issues)).
@@ -9,4 +10,8 @@ There are three repositories to serve different purposes:
  - **[VisionEval.org](https://github.com/VisionEval/VisionEval.org)**: Website repository. You can [create issues](https://github.com/VisionEval/VisionEval.org/issues) here for website-related change requests.
 
 See the [Repository Structure document](Repository-Structure.md) in this branch of VisionEval-Dev for more details.
+
+You are looking at the documentation branch of VisionEval-dev. To get the code, you need to check out either the
+"development" (VisionEval-dev) or the "master" branch (VisionEval or VisionEval-dev).
+
 
