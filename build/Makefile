@@ -9,8 +9,8 @@ ifeq ($(OS),Windows_NT)
 else
   # If you change the PATH to point at a different Rscript, you can
   # support multiple R versions on Linux, but it's done outside the
-  # Makefile
-  $(info Non-Windows Rscript)
+  # Makefile. If you're running in RStudio, just set a different R
+  # version there using its Global Options.
   RSCRIPT:="$(shell which Rscript)"
   override VE_R_VERSION:=$(shell $(RSCRIPT) --no-init-file scripts/find-R.R)
   WINDOWS=FALSE
@@ -23,6 +23,8 @@ endif
 
 export VE_R_VERSION VE_CONFIG VE_RUNTESTS RSCRIPT
 
+# If the correct installation is in place, VE_BRANCH will be set
+# automaticall when the VE_MAKEVARS file gets built
 VE_BRANCH?=$(shell git branch --show-current)
 VE_MAKEVARS?=ve-output-$(VE_BRANCH)-$(VE_R_VERSION).make
 export VE_BRANCH VE_MAKEVARS

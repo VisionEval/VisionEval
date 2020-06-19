@@ -30,8 +30,9 @@ Components:
     Type: framework
     Path: sources/framework
     Docs:
-      - /api                            # absolute path means "relative to ve.root"
-      - function_docs/markdown_files    # relative path means "relative to package (ve.root/sources/framework/visioneval)"
+      - /api                               # absolute path means "relative to ve.root"
+      - /api/VE_Training_March_13-14_2019  # Include Training.md
+      - function_docs/markdown_files       # relative path means "relative to package (ve.root/sources/framework/visioneval)"
     Test: { Script: tests/scripts/test.R, Group: 0 }
     CRAN: 
       - jsonlite

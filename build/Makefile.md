@@ -1,21 +1,30 @@
 ## Makefile ##
 
 This file provides extensive explanation and commentary on the Makefile used to build
-VisionEval with the VE-Installer.
+VisionEval with `ve.build()`.
 
-The first part sets up necessary environment variables.  Here are the list of key
+You'll be most interested in the Makefile Build Targets section below.
+
+### Makefile Environment
+
+The first part of the Makefile sets up necessary environment variables.  Here is the list of key
 environment configuration variables, all of which have useful defaults. The
 Makefile will do error checking to see if a suitable R version is installed. The
-configuration variables VE_CONFIG, VE_RUNTESTS, VE_R_VERSION can either be
-exported from your shell or system environment, or set on the make command
-line (e.g. via `make VE_CONFIG=config/MyVE-Config.yml`).
+configuration variables VE_CONFIG and VE_RUNTESTS work in their default
+form, but you can override them by doing something like
+`Sys.setenv(VE_CONFIG="config/VE-config-release.yml")`.
+(VE_R_VERSION is set up by something like `ve.build(r.version='3.6.1')`).
 
 <dl>
     <dt>VE_CONFIG</dt>
     <dd>Location of the configuration file for this run. Defaults to
-       `config/VE-config.yml` which does not exist until you create it.
-       You can override it by setting it as an environment variable, or
-       specifying it on the make command line.</dd>
+       `config/VE-config.yml` whose default version will build the
+       branch of visioneval that it is checked out into (or a
+       pseudo-branch called "visioneval" if you just copied rather than
+       cloned the repository). You can override it by setting it as an
+       environment variable or putting a flag into ve.build (it would
+       say `ve.build(flags="VE_CONFIG=/path/to/my/VE-config.yml".</dd>
+       See the "config" folder for documentation of the config format.
     <dt>VE_RUNTESTS</dt>
     <dd>Generally, just leave this as "Default".  If TRUE, tests will
        be run when the VE modules are built. If FALSE tests will be
@@ -27,12 +36,12 @@ line (e.g. via `make VE_CONFIG=config/MyVE-Config.yml`).
        variable is forced to match whatever R is installed.  On
        Windows, it uses a helper batch file to find (and optionally
        install) the requested version of R.  This must be one of the
-       versions identifed in r-versions.yml in the root of the
-       VE-Installer (though that file is easy to extend).</dd>
+       versions identifed in r-versions.yml in the build directory
+       (though that file is easy to extend yourself if needed).</dd>
     <dt>VE_LOGS, VE_RUNTIME_CONFIG, VE_MAKEVARS</dt>
-    <dd>These are files constructed during the build to keep track of
-       information passed from one step to another.  VE_LOGS is used
-       to record log and status information on the build.
+    <dd>These are file names constructed automatically during the build
+       to keep track of information passed from one step to another.
+       VE_LOGS is used to record log and status information on the build.
        VE_RUNTIME_CONFIG is used to keep R variables describing what
        is being built, dependencies, build locations, etc.
        VE_MAKEVARS contains additional variables used in this make
@@ -49,12 +58,14 @@ line (e.g. via `make VE_CONFIG=config/MyVE-Config.yml`).
 VE_CONFIG?=config/VE-config.yml
 VE_RUNTESTS?=Default
 ifeq ($(OS),Windows_NT)
-  VE_R_VERSION?=3.6.3
+  VE_R_VERSION?=4.0.1
   RSCRIPT:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
   WINDOWS=TRUE
 else
   # If you change the PATH to point at a different Rscript, you can
-  # support multiple R versions on Linux, but it's done outside the Makefile
+  # support multiple R versions on Linux, but it's done outside the
+  # Makefile. If you're running in RStudio, just set a different R
+  # version there using its Global Options.
   RSCRIPT:="$(shell which Rscript)"
   override VE_R_VERSION:=$(shell $(RSCRIPT) --no-init-file scripts/find-R.R)
   WINDOWS=FALSE
@@ -67,11 +78,11 @@ endif
 
 export VE_R_VERSION VE_CONFIG VE_RUNTESTS RSCRIPT
 
-VE_BRANCH?=$(shell basename $(VE_CONFIG) | cut -d'.' -f 1 | cut -d'-' -f 2-3)
-VE_LOGS?=logs/VE-$(VE_R_VERSION)-$(VE_BRANCH)
-VE_RUNTIME_CONFIG:=$(VE_LOGS)/dependencies.RData
-VE_MAKEVARS:=$(VE_LOGS)/ve-output.make
-export VE_LOGS VE_RUNTIME_CONFIG VE_MAKEVARS
+# If the correct installation is in place, VE_BRANCH will be set
+# automaticall when the VE_MAKEVARS file gets built
+VE_BRANCH?=$(shell git branch --show-current)
+VE_MAKEVARS?=ve-output-$(VE_BRANCH)-$(VE_R_VERSION).make
+export VE_BRANCH VE_MAKEVARS
 
 VE_BOILERPLATE:=$(wildcard boilerplate/boilerplate*.lst)
 ~~~
@@ -88,6 +99,7 @@ include $(VE_MAKEVARS)
 # Make then auto-restarts to read:
 #   VE_OUTPUT, VE_CACHE, VE_LIB, VE_INSTALLER, VE_PLATFORM, VE_SRC
 #   and others
+export VE_RUNTIME_CONFIG
 ~~~
 
 .PHONY make targets are things you can ask to build that do not
@@ -96,9 +108,9 @@ won't bother to see if there's an up-to-date target.
 
 ~~~
 .PHONY: configure repository modules binary runtime installers docs all\
-	clean lib-clean module-clean runtime-clean build-clean test-clean\
-	dev-clean really-clean docs-clean installer-clean\
-        module-list runtime-packages\
+	clean lib-clean module-clean runtime-clean build-clean\
+	dev-clean really-clean docs-clean installer-clean inventory-clean\
+        inventory runtime-packages\
 	docker-clean docker-output-clean docker
 ~~~
 
@@ -116,7 +128,10 @@ debug environment variables and command line definitions.
 ~~~
 show-defaults: $(VE_MAKEVARS)
 	: Make defaults:
+	: VE_MAKEVARS  $(VE_MAKEVARS)   # File containing runtime variables
+	: VE_RUNTIME_CONFIG $(VE_RUNTIME_CONFIG) # File of R built configuration
 	: WINDOWS      $(WINDOWS)       # Running on Windows?
+	: VE_BRANCH    $(VE_BRANCH)     # Current branch
 	: VE_PLATFORM  $(VE_PLATFORM)   # Then what platform ARE we running on?
 	: VE_R_VERSION $(VE_R_VERSION)  # R Version for build
 	: RSCRIPT      $(RSCRIPT)       # Rscript (should match R Version)
@@ -133,25 +148,27 @@ show-defaults: $(VE_MAKEVARS)
 ~~~
 
 The following 'clean' targets will blow away various artifacts of
-previous builds and force make to start again.
+previous builds and force make to start again. In general, the only
+one of these you'll need is `build-clean`.
 
 ~~~
-# Should have the "clean" target depend on $(VE_MAKEVARS) if it uses
-# any of the folders like VE_OUTPUT that are read in from there.
-build-clean: # Resets the built status of all the targets
-	[[ -n "$(VE_LOGS)" ]] && rm -rf $(VE_LOGS)/*
-	rm -f *.out
+# clean targets to remove built artifacts, triggering full rebuild
 
-module-clean: $(VE_MAKEVARS) test-clean # Reset all VE modules for complete rebuild
+build-clean: # Resets the built status of all the targets (but doesn't touch outputs)
+	[[ -n "$(VE_LOGS)" ]] && rm -rf $(VE_LOGS)/*
+	rm -f $(VE_MAKEVARS)
+
+module-clean: $(VE_MAKEVARS) # Reset all VE modules for complete rebuild
 	[[ -n "$(VE_REPOS)" ]] && rm -rf $(VE_REPOS)/*
 	rm -rf $(VE_LIB)/visioneval $(VE_LIB)/VE*
 	rm -f $(VE_LOGS)/modules.built
 
 lib-clean: $(VE_MAKEVARS) # Reset installed package library for complete rebuild
 	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/*
+	rm -f $(VE_LOGS)/velib.built
 
 runtime-clean: $(VE_MAKEVARS) # Reset all models and scripts for complete rebuild
-	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/*
+	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/* && rm -rf $(VE_RUNTIME)/.Rprofile $(VE_RUNTIME)/.Rprof.user
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/runtime.built
 
 src-clean: $(VE_MAKEVARS) # Reset the build source directory for the packages
@@ -163,18 +180,20 @@ docs-clean: $(VE_MAKEVARS) # Clear the docs
 
 installer-clean: $(VE_MAKEVARS) # Reset the installers for rebuild
 	# installers have the R version coded in their .zip name
-	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -f $(VE_OUTPUT)/$(VE_R_VERSION)/*.zip
-	[[ -n "$(VE_PKGS)" ]] && rm -rf $(VE_PKGS)/*
+	[[ -n "$(VE_ZIPOUT)" ]] && rm -f $(VE_ZIPOUT)/*.zip
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
 
-depends-clean: clean # Reset the CRAN, BioConductor and Github dependency packages for fresh download
+inventory-clean:
+	rm -f $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv
+
+repository-clean: clean # Reset the CRAN, BioConductor and Github dependency packages for fresh download
 	[[ -n "$(VE_DEPS)" ]] && rm -rf $(VE_DEPS)/*
 
 dev-clean: $(VE_MAKEVARS) # Reset the developer packages for VE-Installer itself
-	[[ -n "$(VE_R_VERSION)" ]] && rm -rf dev-lib/$(VE_R_VERSION)
+	[[ -n "$(VE_DEVLIB)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_DEVLIB)/*
 
-clean: $(VE_MAKEVARS) build-clean test-clean # Reset everything except developer packages
-	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_OUTPUT)/$(VE_R_VERSION)
+clean: $(VE_MAKEVARS) build-clean # Reset everything except developer packages; won't clean docs
+	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_BRANCH)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_OUTPUT)/$(VE_BRANCH)/$(VE_R_VERSION)
 
 really-clean: clean depends-clean dev-clean # Scorched earth: reset all VE-Installer artifacts
 ~~~
@@ -194,13 +213,15 @@ Finally, we get down to the targets that do real work:
    <dt>runtime</dt><dd>Copies non-package modules into the runtime -
       the startup scripts will locate ve-lib to complete the
       local installation.</dd>
-   <dt>module-list</dt><dd>Analyzes the source tree and identifies all
-      the modules in each package, and what models they are used in</dd>
-   <dt>installer or installer-bin</dt><dd>Builds a binary installer
+   <dt>inventory</dt><dd>Analyzes the source tree and identifies all
+      the modules in each package, and what models they are used in.
+      Results go in the 'src' directory (and auxiliary installer).</dd>
+   <dt>installer</dt><dd>Builds a binary installer
       for the development machine architecture (typically Windows)</dd>
-   <dt>installer-src</dt><dd>Buils a source installer that will work
-      on any architecture with R and a development environment -
-      currently the only way to bundla an install for Mac or Linux.</dd>
+   <dt>installer-full</dt><dd>Buils a source installer that will work
+      on any architecture with R and a development environment. This
+      is only needed if the system does not have RStudio and a graphic
+      environment.</dd>
    <dt>installers</dt><dd>Builds installer-bin and installer-src</dd>
 </dl>
 
@@ -208,13 +229,12 @@ Finally, we get down to the targets that do real work:
 # The remaining targets build the various VisionEval pieces
 
 # Make sure configuration is up to date
-configure: $(VE_RUNTIME_CONFIG) $(VE_MAKEVARS)
+configure: $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG)
+	@echo Configuration complete
 
 # This rule reads the configuration about what to build. Use build-clean to reset
 # Note: build-config.R identifies VE_CONFIG via the exported environment variable
 $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG): scripts/build-config.R $(VE_CONFIG) R-versions.yml
-	mkdir -p $(VE_LOGS)
-	mkdir -p dev-lib/$(VE_R_VERSION)
 	[[ $(RSCRIPT) != "" ]] && $(RSCRIPT) scripts/build-config.R
 
 # This rule and the following one rebuild the repository of dependencies for VE_R_VERSION
@@ -224,7 +244,7 @@ repository: $(VE_LOGS)/repository.built
 $(VE_LOGS)/repository.built: $(VE_RUNTIME_CONFIG) scripts/build-repository.R scripts/build-external.R
 	$(RSCRIPT) scripts/build-repository.R
 	$(RSCRIPT) scripts/build-external.R
-	touch $(VE_LOGS)/repository.built
+	@touch $(VE_LOGS)/repository.built
 
 # This rule and the following one rebuild the installed library of dependencies and VE packages
 # Will skip if velib.built is up to date with the repository build and with the script itself
@@ -233,32 +253,33 @@ binary: $(VE_LOGS)/velib.built
 
 $(VE_LOGS)/velib.built: $(VE_LOGS)/repository.built scripts/build-velib.R
 	$(RSCRIPT) scripts/build-velib.R
-	touch $(VE_LOGS)/velib.built
+	@touch $(VE_LOGS)/velib.built
 
 # This rule and the following one will check the VE modules and rebuild as needed
 # We'll almost always "build" the modules but only out-of-date stuff gets built
 # (File time stamps are checked in the R scripts)
 modules: $(VE_LOGS)/modules.built
 
-$(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built scripts/build-modules.R
+$(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
+        scripts/build-modules.R Makefile
 	$(RSCRIPT) scripts/build-modules.R
-	touch $(VE_LOGS)/modules.built
+	@touch $(VE_LOGS)/modules.built
 
 # This rule and the following one will assemble the documentation
 docs: $(VE_LOGS)/docs.built
 
 $(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/velib.built scripts/build-docs.R
 	$(RSCRIPT) scripts/build-docs.R
-	touch $(VE_LOGS)/docs.built
+	@touch $(VE_LOGS)/docs.built
 
 # This rule and the following one will (re-)copy out of date scripts and models to the runtime
 # We'll almost always "build" the runtime, but only out-of-date stuff gets built
 # (File time stamps are checked in the R scripts)
 runtime: $(VE_LOGS)/runtime.built
 
-$(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/*
+$(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/* $(VE_RUNTIME_CONFIG)
 	$(RSCRIPT) scripts/build-runtime.R
-	touch $(VE_LOGS)/runtime.built
+	@touch $(VE_LOGS)/runtime.built
 
 # The next two rules will build the VisionEval Name Registry (listing
 # all the modules and packages, and what their Inp and Set
@@ -267,7 +288,7 @@ $(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/*
 # programmatically from the VisionEval source tree.
 # Results are place in VE_SRC
 
-module-list: $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv #  $(VE_SRC)/module_status.csv
+inventory: $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv #  $(VE_SRC)/module_status.csv
 
 $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv: scripts/build-inventory.R $(VE_LOGS)/modules.built
 	$(RSCRIPT) scripts/build-inventory.R
@@ -276,24 +297,22 @@ $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv: scripts/build-inven
 # 'bin' is the binary installer for the local architecture (e.g. Windows or MacOSX)
 #     (also package source as a separate zip file)
 # 'src' is install-from-source installer (source packages for everything, including dependencies)
-installers: installer-bin installer-src
+installers: installer-bin installer-full
 
 installer installer-bin: $(VE_LOGS)/installer-bin.built
 
-$(VE_LOGS)/installer-bin.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/runtime.built  \
-            scripts/build-runtime-packages.R scripts/build-installers.sh
-	$(RSCRIPT) scripts/build-runtime-packages.R
-	bash scripts/build-installers.sh BINARY
-	touch $(VE_LOGS)/installer-bin.built
+$(VE_LOGS)/installer-bin.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/docs.built $(VE_LOGS)/runtime.built  \
+            scripts/build-runtime-packages-bin.R scripts/build-installer-base.R scripts/build-installer-bin.R
+	$(RSCRIPT) scripts/build-runtime-packages-bin.R
+	$(RSCRIPT) scripts/build-installer-base.R
+	$(RSCRIPT) scripts/build-installer-bin.R
+	@touch $(VE_LOGS)/installer-bin.built
 
-installer-src: $(VE_LOGS)/installer-src.built
+installer-full: $(VE_LOGS)/installer-full.built
 
-$(VE_LOGS)/installer-src.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/installer-bin.built \
-            scripts/build-runtime-packages.R scripts/build-installers.sh
-	$(RSCRIPT) scripts/build-runtime-packages.R source
-	bash scripts/build-installers.sh SOURCE
-	touch $(VE_LOGS)/installer-src.built
+$(VE_LOGS)/installer-full.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/installer-bin.built \
+            scripts/build-runtime-packages-full.R scripts/build-installer-full.R
+	$(RSCRIPT) scripts/build-runtime-packages-full.R
+	$(RSCRIPT) scripts/build-installer-full.R
+	@touch $(VE_LOGS)/installer-full.built
 ~~~
-
-Finally, there are some Docker targets that work to build images,
-but that are still under development.  Those are not documented here.

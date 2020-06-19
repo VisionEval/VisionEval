@@ -9,5 +9,6 @@
 built/
 build/*.make
 dev/
+docs/
 external/
 Log_*.txt

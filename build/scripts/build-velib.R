@@ -43,19 +43,19 @@ new.pkgs <- sought.pkgs[ ! (sought.pkgs %in% installed.packages(lib.loc=ve.lib)[
 
 unload.pkgs <- new.pkgs[which(new.pkgs %in% .packages())]
 
-mc.deps <- setdiff(tools::package_dependencies("miniCRAN")$miniCRAN,pkgs.BaseR)
-unloadNamespace("miniCRAN")
-for ( mcd in mc.deps ) try(unloadNamespace(mcd))
-unloadNamespace("git2r")
-
-backstop <- 5
-while ( backstop>0 && length(root.pkgs <- intersect(loadedNamespaces(),sought.pkgs))>0 ) {
-  for ( rp in root.pkgs ) {
-    try(unloadNamespace(rp))
-  }
-  backstop <- backstop - 1
-}
-cat("backstop==",backstop,"\n")
+# Added for R-Builder.R, but getting this to work was proving impossible
+# mc.deps <- setdiff(tools::package_dependencies("miniCRAN")$miniCRAN,pkgs.BaseR)
+# unloadNamespace("miniCRAN")
+# for ( mcd in mc.deps ) try(unloadNamespace(mcd))
+# unloadNamespace("git2r")
+# 
+# backstop <- 5
+# while ( backstop>0 && length(root.pkgs <- intersect(loadedNamespaces(),sought.pkgs))>0 ) {
+#   for ( rp in root.pkgs ) {
+#     try(unloadNamespace(rp))
+#   }
+#   backstop <- backstop - 1
+# }
 
 if( length(new.pkgs) > 0 ) {
   cat("---Still missing these packages:\n")
