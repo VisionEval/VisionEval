@@ -557,7 +557,7 @@ initializeModel <-
     if (SimulateRun) {
       simDataTransactions(AllSpecs_ls)
     }
-    
+
     #===============================
     #CHECK AND PROCESS MODULE INPUTS
     #===============================
