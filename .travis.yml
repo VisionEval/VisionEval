@@ -6,9 +6,9 @@ cache:
     - directories:
         - $TRAVIS_BUILD_DIR/ve-lib
 
-# We don't need much of the history
+# Could make this smaller if we don't rewrite history...
 git:
-  depth: 1
+  depth: 20
   
 # Be less strict when checking our package
 warnings_are_errors: false
