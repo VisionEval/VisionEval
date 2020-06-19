@@ -9,7 +9,7 @@ Roots:                          # Require ve.root and ve.output at a minimum
 Components:                     # Where to find wiki components (right here)
     ve.wiki:
         Root: ve.installer
-        Config: build/config/VE-wiki-components.yml
+        Config: config/VE-wiki-components.yml
 # Intended to add .md documents as PDFs in the end-user installer.
 
 Locations: # "Root" elements are variables defined in "Roots" section
