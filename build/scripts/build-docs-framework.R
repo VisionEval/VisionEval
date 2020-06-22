@@ -61,6 +61,7 @@ DocFileNames_ <- dir(framework.rd)
 FuncNames_ <- gsub(".Rd", "", DocFileNames_)
 DocFilePaths_ <- file.path(framework.rd, dir(framework.rd))
 
+cat("Associating .Rd files with their source .R file\n")
 # Make a note of which VisionEval source file led to creation of which .Rd file
 # Warning: requires working RTools40 installation on Windows...
 # Should work on Mac or Linux using "system" instead of "shell"
@@ -92,6 +93,7 @@ FunctionCalls_ls <- lapply(FuncNames_, function(x){
 })
 names(FunctionCalls_ls) <- FuncNames_
 
+cat("Parsing .Rd files for Markdown conversion...\n")
 #Iterate through documentation files, parse, find group, add to FunctionDocs_ls
 #------------------------------------------------------------------------------
 #Initialize a functions documentation list to store documentation by function group
@@ -172,7 +174,7 @@ makeFunctionMarkdown <- function(RdFilePath, FunctionCalls_, RdFileSource) {
 #----------------------------
 writeFunctionDocumentation <- function(doc.file,doc.title,doc.group)
 {
-  cat("Writing framework documentation for",doc.group,"\n")
+  cat("Writing",doc.title,"\n")
   cat("Into:",doc.file,"\n")
   Con <- file(doc.file, "w") # overwrite if there already
   writeLines(

@@ -146,7 +146,7 @@ $(VE_LOGS)/velib.built: $(VE_LOGS)/repository.built scripts/build-velib.R
 modules: $(VE_LOGS)/modules.built
 
 $(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
-        scripts/build-modules.R Makefile
+        scripts/build-modules.R
 	$(RSCRIPT) scripts/build-modules.R
 	@touch $(VE_LOGS)/modules.built
 
@@ -160,7 +160,8 @@ $(VE_LOGS)/framework-docs.built: $(VE_LOGS)/modules.built scripts/build-docs-fra
 # This rule and the following one will assemble the documentation
 docs: $(VE_LOGS)/docs.built
 
-$(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/velib.built scripts/build-docs.R
+$(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/framework-docs.built \
+	$(VE_LOGS)/velib.built scripts/build-docs.R
 	$(RSCRIPT) scripts/build-docs.R
 	@touch $(VE_LOGS)/docs.built
 
