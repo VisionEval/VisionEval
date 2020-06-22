@@ -1,7 +1,7 @@
 Components:
-  GettingStarted:
+  Getting-Started.md:
     Type: docs
-    Path: "Getting-Started.md"
-  VEConcepts:
+    Path: "."         # relative to ve.root for wiki
+  VE-Concepts-Primer.md:
     Type: docs
-    Path: "VE-Concepts-Primer.md"
+    Path: "."         # relative to ve.root for wiki

@@ -37,7 +37,7 @@ doc.file.pattern <- "\\.[Mm]d$"
 # All the documents are .md files and we'll use rmarkdown or knitr to render them
 # into PDF format (also HTML?)
 
-def.inputs <- c(framework="/api",module="inst/module_docs",model=".",script=".")
+def.inputs <- c(framework="inst/framework_docs",module="inst/module_docs",model=".",script=".",docs="")
 
 ve.getdocs <-                  pkgs.db[pkgs.docs,]
 ve.getdocs <- rbind(ve.getdocs,pkgs.db[pkgs.framework,])
@@ -57,7 +57,7 @@ for ( i in 1:nrow(ve.getdocs) ) {
   root <- docs$Root
   input <- def.inputs[type]
 
-  if ( type=='module' ) {
+  if ( type=='module' || type=='framework' ) {
     root <- ve.src # Use intermediate build
   }
 
@@ -66,64 +66,47 @@ for ( i in 1:nrow(ve.getdocs) ) {
   # May end up as a vector of input locations (e.g. for framework)
 
   # Override input if docs$Docs is not an empty string
-  if ( !is.na(docs$Docs) && nchar(docs$Docs)>0 ) {
+  if ( "Docs" %in% names(docs) && !is.na(docs$Docs) && nchar(docs$Docs)>0 ) {
     input <- docs$Docs
   }
 
   # Construct doc.dir vector of locations based on the component type
   doc.dir = character(0)
-  if ( type == 'framework' ) {
-    if ( length(grep(multi.dir.re,input))>0 ) {
-      # relying on input itself being a single element character vector
-      input <- unlist(strsplit(input,multi.dir.re)) # input now will be a multi-element vector, rather than a single element
-      for ( i in input) {
-        if ( substr(i,1,1)=="/" ) {
-          # Framework absolute docs path (e.g. /api)
-          doc.dir <- c(doc.dir,file.path(root,substr(i,2,nchar(i))))
-        } else {
-          # Framework relative path (e.g. /sources/framework/function_docs/markdown_files
-          doc.dir <- c(doc.dir,file.path(root,docs$Path,i)) # docs live alongside "visioneval"
-        }
-      }
-    }
+  # Where to locate docs for other component types (module, model, script)
+  # Need to use root + docs$Path + docs$Package + input for model, script and docs
+  # Need to use just root + docs$Package + input for module
+  if ( type=='module' || type=='framework' ) {
+    doc.dir = file.path(root,docs$Package,input)
+  } else if ( type=='docs' ) { 
+    doc.dir = file.path(root,docs$Path,docs$Package)
   } else {
-    # Where to locate docs for other component types (module, model, script)
-    # Need to use root + docs$Path + docs$Package + input for model, script and docs
-    # Need to use just root + docs$Package + input for module
-    if ( type=='module' ) {
-      doc.dir = file.path(root,docs$Package,input)
-    } else if ( type=='docs' ) { # Path must include file name
-      doc.dir = file.path(root,docs$Path)
-    } else {
-      doc.dir = file.path(root,docs$Path,docs$Package,input)
-    }
+    doc.dir = file.path(root,docs$Path,docs$Package,input)
   }
 
   ############ Output Directory
-  # For the "docs" type, output is just ve.docs
+  # For the "docs" type, output use ve.docs + docs$Target (Target may be "", which resolves to ve.docs)
   # For modules, models and script use ve.docs + docs$Type + docs$Package
   #   Thus "docs/module/modulename...", "docs/model/modelname", "docs/script/scriptname [VEGUI,tools,VEScenarioViewer]
   # For framework use ve.docs + docs$Package, thus "docs/visioneval",
 
   if ( type=="docs" ) {
-    out.dir <- ve.docs
+    out.dir <- file.path(ve.docs,docs$Target)
   } else if ( type %in% c("model","module") ) {
     out.dir <- file.path(ve.docs,docs$Type,docs$Package)
-  } else if ( type %in% c("script") ) {
-    out.dir <- file.path(ve.docs,docs$Package)
-  } else if ( type %in% c("framework") ) {
+  } else if ( type %in% c("script","framework") ) {
     out.dir <- file.path(ve.docs,docs$Package)
   } else {
     stop("Don't know how to make output directory for ",type)
   }
 
-  # Debug: find documentation files
+  doc.dir <- normalizePath(doc.dir,winslash="/",mustWork=FALSE)
+  out.dir <- normalizePath(out.dir,winslash="/",mustWork=FALSE)
+
   doc.files <- character(0)
   if ( type=='docs' && ! dir.exists(doc.dir) ) {
-    # if docs$Path is a directory, do directory processing
-    # otherwise, docs$Path can just be the name of one specific file
-    if ( !file.exists(doc.dir) ) {
-      stop("Could not find 'docs' Path (",doc.dir,") for ",docs$Package)
+    # if doc.dir is a specific file (presumed .md), skip directory processing
+    if ( !file.exists(doc.dir) || length(grep(doc.file.pattern,doc.dir))==0 ) {
+      stop("Could not find .md file on 'docs' Path (",doc.dir,") for ",docs$Package)
     } else {
       doc.files = doc.dir
     }

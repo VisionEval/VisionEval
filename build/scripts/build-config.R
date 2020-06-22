@@ -524,22 +524,20 @@ evalq(
 
   catn("Parsing dependencies...\n")
 
-  pkgs.db <- data.frame(Type="Type",Package="Package",Root="Root",Path="Path",Docs="",Group=0,Test="Test")
+  pkgs.db <- data.frame(Type="Type",Package="Package",Target="Target",Root="Root",Path="Path",Group=0,Test="Test")
   save.types <- c("framework","module","model","script","test","docs")
   # iterate over build.comps, creating dependencies
   for ( pkg in names(build.comps) ) {
     it <- build.comps[[pkg]]
     if ( it$Type %in% save.types ) {
+      # These are the required elements: Type, Package, Root, and Path
       it.db <- data.frame(Type=it$Type,Package=pkg,Root=it$Root,Path=it$Path)
-      if ( "Docs" %in% names(it) ) {
-        it.db$Docs <- paste( it$Docs,collapse="||" ) # Docs may be a vector of paths
+      if ( "Target" %in% names(it) ) {
+        # used for now only in the 'docs' type, indicating sub-folder of output 'docs'
+        # in which to place elements found at it$Path
+        it.db$Target <- it$Target
       } else {
-        it.db$Docs <- ""  # blank means use default doc location for type
-        # Framework default is "ve.root/api" but could include "ve.root/sources/framework/function_docs"
-        # Module default is "<Module>/inst/module_docs"
-        # Scripts default is "." (same folder as script)
-        # In each case, we search for ".md" files and "build" them into PDFs
-        #    in a type-based hierarchy below ve.src
+        it.db$Target <- ""
       }
       if ( "Test" %in% names(it) ) {
         tst <- names(it[["Test"]])
@@ -561,19 +559,19 @@ evalq(
       rm(it.db)
       if ( "CRAN" %in% names(it) ) {
         for ( dep in it$CRAN ) {
-          dep.db <- data.frame(Type="CRAN",Package=dep,Root=NA,Path=NA,Docs=NA,Group=NA,Test=NA)
+          dep.db <- data.frame(Type="CRAN",Package=dep,Root=NA,Path=NA,Target=NA,Group=NA,Test=NA)
           pkgs.db <- rbind(pkgs.db,dep.db)
         }
       }
       if ( "BioC" %in% names(it) ) {
         for ( dep in it$BioC ) {
-          dep.db <- data.frame(Type="BioC",Package=dep,Root=NA,Path=NA,Docs=NA,Group=NA,Test=NA)
+          dep.db <- data.frame(Type="BioC",Package=dep,Root=NA,Path=NA,Target=NA,Group=NA,Test=NA)
           pkgs.db <- rbind(pkgs.db,dep.db)
         }
       }
       if ( "Github" %in% names(it) ) {
         for ( dep in it$Github ) {
-          dep.db <- data.frame(Type="Github",Package=basename(dep),Root=NA,Path=dep,Docs=NA,Group=NA,Test=NA)
+          dep.db <- data.frame(Type="Github",Package=basename(dep),Root=NA,Path=dep,Target=NA,Group=NA,Test=NA)
           pkgs.db <- rbind(pkgs.db,dep.db)
         }
       }

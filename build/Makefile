@@ -150,6 +150,13 @@ $(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
 	$(RSCRIPT) scripts/build-modules.R
 	@touch $(VE_LOGS)/modules.built
 
+# Framework docs
+framework-docs: $(VE_LOGS)/framework-docs.built
+
+$(VE_LOGS)/framework-docs.built: $(VE_LOGS)/modules.built scripts/build-docs-framework.R
+	$(RSCRIPT) scripts/build-docs-framework.R
+	@touch $(VE_LOGS)/framework-docs.built
+
 # This rule and the following one will assemble the documentation
 docs: $(VE_LOGS)/docs.built
 

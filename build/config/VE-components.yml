@@ -29,10 +29,6 @@ Components:
   visioneval:
     Type: framework
     Path: sources/framework
-    Docs:
-      - /api                               # absolute path means "relative to ve.root"
-      - /api/VE_Training_March_13-14_2019  # Include Training.md
-      - function_docs/markdown_files       # relative path means "relative to package (ve.root/sources/framework/visioneval)"
     Test: { Script: tests/scripts/test.R, Group: 0 }
     CRAN: 
       - jsonlite
@@ -45,8 +41,6 @@ Components:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
-#    Docs: inst/module_docs     # always relative to module (ve.root/sources/modules/VE2001NHTS);
-#    if not supplied, then defaults as shown to "inst/module_docs"
     CRAN:
       - usethis
   VEScenario:
@@ -263,6 +257,14 @@ Components:
   tools:
     Type: script
     Path: sources
-    Docs: "."
     CRAN:
       - import
+  api:                               # "package" for 'docs' type is the last element (can be file name)
+    Type: docs
+    Path: "."                        # base directory below root to gather docs
+    Target: api                      # output path relative to "ve.docs"
+  VE_Training_March_13-14_2019:
+    Type: docs
+    Path: api                        # so VE_Training_March_13-14_2019 is a subdirectory of "api"
+    # Target: "."                    # The default (relative to "ve.docs") for Type: docs
+
