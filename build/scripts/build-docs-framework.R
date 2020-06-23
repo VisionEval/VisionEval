@@ -32,6 +32,8 @@ if ( ! suppressWarnings(requireNamespace("jsonlite",quietly=TRUE)) ) {
   install.packages("jsonlite", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
 }
 
+message("========== BUILD FRAMEWORK DOCS ==========")
+
 # Using visioneval framework we just built to do work here.
 .libPaths(c(ve.lib,.libPaths()))
 
@@ -46,171 +48,183 @@ cat("Building framework documentation into:\n",ve.framework.docs,"\n")
 if ( ! dir.exists(ve.framework.docs) ) {
   dir.create(ve.framework.docs, recursive=TRUE, showWarnings=FALSE )
 }
+
 TempDir_ <- file.path(ve.framework.docs,"temp")
 if ( ! dir.exists(TempDir_) ) {
   dir.create(TempDir_, recursive=TRUE, showWarnings=FALSE )
 }
-  
 
-#Make a vector of function documentation file paths
-#Look in the "src" directory for the documents (as built)
-#--------------------------------------------------
-DocFileNames_ <- dir(framework.rd)
-FuncNames_ <- gsub(".Rd", "", DocFileNames_)
-DocFilePaths_ <- file.path(framework.rd, dir(framework.rd))
+# Short-circuit if the contents of "/man" is not newer than "/inst/function_docs".
+need.new.docs <- newerThan(framework.rd,ve.framework.docs)
 
-cat("Associating .Rd files with their source .R file\n")
-# Make a note of which VisionEval source file led to creation of which .Rd file
-# Warning: requires working RTools40 installation on Windows...
-# Should work on Mac or Linux using "system" instead of "shell"
-grep.paths <- paste(DocFilePaths_,collapse=" ")
-# t <- system(paste("bash -c \"echo grep -n \\'document in R/\\' ",grep.paths,"\""),intern=TRUE)
+if ( need.new.docs ) {
 
-# WARNING: the following will fail if the list of grep.paths gets uber-long
-file.docs <- system(paste("grep -n 'documentation in R/'",grep.paths),intern=TRUE)
-file.docs <- strsplit(file.docs,":\\d+:%.*R/")
-DocFileSources_ <- sapply(file.docs,function(x)x[2])
-names(DocFileSources_) <- sapply(file.docs,function(x)x[1])
+  cat("Building Framework Documentation into:\n",ve.visual.docs,"\n")
 
-#Identify functions called by each function
-#------------------------------------------
-#Define function to search for function calls
-findFunctionCalls <- function(FuncName, FuncNames_) {
-  FuncBody <-
-    body(eval(parse(text = paste0("visioneval::", FuncName))))
-  IsCalled_ <- sapply(FuncNames_, function(x) {
-    Test1 <- length(grep(paste0(x, "\\("), FuncBody)) > 0
-    Test2 <- length(grep(paste0(x, " \\("), FuncBody)) > 0
-    Test1 | Test2
-  })
-  FuncNames_[IsCalled_]
-}
-#Iterate through functions and identify the functions that each function calls
-FunctionCalls_ls <- lapply(FuncNames_, function(x){
-  findFunctionCalls(x, FuncNames_)
-})
-names(FunctionCalls_ls) <- FuncNames_
+  #Make a vector of function documentation file paths
+  #Look in the "src" directory for the documents (as built)
+  #--------------------------------------------------
+  DocFileNames_ <- dir(framework.rd)
+  FuncNames_ <- gsub(".Rd", "", DocFileNames_)
+  DocFilePaths_ <- file.path(framework.rd, dir(framework.rd))
 
-cat("Parsing .Rd files for Markdown conversion...\n")
-#Iterate through documentation files, parse, find group, add to FunctionDocs_ls
-#------------------------------------------------------------------------------
-#Initialize a functions documentation list to store documentation by function group
-FunctionDocs_ls <- list(
-  user = list(),
-  developer = list(),
-  control = list(),
-  datastore = list()
-)
-#Define function to extract function group name from the function description
-getGroup <- function(ParsedRd_ls) {
-  Description <- gsub("\n", "", ParsedRd_ls$description)
-  GroupCheck_ <- c(
-    user = length(grep("model user", Description)) != 0,
-    developer = length(grep("module developer", Description)) != 0,
-    control = length(grep("control", Description)) != 0,
-    datastore = length(grep("datastore connection", Description)) != 0
-  )
-  names(GroupCheck_)[GroupCheck_]
-}
-#Iterate through documentation files
-for (DocFile in DocFilePaths_) {
-#  cat("Parsing file:",DocFile,"\n")
-  ParsedRd_ls <- Rd2md::parseRd(tools::parse_Rd(DocFile))
-  Group <- getGroup(ParsedRd_ls)
-  ParsedRd_ls$group <- Group
-  FunctionName <- ParsedRd_ls$name
-  ParsedRd_ls$calls <- FunctionCalls_ls[[FunctionName]]
-  ParsedRd_ls$source <- DocFileSources_[FunctionName]
-  FunctionDocs_ls[[Group]][[FunctionName]] <- ParsedRd_ls
-  rm(ParsedRd_ls, Group, FunctionName)
-}
-rm(DocFile)
+  cat("Associating .Rd files with their source .R file\n")
+  # Make a note of which VisionEval source file led to creation of which .Rd file
+  # Warning: requires working RTools40 installation on Windows...
+  # Should work on Mac or Linux using "system" instead of "shell"
+  grep.paths <- paste(DocFilePaths_,collapse=" ")
+  # t <- system(paste("bash -c \"echo grep -n \\'document in R/\\' ",grep.paths,"\""),intern=TRUE)
 
-#--------------------------------------------
-#CREATE FUNCTION DOCUMENTATION MARKDOWN FILES
-#--------------------------------------------
+  # WARNING: the following will fail if the list of grep.paths gets uber-long
+  file.docs <- system(paste("grep -n 'documentation in R/'",grep.paths),intern=TRUE)
+  file.docs <- strsplit(file.docs,":\\d+:%.*R/")
+  DocFileSources_ <- sapply(file.docs,function(x)x[2])
+  names(DocFileSources_) <- sapply(file.docs,function(x)x[1])
 
-#Make lists of function names and paths to Rd files by group
-#-----------------------------------------------------------
-#Function names by group
-FuncNames_ls <- lapply(FunctionDocs_ls, function(x) {
-  unlist(lapply(x, function(y) {
-    y$name
-  }))
-})
-#Rd file paths by group
-DocFilePaths_ls <- lapply(FunctionDocs_ls, function(x) {
-  unlist(lapply(x, function(y) {
-    paste0(framework.rd, "/", y$name, ".Rd")
-  }))
-})
-
-#Function to compose markdown for a function
-#-------------------------------------------
-makeFunctionMarkdown <- function(RdFilePath, FunctionCalls_, RdFileSource) {
-  #Convert function Rd file to markdown and save to temporary file
-  outfile <- file.path(TempDir_,"temp.md")
-  Rd2md::Rd2markdown( rdfile=RdFilePath, outfile=outfile )
-  #Read the contents of the temporary file
-  MdContents_ <- readLines(outfile)
-  #Insert the file origin after the first row (which has the function name)
-  MdContents_ <- c(
-    MdContents_[1],
-    paste0("(Function Source code is in **visioneval/R/",RdFileSource,"**)"),
-    MdContents_[2:length(MdContents_)]
-  )
-  #Add 2 levels to each heading
-  WhichHeadings_ <- grep("#", MdContents_)
-  MdContents_[WhichHeadings_] <- paste0("##", MdContents_[WhichHeadings_])
-  #Add function calls information
-  if ( length(FunctionCalls_)>0 )
-    c(MdContents_, "#### Calls", paste(FunctionCalls_, collapse = ", "), "", "")
-  return(MdContents_)
-}
-
-#Write function documentation
-#----------------------------
-writeFunctionDocumentation <- function(doc.file,doc.title,doc.group)
-{
-  cat("Writing",doc.title,"\n")
-  cat("Into:",doc.file,"\n")
-  Con <- file(doc.file, "w") # overwrite if there already
-  writeLines(
-    c(paste0("### ",doc.title), "", ""),
-    Con
-    )
-  for (i in 1:length(DocFilePaths_ls[[doc.group]])) {
-    func.name <- FuncNames_ls[[doc.group]][i]
-    cat("Marking down function:",func.name,"in group",doc.group,"\n")
-    Markdown_ <- makeFunctionMarkdown(
-      DocFilePaths_ls[[doc.group]][i], 
-      FunctionCalls_ls[[func.name]],
-      DocFileSources_[func.name]
-      )
-    writeLines(Markdown_, Con)
+  #Identify functions called by each function
+  #------------------------------------------
+  #Define function to search for function calls
+  findFunctionCalls <- function(FuncName, FuncNames_) {
+    FuncBody <-
+      body(eval(parse(text = paste0("visioneval::", FuncName))))
+    IsCalled_ <- sapply(FuncNames_, function(x) {
+      Test1 <- length(grep(paste0(x, "\\("), FuncBody)) > 0
+      Test2 <- length(grep(paste0(x, " \\("), FuncBody)) > 0
+      Test1 | Test2
+    })
+    FuncNames_[IsCalled_]
   }
-  close(Con)
+  #Iterate through functions and identify the functions that each function calls
+  FunctionCalls_ls <- lapply(FuncNames_, function(x){
+    findFunctionCalls(x, FuncNames_)
+  })
+  names(FunctionCalls_ls) <- FuncNames_
+
+  cat("Parsing .Rd files for Markdown conversion...\n")
+  #Iterate through documentation files, parse, find group, add to FunctionDocs_ls
+  #------------------------------------------------------------------------------
+  #Initialize a functions documentation list to store documentation by function group
+  FunctionDocs_ls <- list(
+    user = list(),
+    developer = list(),
+    control = list(),
+    datastore = list()
+  )
+  #Define function to extract function group name from the function description
+  getGroup <- function(ParsedRd_ls) {
+    Description <- gsub("\n", "", ParsedRd_ls$description)
+    GroupCheck_ <- c(
+      user = length(grep("model user", Description)) != 0,
+      developer = length(grep("module developer", Description)) != 0,
+      control = length(grep("control", Description)) != 0,
+      datastore = length(grep("datastore connection", Description)) != 0
+    )
+    names(GroupCheck_)[GroupCheck_]
+  }
+  #Iterate through documentation files
+  for (DocFile in DocFilePaths_) {
+  #  cat("Parsing file:",DocFile,"\n")
+    ParsedRd_ls <- Rd2md::parseRd(tools::parse_Rd(DocFile))
+    Group <- getGroup(ParsedRd_ls)
+    ParsedRd_ls$group <- Group
+    FunctionName <- ParsedRd_ls$name
+    ParsedRd_ls$calls <- FunctionCalls_ls[[FunctionName]]
+    ParsedRd_ls$source <- DocFileSources_[FunctionName]
+    FunctionDocs_ls[[Group]][[FunctionName]] <- ParsedRd_ls
+    rm(ParsedRd_ls, Group, FunctionName)
+  }
+  rm(DocFile)
+
+  #--------------------------------------------
+  #CREATE FUNCTION DOCUMENTATION MARKDOWN FILES
+  #--------------------------------------------
+
+  #Make lists of function names and paths to Rd files by group
+  #-----------------------------------------------------------
+  #Function names by group
+  FuncNames_ls <- lapply(FunctionDocs_ls, function(x) {
+    unlist(lapply(x, function(y) {
+      y$name
+    }))
+  })
+  #Rd file paths by group
+  DocFilePaths_ls <- lapply(FunctionDocs_ls, function(x) {
+    unlist(lapply(x, function(y) {
+      paste0(framework.rd, "/", y$name, ".Rd")
+    }))
+  })
+
+  #Function to compose markdown for a function
+  #-------------------------------------------
+  makeFunctionMarkdown <- function(RdFilePath, FunctionCalls_, RdFileSource) {
+    #Convert function Rd file to markdown and save to temporary file
+    outfile <- file.path(TempDir_,"temp.md")
+    Rd2md::Rd2markdown( rdfile=RdFilePath, outfile=outfile )
+    #Read the contents of the temporary file
+    MdContents_ <- readLines(outfile)
+    #Insert the file origin after the first row (which has the function name)
+    MdContents_ <- c(
+      MdContents_[1],
+      paste0("(Function Source code is in **visioneval/R/",RdFileSource,"**)"),
+      MdContents_[2:length(MdContents_)]
+    )
+    #Add 2 levels to each heading
+    WhichHeadings_ <- grep("#", MdContents_)
+    MdContents_[WhichHeadings_] <- paste0("##", MdContents_[WhichHeadings_])
+    #Add function calls information
+    if ( length(FunctionCalls_)>0 )
+      c(MdContents_, "#### Calls", paste(FunctionCalls_, collapse = ", "), "", "")
+    return(MdContents_)
+  }
+
+  #Write function documentation
+  #----------------------------
+  writeFunctionDocumentation <- function(doc.file,doc.title,doc.group)
+  {
+    cat("Writing",doc.title,"\n")
+    cat("Into:",doc.file,"\n")
+    Con <- file(doc.file, "w") # overwrite if there already
+    writeLines(
+      c(paste0("### ",doc.title), "", ""),
+      Con
+      )
+    for (i in 1:length(DocFilePaths_ls[[doc.group]])) {
+      func.name <- FuncNames_ls[[doc.group]][i]
+      cat("Marking down function:",func.name,"in group",doc.group,"\n")
+      Markdown_ <- makeFunctionMarkdown(
+        DocFilePaths_ls[[doc.group]][i], 
+        FunctionCalls_ls[[func.name]],
+        DocFileSources_[func.name]
+        )
+      writeLines(Markdown_, Con)
+    }
+    close(Con)
+  }
+
+  writeFunctionDocumentation(
+    file.path(ve.framework.docs,"User_Functions.md"),
+    "VisionEval Model User Functions",
+    "user"
+  )
+  writeFunctionDocumentation(
+    file.path(ve.framework.docs,"Control_Functions.md"),
+    "VisionEval Model Control Functions",
+    "control"
+  )
+  writeFunctionDocumentation(
+    file.path(ve.framework.docs,"Developer_Functions.md"),
+    "VisionEval Model Developer Functions",
+    "developer"
+  )
+  writeFunctionDocumentation(
+    file.path(ve.framework.docs,"Datastore_Functions.md"),
+    "VisionEval Model Datastore Functions",
+    "datastore"
+  )
+
+} else {
+  cat("Framework Documentation is up to date.\n")
 }
-  
-writeFunctionDocumentation(
-  file.path(ve.framework.docs,"User_Functions.md"),
-  "VisionEval Model User Functions",
-  "user"
-)
-writeFunctionDocumentation(
-  file.path(ve.framework.docs,"Control_Functions.md"),
-  "VisionEval Model Control Functions",
-  "control"
-)
-writeFunctionDocumentation(
-  file.path(ve.framework.docs,"Developer_Functions.md"),
-  "VisionEval Model Developer Functions",
-  "developer"
-)
-writeFunctionDocumentation(
-  file.path(ve.framework.docs,"Datastore_Functions.md"),
-  "VisionEval Model Datastore Functions",
-  "datastore"
-)
 
-
+# Clean up temporary directory
+if ( exists("TempDir_") && dir.exists(TempDir_) ) unlink(TempDir_,recursive=TRUE)

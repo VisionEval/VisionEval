@@ -167,7 +167,8 @@ $(VE_LOGS)/visual-docs.built: $(VE_LOGS)/framework-docs.built scripts/build-docs
 # This rule and the following one will assemble the documentation
 docs: $(VE_LOGS)/docs.built
 
-$(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/framework-docs.built \
+$(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built\
+	$(VE_LOGS)/framework-docs.built $(VE_LOGS)/visual-docs.built\
 	$(VE_LOGS)/velib.built scripts/build-docs.R
 	$(RSCRIPT) scripts/build-docs.R
 	@touch $(VE_LOGS)/docs.built

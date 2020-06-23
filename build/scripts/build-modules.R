@@ -158,9 +158,9 @@ for ( module in seq_along(package.names) ) {
   need.update <- newerThan( package.paths[module], src.module, quiet=(debug<2) )
   if ( ! (me <- moduleExists(package.names[module], built.path.src)) || need.update ) {
     if ( me ) { # module exists
-      cat("Updating package",package.names[module],"from",package.paths[module],"(Exists: ",me,")\n")
+      cat("++++++++++ Updating package",package.names[module],"from",package.paths[module],"(Exists: ",me,")\n")
     } else {
-      cat("Creating package",package.names[module],"from",package.paths[module],"(Exists:",me,")\n")
+      cat("++++++++++ Creating package",package.names[module],"from",package.paths[module],"(Exists:",me,")\n")
     }
   }
 
@@ -216,7 +216,7 @@ for ( module in seq_along(package.names) ) {
       pkg.files <- file.path(package.paths[module],dir(package.paths[module],recursive=TRUE))
       cat(paste("Copying",pkg.files,"to",build.dir,"\n",sep=" "),sep="")
     } else {
-      cat("Copying module source",package.paths[module],"to build/test environment...\n")
+      cat("++++++++++ Copying module source",package.paths[module],"to build/test environment...\n")
     }
     if ( dir.exists(build.dir) || file.exists(build.dir) ) unlink(build.dir,recursive=TRUE) # Get rid of the build directory and start fresh
     pkg.files <- dir(package.paths[module],recursive=TRUE,all.files=FALSE) # not hidden files, relative to package.paths[module]
@@ -233,11 +233,11 @@ for ( module in seq_along(package.names) ) {
 
   # Step 4: Check the module in order to rebuild the /data directory in build.dir
   if ( ! package.built ) {
-    cat("Checking and pre-processing ",package.names[module]," in ",build.dir,"\n",sep="")
+    cat("++++++++++ Checking and pre-processing ",package.names[module]," in ",build.dir,"\n",sep="")
     # Run the module tests (prior to building anything)
     # Note that "check.dir" here is created within "check_dir=build.dir"
     check.results <- devtools::check(build.dir,check_dir=build.dir,error_on="error")
-    cat("Check results\n")
+    cat("++++++++++ Check results\n")
     print(check.results)
     # devtools::check leaves the package loaded after its test installation to a temporary library
     # Therefore we need to explicitly detach it so we can install it properly later on
@@ -294,7 +294,7 @@ for ( module in seq_along(package.names) ) {
     }
     if ( ! package.installed ) {
       # On Windows, install from the binary package
-      cat("Installing built package:",built.package,"\n")
+      cat("++++++++++ Installing built package:",built.package,"\n")
       if ( package.names[module] %in% pkgs.installed ) {
         cat("First removing obsolete package version:",pkgs.version[package.names[module]],"\n")
         remove.packages(package.names[module])
@@ -304,7 +304,7 @@ for ( module in seq_along(package.names) ) {
   } else { # source build
     # Just do installation directly from source package (no binary package created)
     if ( ! package.installed ) {
-      cat("Installing source package:",src.module,"\n")
+      cat("++++++++++ Installing source package:",src.module,"\n")
       if ( package.names[module] %in% pkgs.installed ) remove.package(package.names[module])
       install.packages(src.module, repos=NULL, lib=ve.lib, type="source")
     } else {
@@ -333,4 +333,4 @@ if ( ve.binary.build ) {
 
 # Completion message, reporting what happened in this step
 building <- paste( "building",ifelse(ve.runtests,", testing","") )
-cat("Done ",building," and installing VisionEval packages.\n",sep="")
+cat("++++++++++ Done ",building," and installing VisionEval packages.\n",sep="")
