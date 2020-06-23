@@ -1,38 +1,67 @@
-#=======================
-#create_functions_docs.R
-#=======================
+#========================
+#build-function-graphic.R
+#========================
 
-#This script creates supplemental documentation files for the visioneval
-#framework. These include javascript files that are used in a webpage
-#visualization of the functions and their calling relationships, and markdown
-#files of documentation that can be added to the visioneval framework
-#documentation.
+# [Jeremy Raw, 2020-06-23] The basic function of building and organizing the function documentation
+# has been moved to build/scripts/build-framework-docs.R and the framework-docs build target for the
+# installation system, and the products are added to a "function_docs" folder in the visioneval
+# package, and built into PDFs in the installer.
 
-#NOTE: The script calls functions from the "jsonlite", "Rd2md", and "purrr"
-#packages. It will attempt to install the packages if they are not installed
+# This script presents some cute techniques for visualizing the Framework function interconnections
 
+# This script creates supplemental documentation files for the visioneval framework as javascript
+# files that are used in a webpage visualization of the functions and their calling relationships.
 
 #-------------------------------------------------------------------------------
 #PROCESS FUNCTION DOCUMENTATION RD FILES TO CREATE LISTS OF REQUIRED INFORMATION
 #-------------------------------------------------------------------------------
 
-#Install packages used if not present
-#------------------------------------
-InstalledPkg_ <- installed.packages()[,"Package"]
-CalledPkg_ <- c("jsonlite", "Rd2md", "purrr")
-IsMissingPkg_ <- !(CalledPkg_ %in% InstalledPkg_)
-if (any(IsMissingPkg_)) {
-  install.packages(CalledPkg_[IsMissingPkg_])
+# Load runtime configuration
+if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
+source(file.path(ve.installer,"scripts","get-runtime-config.R"))
+
+if ( ! suppressWarnings(requireNamespace("jsonlite",quietly=TRUE)) ) {
+  install.packages("jsonlite", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+}
+if ( ! suppressWarnings(requireNamespace("Rd2md",quietly=TRUE)) ) {
+  install.packages("Rd2md", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+}
+if ( ! suppressWarnings(requireNamespace("purrr",quietly=TRUE)) ) {
+  install.packages("purrr", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
 }
 
+# Using visioneval framework we just built to do work here.
+.libPaths(c(ve.lib,.libPaths()))
+
+# Set the boilperplate folder
+ve.boilerplate <- file.path(ve.installer,"boilerplate")
+ve.html <- file.path(ve.boilerplate,"visual_docs")
+
+ve.framework <- pkgs.db[pkgs.framework,]$Package # Expecting one, but could be more
+framework.rd <- file.path(ve.src,ve.framework,"man")
+if ( ! dir.exists(framework.rd) ) {
+  stop("Missing ",framework.rd,". Did you build the modules yet?")
+}
+
+ve.visual.docs <- file.path(ve.docs,ve.framework,"visual_docs","js")
+cat("Building visual documentation into:\n",ve.visual.docs,"\n")
+if ( ! dir.exists(ve.visual.docs) ) {
+  dir.create(ve.visual.docs, recursive=TRUE, showWarnings=FALSE )
+}
+# We created the "js" subdirectory, but we'll also be referring to the
+# parent of that directory (for the .html file copy from boilerplate)
+ve.visual.js <- ve.visual.docs
+ve.visual.docs <- normalizePath(dirname(ve.visual.docs),winslash="/")
+
+# Set up the html boilerplate file (for displaying the .js data)
+ve.html.files <- file.path(ve.html,dir(ve.html,pattern="\\.html$"))
+invisible(file.copy(ve.html.files,ve.visual.docs))
 
 #Make a vector of function documentation file paths
 #--------------------------------------------------
-DocFilePath_ <- "../visioneval/man"
-DocFileNames_ <- dir(DocFilePath_)
+DocFileNames_ <- dir(framework.rd)
 FuncNames_ <- gsub(".Rd", "", DocFileNames_)
-DocFilePaths_ <- file.path(DocFilePath_, dir(DocFilePath_))
-
+DocFilePaths_ <- file.path(framework.rd, dir(framework.rd))
 
 #Identify functions called by each function
 #------------------------------------------
@@ -53,8 +82,9 @@ FunctionCalls_ls <- lapply(FuncNames_, function(x){
 })
 names(FunctionCalls_ls) <- FuncNames_
 
-
 #Iterate through documentation files, parse, find group, add to FunctionDocs_ls
+# NOTE: redundant with build/scripts/build-docs-framework.R - make FunctionDocs_ls
+# into an intermediate buildable so we don't have to do it again.
 #------------------------------------------------------------------------------
 #Initialize a functions documentation list to store documentation by function group
 FunctionDocs_ls <- list(
@@ -85,7 +115,6 @@ for (DocFile in DocFilePaths_) {
   rm(ParsedRd_ls, Group, FunctionName)
 }
 rm(DocFile)
-
 
 #--------------------------------------------
 #CREATE WEB VISUALIZATION DOCUMENTATION FILES
@@ -126,7 +155,6 @@ makeVisList <- function(Doc_ls) {
 #Process list in correct form with correct information
 Vis_ls <- lapply(purrr::flatten(VisDocs_ls), makeVisList)
 
-
 #Define function to clean brackets from JSON created by jsonlite toJson function
 #-------------------------------------------------------------------------------
 cleanJSON <- function(JsonStringToClean) {
@@ -154,7 +182,7 @@ writeNodes <- function(Data_ls) {
     }
   }
   OutJs_[length(Nodes_ls) + 2] <- "]);"
-  writeLines(OutJs_, "functions_doc_files/js/nodes.js")
+  return(OutJs_)
 }
 
 #Define function to create edges data js file that can be used by vis.js
@@ -180,7 +208,7 @@ writeEdges <- function(Data_ls) {
     }
   }
   OutJs_[length(Edges_ls) + 2] <- "]);"
-  writeLines(OutJs_, "functions_doc_files/js/edges.js")
+  return(OutJs_)
 }
 
 #Define function to make an HTML tag text string
@@ -252,111 +280,17 @@ writeFunctionDetails <- function(Data_ls) {
     }
   }
   OutJs_[length(Details_ls) + 2] <- "];"
-  writeLines(OutJs_, "functions_doc_files/js/details.js")
+  return(OutJs_)
 }
 
 #Read functions documentation file and produce nodes.js, edges.js, & details.js
 #------------------------------------------------------------------------------
-writeNodes(Vis_ls)
-writeEdges(Vis_ls)
-writeFunctionDetails(Vis_ls)
+cat("Writing .js files for function relationships.\n")
+OutJs_ <- writeNodes(Vis_ls)
+writeLines(OutJs_, file.path(ve.visual.js,"nodes.js"))
 
+OutJs_ <- writeEdges(Vis_ls)
+writeLines(OutJs_, file.path(ve.visual.js,"edges.js"))
 
-#--------------------------------------------
-#CREATE FUNCTION DOCUMENTATION MARKDOWN FILES
-#--------------------------------------------
-
-#Make lists of function names and paths to Rd files by group
-#-----------------------------------------------------------
-#Function names by group
-FuncNames_ls <- lapply(FunctionDocs_ls, function(x) {
-  unlist(lapply(x, function(y) {
-    y$name
-  }))
-})
-#Rd file paths by group
-DocFilePaths_ls <- lapply(FunctionDocs_ls, function(x) {
-  unlist(lapply(x, function(y) {
-    paste0(DocFilePath_, "/", y$name, ".Rd")
-  }))
-})
-
-#Function to compose markdown for a function
-#-------------------------------------------
-makeFunctionMarkdown <- function(RdFilePath, FunctionCalls_) {
-  #Convert function Rd file to markdown and save to temporary file
-  Rd2md::Rd2markdown(rdfile = RdFilePath, outfile = "temp.md")
-  #Read the contents of the temporary file
-  MdContents_ <- readLines("temp.md")
-  #Add 2 levels to each heading
-  WhichHeadings_ <- grep("#", MdContents_)
-  MdContents_[WhichHeadings_] <- paste0("##", MdContents_[WhichHeadings_])
-  #Add function calls information
-  c(MdContents_, "#### Calls", paste(FunctionCalls_, collapse = ", "), "", "")
-}
-
-#Write user function documentation
-#---------------------------------
-writeLines(
-  c("### Appendix G: VisionEval Model User Functions", "", ""), 
-  "markdown_files/user.md"
-  )
-Con <- file("markdown_files/user.md", "a")
-for (i in 1:length(DocFilePaths_ls$user)) {
-  Markdown_ <- makeFunctionMarkdown(
-    DocFilePaths_ls$user[i], 
-    FunctionCalls_ls[[FuncNames_ls$user[i]]]
-    )
-  writeLines(Markdown_, Con)
-}
-close(Con)
-  
-#Write developer function documentation
-#--------------------------------------
-writeLines(
-  c("### Appendix H: VisionEval Module Developer Functions", "", ""), 
-  "markdown_files/developer.md"
-)
-Con <- file("markdown_files/developer.md", "a")
-for (i in 1:length(DocFilePaths_ls$developer)) {
-  Markdown_ <- makeFunctionMarkdown(
-    DocFilePaths_ls$developer[i], 
-    FunctionCalls_ls[[FuncNames_ls$developer[i]]]
-  )
-  writeLines(Markdown_, Con)
-}
-close(Con)
-
-#Write control function documentation
-#------------------------------------
-writeLines(
-  c("### Appendix I: VisionEval Framework Control Functions", "", ""), 
-  "markdown_files/control.md"
-)
-Con <- file("markdown_files/control.md", "a")
-for (i in 1:length(DocFilePaths_ls$control)) {
-  Markdown_ <- makeFunctionMarkdown(
-    DocFilePaths_ls$control[i], 
-    FunctionCalls_ls[[FuncNames_ls$control[i]]]
-  )
-  writeLines(Markdown_, Con)
-}
-close(Con)
-
-#Write datastore function documentation
-#--------------------------------------
-writeLines(
-  c("### Appendix J: VisionEval Framework Datastore Functions", "", ""), 
-  "markdown_files/datastore.md"
-)
-Con <- file("markdown_files/datastore.md", "a")
-for (i in 1:length(DocFilePaths_ls$datastore)) {
-  Markdown_ <- makeFunctionMarkdown(
-    DocFilePaths_ls$datastore[i], 
-    FunctionCalls_ls[[FuncNames_ls$datastore[i]]]
-  )
-  writeLines(Markdown_, Con)
-}
-close(Con)
-
-
+OutJs_ <- writeFunctionDetails(Vis_ls)
+writeLines(OutJs_, file.path(ve.visual.js,"details.js"))

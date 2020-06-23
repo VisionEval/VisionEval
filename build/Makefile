@@ -157,6 +157,13 @@ $(VE_LOGS)/framework-docs.built: $(VE_LOGS)/modules.built scripts/build-docs-fra
 	$(RSCRIPT) scripts/build-docs-framework.R
 	@touch $(VE_LOGS)/framework-docs.built
 
+# Visual docs (HTML page with graph of function call structures)
+visual-docs: $(VE_LOGS)/visual-docs.built
+
+$(VE_LOGS)/visual-docs.built: $(VE_LOGS)/framework-docs.built scripts/build-docs-visual.R
+	$(RSCRIPT) scripts/build-docs-visual.R
+	@touch $(VE_LOGS)/visual-docs.built
+
 # This rule and the following one will assemble the documentation
 docs: $(VE_LOGS)/docs.built
 

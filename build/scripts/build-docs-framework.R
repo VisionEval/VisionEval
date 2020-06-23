@@ -44,9 +44,7 @@ if ( ! dir.exists(framework.rd) ) {
 ve.framework.docs <- file.path(ve.src,ve.framework,"inst","framework_docs")
 cat("Building framework documentation into:\n",ve.framework.docs,"\n")
 if ( ! dir.exists(ve.framework.docs) ) {
-  cat("Creating...")
   dir.create(ve.framework.docs, recursive=TRUE, showWarnings=FALSE )
-  cat(dir.exists(ve.framework.docs),"\n")
 }
 TempDir_ <- file.path(ve.framework.docs,"temp")
 if ( ! dir.exists(TempDir_) ) {
