@@ -11,7 +11,7 @@ Description: Contains modules for predicting household average DVMT, trips by
     alternative modes (walking, biking, transit), household vehicle trips, and 
     percentage reduction in household DVMT a result of diversion of SOV DVMT to 
     slower vehicle modes (bike etc.)
-License: Apache License 2.0
+License: file LICENSE
 LazyData: TRUE
 Depends: R (>= 3.1.0)
 Imports:

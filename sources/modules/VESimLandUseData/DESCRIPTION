@@ -12,7 +12,7 @@ Description: This package processes data from several sources to produce a
     their likely land use attributes. Datasets from the U.S. Census 2015
     American Community Survey, EPA Smart Location Database (SLD), and National
     Transit Database (NTD) are combined to produce this dataset.
-License: Apache License 2.0
+License: file LICENSE
 LazyData: TRUE
 Depends: R (>= 3.1.0)
 Imports:

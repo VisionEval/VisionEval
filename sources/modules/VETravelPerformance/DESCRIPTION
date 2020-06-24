@@ -14,7 +14,7 @@ Description: Contains modules for calculating fuel consumption, emissions,
     and travel time). Calculates fuel consumption (including electricity) and
     greenhouse gas emissions for households, light-duty commercial service
     vehicles, heavy trucks, and public transit modes.
-License: Apache License 2.0
+License: file LICENSE
 LazyData: TRUE
 Depends: R (>= 3.1.0)
 Imports:

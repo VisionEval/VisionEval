@@ -8,7 +8,7 @@ Maintainer: Aditya Gore <aditya.gore@rsginc.com>, Ben Stabler <ben.stabler@rsgin
 Copyright: AASHTO
 URL: https://github.com/gregorbj/VisionEval/sources/VEGUI
 Description: GUI for running VisionEval.
-License: Apache License 2.0
+License: file LICENSE
 LazyData: TRUE
 Depends: R (>= 3.1.0)
 Imports:

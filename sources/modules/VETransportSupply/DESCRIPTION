@@ -12,7 +12,7 @@ Description: This package contains several modules which attribute the
     including freeway lane miles, public transportation revenue miles,
     neighborhood transit accessibility, and calculation of transit vehicle miles
     by vehicle type from transit revenue miles.
-License: Apache License 2.0
+License: file LICENSE
 LazyData: TRUE
 Depends: R (>= 3.1.0)
 Imports:

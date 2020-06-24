@@ -16,6 +16,7 @@
 #containing travel and other relevant data for each survey household.
 # library(visioneval)
 
+globalVariables("Per_df")
 
 #==================
 #LOAD NHTS DATASETS
