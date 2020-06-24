@@ -34,13 +34,14 @@ ve.models <- pkgs.db[pkgs.model,]$Package
 # For each module package, find the list of data elements and extract those ending with
 # "Specifications"
 
+cat("Scanning packages for modules\n")
 ve.modules <- data.frame(Item=character(0),Package=character(0))
+p.env <- new.env()
 for ( p in ve.packages ) {
-  d <- data(package=p,lib.loc=ve.lib)
+  d <- data(package=p,lib.loc=ve.lib,envir=p.env)
   items <- d$results[,"Item"]
   items <- items[grep("Specifications$",items)] # d$results, and thus "items", is an R matrix
   if ( length(items) < 1 ) {
-    cat("No registry items for package '",p,"'\n")
     next
   }
   items <- unlist(strsplit(items,"Specifications"))
@@ -50,10 +51,9 @@ for ( p in ve.packages ) {
 # writeVENameRegistry weirdly requires the registry file already to exist
 NameRegistry_ls <- list(Inp=list(),Set=list())
 
-cat("Registry calls:\n")
+cat("Building registry calls\n")
 registry <- apply(ve.modules,1,function(x) {
-    cat("Item=",x["MODULE"],"; Package=",x["PACKAGE"],"\n")
-    visioneval::writeVENameRegistry(x["MODULE"],x["PACKAGE"],NameRegistryList=TRUE)
+    suppressWarnings(visioneval::writeVENameRegistry(x["MODULE"],x["PACKAGE"],NameRegistryList=TRUE))
   }
 )
 
@@ -62,12 +62,14 @@ for ( m in registry ) {
   NameRegistry_ls$Set <- c(NameRegistry_ls$Set,m$Set)
 }
 
+cat("Writing registry file\n")
 NameRegistryFile <- file.path(ve.src,"VENameRegistry.json")
 json <- jsonlite::toJSON(NameRegistry_ls,pretty=TRUE)
 writeLines(json,NameRegistryFile)
 # json <- readLines(NameRegistryFile) # Can't use it directly since it won't make Inp or Set into data.frames otherwise
 # reg <- jsonlite::fromJSON(json)
 
+cat("Parsing model scripts for use of modules\n")
 model.path <- file.path(ve.runtime,"models")
 model.mods <- list()
 models <- lapply(ve.models,FUN=function(model) {

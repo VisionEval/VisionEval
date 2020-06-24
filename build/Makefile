@@ -2,6 +2,7 @@
 # Or export them from your environment
 VE_CONFIG?=config/VE-config.yml
 VE_RUNTESTS?=Default
+VE_BRANCH?=$(shell git branch --show-current || echo visioneval)
 ifeq ($(OS),Windows_NT)
   VE_R_VERSION?=4.0.1
   RSCRIPT:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
@@ -18,14 +19,16 @@ endif
 ifeq ($(RSCRIPT),"")
   $(error R Version $(VE_R_VERSION) not found)
 else
-  $(info VE_R_VERSION is $(VE_R_VERSION), using [$(RSCRIPT)])
+  $(info R Version     : R $(VE_R_VERSION) [using $(RSCRIPT)])
+  $(info Configuration : $(VE_CONFIG))
+  $(info Git Branch    : $(VE_BRANCH))
 endif
 
+# Must export to have available for runR
 export VE_R_VERSION VE_CONFIG VE_RUNTESTS RSCRIPT
 
 # If the correct installation is in place, VE_BRANCH will be set
 # automaticall when the VE_MAKEVARS file gets built
-VE_BRANCH?=$(shell git branch --show-current)
 VE_MAKEVARS?=ve-output-$(VE_BRANCH)-$(VE_R_VERSION).make
 export VE_BRANCH VE_MAKEVARS
 
@@ -38,14 +41,41 @@ include $(VE_MAKEVARS)
 #   and others
 export VE_RUNTIME_CONFIG
 
-.PHONY: configure repository modules binary runtime installers docs all\
-	clean lib-clean module-clean runtime-clean build-clean\
-	dev-clean really-clean docs-clean installer-clean inventory-clean\
-        inventory runtime-packages\
-	docker-clean docker-output-clean docker
+.PHONY: list-targets help show-defaults\
+	configure repository lib modules runtime docs\
+	build all dev\
+	installer installers installer-bin installer-full\
+	configure-clean repository-clean lib-clean modules-clean runtime-clean docs-clean\
+	clean build-clean all-clean dev-clean clean-clean\
+	installer-clean installer-bin-clean installer-full-clean\
+	configure-reset repository-reset lib-reset modules-reset runtime-reset docs-reset\
+	reset build-reset all-reset dev-reset clean-reset docs-reset\
+	installer-reset installer-bin-reset installer-full-reset
 
-all: configure repository binary modules runtime # docs - need that for installer, but not for local runtime
+# colon (:) is "do-nothing" rule for shell
+# ake will just echo these commands with variable expansion
+all build dev: configure repository lib modules runtime # docs - need that for installer, but not for local runtime
 
+list-targets help:
+	@echo 'VisionEval Build System (using "make" or "ve.build()")' 
+	@echo 'The following build targets are available'
+	@echo
+	@echo 'all            = build a standard runtime (a.k.a. "build" or "dev")'
+	@echo '                   (can also use "build" or "dev", or not provide a target)'
+	@echo '    \'all\' has the following sub-steps:
+	@echo '     configure = parse the configuration file and set up output directories'
+	@echo '    repository = download the required runtime package dependencies'
+	@echo '           lib = create runtime package library and install the dependencies'
+	@echo '       modules = build the VisionEval framework and module packages'
+	@echo '       runtime = set up static files in the runtime directory'
+	@echo 'docs           = build the documentation'
+	@echo 'installer      = binary installer for the current machine architecture'
+	@echo 'installer-full = installer using only source packages (including dependencies)'
+	@echo 'clean          = remove ALL the build artifacts and re-do (almost) everything'
+	@echo 'reset          = remove all the success flags from previous builds'
+	@echo
+	@echo '    suffix any target with "-reset" to ignore previous builds'
+	@echo '    suffix any target with "-clean" to remove previous build artifacts'
 show-defaults: $(VE_MAKEVARS)
 	: Make defaults:
 	: VE_MAKEVARS  $(VE_MAKEVARS)   # File containing runtime variables
@@ -66,50 +96,61 @@ show-defaults: $(VE_MAKEVARS)
 	: VE_SRC       $(VE_SRC)        # Location of source folder
 	: VE_PKGS      $(VE_PKGS)       # Location of runtime packages (for installer/docker)
 
-# clean targets to remove built artifacts, triggering full rebuild
+# reset targets to force a "visit" by the builder script for that element.
+# The builder scripts do the traditional "make" work of checking for out-of-date/up-to-date targets.
 
-build-clean: # Resets the built status of all the targets (but doesn't touch outputs)
+reset: build-reset
+
+configure-reset build-reset all-reset dev-reset clean-reset repository-reset:
 	[[ -n "$(VE_LOGS)" ]] && rm -rf $(VE_LOGS)/*
 	rm -f $(VE_MAKEVARS)
 
-module-clean: $(VE_MAKEVARS) # Reset all VE modules for complete rebuild
-	[[ -n "$(VE_REPOS)" ]] && rm -rf $(VE_REPOS)/*
-	rm -rf $(VE_LIB)/visioneval $(VE_LIB)/VE*
-	rm -f $(VE_LOGS)/modules.built
+lib-reset:
+	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/velib.built
 
-lib-clean: $(VE_MAKEVARS) # Reset installed package library for complete rebuild
-	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/*
-	rm -f $(VE_LOGS)/velib.built
+modules-reset:
+	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/modules.built
 
-runtime-clean: $(VE_MAKEVARS) # Reset all models and scripts for complete rebuild
-	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/* && rm -rf $(VE_RUNTIME)/.Rprofile $(VE_RUNTIME)/.Rprof.user
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/runtime.built
+runtime-reset: runtime-clean
 
-src-clean: $(VE_MAKEVARS) # Reset the build source directory for the packages
-	[[ -n "$(VE_SRC)" ]] && rm -rf $(VE_SRC)/*
-
-docs-clean: $(VE_MAKEVARS) # Clear the docs
-	[[ -n "$(VE_DOCS)" ]] && rm -rf $(VE_DOCS)/*
+docs-reset:
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/docs.built
 
-installer-clean: $(VE_MAKEVARS) # Reset the installers for rebuild
+installer-reset installer-bin-reset installer-full-reset:
+	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
+
+# clean targets perform a reset and remove built artifacts, triggering full rebuild
+
+configure-clean build-clean: build-reset # Resets the built status of all the targets (but doesn't touch outputs)
+
+modules-clean: $(VE_MAKEVARS) modules-reset # Reset all VE modules for complete rebuild
+	[[ -n "$(VE_REPOS)" ]] && rm -rf $(VE_REPOS)/*
+	[[ -n "$(VE_SRC)" ]] && rm -rf $(VE_SRC)/*
+
+lib-clean: $(VE_MAKEVARS) lib-reset # Reset installed package library for complete rebuild
+	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/*
+
+runtime-clean: $(VE_MAKEVARS) runtime-reset # Reset all models and scripts for complete rebuild
+	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/* && rm -rf $(VE_RUNTIME)/.Rprofile $(VE_RUNTIME)/.Rprof.user
+
+docs-clean: $(VE_MAKEVARS) docs-reset # Clear the docs
+	[[ -n "$(VE_DOCS)" ]] && rm -rf $(VE_DOCS)/*
+
+installer-clean: $(VE_MAKEVARS) installer-reset # remove the installers for rebuild (installers always imply "clean")
 	# installers have the R version coded in their .zip name
 	[[ -n "$(VE_ZIPOUT)" ]] && rm -f $(VE_ZIPOUT)/*.zip
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
 
-inventory-clean:
-	rm -f $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv
-
 repository-clean: clean # Reset the CRAN, BioConductor and Github dependency packages for fresh download
 	[[ -n "$(VE_DEPS)" ]] && rm -rf $(VE_DEPS)/*
 
-dev-clean: $(VE_MAKEVARS) # Reset the developer packages for VE-Installer itself
+dev-clean: $(VE_MAKEVARS) build-reset # Reset the developer packages for VE-Installer itself
 	[[ -n "$(VE_DEVLIB)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_DEVLIB)/*
 
-clean: $(VE_MAKEVARS) build-clean # Reset everything except developer packages; won't clean docs
+clean all-clean: $(VE_MAKEVARS) build-clean docs-clean # Reset everything except developer packages
 	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_BRANCH)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_OUTPUT)/$(VE_BRANCH)/$(VE_R_VERSION)
 
-really-clean: clean depends-clean dev-clean # Scorched earth: reset all VE-Installer artifacts
+clean-clean: all-clean dev-clean # Scorched earth: reset all installer artifacts
 
 # The remaining targets build the various VisionEval pieces
 
@@ -120,7 +161,11 @@ configure: $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG)
 # This rule reads the configuration about what to build. Use build-clean to reset
 # Note: build-config.R identifies VE_CONFIG via the exported environment variable
 $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG): scripts/build-config.R $(VE_CONFIG) R-versions.yml
-	[[ $(RSCRIPT) != "" ]] && $(RSCRIPT) scripts/build-config.R
+	: Build Environment:
+	:     R Version = $(VE_R_VERSION)
+	: Configuration = $(VE_CONFIG)
+	:    Git branch = $(VE_BRANCH)
+	@[[ $(RSCRIPT) != "" ]] && $(RSCRIPT) scripts/build-config.R
 
 # This rule and the following one rebuild the repository of dependencies for VE_R_VERSION
 # Will skip if repository.built is up to date with VE_Config and the scripts themselves
@@ -134,7 +179,7 @@ $(VE_LOGS)/repository.built: $(VE_RUNTIME_CONFIG) scripts/build-repository.R scr
 # This rule and the following one rebuild the installed library of dependencies and VE packages
 # Will skip if velib.built is up to date with the repository build and with the script itself
 # Use build-clean to reset velib.built and lib-clean to force complete rebuild of library
-binary: $(VE_LOGS)/velib.built
+lib: $(VE_LOGS)/velib.built
 
 $(VE_LOGS)/velib.built: $(VE_LOGS)/repository.built scripts/build-velib.R
 	$(RSCRIPT) scripts/build-velib.R
@@ -150,26 +195,15 @@ $(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
 	$(RSCRIPT) scripts/build-modules.R
 	@touch $(VE_LOGS)/modules.built
 
-# Framework docs
-framework-docs: $(VE_LOGS)/framework-docs.built
-
-$(VE_LOGS)/framework-docs.built: $(VE_LOGS)/modules.built scripts/build-docs-framework.R
-	$(RSCRIPT) scripts/build-docs-framework.R
-	@touch $(VE_LOGS)/framework-docs.built
-
-# Visual docs (HTML page with graph of function call structures)
-visual-docs: $(VE_LOGS)/visual-docs.built
-
-$(VE_LOGS)/visual-docs.built: $(VE_LOGS)/framework-docs.built scripts/build-docs-visual.R
-	$(RSCRIPT) scripts/build-docs-visual.R
-	@touch $(VE_LOGS)/visual-docs.built
-
 # This rule and the following one will assemble the documentation
 docs: $(VE_LOGS)/docs.built
 
 $(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built\
-	$(VE_LOGS)/framework-docs.built $(VE_LOGS)/visual-docs.built\
-	$(VE_LOGS)/velib.built scripts/build-docs.R
+	$(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv\
+	$(VE_LOGS)/velib.built scripts/build-docs.R scripts/build-inventory.R
+	$(RSCRIPT) scripts/build-docs-framework.R
+	$(RSCRIPT) scripts/build-docs-visual.R
+	$(RSCRIPT) scripts/build-inventory.R
 	$(RSCRIPT) scripts/build-docs.R
 	@touch $(VE_LOGS)/docs.built
 
@@ -182,17 +216,7 @@ $(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/* 
 	$(RSCRIPT) scripts/build-runtime.R
 	@touch $(VE_LOGS)/runtime.built
 
-# The next two rules will build the VisionEval Name Registry (listing
-# all the modules and packages, and what their Inp and Set
-# specifications are), and the Model Packages (listing which models
-# use which modules from which packages). These are constructed
-# programmatically from the VisionEval source tree.
-# Results are place in VE_SRC
-
-inventory: $(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv #  $(VE_SRC)/module_status.csv
-
-$(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv: scripts/build-inventory.R $(VE_LOGS)/modules.built
-	$(RSCRIPT) scripts/build-inventory.R
+: scripts/build-inventory.R $(VE_LOGS)/modules.built
 
 # The next rules build the installer .zip files
 # 'bin' is the binary installer for the local architecture (e.g. Windows or MacOSX)
@@ -202,7 +226,7 @@ installers: installer-bin installer-full
 
 installer installer-bin: $(VE_LOGS)/installer-bin.built
 
-$(VE_LOGS)/installer-bin.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/docs.built $(VE_LOGS)/runtime.built  \
+$(VE_LOGS)/installer-bin.built: inventory $(VE_RUNTIME_CONFIG) $(VE_LOGS)/docs.built $(VE_LOGS)/runtime.built\
             scripts/build-runtime-packages-bin.R scripts/build-installer-base.R scripts/build-installer-bin.R
 	$(RSCRIPT) scripts/build-runtime-packages-bin.R
 	$(RSCRIPT) scripts/build-installer-base.R

@@ -119,13 +119,15 @@ for ( i in 1:nrow(ve.getdocs) ) {
     }
   }
   if ( length(doc.files)>0 ) {
-    cat("=== Rendering docs for '",docs$Package,"' (as '",type,"'):\n",sep="")
+    cat("=== Rendering docs for '",docs$Package,"' (as '",type,"')...",sep="")
+    up.to.date <- TRUE
     for ( f in doc.files ) {
       # Note that rmarkdown will create output_dir and its components if they
-      # do not already exist, so we don't need
+      # do not already exist, so we don't need to
       expected.of <- file.path(out.dir,sub(doc.file.pattern,".pdf",basename(f)))
       if ( newerThan(f,expected.of) ) {
-        cat("Rendering",sub(root,"",f),"...")
+        up.to.date <- FALSE
+        cat("\nRendering",sub(root,"",f),"...")
         of <- rmarkdown::render(
           f
           , output_dir=out.dir
@@ -133,15 +135,16 @@ for ( i in 1:nrow(ve.getdocs) ) {
           , quiet=TRUE
           # , param=value # do it like this and you can drop options in and out with a single #
         )
-        cat("\nDone as",sub(file.path(ve.docs),"",of),"\n")
+        cat("\nDone as",sub(file.path(ve.docs),"",of))
         if ( of != expected.of ) {
-          cat("DIFFERENT NAME\n")
-          cat(of,"\n")
-          cat(expected.of,"\n")
+          cat("\nDIFFERENT NAME")
+          cat("\n",of)
+          cat("\n",expected.of)
         }
-      } else {
-        cat("Up to date: ",sub(file.path(ve.docs),"",expected.of),"\n")
       }
     }
+    if ( up.to.date ) {
+      cat("Up to date.\n")
+    } else cat("\n")
   }
 }

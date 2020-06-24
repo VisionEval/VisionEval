@@ -397,6 +397,7 @@ evalq(
      VE_R_VERSION      = this.R
     ,VE_LOGS           = ve.logs
     ,VE_DEVLIB         = dev.lib
+    ,VE_BRANCH         = ve.branch
     ,VE_RUNTIME_CONFIG = ve.runtime.config
     ,VE_PLATFORM       = ve.platform
     ,VE_INSTALLER      = ve.installer
