@@ -55,6 +55,7 @@ export VE_RUNTIME_CONFIG
 # colon (:) is "do-nothing" rule for shell
 # ake will just echo these commands with variable expansion
 all build dev: configure repository lib modules runtime # docs - need that for installer, but not for local runtime
+	@echo Build complete
 
 list-targets help:
 	@echo 'VisionEval Build System (using "make" or "ve.build()")' 
@@ -156,7 +157,6 @@ clean-clean: all-clean dev-clean # Scorched earth: reset all installer artifacts
 
 # Make sure configuration is up to date
 configure: $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG)
-	@echo Configuration complete
 
 # This rule reads the configuration about what to build. Use build-clean to reset
 # Note: build-config.R identifies VE_CONFIG via the exported environment variable
