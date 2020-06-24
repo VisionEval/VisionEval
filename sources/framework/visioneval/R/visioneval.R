@@ -5,6 +5,7 @@
 #This script defines the main functions that implement the VisionEval framework
 #and are intended to be exported.
 
+utils::globalVariables(c("initDatastore","Year","ModelState_ls"))
 
 #INITIALIZE MODEL
 #================
@@ -97,7 +98,7 @@ initializeModel <-
     } else {
       if(!"ModelState_ls" %in% ls()){
         # Load modelstate file in the global environment
-        ModelState_ls <<- readModelState()
+        assign("ModelState_ls", readModelState(), envir=.GlobalEnv)
       }
       writeLog("option visioneval.keepExistingModelState TRUE so skipping initModelStateFile and initLog",
                Print=TRUE)

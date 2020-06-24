@@ -191,7 +191,8 @@ $(VE_LOGS)/velib.built: $(VE_LOGS)/repository.built scripts/build-velib.R
 modules: $(VE_LOGS)/modules.built
 
 $(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
-        scripts/build-modules.R
+        scripts/build-modules.R scripts/build-framework.R
+	$(RSCRIPT) scripts/build-framework.R
 	$(RSCRIPT) scripts/build-modules.R
 	@touch $(VE_LOGS)/modules.built
 
@@ -199,7 +200,6 @@ $(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
 docs: $(VE_LOGS)/docs.built
 
 $(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built\
-	$(VE_SRC)/VENameRegistry.json $(VE_SRC)/VEModelPackages.csv\
 	$(VE_LOGS)/velib.built scripts/build-docs.R scripts/build-inventory.R
 	$(RSCRIPT) scripts/build-docs-framework.R
 	$(RSCRIPT) scripts/build-docs-visual.R

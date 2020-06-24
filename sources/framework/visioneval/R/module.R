@@ -4,6 +4,7 @@
 
 #This script defines functions related to the development and use of modules.
 
+utils::globalVariables(c("readFromTable","initDatastore"))
 
 #DEFINE LIST ALIAS
 #=================
@@ -23,7 +24,7 @@ item <- list
 
 #' Alias for list function.
 #'
-#' \code{items} a visioneval framework \strong{module developer} function that is
+#' \code{items} a visioneval framework module developer function that is
 #' an alias for the list function whose purpose is to make module specifications
 #' easier to read.
 #'

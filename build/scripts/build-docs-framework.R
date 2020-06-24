@@ -59,7 +59,7 @@ need.new.docs <- newerThan(framework.rd,ve.framework.docs)
 
 if ( need.new.docs ) {
 
-  cat("Building Framework Documentation into:\n",ve.visual.docs,"\n")
+  cat("Building Framework Documentation into:\n",ve.framework.docs,"\n")
 
   #Make a vector of function documentation file paths
   #Look in the "src" directory for the documents (as built)
@@ -123,7 +123,7 @@ if ( need.new.docs ) {
   }
   #Iterate through documentation files
   for (DocFile in DocFilePaths_) {
-  #  cat("Parsing file:",DocFile,"\n")
+    cat("Parsing file:",DocFile,"\n")
     ParsedRd_ls <- Rd2md::parseRd(tools::parse_Rd(DocFile))
     Group <- getGroup(ParsedRd_ls)
     ParsedRd_ls$group <- Group

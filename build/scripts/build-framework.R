@@ -27,7 +27,7 @@ if ( ! suppressWarnings(require("rmarkdown",quietly=TRUE)) ) {
   install.packages("rmarkdown", lib=dev.lib, type=.Platform$pkgType )
 }
 
-message("========== BUILD MODULES ==========")
+message("========== BUILD FRAMEWORK ==========")
 
 # Reach for ve.lib first when seeking packages used by the ones we're
 # building
@@ -44,8 +44,8 @@ if ( ve.binary.build ) {
   built.path.binary <- NULL
 }
 
-# Where to find the module package sources (in the VisionEval repository)
-ve.packages  <- pkgs.db[pkgs.module,]
+# Where to find the package sources (in the VisionEval repository)
+ve.packages <- pkgs.db[pkgs.framework,]
 
 package.names <- ve.packages$Package
 package.paths <- file.path(ve.packages[,"Root"], ve.packages[,"Path"], package.names)
@@ -274,7 +274,7 @@ for ( module in seq_along(package.names) ) {
       # prevents devtools:build from correctly building from a source package (it
       # requires an unpacked source directory, which we have in build.dir)
       cat("building",package.names[module],"from",build.dir,"as",ve.build.type,"\n")
-      cat("building into",built.path.binary,"\n")
+      cat("building framework into",built.path.binary,"\n")
 
       obsolete <- dir(built.path.binary,pattern=paste0(package.names[module],"*_"))
       if ( length(obsolete)>0 ) cat("obsolete:",obsolete,"\n")
@@ -285,14 +285,14 @@ for ( module in seq_along(package.names) ) {
       }
       num.bin <- num.bin + 1
     } else {
-      cat("Existing binary package:",package.names[module],ifelse(package.installed,"(Already Installed)",""),"\n")
+      cat("Existing framework binary package:",package.names[module],ifelse(package.installed,"(Already Installed)",""),"\n")
       built.package <- file.path(built.path.binary, modulePath(package.names[module], built.path.binary))
     }
     if ( ! package.installed ) {
       # On Windows, install from the binary package
       cat("++++++++++ Installing built package:",built.package,"\n")
       if ( package.names[module] %in% pkgs.installed ) {
-        cat("First removing obsolete package version:",pkgs.version[package.names[module]],"\n")
+        cat("First removing obsolete framework package version:",pkgs.version[package.names[module]],"\n")
         remove.packages(package.names[module])
       }
       install.packages(built.package, repos=NULL, lib=ve.lib, type=ve.build.type) # so they will be available for later modules
@@ -304,7 +304,7 @@ for ( module in seq_along(package.names) ) {
       if ( package.names[module] %in% pkgs.installed ) remove.package(package.names[module])
       install.packages(src.module, repos=NULL, lib=ve.lib, type="source")
     } else {
-      cat("Existing source package",package.names[module],"(Already Installed)\n")
+      cat("Existing framework source package",package.names[module],"(Already Installed)\n")
     }
   }
 }
@@ -316,17 +316,17 @@ if ( num.src > 0 ) {
   cat("Writing source PACKAGES file\n")
   tools::write_PACKAGES(built.path.src, type="source")
 } else {
-  cat("No source packages needed to be built\n")
+  cat("Framework source pacakge up to date\n")
 }
 if ( ve.binary.build ) {
   if ( num.bin > 0 ) {
     cat("Writing binary PACKAGES file\n")
     tools::write_PACKAGES(built.path.binary, type=ve.build.type)
   } else {
-    cat("No binary packages needed to be built.\n")
+    cat("Framework binary package up to date\n")
   }
 }
 
 # Completion message, reporting what happened in this step
 building <- paste( "building",ifelse(ve.runtests,", testing","") )
-cat("++++++++++ Done ",building," and installing VisionEval packages.\n",sep="")
+cat("++++++++++ Done ",building," and installing VisionEval framework.\n",sep="")

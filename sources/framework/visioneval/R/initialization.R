@@ -5,6 +5,7 @@
 #This script defines various functions that are invoked to initialize a model
 #run. Several of the functions are also invoked when modules are run.
 
+utils::globalVariables(c("initTable","writeToTable","ModelState_ls","listDatastore"))
 
 #INITIALIZE MODEL STATE
 #======================
@@ -61,12 +62,13 @@ initModelStateFile <-
       )
       stop(Message)
     } else {
-      ModelState_ls <- jsonlite::fromJSON(ParamFilePath)
-      ModelState_ls$LastChanged <- Sys.time()
-      ModelState_ls$Deflators <- read.csv(DeflatorFilePath, as.is = TRUE)
-      ModelState_ls$Units <- read.csv(UnitsFilePath, as.is = TRUE)
-      save(ModelState_ls, file = "ModelState.Rda")
-      ModelState_ls <<- ModelState_ls
+      newModelState_ls <- jsonlite::fromJSON(ParamFilePath)
+      newModelState_ls$LastChanged <- Sys.time()
+      newModelState_ls$Deflators <- read.csv(DeflatorFilePath, as.is = TRUE)
+      newModelState_ls$Units <- read.csv(UnitsFilePath, as.is = TRUE)
+      assign("ModelState_ls",newModelState_ls,envir=.GlobalEnv)
+      # ModelState_ls <<- newModelState_ls
+      save(ModelState_ls, envir=.GlobalEnv, file = "ModelState.Rda")
     }
   }
   TRUE
