@@ -1230,9 +1230,9 @@ summarizeDatasets <-
 #=============================================
 #' Calculate summary measures for a region and organize results in a table.
 #'
-#' \code{calcRegionSummaryMeasures} a visioneval framework user function that calculates
-#' summary measures for a model region for specified model run years and organizes the
-#' results in a table.
+#' \code{calcRegionSummaryMeasures} a visioneval framework model user function that
+#' calculates summary measures for a model region for specified model run years and
+#' organizes the results in a table.
 #'
 #' This function computes summary measures for a model region for specified
 #' model run years and organizes the results in a table. The function calls the
@@ -1242,31 +1242,31 @@ summarizeDatasets <-
 #' or that may be saved to a csv-formatted text file instead. The JSON-formatted
 #' file which includes the specifications has a structure like the following
 #' example which specifies the calculation of 2 measures:
-#' {
-#'   "Datastore": {
+#' \{
+#'   "Datastore": \{
 #'     "Path": "Datastore",
 #'     "Type": "RD"
-#'   },
-#'   "Measures": {
-#'     "Household_DVMT":{
+#'   \},
+#'   "Measures": \{
+#'     "Household_DVMT":\{
 #'       "Calculation": "sum(Dvmt)",
-#'       "Units": {
+#'       "Units": \{
 #'         "Dvmt": "MI/DAY"
-#'       },
+#'       \},
 #'       "Table": "Household",
 #'       "Description": "Total DVMT of households residing in the region."
-#'     },
-#'     "Average_Per_Capita_DVMT":{
+#'     \},
+#'     "Average_Per_Capita_DVMT":\{
 #'       "Calculation": "sum(Dvmt) / sum(HhSize)",
-#'       "Units": {
+#'       "Units": \{
 #'       "HhSize": "PRSN",
 #'       "Dvmt": "MI/DAY"
-#'       },
+#'       \},
 #'       "Table": "Household",
 #'       "Description": "Total population residing in the region."
-#'     }
-#'   }
-#' }
+#'     \}
+#'   \}
+#' \}
 #'
 #' The 'Datastore' property identies the path name and type for the datastore.
 #' 'Path' names can either be relative to the working directory or absolute.
