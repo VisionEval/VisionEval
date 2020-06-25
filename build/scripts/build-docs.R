@@ -112,7 +112,7 @@ for ( i in 1:nrow(ve.getdocs) ) {
     }
   } else { 
     for (d in doc.dir) {
-      these.files <- dir(d,pattern=doc.file.pattern,full.names=TRUE)
+      these.files <- dir(d,pattern=doc.file.pattern,full.names=TRUE,recursive=TRUE)
       if ( length(these.files)>0 ) {
         doc.files <- c(doc.files,these.files)
       }

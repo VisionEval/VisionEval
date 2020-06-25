@@ -43,7 +43,7 @@
 #' @export
 listDatastoreRD <- function(DataListing_ls = NULL) {
   #Load the model state file
-  if (exists("ModelState_ls")) {
+  if (exists("ModelState_ls")) { # look in "ve.model" environment specifically
     G <- getModelState()
   } else {
     G <- readModelState()

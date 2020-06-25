@@ -96,7 +96,7 @@ initializeModel <-
       rm(Msg)
       #Otherwise read the preExistingModelState
     } else {
-      if(!"ModelState_ls" %in% ls()){
+      if(!"ModelState_ls" %in% ls()){  # Check in "ve.model" environment
         # Load modelstate file in the global environment
         assign("ModelState_ls", readModelState(), envir=.GlobalEnv)
       }
@@ -204,7 +204,7 @@ initializeModel <-
         RunDstoreType <- G$DatastoreType
         #Load datastore type
         LoadEnv <- new.env()
-        load(file.path(LoadDstoreDir, "ModelState.Rda"), envir = LoadEnv)
+        load(file.path(LoadDstoreDir, "ModelState.Rda"), envir = LoadEnv) # Open into ve.model environment
         LoadDstoreType <- LoadEnv$ModelState_ls$DatastoreType
         #Check that run and load datastores are of same type
         if (RunDstoreType != LoadDstoreType) {
@@ -854,5 +854,3 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
     )
   }
 }
-
-# TODO: Run the steps from ModelScriptFile (equivalently getModelState()$ModuleCalls_df)

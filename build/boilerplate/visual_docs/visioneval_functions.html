@@ -25,18 +25,28 @@
     VisionEval Function Relationships and Details
   </h2>
   <p>
-    <strong>blue</strong> = model user functions; <strong>green</strong> = model developer functions; <strong>yellow</strong> = framework control functions; <strong>red</strong> = HDF5 datastore interaction functions
+     <strong>blue</strong> = model user functions;
+     <strong>gray</strong> = query user functions;
+     <strong>green</strong> = model developer functions;
+     <strong>yellow</strong> = framework control functions;
+     <strong>pink</strong> = datastore interaction functions
   </p>
   <p>
-    <strong>Note</strong> that datastore functions are present to support different types of datastores. These are distinguished by the capitalized last two letters of the function names. Currently two types of datastores are supported, R data files (RD) and HDF5 files (H5). The type of datastore does not affect the function call relationships of the datastore functions. The datastore functions shown are the RD version functions.
+     <strong>Note</strong> that datastore functions are present to support different types of
+     datastores. These are distinguished by the capitalized last two letters of the function names.
+     Currently two types of datastores are supported, R data files (RD) and HDF5 files (H5). The type
+     of datastore does not affect the function call relationships of the datastore functions. The
+     datastore functions shown are the RD version functions.
   </p>
   <h3>
     Network View Frame
   </h3>
   <p>
-    Click anywhere in the following network view frame to pan the view. Use mouse wheel to zoom in and out of view. Click on a function 'bubble' to highlight call relationships of the function and show function details below the network view frame.
+     Click anywhere in the following network view frame to pan the view. Use mouse wheel to zoom in
+     and out of view. Click on a function 'bubble' to highlight call relationships of the function and
+     show function details below the network view frame.
   </p>
-  
+
   <!-- Create container for network and function detail displays -->
   <div id="mynetwork" style="border: 2px solid black"></div>
   <div id="details"></div>
@@ -67,28 +77,41 @@
         user: {color:{background:'LightSkyBlue', 
                       border:'DeepSkyBlue',
                       highlight:{background:'LightSkyBlue',
-                                 border:'DeepSkyBlue'
-                                }
-                     }},
+                      border:'DeepSkyBlue'
+        }
+        }
+        },
+        query: {color:{background:'LightGray', 
+                      border:'#767676', // a darker shade of gray
+                      highlight:{background:'LightGray',
+                      border:'#767676'
+        }
+        }
+        },
         developer: {color:{background:'LightGreen',
-                           border:'MediumSeaGreen',
-                           highlight:{background:'LightGreen',
-                                      border:'MediumSeaGreen'
-                                     }
-                          }},
+        border:'MediumSeaGreen',
+        highlight:{
+                background:'LightGreen',
+                border:'MediumSeaGreen'
+        }
+        }
+        },
         control: {color:{background:'Gold', 
-                         border:'Goldenrod',
-                         highlight:{background:'Gold',
-                                    border:'Goldenrod'
-                                   }
-                        }},
+        border:'Goldenrod',
+        highlight:{
+                background:'Gold',
+                border:'Goldenrod'
+        }
+        }
+        },
         datastore: {color:{background:'LightPink', 
-                           border:'LightCoral',
-                           highlight:{background:'LightPink',
-                                      border:'LightCoral'
-                                     }
-                          }}
-      }
+        border:'LightCoral',
+        highlight:{background:'LightPink',
+        border:'LightCoral'
+        }
+        }
+        }
+      } 
     };
     var network = new vis.Network(container, data, options);
     // handle click on node to display function details

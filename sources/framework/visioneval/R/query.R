@@ -11,7 +11,7 @@ utils::globalVariables("ModelState_ls")
 #=============================
 #' Retrieve information needed to prepare a datastore query.
 #'
-#' \code{prepareForDatastoreQuery} a visioneval framework model user function that
+#' \code{prepareForDatastoreQuery} a visioneval framework query user function that
 #' retrieves datastore listings and functions required to make a datastore query.
 #'
 #' This function prepares a list of information that is used in making a query
@@ -92,7 +92,7 @@ prepareForDatastoreQuery <- function(DstoreLocs_, DstoreType) {
 #===========
 #' Lists the names of groups in model datastores.
 #'
-#' \code{listGroups} a visioneval framework model user function which lists the groups in a
+#' \code{listGroups} a visioneval framework query user function which lists the groups in a
 #' datastore or datastores that contain data for a scenario.
 #'
 #' This function lists the names of groups in a model datastore and any other
@@ -124,7 +124,7 @@ listGroups <- function(QueryPrep_ls) {
 #====================
 #' List names of tables in a group in a datastore.
 #'
-#' \code{listTables} a visioneval framework model user function which lists the tables in a
+#' \code{listTables} a visioneval framework query user function which lists the tables in a
 #' group in a datastore.
 #'
 #' This functions lists the tables in a group in a datastore.
@@ -157,11 +157,11 @@ listTables <- function(Group, QueryPrep_ls) {
 #   print(listTables(grp, QPrep_ls))
 # }
 
-#LIST DATASETS IN GROUP
+#LIST DATASETS IN TABLE
 #======================
 #' List names and descriptions datasets in a table in a datastore.
 #'
-#' \code{listTables} a visioneval framework model user function which lists the names and
+#' \code{listTables} a visioneval framework query user function which lists the names and
 #' descriptions datasets in a table in a datastore.
 #'
 #' This functions lists the names and descriptions datasets in a table in a
@@ -215,7 +215,7 @@ listDatasets <- function(Table, Group, QueryPrep_ls) {
 #===============================================
 #' Save an zip archive which documents all tables/datasets in a datastore.
 #'
-#' \code{documentDatastoreTables} a visioneval framework model user function that saves a zip
+#' \code{documentDatastoreTables} a visioneval framework query user function that saves a zip
 #' archive of a set of csv-formatted text files which document tables in a datastore.
 #'
 #' This function inventories all datsets in the tables in a datastore and
@@ -269,7 +269,7 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
 #======================================
 #' Read multiple datasets from multiple tables in datastores
 #'
-#' \code{readDatastoreTables} a visioneval framework model user function that reads datasets
+#' \code{readDatastoreTables} a visioneval framework query user function that reads datasets
 #' from one or more tables in a specified group in one or more datastores
 #'
 #' This function can read multiple datasets in one or more tables in a group.
@@ -389,7 +389,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
 #' this function is to enable the calculation of a measure to be switched
 #' based on the presence of one or more datasets. For example, some datasets
 #' present in a VE-State model are not present in a VE-RSPM model and vice
-#' verse. So in some instances, a measure needs to be calculated in a different
+#' versa. So in some instances, a measure needs to be calculated in a different
 #' way for VE-State and VE-RSPM models.
 #'
 #' @param Dataset a string identifying the name of the dataset to check the
@@ -419,7 +419,7 @@ isDatasetPresent <- function(Dataset, Table, Group, QueryPrep_ls) {
 #' Summarize the values in a table dataset according to the values in another
 #' dataset in the table.
 #'
-#' \code{summarizeDataset} a visioneval framework model user function that summarizes the values
+#' \code{summarizeDataset} a visioneval framework query user function that summarizes the values
 #' in a table dataset according to the values in another dataset in the table.
 #'
 #' This function is used to calculate summary measures from one or more
@@ -1230,7 +1230,7 @@ summarizeDatasets <-
 #=============================================
 #' Calculate summary measures for a region and organize results in a table.
 #'
-#' \code{calcRegionSummaryMeasures} a visioneval framework model user function that
+#' \code{calcRegionSummaryMeasures} a visioneval framework query user function that
 #' calculates summary measures for a model region for specified model run years and
 #' organizes the results in a table.
 #'

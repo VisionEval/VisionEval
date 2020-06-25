@@ -5,6 +5,7 @@
 #This script defines various functions that are invoked to initialize a model
 #run. Several of the functions are also invoked when modules are run.
 
+# Get rid of the global function references
 utils::globalVariables(c("initTable","writeToTable","ModelState_ls","listDatastore"))
 
 #INITIALIZE MODEL STATE

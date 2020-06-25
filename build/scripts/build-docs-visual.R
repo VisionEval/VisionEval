@@ -98,6 +98,7 @@ if ( need.new.docs ) {
   #Initialize a functions documentation list to store documentation by function group
   FunctionDocs_ls <- list(
     user = list(),
+    query = list(),
     developer = list(),
     control = list(),
     datastore = list()
@@ -107,6 +108,7 @@ if ( need.new.docs ) {
     Description <- gsub("\n", "", ParsedRd_ls$description)
     GroupCheck_ <- c(
       user = length(grep("model user", Description)) != 0,
+      query = length(grep("query user", Description)) != 0,
       developer = length(grep("module developer", Description)) != 0,
       control = length(grep("control", Description)) != 0,
       datastore = length(grep("datastore connection", Description)) != 0
