@@ -5,24 +5,26 @@ VE_RUNTESTS?=Default
 VE_BRANCH?=$(shell git branch --show-current || echo visioneval)
 ifeq ($(OS),Windows_NT)
   VE_R_VERSION?=4.0.1
-  RSCRIPT:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
+  RTERM:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
   WINDOWS=TRUE
 else
   # If you change the PATH to point at a different Rscript, you can
   # support multiple R versions on Linux, but it's done outside the
   # Makefile. If you're running in RStudio, just set a different R
   # version there using its Global Options.
-  RSCRIPT:="$(shell which Rscript)"
-  override VE_R_VERSION:=$(shell $(RSCRIPT) --no-init-file scripts/find-R.R)
+  RTERM:="$(shell which Rterm)"
+  override VE_R_VERSION:=$(shell $(RSCRIPT) --vanilla --no-echo --quiet --no-init-file scripts/find-R.R)
   WINDOWS=FALSE
 endif
-ifeq ($(RSCRIPT),"")
+ifeq ($(RTERM),"")
   $(error R Version $(VE_R_VERSION) not found)
 else
-  $(info R Version     : R $(VE_R_VERSION) [using $(RSCRIPT)])
+  $(info R Version     : R $(VE_R_VERSION) [using $(RTERM)])
   $(info Configuration : $(VE_CONFIG))
   $(info Git Branch    : $(VE_BRANCH))
 endif
+RSCRIPT:=$(RTERM) --vanilla --no-echo --quiet --no-init-file -f
+# Must follow $(RSCRIPT) with the name of the file to run
 
 # Must export to have available for runR
 export VE_R_VERSION VE_CONFIG VE_RUNTESTS RSCRIPT
@@ -165,7 +167,7 @@ $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG): scripts/build-config.R $(VE_CONFIG) R-versi
 	:     R Version = $(VE_R_VERSION)
 	: Configuration = $(VE_CONFIG)
 	:    Git branch = $(VE_BRANCH)
-	@[[ $(RSCRIPT) != "" ]] && $(RSCRIPT) scripts/build-config.R
+	$(RSCRIPT) scripts/build-config.R
 
 # This rule and the following one rebuild the repository of dependencies for VE_R_VERSION
 # Will skip if repository.built is up to date with VE_Config and the scripts themselves

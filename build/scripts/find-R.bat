@@ -29,7 +29,8 @@ if [!R_HOME!] == [] (
 	start "" https://cran.r-project.org/bin/windows/base/old/%R_VERSION%
 	EXIT /B 1
 ) else (
-	echo !R_HOME!\bin\Rscript.exe
+rem     capture machine architecture
+	!R_HOME!\bin\Rscript.exe --vanilla --no-echo --quiet -e "cat(file.path(R.home('bin'),'Rterm.exe'))"
 	set RSCRIPT=!R_HOME!\bin\Rscript.exe
 rem	"!RSCRIPT!" --version 1>&2
 	EXIT /B 0
