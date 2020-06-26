@@ -293,7 +293,7 @@ for ( module in seq_along(package.names) ) {
       cat("++++++++++ Installing built package:",built.package,"\n")
       if ( package.names[module] %in% pkgs.installed ) {
         cat("First removing obsolete framework package version:",pkgs.version[package.names[module]],"\n")
-        remove.packages(package.names[module])
+        remove.packages(package.names[module],lib=ve.lib)
       }
       install.packages(built.package, repos=NULL, lib=ve.lib, type=ve.build.type) # so they will be available for later modules
     }

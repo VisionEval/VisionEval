@@ -114,7 +114,8 @@ lib-reset:
 modules-reset:
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/modules.built
 
-runtime-reset: runtime-clean
+runtime-reset:
+	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/runtime.built
 
 docs-reset:
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/docs.built

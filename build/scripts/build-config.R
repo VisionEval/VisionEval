@@ -22,7 +22,7 @@ if ( length(grep("^ve.builder$",search()))==0 ) {
   blow.away <- ls("ve.builder")
   blow.away <- setdiff(blow.away,c("ve.root","ve.build.dir","ve.dev","dev.lib","this.R"))
   if ( length(blow.away) > 0 ) {
-    rm(list=blow.away) # blow away all but basic build elements
+    rm(list=blow.away,pos=as.environment("ve.builder")) # blow away all but basic build elements
   }
 }
 
@@ -374,14 +374,6 @@ evalq(
     stop("ve.lib must be defined in VE-config.yml")
   }
 
-  r.environ <- file.path(ve.root,".Renviron")
-  r.ve.lib <-gsub(this.R,"%V",ve.lib)
-  r.dev.lib <- gsub(this.R,"%V",dev.lib)
-  r.libs.user <- paste0("R_LIBS_USER=",paste(r.ve.lib,r.dev.lib,sep=";"))
-  r.runtime <- paste0("VE_RUNTIME=",ve.runtime)
-  writeLines(c(r.libs.user,r.runtime),con=r.environ)
-  rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib,r.runtime )
-
   # Convey key file locations to the 'make' environment
   ve.runtime.config <- file.path(ve.logs,"dependencies.RData")
   make.target <- file.path(
@@ -419,7 +411,7 @@ evalq(
   r.ve.lib <-gsub(this.R,"%V",ve.lib)
   r.dev.lib <- gsub(this.R,"%V",dev.lib)
   r.libs.user <- paste0("R_LIBS_USER=",paste(r.ve.lib,r.dev.lib,sep=";"))
-  writeLines(c(r.libs.user),con=r.environ)
+  writeLines(r.libs.user,con=r.environ)
   rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib )
 
   writeLines( paste( names(make.variables), make.variables, sep="="),make.target)

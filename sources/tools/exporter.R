@@ -6,7 +6,7 @@ requireNamespace("data.table")
 # To use this in a visioneval runtime, just do this:
 #   import::here(ve.export,"tools/exporter.R")
 
-tool.contents <- "ve.export"
+tool.contents <- c("ve.export","ve.list")
 
 # ve.export
 # Dump a model run Datastore to .csv files in an output folder
@@ -37,7 +37,7 @@ tool.contents <- "ve.export"
 #     If FALSE, dish up some progress messages and extra debugging data
 #     If TRUE, only report errors
 
-ve.export <- function (modelStateFile = "ModelState.Rda",
+ve.export <- function( modelStateFile = "ModelState.Rda",
                        outputFolder   = "output",
                        includeTables  = character(0),  # default: all of them
                        excludeTables  = c("Vehicle"),  # Vehicle doesn't work for VERPAT
@@ -253,4 +253,16 @@ exportData <- function(Output,
 				if ( ! quiet ) cat("Done (as ",basename(filename),")\n",sep="")
 		}
   }
+}
+
+ve.list <- function( modelStateFile = "ModelState.Rda",
+                     groups = TRUE,
+                     tables = TRUE,
+                     datasets = TRUE,
+                     quiet = FALSE
+                   ) {
+ msf <- getModelState(ModelStateFile,quiet=quiet)
+ idx <- indexModelState(msf,quiet=quiet)
+ if ( !any(c(groups,tables,datasets)) ) groups <- tables <- datasets <- TRUE
+ gtn <- idx[[GroupTableName]][,c("Group","Table","Name")[groups,tables,datasets]]
 }

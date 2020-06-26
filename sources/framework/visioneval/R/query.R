@@ -33,9 +33,9 @@ utils::globalVariables("ModelState_ls")
 #' (e.g. 'RD', 'H5').
 #' @return A named list having three components. The 'Dir' component is a
 #' string vector identifying the relative path(s) to the datastore(s). The
-#' 'Listing' component is a list where each component is a datastore listing.
-#' The 'Functions' component contains the appropriate functions for the
-#' datastore type for listing the datastore contents and for reading datasets.
+#' 'Listing' component is a list where each component is the ModelState for the corresponding
+#' element in 'Dir'. The 'Functions' component contains dispatch
+#' functions for the datastore type for listing the datastore contents and for reading datasets.
 #' @export
 prepareForDatastoreQuery <- function(DstoreLocs_, DstoreType) {
   #Initialize list to hold query preparation information
@@ -48,7 +48,7 @@ prepareForDatastoreQuery <- function(DstoreLocs_, DstoreType) {
              DstoreType, " - is not a recognized type. ",
              "Recognized datastore types are: ",
              paste(AllowedDstoreTypes_, collapse = ", "), ".")
-    stop(Msg)
+    stop(Msg,call.=FALSE)
   }
   #Check that DstoreLocs_ are correct and assign
   DstoreLocsExist_ <- sapply(DstoreLocs_, function(x) file.exists(x))
@@ -57,7 +57,7 @@ prepareForDatastoreQuery <- function(DstoreLocs_, DstoreType) {
       paste0("One or more of the specified DstoreLocs_ can not be found. ",
              "Maybe they are misspecified. Check the following: ",
              DstoreLocs_[!DstoreLocsExist_])
-    stop(Msg)
+    stop(Msg,call.=FALSE)
   } else {
     Prep_ls$Dir <- DstoreLocs_
   }
@@ -69,18 +69,11 @@ prepareForDatastoreQuery <- function(DstoreLocs_, DstoreType) {
   }
   #Get listing for each datastore
   Prep_ls$Listing <- lapply(DstoreLocs_, function(x) {
-    SplitRef_ <- unlist(strsplit(x, "/"))
-    RefHead <- paste(SplitRef_[-length(SplitRef_)], collapse = "/")
-    if (RefHead == "") {
-      ModelStateFile <- "ModelState.Rda"
-    } else {
-      ModelStateFile <- paste(RefHead, "ModelState.Rda", sep = "/")
-    }
-    readModelState(FileName = ModelStateFile)
+    return( readModelState(FileName = file.path(dirname(DstoreLocs_),"ModelState.Rda")) )
   })
   names(Prep_ls$Listing) <- DstoreLocs_
-  #Return the query preparation list
-  Prep_ls
+
+  return( Prep_ls )
 }
 # #Example
 # QPrep_ls <- prepareForDatastoreQuery(

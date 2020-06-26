@@ -45,25 +45,49 @@ evalq(
       }
       make.me <- paste("make",paste(flags,collapse=" "),paste(targets,collapse=" "))
       system(make.me)
-      if ( exists("r.home") ) Sys.setenv(R_HOME=r.home)
+      if ( exists("r.home") && nzchar(r.home) ) Sys.setenv(R_HOME=r.home)
       setwd(owd)
     }
 
-    # Run the resultant runtime
+    # Get the current runtime, if available for currently running R version
+    getLocalBranch <- function(repopath) {
+      if ( requireNamespace("git2r",quietly=TRUE) ) {
+        localbr <- git2r::branches(repopath,flags="local")
+        hd <- which(sapply(localbr,FUN=git2r::is_head,simplify=TRUE))
+        return( localbr[[hd]]$name )
+      } else {
+        return( "visioneval" )
+      }
+    }
+
     get.ve.runtime <- function() {
-      ve.runtime <- Sys.getenv("VE_RUNTIME","") # built in previous session
-      if ( ! nzchar(ve.runtime) ) {             # built in this session
-        if ( "ve.builder" %in% search() &&
-          exists("ve.runtime",pos=as.environment("ve.builder") ) ) {
-          ve.runtime <- get("ve.runtime",pos=as.environment("ve.builder"))
+      ve.runtime = NA
+      if ( ! "ve.builder" %in% search() ) {
+        env.builder <- attach(NULL,name="ve.builder")
+      } else {
+        env.builder <- as.environment("ve.builder")
+      }
+      if ( ! exists("ve.runtime",envir=env.builder) ) {
+        ve.branch <- getLocalBranch(ve.root)
+        this.r <- paste(R.version[c("major","minor")],collapse=".")
+        build.file <- file.path(ve.root,"dev","logs",ve.branch,this.r,"dependencies.RData")
+        if ( file.exists(build.file) ) {
+          load(build.file,envir=env.builder)
+        } else {
+          cat("Could not locate build for R-",this.r," in ",build.file,"\n",sep="")
         }
+      }
+      if ( exists("ve.runtime",envir=env.builder) ) {
+        ve.runtime <- get("ve.runtime",pos=env.builder)
       }
       return(ve.runtime)
     }
 
+
     ve.run <- function() {
       ve.runtime <- get.ve.runtime()
       if (
+        ! is.na(ve.runtime) &&
         dir.exists(ve.runtime) &&
         file.exists(file.path(ve.runtime,"VisionEval.R"))
       ) {
@@ -71,7 +95,7 @@ evalq(
         setwd(ve.runtime)
         source("VisionEval.R")
       } else {
-        message("Runtime not built. Run ve.build()")
+        message("Could not locate runtime. Run ve.build()")
       }
     }
     message("ve.build() to (re)build VisionEval\n\t(see build/Building.md for advanced configuration)")
