@@ -28,8 +28,8 @@
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
-if ( ! suppressWarnings(requireNamespace("jsonlite",quietly=TRUE)) ) {
-  install.packages("jsonlite", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+if ( ! suppressWarnings(requireNamespace("Rd2md",quietly=TRUE)) ) {
+  install.packages("Rd2md", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
 }
 
 message("========== BUILD FRAMEWORK DOCS ==========")
