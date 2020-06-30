@@ -5,7 +5,7 @@
 #<doc>
 #
 ## CalculateSafetyMeasures Module
-#### June 02, 1992
+#### June 02, 2020
 #
 # This module aims to calculate safety measures for the model area. It uses the fatality and injury crash rates for different modes
 # All these rates are per miles traveled. Therefore this module simply uses calculated VMT from model to estimate the 
@@ -290,10 +290,11 @@ usethis::use_data(CalculateSafetyMeasuresSpecifications, overwrite = TRUE)
 #' @return A list containing data produced by the function consistent with the
 #' module specifications.
 #' @name CalculateSafetyMeasures
-#' @import visioneval dplyr
+#' @import visioneval 
 #' @export
 CalculateSafetyMeasures <- function(L) {
   
+  assign("%>%",getFromNamespace("%>%","magrittr"))
   
   HH_df= data.frame(L$Year$Household)
   Marea_df= data.frame(L$Year$Marea)
@@ -301,12 +302,12 @@ CalculateSafetyMeasures <- function(L) {
 # calcualte Bike and Walk PMT from Houshold table and aggregate all housholds to geth the total Marea PMTs
 # apply the injury and fatal rates to estiamte the crashes by type.  
     Crashes_HH <- HH_df %>%
-      mutate(BikeMT = BikeTrips * BikeAvgTripDist,
+      dplyr::mutate(BikeMT = BikeTrips * BikeAvgTripDist,
              WalkMT = WalkTrips * WalkAvgTripDist) %>%
-      group_by(Marea) %>%
-      summarise(BikePMT = sum(BikeMT),
+      dplyr::group_by(Marea) %>%
+      dplyr::summarise(BikePMT = sum(BikeMT),
               WalkPMT = sum(WalkMT)) %>%
-      mutate(walkfatal = Marea_df$WalkFatal[[1]] *WalkPMT / (10^8),
+      dplyr::mutate(walkfatal = Marea_df$WalkFatal[[1]] *WalkPMT / (10^8),
              walkinjury = Marea_df$WalkInjur[[1]] *WalkPMT / (10^8),
              bikefatal = Marea_df$BikeFatal[[1]] *BikePMT / (10^8),
              bikeinjury = Marea_df$BikeInjur[[1]] *BikePMT / (10^8)
@@ -314,7 +315,7 @@ CalculateSafetyMeasures <- function(L) {
            )
   
     Crashes_Marea <- Marea_df %>%
-      mutate(AutoFatalCrashRural = AutoFatal[[1]] * RuralHhDvmt[[1]] / (10^8),
+      dplyr::mutate(AutoFatalCrashRural = AutoFatal[[1]] * RuralHhDvmt[[1]] / (10^8),
              AutoInjuryCrashRural = AutoInjur[[1]] * RuralHhDvmt[[1]] / (10^8) ,
              AutoFatalCrashUrban = AutoFatal[[1]] * UrbanHhDvmt[[1]] / (10^8),
              AutoInjuryCrashUrban= AutoInjur[[1]] * UrbanHhDvmt[[1]] / (10^8),
