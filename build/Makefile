@@ -13,7 +13,7 @@ else
   # Makefile. If you're running in RStudio, just set a different R
   # version there using its Global Options.
   RTERM:="$(shell which Rterm)"
-  override VE_R_VERSION:=$(shell $(RSCRIPT) --vanilla --no-echo --quiet --no-init-file scripts/find-R.R)
+  override VE_R_VERSION:=$(shell $(RSCRIPT) --vanilla --slave --quiet scripts/find-R.R)
   WINDOWS=FALSE
 endif
 ifeq ($(RTERM),"")
@@ -23,7 +23,7 @@ else
   $(info Configuration : $(VE_CONFIG))
   $(info Git Branch    : $(VE_BRANCH))
 endif
-RSCRIPT:=$(RTERM) --vanilla --no-echo --quiet --no-init-file -f
+RSCRIPT:=$(RTERM) --vanilla --slave --quiet --no-init-file -f
 # Must follow $(RSCRIPT) with the name of the file to run
 
 # Must export to have available for runR
