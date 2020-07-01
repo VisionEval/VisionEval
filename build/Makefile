@@ -199,17 +199,6 @@ $(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
 	$(RSCRIPT) scripts/build-modules.R
 	@touch $(VE_LOGS)/modules.built
 
-# This rule and the following one will assemble the documentation
-docs: $(VE_LOGS)/docs.built
-
-$(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built\
-	$(VE_LOGS)/velib.built scripts/build-docs.R scripts/build-inventory.R
-	$(RSCRIPT) scripts/build-docs-framework.R
-	$(RSCRIPT) scripts/build-docs-visual.R
-	$(RSCRIPT) scripts/build-inventory.R
-	$(RSCRIPT) scripts/build-docs.R
-	@touch $(VE_LOGS)/docs.built
-
 # This rule and the following one will (re-)copy out of date scripts and models to the runtime
 # We'll almost always "build" the runtime, but only out-of-date stuff gets built
 # (File time stamps are checked in the R scripts)
@@ -218,6 +207,17 @@ runtime: $(VE_LOGS)/runtime.built
 $(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/* $(VE_RUNTIME_CONFIG)
 	$(RSCRIPT) scripts/build-runtime.R
 	@touch $(VE_LOGS)/runtime.built
+
+# This rule and the following one will assemble the documentation
+docs: $(VE_LOGS)/docs.built
+
+$(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/runtime.built\
+	$(VE_LOGS)/velib.built scripts/build-docs.R scripts/build-inventory.R
+	$(RSCRIPT) scripts/build-docs-framework.R
+	$(RSCRIPT) scripts/build-docs-visual.R
+	$(RSCRIPT) scripts/build-inventory.R
+	$(RSCRIPT) scripts/build-docs.R
+	@touch $(VE_LOGS)/docs.built
 
 # The next rules build the installer .zip files
 # 'bin' is the binary installer for the local architecture (e.g. Windows or MacOSX)
