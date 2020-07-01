@@ -200,7 +200,7 @@ outputData <- function(Output,quiet=FALSE) {
 makeDataFrame <- function(Table, Output){
   OutputAllYr <- data.frame()
 
-  for ( year in getYears()){
+  for ( year in visioneval::getYears()){
     # Looping over each year's worth of data in the given table
     # OutputIndex is a vector of booleans true for each row in GroupTableName that
     # contains data for the sought table in the sought year
