@@ -314,8 +314,7 @@ readFromTableRD <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, 
   if (is.null(DstoreLoc)) {
     DstoreDir <- ""
   } else {
-    ParseDstoreLoc_ <- unlist(strsplit(DstoreLoc, "/"))
-    DstoreDir <- paste(ParseDstoreLoc_[-length(ParseDstoreLoc_)], collapse = "/")
+    DstoreDir <- dirname(DstoreLoc)
   }
   #Load the model state file
   if (DstoreDir == "") {

@@ -33,15 +33,18 @@ tool.contents <- c("ve.export","ve.list")
 #     'Vehicle' from VERPAT includes incompatible numbers of rows
 #   overwrite=TRUE
 #     Blow away the outputFolder if it already exists
+#   all.tables=FALSE
+#     If TRUE, include EVERYTHING (not just output files)
 #   quiet=FALSE
 #     If FALSE, dish up some progress messages and extra debugging data
 #     If TRUE, only report errors
 
 ve.export <- function( modelStateFile = "ModelState.Rda",
                        outputFolder   = "output",
-                       includeTables  = character(0),  # default: all of them
-                       excludeTables  = c("Vehicle"),  # Vehicle doesn't work for VERPAT
+                       includeTables  = character(0),  # default: include all of them
+                       excludeTables  = character(0),  # default: don't exclude any
                        overwrite      = FALSE,         # TRUE to destroy outputFolder first if it exists
+                       all.tables     = FALSE,         # TRUE will ignore include/exclude and export everything
                        quiet          = FALSE          # TRUE to suppress all 
                        ) {
   owd <- getwd()
@@ -49,49 +52,48 @@ ve.export <- function( modelStateFile = "ModelState.Rda",
   msf <- getModelStateFile(modelStateFile,quiet=quiet)
   idx <- indexModelState(msf,quiet=quiet)
   odt <- outputData(idx,quiet=quiet)
+  outputFolder <- file.path(dirname(msf),outputFolder)
   exportData(  outputFolder  = outputFolder,
                includeTables = includeTables,
                excludeTables = excludeTables,
+               all.tables    = all.tables,
                overwrite     = overwrite,
                quiet         = quiet,
                odt
              )
-  if ( exists("ModelState_ls",envir=.GlobalEnv) ) rm(ModelState_ls,pos=.GlobalEnv) # Hack to support framework
+  if ( exists("ModelState_ls",where=.GlobalEnv,inherits=FALSE) ) rm(ModelState_ls,pos=.GlobalEnv) # Hack to support framework
   setwd(owd)
 }
 
 # Locate Model State File
 # See: https://stackoverflow.com/questions/48218491/os-independent-way-to-select-directory-interactively-in-r
-getModelStateFile <- function(modelState,quiet=FALSE) {
-  if ( dir.exists(modelState) ) {
-    model.dir <- modelState
-  } else if ( file.exists(modelState) ) {
-    model.dir <- dirname(modelState)
+getModelStateFile <- function(modelStateFile="ModelState.Rda",quiet=FALSE) {
+  if ( dir.exists(modelStateFile) ) {
+    model.dir <- modelStateFile
+  } else if ( file.exists(modelStateFile) ) {
+    model.dir <- dirname(modelStateFile)
   } else {
     model.dir <- "."
   }
   model.dir <- normalizePath(model.dir)
-  modelState <- file.path(model.dir,"ModelState.Rda") # visioneval says you don't get to change this name
+  modelStateFile <- file.path(model.dir,"ModelState.Rda") # visioneval says you don't get to change this name
   if ( interactive() ) {
-    while ( ! file.exists(modelState) ) {
+    while ( ! file.exists(modelStateFile) ) {
       cat("ModelState.Rda not found in",model.dir,"\n")
       cont <- readline("Pick a different directory? ")
       if ( substr(cont,1,1) %in% c("N","n","F","f") ) break
       model.dir <- tcltk::tk_choose.dir(default=model.dir,caption = "Select model run directory" )
-      modelState<-file.path(model.dir,"ModelState.Rda")
+      modelStateFile<-file.path(model.dir,"ModelState.Rda")
     }
   }
-  if ( ! file.exists(modelState) ) modelState <- ""
+  if ( ! file.exists(modelStateFile) ) modelStateFile <- ""
 
   # Status messaging and context check
-  if ( nchar(modelState)==0 ) stop("No Model State found.")
-  if ( ! quiet ) cat("Model State File:",modelState,"\n")
+  if ( nchar(modelStateFile)==0 ) stop("No Model State found.")
+  modelStateFile <- normalizePath(modelStateFile)
+  if ( ! quiet ) cat("Model State File:",modelStateFile,"\n")
 
-  # Move to location of Model State file (the model run root directory)
-  output.dir <- dirname(modelState)
-  setwd(output.dir)
-
-  modelState
+  return(modelStateFile)
 }
 
 # Create a function to check if a specified attribute
@@ -103,15 +105,41 @@ attributeExist <- function(variable, attr_name){
       if(!is.null(attr_value)) return(TRUE)
     }
   }
-  FALSE
+  return(FALSE)
+}
+
+# Create a function to get a specified attribute for a Datastore row
+attributeGet <- function(variable, attr_name){
+  if(is.list(variable)){
+    if(!is.na(variable[[1]])){
+      attr_value <- variable[[attr_name]]
+      if(!is.null(attr_value)) return(attr_value)
+    }
+  }
+  return(NA)
+}
+
+# Establish model environment (for ModelState)
+getModelEnvironment <- function(){
+  env.model <- grep("^ve.model$",search(),value=TRUE)
+  if ( length(env.model)==0 ) {
+    env.model <- attach(NULL,name="ve.model")
+  } else {
+    env.model <- as.environment(env.model)
+  }
+  return(env.model)
 }
 
 indexModelState <- function(modelState,quiet=FALSE) {
   # Check that there is a model state
   if ( nchar(modelState)==0 || !file.exists(modelState) ) stop("No Model State File to index\n")
 
+  # Create model environment
+  env.model <- getModelEnvironment()
+  rm(list=ls(env.model,all=T),pos=env.model)
+
   # Load Model State, and through it, the Datastore and its access functions
-  load(modelState,.GlobalEnv) # Horrendous hack to keep the framework happy by stuffing ModelState_ls into .GlobalEnv
+  load(modelState,env.model)
   Datastore <- ModelState_ls$Datastore
   DatastoreType <- ModelState_ls$DatastoreType
   BaseYear <- ModelState_ls$BaseYear
@@ -121,6 +149,8 @@ indexModelState <- function(modelState,quiet=FALSE) {
   # Datastore elements with a "FILE" attribute are inputs; we want the outputs
   # the non-FILE elements are creations living in the Datastore (i.e. not inputs => outputs)
   InputIndex <- sapply(Datastore$attributes, attributeExist, "FILE")
+  Description <- sapply(Datastore$attributes, attributeGet, "DESCRIPTION")
+  cat("Length of InputIndex:",length(InputIndex),"\n")
   splitGroupTableName <- strsplit(Datastore[!InputIndex, "groupname"], "/")
   maxLength <- max(unlist(lapply(splitGroupTableName, length)))
   # NOTE: the "length" in this case is the maximum number of elements composing the groupname, probably 3
@@ -131,24 +161,30 @@ indexModelState <- function(modelState,quiet=FALSE) {
   GroupTableName <- data.frame()
   GroupTableName <- do.call(rbind.data.frame, lapply(splitGroupTableName , function(x) c(x, rep(NA, maxLength-length(x)))))
   colnames(GroupTableName) <- c("Group", "Table", "Name")
+  cat("Rows in GroupTableName:",nrow(GroupTableName),"\n")
+  Description <- Description[!InputIndex]
+  cat("Length of Description:",length(Description),"\n")
 
   # GroupTableName is now a data.frame with three columns
   # complete.cases blows away the rows that have any NA values
   # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each column)
-  GroupTableName <- GroupTableName[complete.cases(GroupTableName),]
+  ccases <- complete.cases(GroupTableName)
+  GroupTableName <- GroupTableName[ccases,]
+  Description <- Description[ccases]
   if ( ! quiet ) cat(nrow(GroupTableName),"rows in Group/Table/Name data.frame\n")
   # returns the basis for later output
-  list(GroupTableName=GroupTableName,Type=DatastoreType, BaseYear=BaseYear)
+  DstoreLoc <- file.path(dirname(modelState),ModelState_ls$DatastoreName)
+  cat("Datastore is",DstoreLoc,"\n")
+  list(GroupTableName=GroupTableName,Description=Description,Type=DatastoreType, BaseYear=BaseYear, DstoreLoc=DstoreLoc)
 }
 
 outputData <- function(Output,quiet=FALSE) {
   # Pick appropriate data extractor
-  # JR Note on visioneval Datastore handling: OMG. Quel Cauchemar! Please let us refactor this!
   readFromTable <- function(x) {
     if ( Output$Type == "H5" ) {
-      visioneval::readFromTableH5(Name = x[3], Table = x[2], Group = x[1], ReadAttr = TRUE)
+      visioneval::readFromTableH5(Name = x[3], Table = x[2], Group = x[1], DstoreLoc=Output$DstoreLoc, ReadAttr = TRUE)
     } else {
-      visioneval::readFromTableRD(Name = x[3], Table = x[2], Group = x[1], ReadAttr = TRUE)
+      visioneval::readFromTableRD(Name = x[3], Table = x[2], Group = x[1], DstoreLoc=Output$DstoreLoc, ReadAttr = TRUE)
     }
   }
 
@@ -185,11 +221,6 @@ makeDataFrame <- function(Table, Output){
 		row_lengths <- sapply(OutputRows,length,simplify=TRUE)
 		row_names <- names(row_lengths)
 		row_sets <- unique(row_lengths);
-# 		if ( length(row_sets) > 1 ) {
-# 				cat("OutputRows has multiple lengths:\n")
-# 				print(unique(row_lengths))
-# 				print(row_names) # look in...
-# 		}
 		for ( rs in row_sets ) {
 				OutputRowSet <- OutputRows[ row_names[ which( row_lengths == rs ) ] ]
 				OutputRows_df <- data.frame(OutputRowSet, stringsAsFactors = FALSE)
@@ -208,10 +239,11 @@ exportData <- function(Output,
                        outputFolder="output",
                        includeTables=character(0),
                        excludeTables=character(0),
+                       all.tables=FALSE,
                        overwrite=FALSE,
                        quiet=TRUE) {
 
-  # (Re-)Create the output directory (relative to getwd())
+  # (Re-)Create the output directory (relative to directory of modelStateFile)
   if ( dir.exists(outputFolder) || file.exists(outputFolder) ) {
     if ( overwrite ) {
       unlink(outputFolder,recursive=TRUE,force=TRUE)
@@ -224,20 +256,27 @@ exportData <- function(Output,
 
   # Get the list of tables
   Tables <- unique(as.character(Output$GroupTableName$Table))
-  if ( length(includeTables)>0 && nchar(includeTables[1])>0 ) {
-    Tables <- intersect(Tables,includeTables)
-  } else if ( length(excludeTables)>0 && nchar(excludeTables[1])>0 ) {
-    Tables <- setdiff(Tables,unique(c(excludeTables,"Model")))
+  if ( ! all.tables ) {
+    if ( length(includeTables)>0 && nchar(includeTables[1])>0 ) {
+      Tables <- intersect(Tables,includeTables)
+    } else if ( length(excludeTables)>0 && nchar(excludeTables[1])>0 ) {
+      Tables <- setdiff(Tables,unique(c(excludeTables,"Model")))
+    } else {
+      Tables <- setdiff(Tables,"Model")
+    }
+    if ( ! quiet ) {
+      cat("Include Tables:\n")
+      print(includeTables)
+      cat("Exclude Tables:\n")
+      print(excludeTables)
+      cat("Exporting Tables:\n")
+      print(Tables)
+    }
   } else {
-    Tables <- setdiff(Tables,"Model")
-  }
-  if ( ! quiet ) {
-    cat("Include Tables:\n")
-    print(includeTables)
-    cat("Exclude Tables:\n")
-    print(excludeTables)
-    cat("Exporting Tables:\n")
-    print(Tables)
+    if ( ! quiet ) {
+      cat("Exporting all tables.\n")
+      print(Tables)
+    }
   }
 
   for ( tbl in Tables ){
@@ -261,8 +300,12 @@ ve.list <- function( modelStateFile = "ModelState.Rda",
                      datasets = TRUE,
                      quiet = FALSE
                    ) {
- msf <- getModelState(ModelStateFile,quiet=quiet)
+ msf <- getModelStateFile(modelStateFile,quiet=quiet)
  idx <- indexModelState(msf,quiet=quiet)
  if ( !any(c(groups,tables,datasets)) ) groups <- tables <- datasets <- TRUE
- gtn <- idx[[GroupTableName]][,c("Group","Table","Name")[groups,tables,datasets]]
+ gtn <- idx[["GroupTableName"]][,c("Group","Table","Name")[c(groups,tables,datasets)]]
+ gtn$Description <- idx$Description
+ desc.na <- is.na(gtn$Description)
+ gtn$Description[desc.na] <- gtn$Name[desc.na]
+ return(gtn[order(gtn$Group,gtn$Table,gtn$Name),])
 }

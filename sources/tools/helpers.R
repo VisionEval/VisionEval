@@ -5,7 +5,7 @@
 # See VisionEval.R in the installation runtime (VE-Installer/boilerplate)
 # In particular, functions call models at locations relative to ve.root
 
-tool.contents <- c("vegui","verpat","verspm","vestate")
+tool.contents <- c("vegui","verpat","verspm","verspm_mm","vestate")
 
 # Function starts the VEGUI
 vegui <- function(ve.root=ve.runtime) {

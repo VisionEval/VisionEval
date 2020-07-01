@@ -181,7 +181,11 @@ if ( install.success ) {
     tools <- character(0)
     for ( tf in tool.files ) {
       # Add error checking for tool.contents not present
-      eval(parse(text=paste0("import::here(tool.contents,.from='",tf,"')")))
+      try(
+        silent=TRUE,
+        eval(parse(text=paste0("import::here(tool.contents,.from='",tf,"')")))
+      )
+      if ( ! exists("tool.contents") ) next
       tools <- c(tools,tool.contents)
       eval(parse(text=paste0("import::into(.into='",env.loc,"',",paste(tool.contents,collapse=","),",.from='",tf,"')")))
       rm(tool.contents)
