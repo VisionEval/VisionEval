@@ -32,7 +32,7 @@ local({
       sep=":",
       what=list( var=character(), var=character() ),
       quiet=TRUE
-    )
+    ), stringsAsFactors=FALSE
   )
   this.R <- paste(R.version[c("major","minor")],collapse=".")
   if ( nrow(ve.vars)==0 ) {
