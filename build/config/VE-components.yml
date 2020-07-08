@@ -120,17 +120,16 @@ Components:
       - usethis
     VE:
       - VE2001NHTS
-#   Not yet ready for primetime:
-#   VEHouseholdVehiclesWithAdj:
-#     Type: module
-#     Path: sources/modules
-#     Test: { Script: tests/scripts/test.R, Group: 2 }
-#     CRAN:
-#       - ordinal
-#       - reshape2
-#       - usethis
-#     VE:
-#       - VE2001NHTS
+  VEHouseholdVehiclesWithAdj:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    CRAN:
+      - ordinal
+      - reshape2
+      - usethis
+    VE:
+      - VE2001NHTS
   VELandUse:
     Type: module
     Path: sources/modules
