@@ -5,7 +5,7 @@
 #<doc>
 #
 ## AssignDrivers Module
-#### September 6, 2018
+#### July 8, 2020
 #
 #This module assigns drivers by age group to each household as a function of the numbers of persons and workers by age group, the household income, land use characteristics, and public transit availability. Users may specify the relative driver licensing rate relative to the model estimation data year in order to account for observed or projected changes in licensing rates.
 #
@@ -592,16 +592,20 @@ AssignDrivers <- function(L) {
     if (!is.null(L$Year$Region[[TargetDriverPropName]])) {
       TargetDriverProp <- L$Year$Region[[TargetDriverPropName]]
       DriverProb_ <- rep(0, length(Driver_))
-      DriverProb_[IsUrban_] <- applyBinomialModel(
-        Model_ls = DriverModel_ls$Metro,
-        Data_df = Per_df[IsUrban_,],
-        ReturnProbs = TRUE
-      )
-      DriverProb_[!IsUrban_] <- applyBinomialModel(
-        Model_ls = DriverModel_ls$NonMetro,
-        Data_df = Per_df[!IsUrban_,],
-        ReturnProbs = TRUE
-      )
+      if (any(IsUrban_)) {
+        DriverProb_[IsUrban_] <- applyBinomialModel(
+          Model_ls = DriverModel_ls$Metro,
+          Data_df = Per_df[IsUrban_,],
+          ReturnProbs = TRUE
+        )
+      }
+      if (any(!IsUrban_)) {
+        DriverProb_[!IsUrban_] <- applyBinomialModel(
+          Model_ls = DriverModel_ls$NonMetro,
+          Data_df = Per_df[!IsUrban_,],
+          ReturnProbs = TRUE
+        )
+      }
       Driver_ <- adjustDrivers(Driver_, DriverProb_, TargetDriverProp)
       rm(DriverProb_, TargetDriverProp)
     }
