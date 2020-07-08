@@ -672,6 +672,12 @@ Types <- function(){
       units = list(
         HHJOB = c(HHJOB = 1)
       )
+    ),
+    drivers = list(
+      units = list(
+        DRV = c(DRV = 1)
+      ),
+      mode = "integer"
     )
   )
 }
