@@ -400,7 +400,14 @@ initializeModel <-
     #Get list of installed packages
     InstalledPkgs_ <- rownames(installed.packages())
     #Check that all module packages are in list of installed packages
-    RequiredPkg_ <- getModelState()$RequiredVEPackages
+
+#    JRaw 2020/07/07: Previously required a separate list of packages in run_parameters.json, but
+#    since all the needed information is in the RunModel setup and in the (separately checked) Call
+#    specifications, code is changed to simply use the PackageName from the list of modules that are
+#    actually called by the model.
+#    RequiredPkg_ <- getModelState()$RequiredVEPackages
+
+    RequiredPkg_ <- unique(ModuleCalls_df$PackageName)
     MissingPkg_ <- RequiredPkg_[!(RequiredPkg_ %in% InstalledPkgs_)]
     if (length(MissingPkg_ != 0)) {
       Msg <-
@@ -525,16 +532,10 @@ initializeModel <-
               Err <- checkModuleSpecs(CallSpecs_ls, Call_[length(Call_)])
               if (length(Err) > 0) {
                 Errors_ <- c(Errors_, Err)
-
-
-                
-                
                 next()
               } else {
                 AllSpecs_ls[[i]]$Specs$Get <-
                   c(AllSpecs_ls[[i]]$Specs$Get <- Specs_ls$Get)
-
-
               }            
 			 }
           }

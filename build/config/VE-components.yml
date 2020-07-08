@@ -234,25 +234,25 @@ Components:
   VEScenarioViewer:
     Type: script
     Path: sources
-  VEGUI:
-    Type: script
-    Path: sources
-    Test: { Script: run_vegui_test.R, Group: 5 }
-    CRAN:
-      - DT
-      - envDocument
-      - rhandsontable
-      - shiny
-      - shinyBS
-      - shinyFiles
-      - shinyjs
-      - shinytest
-      - testit
-      - testthat
-    BioC:
-      - rhdf5
-    Github:
-      - tdhock/namedCapture
+#   VEGUI:
+#     Type: script
+#     Path: sources
+#     Test: { Script: run_vegui_test.R, Group: 5 }
+#     CRAN:
+#       - DT
+#       - envDocument
+#       - rhandsontable
+#       - shiny
+#       - shinyBS
+#       - shinyFiles
+#       - shinyjs
+#       - shinytest
+#       - testit
+#       - testthat
+#     BioC:
+#       - rhdf5
+#     Github:
+#       - tdhock/namedCapture
   tools:
     Type: script
     Path: sources
