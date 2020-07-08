@@ -7,8 +7,5 @@
   "Years": ["2035"],
   "DatastoreName": ["Datastore"],
   "DatastoreType": ["RD"],
-  "Seed": [1],
-  "RequiredVEPackages": [ 
-    "VEScenario"
-  ]
+  "Seed": [1]
 }

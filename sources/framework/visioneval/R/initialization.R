@@ -51,7 +51,7 @@ initModelStateFile <-
     RunParam_ls <- jsonlite::fromJSON(ParamFilePath)
     RequiredParam_ <- c(
       "Model", "Scenario", "Description", "Region", "BaseYear", "Years",
-      "DatastoreName", "Seed", "RequiredVEPackages"
+      "DatastoreName", "Seed"
     )
     ParamExists_ <- RequiredParam_ %in% names(RunParam_ls)
     if (any(!ParamExists_)) {
