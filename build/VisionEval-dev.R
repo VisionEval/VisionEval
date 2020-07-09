@@ -43,24 +43,32 @@ evalq(
       use.git=FALSE
     ) {
       owd<-setwd(file.path(ve.root,"build"))
-      if ( length(r.version)>0 ) {
-        r.version <- r.version[1] # only the first is used
-        Sys.setenv(VE_R_VERSION=r.version)
-        r.home <- Sys.getenv("R_HOME")
-        Sys.unsetenv("R_HOME") # R Studio forces this to its currently configured R
-      }
-      if ( length(config)>0 ) {
-        config <- config[1]
-        if ( file.exists(config) ) {
-          Sys.setenv(VE_CONFIG=config)
+      r.home <- Sys.getenv("R_HOME")
+      tryCatch(
+        { 
+          if ( length(r.version)>0 ) {
+            r.version <- r.version[1] # only the first is used
+            Sys.setenv(VE_R_VERSION=r.version)
+            Sys.unsetenv("R_HOME") # R Studio forces this to its currently configured R
+          }
+          if ( length(config)>0 ) {
+            config <- config[1]
+            if ( file.exists(config) ) {
+              Sys.setenv(VE_CONFIG=config)
+            }
+          }
+          # Force our own version of VE_BRANCH
+          Sys.setenv(VE_BRANCH=getLocalBranch(ve.root,use.git))
+          make.me <- paste("make",paste(flags,collapse=" "),paste(targets,collapse=" "))
+          if ( invisible(status <- system(make.me)) ) stop("Build exited with status: ",status,call.=FALSE)
+        },
+        error = function(e) e, # Probably should clean up
+        finally =
+        {
+          Sys.setenv(R_HOME=r.home)
+          setwd(owd)
         }
-      }
-      # Force our own version of VE_BRANCH
-      Sys.setenv(VE_BRANCH=getLocalBranch(ve.root,use.git))
-      make.me <- paste("make",paste(flags,collapse=" "),paste(targets,collapse=" "))
-      system(make.me)
-      if ( exists("r.home") && nzchar(r.home) ) Sys.setenv(R_HOME=r.home)
-      setwd(owd)
+      )
     }
 
     get.ve.runtime <- function(use.git=FALSE) {
