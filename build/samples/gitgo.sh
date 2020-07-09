@@ -40,19 +40,22 @@ else
 	else
 		VE_BRANCH=$(ls -d $GIT_HOME/VisionEval-dev 2>&1)
 		echo Base branch for VisionEval-dev
-		if [ -d "$VE_BRANCH" ]
-		then
-			cd $VE_BRANCH
-                        # Set the built branch (default visioneval, or track git checkout)
-                        if [ "$2" == "git" ]
-                        then
-                          VE_BRANCH=$(git branch --show-current 2>/dev/null || echo visioneval)
-                        else
-                          VE_BRANCH=visioneval
-                        fi
-                        export VE_BRANCH
-		else
-			echo Not Found: $VE_BRANCH
-		fi
 	fi
+        if [ -d "$VE_BRANCH" ]
+        then
+                cd $VE_BRANCH
+                # Set the built branch (default visioneval, or
+                # track git checkout)
+                echo -n exporting VE_BRANCH...
+                if [ "$2" == "git" ]
+                then
+                  VE_BRANCH=$(git branch --show-current 2>/dev/null || echo visioneval)
+                else
+                  VE_BRANCH=visioneval
+                fi
+                export VE_BRANCH
+                echo ${VE_BRANCH}
+        else
+                echo Not Found: $VE_BRANCH
+        fi
 fi

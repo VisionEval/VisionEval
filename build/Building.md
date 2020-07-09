@@ -44,6 +44,7 @@ Full instructions and reference materials are included below and in various refe
 
 Here's a sequence of steps that will get you started:
 
+1. Install [Git for Windows][Git4W] or equivalent - technically optional, but recommended
 1. Install R\
    (usually the most recent version works; must be 3.6.0 or later)
 2. Install RTools40
@@ -68,7 +69,8 @@ Here's a sequence of steps that will get you started:
 
 ### Troubleshooting
 
-- Administrator permissions are not required to install any of that, but you must put RTools40
+- Administrator permissions are required to install RStudio, but not the rest of it.
+- You must put RTools40
   into a directory you can write (i.e. NOT the default location it suggests). Putting it in %HOME%
   or your Documents folder are workable options.
 - On Windows, make sure RTools40 is on your path, and in particular that RStudio can find
@@ -81,6 +83,11 @@ Here's a sequence of steps that will get you started:
   about the new R. The VisionEval development and master branches are updated with a new
   r-versions.yml file in between releases (whenever a new binary installer is
   placed in the Downloads area for VisionEval/VisionEval.git).
+  Do this to update just the r-versions.yml into your current branch (without having to merge
+  or rebase the whole thing):
+  ```
+  git checkout development -- build/R-versions.yml
+  ```
 
 ## `ve.build()` Usage
 
@@ -93,9 +100,14 @@ default will build the targets needed for a local runtime.
 `r.version` - a character string (if a vector, only the first element will be used) in the format '4.0.1'
 identifying the R major and minor version. The default is to use the version of R that is running in RStudio.
 
+`use.git` - a logical flag (`TRUE` or (default) `FALSE`) that says whether to name the built branch after the
+git branch. The default is to always use the "visioneval" branch. If you are checking out and building different
+branches in the same worktree, or using the command-line `make` build process, you should set it to `TRUE`.
+
 `config` - a character string (if a vecotr, only the first element will be used) with a relative path (to the
-'build' directory) or absolute path to the alternate VE-config.yml file. See the 'build/config' directory for
-instructions about how to build or modify that file.
+'build' directory) or absolute path to the alternate `VE-config.yml` file. See the 'build/config' directory for
+instructions about how to build or modify that file. The default should be good for development purposes. The
+release version (which includes documentation from the wiki) is build from "build/config/VE-config-release.yml"
 
 `flags` - a character vector flags that can be passed to the `make` program. In general, the only one you might
 consdier using is "-n", which does a "dry run" (it will build the configuration file).
@@ -108,13 +120,12 @@ Just give `ve.build` a different `r.version` parameter (e.g. `ve.build(r.version
 r.version will not look for other versions of R on Linux or the Mac; on those systems you should set RStudio (via
 its global options) to use an R installed some place other than the default R path.
 
-If you're having trouble getting `ve.build()` to notice that you have changed one of the packages or models, you
-can always run the special target **build-clean** which will reset the  status and visit each of the build
-targets to investigate what has changed. Try this:\
-```
-ve.build(c("build-clean","all"))
-```
+If you want to reset the build products (e.g. if you are using the default 'visioneval' build branch and need to
+build a different branch in the same place), you should clean your output:
 
+```
+ve.build(c("clean")
+```
 You can build an installer by doing this:\
 ```
 ve.build("installer")

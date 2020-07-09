@@ -56,7 +56,7 @@ evalq(
         }
       }
       # Force our own version of VE_BRANCH
-      sys.Setenv(VE_BRANCH=getLocalBranch(ve.root,use.git)
+      Sys.setenv(VE_BRANCH=getLocalBranch(ve.root,use.git))
       make.me <- paste("make",paste(flags,collapse=" "),paste(targets,collapse=" "))
       system(make.me)
       if ( exists("r.home") && nzchar(r.home) ) Sys.setenv(R_HOME=r.home)

@@ -4,12 +4,12 @@ As of the June 2020 release of VisionEval, [RStudio Desktop](https://rstudio.com
 
 If you are interested in developing or debugging [VisionEval](https://visioneval.org "VisionEval"), you can get started in one of two ways:
 
-1. **With VE-Installer**
+1. **From the Github**
     * _When to use this method:_
       * To work on the VisionEval development branch and its unreleased features (as opposed to the `master` branch which corresponds to the current binary release).
       * You _must_ use this method if you are developing something (like a new module) that you think you might submit back to the VisionEval project.
     * _How to use this method:_
-    1. Change to the parent directory where you would like to put the VisionEval Github source, and the VE-Installer
+    1. Change to the parent directory where you would like to put the VisionEval Github source
     1. Clone the Github development branch from [https://github.com/VisionEval/VisionEval-dev](https://github.com/VisionEval/VisionEval-dev), like this:
       ```
       git clone --branch development https://github.com/VisionEval/VisionEval-dev.git MyVisionEval-dev
@@ -17,11 +17,7 @@ If you are interested in developing or debugging [VisionEval](https://visioneval
       * Change the final argument to give the repository a useful name in your local environment.
       * This instruction will still clone all the other branches as well.  Use the `--single-branch` option to limit the clone just to the `development` branch
       * Use the `--depth=1` argument to forego all the branch history. That will speed the clone, but is inappropriate if you are planning to re-submit your changes.
-    2. Clone the VE-Installer build system from [https://github.com/VisionEval/VE-Installer](https://github.com/VisionEval/VE-Installer)
-      ```
-      git clone https://github.com/VisionEval/VE-Installer.git
-      ```
-    2. Follow the setup and build instructions in the ReadMe.md file for [VE-Installer](https://github.com/VisionEval/VE-Installer).
+    2. Follow the setup and build instructions in the build/Building.md file for the development branch of [VisionEval-dev](https://github.com/VisionEval/VisionEval-dev).
       * You will need [RTools40][getRTools40] plus [Git for Windows](<https://gitforwindows.org/>) and additional software if you plan to re-build the runtime documentation. 
     
 2. **From the Binary Installer**

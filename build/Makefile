@@ -49,6 +49,9 @@ export VE_RUNTIME_CONFIG
 	configure repository lib modules runtime docs\
 	build all dev\
 	installer installers installer-bin installer-full\
+	configure-build repository-build lib-build modules-build runtime-build docs-build\
+	clean build-build all-build dev-build clean-build\
+	installer-build installer-bin-build installer-full-build\
 	configure-clean repository-clean lib-clean modules-clean runtime-clean docs-clean\
 	clean build-clean all-clean dev-clean clean-clean\
 	installer-clean installer-bin-clean installer-full-clean\
@@ -56,9 +59,7 @@ export VE_RUNTIME_CONFIG
 	reset build-reset all-reset dev-reset clean-reset docs-reset\
 	installer-reset installer-bin-reset installer-full-reset
 
-# colon (:) is "do-nothing" rule for shell
-# ake will just echo these commands with variable expansion
-all build dev: configure repository lib modules runtime # docs - need that for installer, but not for local runtime
+all build dev: reset configure-build repository-build lib-build modules-build runtime-build # docs - need that for installer, but not for local runtime
 	@echo Build complete
 
 list-targets help:
@@ -81,6 +82,7 @@ list-targets help:
 	@echo
 	@echo '    suffix any target with "-reset" to ignore previous builds'
 	@echo '    suffix any target with "-clean" to remove previous build artifacts'
+
 show-defaults: $(VE_MAKEVARS)
 	: Make defaults:
 	: VE_MAKEVARS  $(VE_MAKEVARS)   # File containing runtime variables
@@ -161,7 +163,9 @@ clean-clean: all-clean dev-clean # Scorched earth: reset all installer artifacts
 # The remaining targets build the various VisionEval pieces
 
 # Make sure configuration is up to date
-configure: $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG)
+configure: reset configure-build
+
+configure-build: $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG)
 
 # This rule reads the configuration about what to build. Use build-clean to reset
 # Note: build-config.R identifies VE_CONFIG via the exported environment variable
@@ -174,7 +178,9 @@ $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG): scripts/build-config.R $(VE_CONFIG) R-versi
 
 # This rule and the following one rebuild the repository of dependencies for VE_R_VERSION
 # Will skip if repository.built is up to date with VE_Config and the scripts themselves
-repository: $(VE_LOGS)/repository.built
+repository: repository-reset repository-build
+
+repository-build: $(VE_LOGS)/repository.built
 
 $(VE_LOGS)/repository.built: $(VE_RUNTIME_CONFIG) scripts/build-repository.R scripts/build-external.R
 	$(RSCRIPT) scripts/build-repository.R
@@ -184,7 +190,9 @@ $(VE_LOGS)/repository.built: $(VE_RUNTIME_CONFIG) scripts/build-repository.R scr
 # This rule and the following one rebuild the installed library of dependencies and VE packages
 # Will skip if velib.built is up to date with the repository build and with the script itself
 # Use build-clean to reset velib.built and lib-clean to force complete rebuild of library
-lib: $(VE_LOGS)/velib.built
+lib: lib-reset lib-build
+
+lib-build: $(VE_LOGS)/velib.built
 
 $(VE_LOGS)/velib.built: $(VE_LOGS)/repository.built scripts/build-velib.R
 	$(RSCRIPT) scripts/build-velib.R
@@ -193,7 +201,9 @@ $(VE_LOGS)/velib.built: $(VE_LOGS)/repository.built scripts/build-velib.R
 # This rule and the following one will check the VE modules and rebuild as needed
 # We'll almost always "build" the modules but only out-of-date stuff gets built
 # (File time stamps are checked in the R scripts)
-modules: $(VE_LOGS)/modules.built
+modules: modules-reset modules-build
+
+modules-build: $(VE_LOGS)/modules.built
 
 $(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
         scripts/build-modules.R scripts/build-framework.R
@@ -204,14 +214,18 @@ $(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
 # This rule and the following one will (re-)copy out of date scripts and models to the runtime
 # We'll almost always "build" the runtime, but only out-of-date stuff gets built
 # (File time stamps are checked in the R scripts)
-runtime: $(VE_LOGS)/runtime.built
+runtime: runtime-reset runtime-build
+
+runtime-build: $(VE_LOGS)/runtime.built
 
 $(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/* $(VE_RUNTIME_CONFIG)
 	$(RSCRIPT) scripts/build-runtime.R
 	@touch $(VE_LOGS)/runtime.built
 
 # This rule and the following one will assemble the documentation
-docs: $(VE_LOGS)/docs.built
+docs: docs-reset docs-build
+
+docs-build: $(VE_LOGS)/docs.built
 
 $(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/runtime.built\
 	$(VE_LOGS)/velib.built scripts/build-docs.R scripts/build-inventory.R
@@ -225,9 +239,13 @@ $(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/runtime.built\
 # 'bin' is the binary installer for the local architecture (e.g. Windows or MacOSX)
 #     (also package source as a separate zip file)
 # 'src' is install-from-source installer (source packages for everything, including dependencies)
-installers: installer-bin installer-full
+installers: installers-reset installers-build
 
-installer installer-bin: $(VE_LOGS)/installer-bin.built
+installers-build: installer-bin installer-full
+
+installer installer-bin: installer-reset installer-build
+
+installer-build installer-bin-build: $(VE_LOGS)/installer-bin.built
 
 $(VE_LOGS)/installer-bin.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/docs.built $(VE_LOGS)/runtime.built\
             scripts/build-runtime-packages-bin.R scripts/build-installer-base.R scripts/build-installer-bin.R
@@ -236,7 +254,9 @@ $(VE_LOGS)/installer-bin.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/docs.built $(VE_
 	$(RSCRIPT) scripts/build-installer-bin.R
 	@touch $(VE_LOGS)/installer-bin.built
 
-installer-full: $(VE_LOGS)/installer-full.built
+installer-full: installer-full-reset installer-full-build
+
+installer-full-build: $(VE_LOGS)/installer-full.built
 
 $(VE_LOGS)/installer-full.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/installer-bin.built \
             scripts/build-runtime-packages-full.R scripts/build-installer-full.R
