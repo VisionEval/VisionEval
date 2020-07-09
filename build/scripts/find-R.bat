@@ -30,7 +30,7 @@ if [!R_HOME!] == [] (
 	EXIT /B 1
 ) else (
 rem     capture machine architecture
-	!R_HOME!\bin\Rscript.exe --vanilla --slave --quiet -e "cat(file.path(R.home('bin'),'R.exe'))"
+	"!R_HOME!\bin\Rscript.exe" --vanilla --slave --quiet -e "cat(file.path(R.home('bin'),'R.exe'))"
 rem	"!RSCRIPT!" --version 1>&2
 	EXIT /B 0
 )
