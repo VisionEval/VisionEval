@@ -316,7 +316,7 @@ if ( num.src > 0 ) {
   cat("Writing source PACKAGES file\n")
   tools::write_PACKAGES(built.path.src, type="source")
 } else {
-  cat("Framework source pacakge up to date\n")
+  cat("Framework source package up to date\n")
 }
 if ( ve.binary.build ) {
   if ( num.bin > 0 ) {
