@@ -86,21 +86,21 @@ findMissingPackages <- function( required.packages ) {
   return( setdiff( required.packages, apb[,"Package"]) )
 }
 
-cat("Computing dependencies.\n")
+# cat("Computing dependencies.\n")
 pkgs.CRAN.lst <- pkgs.db$Package[pkgs.CRAN]
 pkgs.CRAN.lst <- setdiff(pkgs.CRAN.lst, pkgs.BaseR) # don't search for base package dependencies
 pkgs.CRAN.all <- pkgs.CRAN.lst <- miniCRAN::pkgDep( pkgs.CRAN.lst, repos=CRAN.mirror, suggests=FALSE)
 pkgs.CRAN.lst <- setdiff(pkgs.CRAN.lst, pkgs.BaseR) # don't keep base packages
-cat("pkgs.CRAN.all\n")
-print(sort(pkgs.CRAN.all))
+# cat("pkgs.CRAN.all\n")
+# print(sort(pkgs.CRAN.all))
 
 pkgs.BioC.lst <- pkgs.db$Package[pkgs.BioC]
 pkgs.BioC.all <- pkgs.BioC.lst <- miniCRAN::pkgDep( pkgs.BioC.lst, repos=bioc, suggests=FALSE)
 pkgs.BioC.lst <- setdiff( pkgs.BioC.lst, pkgs.CRAN.lst ) # Possible risk here: don't double-install packages
-cat("pkgs.BioC.all\n")
-print(sort(pkgs.BioC.all))
+# cat("pkgs.BioC.all\n")
+# print(sort(pkgs.BioC.all))
 
-cat("Dependencies:\n")
+# cat("Dependencies:\n")
 stated.dependencies <- as.character(c(pkgs.CRAN.lst, pkgs.BioC.lst))
 all.dependencies <- setdiff(as.character(c(pkgs.CRAN.all, pkgs.BioC.all)),pkgs.BaseR)
 save(stated.dependencies, all.dependencies, file=ve.all.dependencies)
@@ -110,24 +110,26 @@ cat("Repository location:",ve.dependencies,"\n")
 # We won't attempt to delete - cleanup just by rebuilding when cruft gets to be too much.
 if ( havePackages() ) {
   pkgs.missing.CRAN <- findMissingPackages(pkgs.CRAN.lst)
+  up.to.date = TRUE
   if ( any(sapply(pkgs.missing.CRAN, length)) > 0 ) {
     if ( length(pkgs.missing.CRAN ) > 0 ) {
+      up.to.date = FALSE
       cat("Updating VE dependency repository to add from CRAN:\n")
       print(pkgs.missing.CRAN)
       miniCRAN::addPackage(pkgs.missing.CRAN, path=ve.dependencies, repos=CRAN.mirror, type=ve.build.type, deps=FALSE)
-    } else {
-      cat("VE dependency repository up to date with CRAN\n")
     }
   }
   pkgs.missing.BioC <- findMissingPackages(pkgs.BioC.lst)
   if ( any(sapply(pkgs.missing.BioC, length)) > 0 ) {
     if ( length(pkgs.missing.BioC) > 0 ) {
+      up.to.date = FALSE
       cat("Updating VE dependency repository to add from BioConductor:\n")
       print(pkgs.missing.BioC)
       miniCRAN::addPackage(pkgs.missing.BioC, path=ve.dependencies, repos=bioc, type=ve.build.type, deps=FALSE)
-    } else {
-      cat("VE dependency repository up to date with CRAN\n")
     }
+  }
+  if ( up.to.date ) {
+    cat("VE dependency repository up to date with BioConductor\n")
   }
 } else {
   cat("Building VE repository from scratch from CRAN packages\n")
@@ -147,7 +149,6 @@ if ( ve.build.type != "source" ) {
     dir.create( src.contrib, recursive=TRUE, showWarnings=FALSE )
   }
 }
-
 
 # Verify the VE Repository with the following independent cross-check of dependencies
 
