@@ -55,10 +55,8 @@ then
 fi
 
 # Helpful aliases
-# The first two illustrate how to set up your editor
-if [ -d "${GIT_HOME}/VE-Installer" ]
+if [ -d "${GIT_HOME}/VisionEval-dev" ]
 then
-    alias config="source ${GIT_HOME}/VE-Installer/config/config.sh"
-    alias gitgo="source ${GIT_HOME}/VE-Installer/config/gitgo.sh"
+    alias gitgo="source ${GIT_HOME}/VisionEval-dev/build/samples/gitgo.sh"
 fi
   

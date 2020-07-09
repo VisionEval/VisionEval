@@ -24,11 +24,23 @@ local({
 evalq(
   envir=as.environment("ve.bld"),
   expr={
+    # Get the local git branch (if use.git, else just "visioneval")
+    getLocalBranch <- function(repopath,use.git) {
+      if ( use.git && requireNamespace("git2r",quietly=TRUE) ) {
+        localbr <- git2r::branches(repopath,flags="local")
+        hd <- which(sapply(localbr,FUN=git2r::is_head,simplify=TRUE))
+        return( localbr[[hd]]$name )
+      } else {
+        return( "visioneval" )
+      }
+    }
+
     ve.build <- function(
       targets=character(0),
       r.version=paste(R.version[c("major","minor")],collapse="."),
       config=character(0), # defaults to config/VE-config.yml
-      flags=character(0)
+      flags=character(0),
+      use.git=FALSE
     ) {
       owd<-setwd(file.path(ve.root,"build"))
       if ( length(r.version)>0 ) {
@@ -43,24 +55,15 @@ evalq(
           Sys.setenv(VE_CONFIG=config)
         }
       }
+      # Force our own version of VE_BRANCH
+      sys.Setenv(VE_BRANCH=getLocalBranch(ve.root,use.git)
       make.me <- paste("make",paste(flags,collapse=" "),paste(targets,collapse=" "))
       system(make.me)
       if ( exists("r.home") && nzchar(r.home) ) Sys.setenv(R_HOME=r.home)
       setwd(owd)
     }
 
-    # Get the current runtime, if available for currently running R version
-    getLocalBranch <- function(repopath) {
-      if ( requireNamespace("git2r",quietly=TRUE) ) {
-        localbr <- git2r::branches(repopath,flags="local")
-        hd <- which(sapply(localbr,FUN=git2r::is_head,simplify=TRUE))
-        return( localbr[[hd]]$name )
-      } else {
-        return( "visioneval" )
-      }
-    }
-
-    get.ve.runtime <- function() {
+    get.ve.runtime <- function(use.git=FALSE) {
       ve.runtime = NA
       if ( ! "ve.builder" %in% search() ) {
         env.builder <- attach(NULL,name="ve.builder")
@@ -68,7 +71,7 @@ evalq(
         env.builder <- as.environment("ve.builder")
       }
       if ( ! exists("ve.runtime",envir=env.builder) ) {
-        ve.branch <- getLocalBranch(ve.root)
+        ve.branch <- getLocalBranch(ve.root,use.git)
         this.r <- paste(R.version[c("major","minor")],collapse=".")
         build.file <- file.path(ve.root,"dev","logs",ve.branch,this.r,"dependencies.RData")
         if ( file.exists(build.file) ) {

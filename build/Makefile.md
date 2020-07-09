@@ -53,13 +53,16 @@ form, but you can override them by doing something like
 </dl>
 
 ~~~
-# You can override VE_CONFIG, VE_LOGS, VE_RUNTESTS and VE_R_VERSION on the command line
-# Or export them from your environment
+# You can override VE_CONFIG, VE_BRANCH, VE_LOGS, VE_RUNTESTS and
+# VE_R_VERSION
+# on the command line or export them from your environment
+# ve.build() handles useful defaults
 VE_CONFIG?=config/VE-config.yml
 VE_RUNTESTS?=Default
+VE_BRANCH?=$(shell git branch --show-current 2>/dev/null || echo visioneval)
 ifeq ($(OS),Windows_NT)
   VE_R_VERSION?=4.0.1
-  RSCRIPT:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
+  RTERM:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
   WINDOWS=TRUE
 else
   # If you change the PATH to point at a different Rscript, you can

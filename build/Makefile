@@ -1,8 +1,10 @@
-# You can override VE_CONFIG, VE_LOGS, VE_RUNTESTS and VE_R_VERSION on the command line
-# Or export them from your environment
+# You can override VE_CONFIG, VE_BRANCH, VE_LOGS, VE_RUNTESTS and
+# VE_R_VERSION
+# on the command line or export them from your environment
+# ve.build() handles useful defaults
 VE_CONFIG?=config/VE-config.yml
 VE_RUNTESTS?=Default
-VE_BRANCH?=$(shell git branch --show-current || echo visioneval)
+VE_BRANCH?=$(shell git branch --show-current 2>/dev/null || echo visioneval)
 ifeq ($(OS),Windows_NT)
   VE_R_VERSION?=4.0.1
   RTERM:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
@@ -12,8 +14,8 @@ else
   # support multiple R versions on Linux, but it's done outside the
   # Makefile. If you're running in RStudio, just set a different R
   # version there using its Global Options.
-  RTERM:="$(shell which Rterm)"
-  override VE_R_VERSION:=$(shell $(RSCRIPT) --vanilla --slave --quiet scripts/find-R.R)
+  RTERM:="$(shell which R)"
+  override VE_R_VERSION:=$(shell $(RTERM) --vanilla --slave --quiet -f scripts/find-R.R)
   WINDOWS=FALSE
 endif
 ifeq ($(RTERM),"")
