@@ -29,11 +29,11 @@ SpecFile <- "Sample-VERSPM-Spec.R"
 # replace 'By = "Marea"' with 'By="Azone"' and replace 'Marea = ""' with 'Azone = ""' in the Summarize Units
 
 # ScenarioRoot is a path (absolute or relative) to a directory that contains the Scenarios
-ScenarioRoot <- file.path(ve.root,"models")
+ScenarioRoot <- file.path(ve.root,"ModelState")
 
 # 'Scenarios' is a vector of names of subfolders of 'ScenarioRoot' to be a directory containing a
 # "Datastore" and "ModelState.Rda" that is a subfolder of where you are running the script
-Scenarios <- c("VE_RSPM") # could be many
+Scenarios <- c("VERSPM") # could be many
 # Each scenario gets expanded using file.path(normalizePath(ScenarioRoot),Scenarios[x]) before
 # processing. You can fake it by making Scenarios a vector of relative paths (relative to
 # ScenarioRoot), so this mechanism should be general purpose.
@@ -49,6 +49,7 @@ Geography <- c(Type="Marea",Value="RVMPO") # Can set type to "Azone" or "Bzone" 
 #    Type can be Marea, Azone or Bzone
 #    Value should be the label of one of those geographies)
 # The Geography should be consistent with the "By" field in PMSpecifications
+# TODO: Type="Region"
 
 # Comment out the following line if you're not doing measures that use PctMedianIncome
 
@@ -63,10 +64,6 @@ MedianIncome <- 92100
 # so providing a single value gives every HH Size the same MFI
 # 92100 default is from
 # https://www.huduser.gov/portal/datasets/il/il2020/2020MedCalc.odn?inputname=METRO38900M38900*Portland-Vancouver-Hillsboro%2C+OR-WA+MSA&selection_type=hmfa&year=2020&wherefrom=mfi&incpath=%24incpath%24
-
-# OPTIONAL: Uncomment the following line and define outputFile
-# outputFile <- "MyPBOTMeasures.csv"
-#   (default is a long-but-informative file name in the Scenario directory)
 
 # Change the line below if all your scenarios are using the hdf5 Datastore_Type (verify in
 # defs/run_parameters.json). We don't just read that file, since the model setup files might be
@@ -340,8 +337,6 @@ old.wd <- getwd()
 tryCatch(
   {
     for ( scenario in Scenarios ) { # scenario contains a path to a working directory with a Datastore in it
-
-      # Check that scenario directory exists
 
       # Move to scenario directory
       setwd(scenario)

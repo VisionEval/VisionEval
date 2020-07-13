@@ -1,19 +1,19 @@
 ### Query Example
 
-The file `Sample_Measures_Script.R` will process a list of measure specifications across the Years
-in a Scenario Datastore and generate a .csv file that contains the measures.
+The file `Sample_Query_Script.R` will process a list of measure specifications across the Years in a
+Scenario Datastore and generate a .csv file that contains the measures.
 
-Default/Example measures in Test-Spec.R will work with output from the sample VE_RSPM. Adjust the
-Test-Spec.R file for your own MArea and Azone geography and it should work with your local version
-of VE_RSPM.
+Default/Example measures in Sample-VERSPM-Spec.R will work with output from the sample VE_RSPM.
+Adjust the Test-Spec.R file for your own MArea and Azone geography and it should work with your
+local version of VE_RSPM.
 
-To run this query, start Rstudio, make sure there's a `PM-Spec.R` file in the same location as the
-script (or in the same directory next to this script) and that it points to the scenarios you would like to
-summarize.  Then just do this (from your VisionEval runtime directory):
+To run this query, start Rstudio, make sure you're in the directory with the Sample-VERSPM-Spec.R
+file and that the Sample_Query_Script.R has been adjusted to point at the scenarios you would like
+to summarize. Then just do this (from your VisionEval runtime directory):
 
-source("tools/Query-Example/Sample-Measures-Script.R")
+source("tools/Sample-Measures-Script.R")
 
-CONFIGURE THE FOLLOWING PARAMETERS FOR THE SCRIPT RUN:
+CONFIGURE THE FOLLOWING PARAMETERS FOR THE SCRIPT RUN by editing Sample-Measures-Script.R:
 
 **SpecFile** - (optional) file name containing measure specifications; examples/default: PM-Spec.R
 in the same folder as the script
@@ -69,8 +69,4 @@ If there are fewer MFI's than Household Sizes, the last value is used for all th
 so providing a single value gives every HH Size the same MFI
 92100 default is from
 https://www.huduser.gov/portal/datasets/il/il2020/2020MedCalc.odn?inputname=METRO38900M38900*Portland-Vancouver-Hillsboro%2C+OR-WA+MSA&selection_type=hmfa&year=2020&wherefrom=mfi&incpath=%24incpath%24
-
-OPTIONAL: Uncomment the following line and define outputFile
-outputFile <- "MyPBOTMeasures.csv"
-  (default is a long-but-informative file name in the Scenario directory)
 
