@@ -105,10 +105,6 @@ VERPATOutputConfig <- list(
 "VERPATOutputConfig"
 usethis::use_data(VERPATOutputConfig, overwrite = TRUE)
 
-
-
-
-
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
 #================================================

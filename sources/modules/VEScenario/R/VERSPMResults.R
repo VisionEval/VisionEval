@@ -124,10 +124,6 @@ verspm_output_config_txt <-
   "VERSPMOutputConfig"
   usethis::use_data(VERSPMOutputConfig, overwrite = TRUE)
 
-
-
-
-
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
 #================================================

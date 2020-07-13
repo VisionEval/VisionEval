@@ -3,11 +3,6 @@
 #=================
 # This module builds scenarios from the combinations scenario input levels.
 
-
-
-
-
-
 library(visioneval)
 library(jsonlite)
 
@@ -15,6 +10,7 @@ library(jsonlite)
 #SECTION 1: ESTIMATE AND SAVE Scenario PARAMETERS
 #=================================================
 
+# No estimation required
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -98,11 +94,9 @@ Set = items(
 "NewScenarioSetSpecifications"
 usethis::use_data(NewScenarioSetSpecifications, overwrite = TRUE)
 
-
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
 #=======================================================
-
 
 #Main module function builds scenarios
 #------------------------------------------------------------------
@@ -128,12 +122,6 @@ NewScenarioSet <- function(L){
   # Set input directory
   RunDir <- getwd()
   ModelPath <- file.path(RunDir, L$Global$Model$ModelFolder)
-  
-  tool.contents <- c(
-    "ve.scenario_management.make_form_csv_from_json",
-    "ve.scenario_management.make_json_from_form_csv",
-    "ve.scenario_management.make_directory_structure"
-  )
   
   assign("%>%",getFromNamespace("%>%","magrittr"))
 
@@ -262,9 +250,6 @@ NewScenarioSet <- function(L){
   #     Standard VisionEval scenario configuration CSV file, which can have any name and
   #     file location that you wish. 
   ve.scenario_management.make_directory_structure <- function(target_root_dir, input_form_csv){
-    
-
-  
 
     form_df <- .ReadScenarioFormFromCSV(input_form_csv)
     
@@ -280,9 +265,7 @@ NewScenarioSet <- function(L){
       inputs_list <-  unlist(strsplit(inputs_requierd, ","))
       #check if inputs exist in parent directry
       for (i in 1:length(inputs_list)) {
-        
 
-         
           if( !file.exists(file.path(ModelPath, "inputs", inputs_list[i])) ) {
             stop(paste0(inputs_list[i] , " does not exist in the main input directory "))
          
@@ -291,15 +274,12 @@ NewScenarioSet <- function(L){
             file.copy(file.path(ModelPath, "inputs",inputs_list[i]), level_two_dir)
          
           }
-         
 
-
-      
       } 
     }
-    
-}
-## read user defined scenario database and makes json files   
+  }
+
+  ## read user defined scenario database and makes json files   
     
   scenario_root_dir <- file.path(RunDir, L$Global$Model$ScenarioInputFolder)
   csv_database_file <- file.path(scenario_root_dir,L$Global$Model$ScenarioManagerFile)
@@ -307,7 +287,6 @@ NewScenarioSet <- function(L){
   ve.scenario_management.make_directory_structure(scenario_root_dir,csv_database_file)
  
   Out_ls <- initDataList()
-  Out_ls$Global$Model <- list(Scenarioset = 1L
-                              )
+  Out_ls$Global$Model <- list(Scenarioset = 1L)
   return(Out_ls)
 }
