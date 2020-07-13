@@ -127,6 +127,10 @@ setModelState <-
     }
     ModelState_ls$LastChanged <- Sys.time()
 
+    # JRaw: why not just do this:
+    #       result <- try(save(ModelState_ls, file=FileName))
+    #       if ( class(result) == 'try-class' ) stop('Could not write to ', FileName)
+
     i <- 1
     while ( i <= 5 ){
       result <- try(save(ModelState_ls, file=FileName))
@@ -143,17 +147,6 @@ setModelState <-
     ModelState_ls <<- ModelState_ls
     TRUE
   }
-# setModelState <-
-#   function(ChangeState_ls, FileName = "ModelState.Rda") {
-#     ModelState_ls <- getModelState()
-#     for (i in 1:length(ChangeState_ls)) {
-#       ModelState_ls[[names(ChangeState_ls[i])]] <- ChangeState_ls[[i]]
-#     }
-#     ModelState_ls$LastChanged <- Sys.time()
-#     save(ModelState_ls, file = FileName)
-#     TRUE
-#   }
-
 
 #READ MODEL STATE FILE
 #=====================
@@ -804,7 +797,18 @@ parseModelScript <-
         paste0("Specified model script file (", FilePath, ") does not exist.")
       stop(Msg)
     }
-    Script <- paste(readLines(FilePath), collapse = " ")
+    rawScript <- readLines(FilePath) # so we can extract requirePackage calls (see below)
+
+    # remove commented lines from run_model script file (possibly entire lines).
+    rawScript <- gsub("^[:space:]*#.*","",rawScript)
+
+    # get required packages
+    requirePackages_ <- "requirePackage"
+    RequiredVEPackages <- grep(requirePackages_,rawScript,value=TRUE)
+    RequiredVEPackages <- sub("[^(]*\\([ \"']*([^\"')]+)[ \"']*\\).*","\\1",RequiredVEPackages)
+    setModelState(list(RequiredVEPackages = RequiredVEPackages))
+
+    Script <- paste(rawScript, collapse = " ")
     RunModuleCalls_ <- unlist(strsplit(Script, "runModule"))[-1]
     if (length(RunModuleCalls_) == 0) {
       Msg <- "Specified script contains no 'runModule' function calls."

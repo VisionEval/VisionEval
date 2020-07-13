@@ -400,14 +400,16 @@ initializeModel <-
     #Get list of installed packages
     InstalledPkgs_ <- rownames(installed.packages())
     #Check that all module packages are in list of installed packages
+    RequiredPkg_ <- getModelState()$RequiredVEPackages
 
-#    JRaw 2020/07/07: Previously required a separate list of packages in run_parameters.json, but
-#    since all the needed information is in the RunModel setup and in the (separately checked) Call
-#    specifications, code is changed to simply use the PackageName from the list of modules that are
-#    actually called by the model.
-#    RequiredPkg_ <- getModelState()$RequiredVEPackages
+    # Report any required packages that are not also in module calls
+    umc <- unique(ModuleCalls_df$PackageName)
+    rpk <- unique(RequiredPkg_)
+    if ( any( not.in.umc <- ! (rpk %in% umc) ) ) {
+      for ( p in rpk[not.in.umc] ) message(paste("Package",p,"is required internally"))
+    }
+    RequiredPkg_ <- c(umc,rpk)
 
-    RequiredPkg_ <- unique(ModuleCalls_df$PackageName)
     MissingPkg_ <- RequiredPkg_[!(RequiredPkg_ %in% InstalledPkgs_)]
     if (length(MissingPkg_ != 0)) {
       Msg <-
@@ -518,6 +520,14 @@ initializeModel <-
                   ModulesByPackage_df$Package[ModulesByPackage_df$Module == Call_]
                 Call_ <- c(Pkg, Call_)
                 rm(Pkg)
+              }
+              # JRaw: The following needs to be an error, as there is no way to
+              # tell which of the different packages would (at runtime) supply
+              # the module for this call (which lacks explicit namespace)
+              if (length(Call_) > 2 ) {
+                Err <- paste0("Error in runModule call for module ",Call_[length(Call_)],
+                  ". Module is specified in multiple packages: ",
+                  paste(Call_[-length(Call_)],collapse=", "))
               }
             }
             if (length(Err) > 0) {
@@ -641,7 +651,6 @@ initializeModel <-
     writeLog(SuccessMsg)
     print(SuccessMsg)
   }
-
 
 #RUN MODULE
 #==========
