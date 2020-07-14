@@ -513,8 +513,9 @@ initializeModel <-
             if (length(Call_) == 1) {
               if (!Call_ %in% ModulesByPackage_df$Module) {
                 Err <- paste0("Error in runModule call for module ", Call_,
-                              ". Is not present in any package identified in ",
-                              "the model run script.")
+                              ". It is not present in any package identified in ",
+                              "the model run script. Please add",
+                              'requirePackage("<package-with-module>") to the script.')
               } else {
                 Pkg <-
                   ModulesByPackage_df$Package[ModulesByPackage_df$Module == Call_]
@@ -652,23 +653,22 @@ initializeModel <-
     print(SuccessMsg)
   }
 
-#REQUIRE MODULE
-#==============
-#' Dummy function to allow parsing "hidden" module dependencies
-#' during model initialization
+#REQUIRE PACKAGE
+#===============
+#' Require package.
 #'
-#' \code{requireModule} a visioneval model developer function that
+#' \code{requireModule} a visioneval control function that
 #' introduces a package dependency.
 #'
 #' This function simply returns TRUE. It is used to state a module
 #' dependency explicitly to support internal Module calls without
-#' requiring a specific package.
+#' naming a specific package.
 #'
 #' @param Module During parsing, module is added to the list of
 #'   packages to be searched for modules. Otherwise ignored.
 #' @return TRUE. The function returns TRUE.
 #' @export
-requireModule <- function(Module) TRUE
+requirePackage <- function(Module) TRUE
 
 #RUN MODULE
 #==========

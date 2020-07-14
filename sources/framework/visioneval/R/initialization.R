@@ -789,7 +789,7 @@ loadModelParameters <- function(ModelParamFile = "model_parameters.json") {
 parseModelScript <-
   function(FilePath = "Run_Model.R",
            TestMode = FALSE) {
-    if (!TestMode) {
+    if ( ! TestMode ) {
       writeLog("Parsing model script")
     }
     if (!file.exists(FilePath)) {
@@ -806,7 +806,7 @@ parseModelScript <-
     requirePackages_ <- "requirePackage"
     RequiredVEPackages <- grep(requirePackages_,rawScript,value=TRUE)
     RequiredVEPackages <- sub("[^(]*\\([ \"']*([^\"')]+)[ \"']*\\).*","\\1",RequiredVEPackages)
-    setModelState(list(RequiredVEPackages = RequiredVEPackages))
+    if ( ! TestMode ) setModelState(list(RequiredVEPackages = RequiredVEPackages))
 
     Script <- paste(rawScript, collapse = " ")
     RunModuleCalls_ <- unlist(strsplit(Script, "runModule"))[-1]
