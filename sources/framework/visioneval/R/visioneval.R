@@ -652,6 +652,24 @@ initializeModel <-
     print(SuccessMsg)
   }
 
+#REQUIRE MODULE
+#==============
+#' Dummy function to allow parsing "hidden" module dependencies
+#' during model initialization
+#'
+#' \code{requireModule} a visioneval model developer function that
+#' introduces a package dependency.
+#'
+#' This function simply returns TRUE. It is used to state a module
+#' dependency explicitly to support internal Module calls without
+#' requiring a specific package.
+#'
+#' @param Module During parsing, module is added to the list of
+#'   packages to be searched for modules. Otherwise ignored.
+#' @return TRUE. The function returns TRUE.
+#' @export
+requireModule <- function(Module) TRUE
+
 #RUN MODULE
 #==========
 #' Run module.
