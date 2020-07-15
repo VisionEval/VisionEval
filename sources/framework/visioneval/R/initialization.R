@@ -123,7 +123,7 @@ setModelState <-
   function(ChangeState_ls, FileName = "ModelState.Rda") {
     ModelState_ls <- getModelState()
     for (i in 1:length(ChangeState_ls)) {
-      ModelState_ls[[names(ChangeState_ls[i])]] <- ChangeState_ls[[i]]
+      ModelState_ls[[names(ChangeState_ls)[i]]] <- ChangeState_ls[[i]]
     }
     ModelState_ls$LastChanged <- Sys.time()
 
@@ -311,8 +311,8 @@ writeLog <- function(Msg = "", Print = FALSE) {
   LogFile <- unlist(getModelState("LogFile"))
   Con <- file(LogFile, open = "a")
   Time <- as.character(Sys.time())
-  Content <- paste(Time, ":", Msg, "\n")
-  writeLines(Content, Con)
+  Content <- paste(Time, ":", trimws(Msg))
+  writeLines(Content, Con) # appends "\n" by default
   close(Con)
   if (Print) {
     print(gsub(" \n", "", Content))
@@ -806,7 +806,6 @@ parseModelScript <-
     requirePackages_ <- "requirePackage"
     RequiredVEPackages <- grep(requirePackages_,rawScript,value=TRUE)
     RequiredVEPackages <- sub("[^(]*\\([ \"']*([^\"')]+)[ \"']*\\).*","\\1",RequiredVEPackages)
-    if ( ! TestMode ) setModelState(list(RequiredVEPackages = RequiredVEPackages))
 
     Script <- paste(rawScript, collapse = " ")
     RunModuleCalls_ <- unlist(strsplit(Script, "runModule"))[-1]
@@ -923,16 +922,13 @@ parseModelScript <-
       stop(
         "One or more errors in model run script. Must fix before model initialization can be completed."
       )
-    } else {
-      ModuleCalls_df <-
-        data.frame(do.call(rbind, Args_ls), stringsAsFactors = FALSE)
-      if (TestMode) {
-        ModuleCalls_df
-      } else {
-        writeLog("Success parsing model script")
-        setModelState(list(ModuleCalls_df = ModuleCalls_df))
-      }
     }
+    ModuleCalls_df <-
+      data.frame(do.call(rbind, Args_ls), stringsAsFactors = FALSE)
+    if (! TestMode) {
+      writeLog("Success parsing model script")
+    } 
+    return(list(ModuleCalls_df = ModuleCalls_df, RequiredVEPackages = RequiredVEPackages))
   }
 
 

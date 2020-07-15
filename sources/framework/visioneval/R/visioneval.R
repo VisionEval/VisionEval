@@ -126,6 +126,10 @@ initializeModel <-
         "",
         normalizePath(DatastoreName, winslash = "/", mustWork = FALSE))
       #Define function to get the directory path
+      # JRaw: Much simpler just to do this, using built in path management functions
+      #    RunDstoreDir <- dirname(RunDstoreName)
+      #    LoadDstoreDir <- ifelse(is.null(DatastoreName),"",dirname(LoadDstoreName))
+
       getDirPath <- function(FilePath) {
         FilePathSplit_ <- unlist(strsplit(FilePath, "/"))
         paste(FilePathSplit_[-length(FilePathSplit_)], collapse = "/")
@@ -141,6 +145,8 @@ initializeModel <-
       #First round of error checks on datastore conflicts, loading, saving
       #-------------------------------------------------------------------
       #Is LoadDatastore FALSE but DatastoreName not NULL
+      # JRaw: Why not just force LoadDatastore <- ! is.null(DatastoreName)
+      #       (i.e. just have one parameter, the DatastoreName)
       IsLoadConfusion <- !LoadDatastore & !is.null(DatastoreName)
       #Does the datastore identitied in the run parameters already exist?
       IsConflict <- file.exists(RunDstoreName)
@@ -199,6 +205,7 @@ initializeModel <-
       #---------------------------------------------------
       #Check if geography, units, deflators, & base year are the same as run
       #parameters
+      # JRaw: Should process LoadDatastore all in one place; see below tagged JRaw::LoadDatastore
       if (LoadDatastore) {
         #Run datastore type
         RunDstoreType <- G$DatastoreType
@@ -301,6 +308,7 @@ initializeModel <-
       #Get the model state
       G <- getModelState()
       #Define function to get the directory path
+      # JRaw: use dirname and basename built-in functions
       splitPath <- function(FilePath) {
         FilePathSplit_ <- unlist(strsplit(FilePath, "/"))
         Dir <- paste(FilePathSplit_[-length(FilePathSplit_)], collapse = "/")
@@ -316,6 +324,7 @@ initializeModel <-
       #Normalized path name of the datastore used in the model run
       RunDstoreName <-
         normalizePath(G$DatastoreName, winslash = "/", mustWork = FALSE)
+      # JRaw: use dirname and basename built-in functions
       RunDstoreDir <- splitPath(RunDstoreName)$Dir
       RunDstoreFile <- splitPath(RunDstoreName)$File
       #--------------------------------------------------------
@@ -336,11 +345,13 @@ initializeModel <-
       #---------------------------
       #Load datastore if specified
       #---------------------------
+      # JRaw::LoadDatastore
       if (LoadDatastore) {
         #Normalized path name of the datastore to be loaded
         LoadDstoreName <-
           normalizePath(DatastoreName, winslash = "/", mustWork = FALSE)
         #Path of directory where datastore is to be loaded from
+        # JRaw: use dirname and basename built-in functions
         LoadDstoreDir <- splitPath(LoadDstoreName)$Dir
         #Name of the loaded datastore file
         LoadDstoreFile <- splitPath(LoadDstoreName)$File
@@ -354,6 +365,7 @@ initializeModel <-
           LoadModelStateFileName <- file.path(RunDstoreDir, "LoadModelState.Rda")
           file.copy(file.path(LoadDstoreDir, "ModelState.Rda"), LoadModelStateFileName)
         }
+        # JRaw: This will fail with undefined variable if SameDir is TRUE
         LoadModelState_ls <- assignLoadModelState(LoadModelStateFileName)
         file.remove(LoadModelStateFileName)
         #Copy load datastore if not same as run datastore
@@ -369,6 +381,11 @@ initializeModel <-
         }
         #Copy the datastore inventory to the ModelState_ls
         ModelState_ls$Datastore <- LoadModelState_ls$Datastore
+        ModelState_ls$RequiredVEPackages <- if ( "RequiredVEPackages" %in% names(LoadModelState_ls) ) {
+          unique(c(LoadModelState_ls$RequiredVEPackages,LoadModelState_ls$ModuleCalls_df$PackageName))
+        } else {
+          unique(LoadModelState_ls$ModuleCalls_df$PackageName)
+        }
         setModelState(ModelState_ls)
         save(ModelState_ls, file = "ModelState.Rda")
         #Initialize geography for years not present in datastore
@@ -395,21 +412,36 @@ initializeModel <-
     #PARSE SCRIPT TO MAKE TABLE OF ALL THE MODULE CALLS, CHECK AND COMBINE SPECS
     #===========================================================================
     #Parse script and make data frame of modules that are called directly
-    parseModelScript(ModelScriptFile)
-    ModuleCalls_df <- unique(getModelState()$ModuleCalls_df)
-    #Get list of installed packages
-    InstalledPkgs_ <- rownames(installed.packages())
-    #Check that all module packages are in list of installed packages
-    RequiredPkg_ <- getModelState()$RequiredVEPackages
+    # JRaw: changed parseModelScript so it always returns the elements, rather
+    #       than secretly stuffing them into the ModelState
+    parsedScript <- parseModelScript(ModelScriptFile)
+
+    # JRaw: Create required package list
+    RequiredPkg_ <- parsedScript$RequiredVEPackages
+    # JRaw: Handle requirements from previously loaded model state
+    if ( LoadDatastore ) {
+      G <- getModelState()
+      if ( "RequiredVEPackages" %in% names(G) ) {
+        RequiredPkg_ <- c(RequiredPkg_, G$RequiredVEPackages)
+      }
+      rm(G)
+    }
+    setModelState(list(ModuleCalls_df=parsedScript$ModuleCalls_df,RequiredVEPackages=RequiredPkg_))
+
+    # JRaw: not an error to have already saved ModuleCalls_df: ModelState hosts module calls with duplicates
+    ModuleCalls_df <- unique(parsedScript$ModuleCalls_df)
 
     # Report any required packages that are not also in module calls
     umc <- unique(ModuleCalls_df$PackageName)
     rpk <- unique(RequiredPkg_)
     if ( any( not.in.umc <- ! (rpk %in% umc) ) ) {
-      for ( p in rpk[not.in.umc] ) message(paste("Package",p,"is required internally"))
+      for ( p in rpk[not.in.umc] ) message(paste("Package",p,"is required"))
     }
     RequiredPkg_ <- c(umc,rpk)
 
+    #Get list of installed packages
+    #Check that all module packages are in list of installed packages
+    InstalledPkgs_ <- rownames(installed.packages())
     MissingPkg_ <- RequiredPkg_[!(RequiredPkg_ %in% InstalledPkgs_)]
     if (length(MissingPkg_ != 0)) {
       Msg <-
@@ -469,6 +501,8 @@ initializeModel <-
     rm(Datasets_df, WhichAreModules_)
     #Iterate through each module call and check availability and specifications
     #create combined list of all specifications
+    #JRaw: AllSpecs_ls is optionally used to simulate the model run, then discarded
+    #      However, parsing the specs as we build AllSpecs_ls does critical error checking
     Errors_ <- character(0)
     AllSpecs_ls <- list()
     for (i in 1:nrow(ModuleCalls_df)) {

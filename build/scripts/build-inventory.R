@@ -73,7 +73,7 @@ cat("Parsing model scripts for use of modules\n")
 model.path <- file.path(ve.runtime,"models")
 model.mods <- list()
 models <- lapply(ve.models,FUN=function(model) {
-  script <- visioneval::parseModelScript(file.path(model.path,model,"run_model.R"),TestMode=TRUE)
+  script <- visioneval::parseModelScript(file.path(model.path,model,"run_model.R"))$ModuleCalls_df
   df <- data.frame(MODULE=script$ModuleName,PACKAGE=script$PackageName,MODEL=TRUE)
   names(df)[3] <- model
   return(df)
