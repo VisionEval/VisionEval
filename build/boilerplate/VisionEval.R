@@ -194,4 +194,4 @@ if ( install.success ) {
   }
   rm(tool.files,ve.tools)
 }
-rm(env.loc,install.success)
+rm(ve.lib, env.loc,install.success)
