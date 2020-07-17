@@ -132,7 +132,7 @@ Running VERSPM_Scenario has 5 major steps. After initalizing the module there ar
 ** VERSPMResults: This model summarizes all different scenario outputs from datastor to standard format
 ** ViewResults:  This module create the visualization and summaries for different performance measures 
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, eval=FALSE}
 
 library(visioneval)
 

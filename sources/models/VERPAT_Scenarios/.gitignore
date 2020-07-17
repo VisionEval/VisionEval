@@ -1,6 +1,8 @@
 .Rproj.user
 .Rhistory
 .RData
+Datastore/
+scenario_root/
 /*.Rbuildignore
 Log*.txt
 *.h5

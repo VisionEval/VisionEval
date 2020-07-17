@@ -14,7 +14,23 @@ if ( ! suppressWarnings(require("rmarkdown",quietly=TRUE)) ) {
 
 message("========== BUILD DOCS ==========")
 
-doc.file.pattern <- "\\.[Mm]d$"
+# See this Rstudio forum thread on getting set up for rendering to PDF:
+# https://github.com/rstudio/rmarkdown/issues/1285#issuecomment-374340175
+# Despite their "allergy" to MikTeX, I find it a far more functional and
+# easy to manage system than tinytex. Either should work, though you may
+# still need to add rsvg-convert to your Pandoc installation (see the
+# instructions for building VisionEval).
+
+# Consider this page for information on controlling the render environment
+# for .Rmd files: https://bookdown.org/yihui/rmarkdown-cookbook/rmarkdown-render.html
+
+# We'll look for Markdown (.md), and R Markdown (.Rmd) files (case insensitive)
+# In principle, could handle anything we can throw at Pandoc.
+
+doc.file.pattern <- "\\.[Rr]*[Mm]d$"  # Include .Rmd files
+# doc.file.pattern <- "\\.[Mm]d$"    # Only .md files
+
+.libPaths( c(ve.lib,.libPaths()) ) # Add visioneval to process R inside .Rmd rendering
 
 # We'll find docs in the following types of components:
 #    framework
@@ -112,7 +128,7 @@ for ( i in 1:nrow(ve.getdocs) ) {
     }
   } else { 
     for (d in doc.dir) {
-      these.files <- dir(d,pattern=doc.file.pattern,full.names=TRUE,recursive=TRUE)
+      these.files <- dir(d,pattern=doc.file.pattern,full.names=TRUE) #,recursive=TRUE)
       if ( length(these.files)>0 ) {
         doc.files <- c(doc.files,these.files)
       }
@@ -133,6 +149,7 @@ for ( i in 1:nrow(ve.getdocs) ) {
           , output_dir=out.dir
           , output_format="pdf_document"
           , quiet=TRUE
+          , param=list(eval=FALSE)
           # , param=value # do it like this and you can drop options in and out with a single #
         )
         cat("\nDone as",sub(file.path(ve.docs),"",of))

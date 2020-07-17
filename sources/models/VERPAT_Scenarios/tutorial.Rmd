@@ -113,7 +113,7 @@ These are the current list of VERSPM_Scenarios categories:
 ** ScenarioOutputFolder: Name of the folder where all the scenarios are created
 
 
-### Running VERPAT_Scnearios
+### Running VERPAT_Scenarios
 
 Running VERSPM_Scenario has 5 major steps. After initalizing the module there are 5 modules to call
 
@@ -124,7 +124,7 @@ Running VERSPM_Scenario has 5 major steps. After initalizing the module there ar
 ** VERSPMResults: This model summarizes all different scenario outputs from datastor to standard format
 ** ViewResults:  This module create the visualization and summaries for different performance measures 
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, eval=FALSE}
 
 library(visioneval)
 

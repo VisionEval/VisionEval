@@ -9,8 +9,6 @@ cat('run_model.R: script entered\n')
 library(visioneval)
 cat('run_model.R: library visioneval loaded\n')
 
-planType <- 'callr'
-
 #Initialize model
 #----------------
 initializeModel(
@@ -24,6 +22,7 @@ initializeModel(
   SaveDatastore = TRUE
   )  
 cat('run_model.R: initializeModel completed\n')
+
 #Run all demo module for all years
 #---------------------------------
 for(Year in getYears()) {

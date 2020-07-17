@@ -1122,7 +1122,7 @@ checkSpec <- function(Spec_ls, SpecGroup, SpecNum) {
                      "The attribute must be a ", Req_ls$ValueType, " type.")
             Errors_ <- c(Errors_, Msg)
           }
-          if (!any(str_detect(Spec, Req_ls$ValuesAllowed))) {
+          if (!any(stringr::str_detect(Spec, Req_ls$ValuesAllowed))) {
             Msg <-
               paste0("The value of the ", Name, "attribute of the ", SpecGroup,
                      " specification number ", SpecNum, " is incorrect. ",
