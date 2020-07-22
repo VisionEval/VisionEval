@@ -285,12 +285,12 @@ exportData <- function(Output,
     if ( tbl == "IncomeGroup" ) tbl <- "JobAccessibility"
 
     filename <- file.path(outputFolder, paste0(tbl, ".csv"))
-		if ( ncol(OutDf) < 1 ) {
-				if ( ! quiet) cat("Warning: Not writing empty file",basename(filename),"\n")
-		} else {
-				data.table::fwrite(OutDf, file=filename)
-				if ( ! quiet ) cat("Done (as ",basename(filename),")\n",sep="")
-		}
+    if ( ncol(OutDf) < 1 ) {
+      if ( ! quiet) cat("Warning: Not writing empty file",basename(filename),"\n")
+    } else {
+      data.table::fwrite(OutDf, file=filename)
+      if ( ! quiet ) cat("Done (as ",basename(filename),")\n",sep="")
+    }
   }
 }
 

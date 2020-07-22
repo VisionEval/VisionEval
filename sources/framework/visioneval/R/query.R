@@ -44,7 +44,7 @@ prepareForDatastoreQuery <- function(DstoreLocs_, DstoreType) {
   AllowedDstoreTypes_ <- c("RD", "H5")
   if (!DstoreType %in% AllowedDstoreTypes_) {
     Msg <-
-      paste0("Specified 'DatastoreType' in the 'run_parameters.json' file - ",
+      paste0("Specified 'DatastoreType' - ",
              DstoreType, " - is not a recognized type. ",
              "Recognized datastore types are: ",
              paste(AllowedDstoreTypes_, collapse = ", "), ".")

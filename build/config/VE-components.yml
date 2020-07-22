@@ -265,6 +265,8 @@ Components:
     Path: sources
     CRAN:
       - import
+      - R6
+      - jsonlite
   api:                               # "package" for 'docs' type is the last element (can be file name)
     Type: docs
     Path: "."                        # base directory below root to gather docs
