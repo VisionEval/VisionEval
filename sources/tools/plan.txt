@@ -1,0 +1,16 @@
+Elements required for specification:
+
+Measures:
+  Name:
+  Units: (output)
+  Description: (output)
+  Function: OR Summarize:
+    Calculation:
+  Under Summarize Only:
+    Units: (for inputs to Expr and By)
+    By: (optional; zero, one or two)
+    Table: (in which to find elements of expression)
+           (tables must link and be at same level of geography)
+
+Measures are processed in order of definition. Functions
+refer to measures computed earlier.

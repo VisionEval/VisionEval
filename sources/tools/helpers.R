@@ -4,6 +4,12 @@
 # NOTE: these all depend on having set up the VisionEval environment
 # See VisionEval.R in the installation runtime (VE-Installer/boilerplate)
 
+# R6 Class documentation example:
+# https://github.com/r-lib/R6/issues/3#issuecomment-173855054
+# https://github.com/r-lib/processx/blob/bc7483237b0fbe723390cbb74951221968fdb963/R/process.R#L2
+# https://www.tidyverse.org/blog/2019/11/roxygen2-7-0-0/#r6-documentation
+# https://roxygen2.r-lib.org/articles/rd.html#r6
+
 tool.contents <- c("openModel","verpat","verspm","vestate")
 
 requireNamespace("jsonlite")
@@ -146,8 +152,8 @@ ve.model.clear <- function(force=FALSE) {
   if ( length(to.delete)>0 ) {
     print(gsub(ve.runtime,"",to.delete))
     if ( force || (force <- confirm("Clear ALL prior model results?")) ) {
-      print(gsub(ve.runtime,"",to.delete))
-      unlink(to.delete)
+      unlink(to.delete,recursive=TRUE)
+      cat("Model results cleared.\n")
     } else {
       cat("Model results NOT cleared.\n")
     }
@@ -273,8 +279,8 @@ VEModel <- R6::R6Class(
   )
 )
 
-# The following function is the only thing exported
-openModel <- ve.model <- function(modelPath,modelName=NULL) {
+# The openModel function is the only thing exported
+openModel <- function(modelPath,modelName=NULL) {
   return( VEModel$new(modelPath=modelPath,modelName=modelName) )
 }
 
@@ -284,9 +290,9 @@ openModel <- ve.model <- function(modelPath,modelName=NULL) {
 
 verpat <- function(Scenarios=FALSE) {
   if ( ! scenarios ) {
-    model <- ve.model("VERPAT")
+    model <- openModel("VERPAT")
   } else {
-    model <- ve.model("VERPAT_Scenarios")
+    model <- openModel("VERPAT_Scenarios")
   }
   model$run()
   model
@@ -294,13 +300,13 @@ verpat <- function(Scenarios=FALSE) {
 
 verspm <- function(Scenarios=FALSE,MM=FALSE,VehAdj=FALSE) {
   if ( scenarios ) {
-    model <- ve.model("VERSPM_Scenarios")
+    model <- openModel("VERSPM_Scenarios")
   } else if ( mm ) {
-    model <- ve.model("VERSPM_MM")
+    model <- openModel("VERSPM_MM")
   } else if ( withAdj ) {
-    model <- ve.model("VERSPM_VehAdj")
+    model <- openModel("VERSPM_VehAdj")
   } else {
-    model <- ve.model("models/VERSPM")
+    model <- openModel("models/VERSPM")
   }
   model$run()
   model
@@ -308,9 +314,9 @@ verspm <- function(Scenarios=FALSE,MM=FALSE,VehAdj=FALSE) {
 
 vestate <- function(staged=FALSE) {
   if ( ! staged ) {
-    model <- ve.model("VE-State")
+    model <- openModel("VE-State")
   } else {
-    model <- ve.model(dir(pattern=".*Stage-\\d",file.path(ve.runtime,"models","VE-State-Staged"),full.names=TRUE))
+    model <- openModel(dir(pattern=".*Stage-\\d",file.path(ve.runtime,"models","VE-State-Staged"),full.names=TRUE))
   }
   model$run()
   model
