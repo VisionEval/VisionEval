@@ -300,6 +300,10 @@ ve.list <- function( modelStateFile = "ModelState.Rda",
                      datasets = TRUE,
                      quiet = FALSE
                    ) {
+  # rewrite this using visioneval::ListGroups, ListTables,
+  # ListDatasets (iterate over Groups and Tables)
+  # Change parameters to limit to just a list of groups,
+  # just a list of tables, list of datasets, on datasets, names only
  msf <- getModelStateFile(modelStateFile,quiet=quiet)
  idx <- indexModelState(msf,quiet=quiet)
  if ( !any(c(groups,tables,datasets)) ) groups <- tables <- datasets <- TRUE

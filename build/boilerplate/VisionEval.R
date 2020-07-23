@@ -193,6 +193,7 @@ if ( install.success ) {
     rm(tf,tools)
   }
   rm(tool.files,ve.tools)
+  require("visioneval",quietly=TRUE)
 }
-if ( exists("ve.lib",envir=environment()) ) rm(ve.lib,envir=environment())
+if ( exists("ve.lib",inherits=FALSE) ) rm(ve.lib)
 rm(env.loc,install.success)
