@@ -19,7 +19,7 @@ initializeModel(
   ModelParamFile = "model_parameters.json",
   LoadDatastore = TRUE,
   DatastoreName = "../VE-State-stage-1/Datastore",
-  SaveDatastore = FALSE
+  SaveDatastore = TRUE
   )
 cat("run_model.R: Stage 2 Initialization Complete")
 

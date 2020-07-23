@@ -19,7 +19,7 @@ initializeModel(
   ModelParamFile = "model_parameters.json",
   LoadDatastore = TRUE,
   DatastoreName = "../VE-State-stage-2/Datastore",
-  SaveDatastore = FALSE
+  SaveDatastore = TRUE
   )  
 
 #Run all demo module for all years

@@ -19,7 +19,7 @@ initializeModel(
   ModelParamFile = "model_parameters.json",
   LoadDatastore = FALSE,
   DatastoreName = NULL,
-  SaveDatastore = FALSE
+  SaveDatastore = TRUE
   )  
 cat('run_model.R: initializeModel completed\n')
 
