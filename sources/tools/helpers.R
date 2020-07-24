@@ -14,6 +14,7 @@ tool.contents <- c("openModel","verpat","verspm","vestate")
 
 requireNamespace("jsonlite")
 requireNamespace("R6")
+requireNamespace("visioneval")
 
 # Function: ve.model.path
 # Determine if parameter is a list of locations of run_model.R riles
@@ -55,10 +56,21 @@ ve.model.path <- function(modelPath=NULL) {
   normalizePath(modelPath,winslash="/",mustWork=TRUE)
 }
 
+load.model.state <- function(path) {
+  ms.env <- new.env()
+  model.state <- file.path(path,"ModelState.Rda")
+  if ( file.exists(model.state) ) {
+    return( visioneval::readModelState(FileName = model.state) )
+  } else {
+    return( list(0) )
+  }
+}
+
 ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
   self$modelPath <- ve.model.path(modelPath)
+  names(self$modelPath) <- basename(self$modelPath)
   if ( is.null(modelName) ) {
-    self$modelName <- basename(modelPath)
+    self$modelName <- names(modelPath)[1]
   } else {
     self$modelName <- modelName
   }
@@ -69,12 +81,27 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
     stop("Cannot construct model; missing: ",rpfile)
   }
   self$stageCount <- length(self$modelPath)
-  self$runStatus <- ifelse (
-    file.exists(file.path(self$modelPath,"ModelState.Rda")),
-    "Complete",
-    "Not Started"
+  self$modelState <- lapply(
+    self$modelPath,
+    load.model.state
   )
-  self$runError <- "Not Run"
+  if ( exists("ModelState_ls",envir=globalenv()) ) rm("ModelState_ls",envir=globalenv())
+  self$runStatus <- sapply(
+    simplify=TRUE,
+    self$modelState,
+    function(ms) {
+      if ( length(ms) > 0 ) {
+        ifelse(
+          "runStatus" %in% names(ms),
+          ms$runStatus,
+          "Prior Run"
+        )
+      } else {
+        "Not Run"
+      }
+    }
+  )
+  self$status <- self$runStatus[length(self$runStatus)]
 }
 
 ve.run.model <- function(verbose=TRUE) {
@@ -87,41 +114,46 @@ ve.run.model <- function(verbose=TRUE) {
     }
     owd <- setwd(stage)
     env.model <- attach(NULL,name="ve.run.model")
-    self$runError=""
+    self$status <- ""
     tryCatch(
       {
-        self$runError <- "Running"
+        self$status <- "Running"
         sys.source("run_model.R",envir=as.environment("ve.run.model"))
         if (verbose) message("Model stage ",stage," complete")
-        self$runError <- self$runStatus[ms] <- "Complete"
+        self$status <- self$runStatus[ms] <- "Complete"
       },
       error = function(e) {
         message("Model stage ",stage," failed")
         msg <- as.character(e)
         if ( ! nzchar(msg) ) msg <- "Stopped."
-        self$runError <- msg
+        self$status <- msg
         self$runStatus[ms] <- "Failed"
       },
       finally =
       {
-        if ( self$runError == "Running" ) {
-          self$runError <- "Failed"
+        if ( self$status == "Running" ) {
+          self$status <- "Failed"
         }
-        if ( self$runError == "" ) {
-          self$runError <- "Stopped"
+        if ( self$status == "" ) {
+          self$status <- "Stopped"
         }
         if (verbose) {
           cat("Model Stage:",gsub(ve.runtime,"",stage),"\n")
-          if ( self$runError != "Complete" ) cat("Error:",self$runError,"\n")
+          if ( self$status != "Complete" ) cat("Error:",self$status,"\n")
         }
         setwd(owd)
       }
     )
     if (verbose) {
-      cat("Status:",self$runError,"\n")
+      cat("Status:",self$status,"\n")
     }
   }
-  return(invisible(self$runError))
+  self$modelState <- lapply(
+    self$modelPath,
+    load.model.state
+  )
+  if ( exists("ModelState_ls",envir=globalenv()) ) rm("ModelState_ls",envir=globalenv())
+  return(invisible(self$status))
 }
 
 ve.model.dir <- function(pattern=NULL,recursive=FALSE,shorten="",path=NULL) {
@@ -177,7 +209,7 @@ ve.path.prefix <- function(x) {
     }
 }
 
-ve.model.duplicate <- function(newName=NULL,newPath=NULL) {
+ve.model.copy <- function(newName=NULL,newPath=NULL) {
   if ( is.null(newPath) ) {
     if ( self$stageCount>1 ) {
       newPath <- dirname(self$modelPath)
@@ -215,9 +247,9 @@ ve.model.duplicate <- function(newName=NULL,newPath=NULL) {
   return( openModel(newModelPath,newName) )
 }
 
-ve.model.status <- function(printStatus=TRUE) {
-  if ( printStatus ) print(self$runStatus)
-  return(invisible(self$runStatus))
+ve.model.status <- function(status) {
+  if ( missing(status) ) return(private$runError)
+  private$runError <- status
 }
 
 ve.print.model <- function() {
@@ -225,12 +257,11 @@ ve.print.model <- function() {
   cat("Path:\n")
   print(self$modelPath)
   cat("Datastore Type:",self$runParams$DatastoreType,"\n")
-  cat("Status:\n")
-  self$status()
-  return(NULL)
+  cat("Status:", self$status,"\n")
+  self$status
 }
 
-ve.model.dump <- function(
+ve.model.export <- function(
                        outputFolder   = "output",
                        includeTables  = character(0),  # default: include all of them
                        excludeTables  = character(0),  # default: don't exclude any
@@ -261,20 +292,24 @@ VEModel <- R6::R6Class(
   public = list(
     modelName=NULL,
     modelPath=NULL,
+    modelState=NULL,
     stageCount=NULL,
     runParams=NULL,
     runStatus=NULL,
-    runError=NULL,
     initialize=ve.init.model,
     run=ve.run.model,
     print=ve.print.model,
-    status=ve.model.status,
     dir=ve.model.dir,
     clear=ve.model.clear,
-    duplicate=ve.model.duplicate,
-    dump=ve.model.dump
+    copy=ve.model.copy,
+    export=ve.model.export
+  ),
+  active = list(
+    status=ve.model.status
   ),
   private = list(
+    runError=NULL,
+    ModelState=NULL,
     artifacts = ve.artifacts
   )
 )

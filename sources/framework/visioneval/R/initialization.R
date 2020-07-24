@@ -163,28 +163,34 @@ setModelState <-
 #' ModelState_ls list.
 #' @param FileName A string vector with the full path name of the model state
 #' file.
+#' @param envir An environment into which to load ModelState.Rda
 #' @return A list containing the specified components from the model state file.
 #' @export
-readModelState <- function(Names_ = "All", FileName = "ModelState.Rda") {
+readModelState <- function(Names_ = "All", FileName = "ModelState.Rda", envir=NULL) {
+#   if (file.exists(FileName)) {
+#     #writeLog(paste0('readModelState: loading ', FileName, ' \n'))
+#     i <- 1
+#     while( i <= 5 ){
+#       result <- try(load(FileName), silent=TRUE)
+# 
+#       if (class(result) != 'try-error'){
+#         break()
+#       } else {
+#         #writeLog(paste0('readModelState: error loading ', FileName, '\n'))
+#         i <- i + 1
+#       }
+#     }
+#     if ( i > 5 ) stop('Could not load ', FileName)
+#   }
+
+  if ( missing(envir) || is.null(envir) ) envir <- parent.frame()
   if (file.exists(FileName)) {
-    #writeLog(paste0('readModelState: loading ', FileName, ' \n'))
-    i <- 1
-    while( i <= 5 ){
-      result <- try(load(FileName), silent=TRUE)
-
-      if (class(result) != 'try-error'){
-        break()
-      } else {
-        #writeLog(paste0('readModelState: error loading ', FileName, '\n'))
-        i <- i + 1
-      }
-    }
-    if ( i > 5 ) stop('Could not load ', FileName)
+    load(FileName,envir=envir)
   }
-
-  # Commented out the following because it looks only in the local environment
-  #if ("ModelState_ls" %in% ls()) State_ls <- get("ModelState_ls")
-  State_ls <- ModelState_ls
+  if ( ! "ModelState_ls" %in% ls(envir) ) {
+    stop("No Model State available.")
+  }
+  State_ls <- get("ModelState_ls",envir=envir)
   if (Names_[1] == "All") {
     return(State_ls)
   } else {
