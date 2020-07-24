@@ -5,9 +5,9 @@
 #<doc>
 #
 ## AssignDrivers Module
-#### July 8, 2020
+#### May 8, 2020
 #
-#This module assigns drivers by age group to each household as a function of the numbers of persons and workers by age group, the household income, land use characteristics, and public transit availability. Users may specify the relative driver licensing rate relative to the model estimation data year in order to account for observed or projected changes in licensing rates.
+#This module assigns drivers by age group to each household as a function of the numbers of persons and workers by age group, the household income, land use characteristics, and public transit availability. Users may optionally specify regional targets for the ratio of drivers to persons by age group. If targets are supplied, the module will adjust the number of drivers in a selection of households to match the targets.
 #
 ### Model Parameter Estimation
 #
@@ -24,6 +24,20 @@
 ### How the Module Works
 #
 #The module iterates through each age group excluding the 0-14 year age group and creates a temporary set of person records for households in the region. For each household there are as many person records as there are persons in the age group in the household. A worker status attribute is added to each record based on the number of workers in the age group in the household. For example, if a household has 2 persons and 1 worker in the 20-29 year age group, one of the records would have its worker status attribute equal to 1 and the other would have its worker status attribute equal to 0. The person records are also populated with the household characteristics used in the model. The binomial logit model is applied to the person records to determine the probability that each person is a driver. The driver status of each person is determined by random draws with the modeled probability determining the likelihood that the person is determined to be a driver. The resulting number of drivers in the age group is then tabulated by household.
+#
+#The module accepts an optional input file *region_hh_ave_driver_per_capita.csv* that is used to specify ratios of licensed drivers to population by age group in the region for each model run year. The specifications for this file are described in the table below. If the file is present, the driver assignments computed by the model are adjusted to match the input target ratios. The process for making adjustments is described below. Although these inputs are not required, they may be important for calibrating the model for the base year and other past years that are modeled. The number of drivers in the household are significant inputs to the vehicle ownership and household travel models. Therefore if the modeled number of drivers is not consistent with observed values, the modeled estimates of household vehicles and household DVMT may not be consistent with observed values as well. These inputs may also be important for modeling future scenarios which assume future changes in driver licensing rates.
+#
+#Adjustments to match target inputs are done by age group as follows:
+#1. The driver model (binomial logit model) is applied to make an initial assignment of drivers in the age group as described above.
+#2. The difference in the total modeled number of drivers in the region and target number of drivers is calculated.
+#3. If the model produces fewer drivers than the target number, additional drivers equal to the calculated difference are assigned from the unassigned population. The assignment is done by sampling from this population where the probability that a person is assigned is the modeled probability that the person is a driver.
+#4. If the model produced more drivers than the target number, then a number of assigned drivers equal to the calculated difference is removed from the assigned population. The unassignment is done by sampling from this population where the probability of a driver being unassigned is 1 minus the model probability that the person is a driver.
+#
+#The values for the target ratios may be computed from state or federal data sources. State motor vehicle departments maintain data on licensed drivers and their ages. However, because the structure of those data and the means of acquiring them will vary by state no suggestions are made here regarding how to acquire or process them. Alternately, driver ratios may be computed from data published in Highway Statistics reports by the Federal Highway Administration. Both the state and federal data may be used to calculate the driver ratios by age group at the state level. However, if the user is not satisfied with using the state-level ratios for their model region, they will need to use data from their state's motor vehicle department for their area. The advantage of using data from the FHWA Highway Statistics reports is that they are available in a consistent and easy to use format from 1995 to the present. This can be useful for evaluating trends over time and consider the implications for future licensing rates. Following are the relevant report tables:
+#
+#**Table DL-20** (Licensed drivers, by sex and percentage in each age group) provides ratios of drivers to population by age group for the nation. If the user is willing to assume that the driver ratios in their region match those of the nation then data in this table can be used to populate the values in the *region_hh_ave_driver_per_capita.csv* file. Aggregation of age groups in the table will be necessary.
+#
+#**Table DL-22** (Licensed drivers, by State, sex, and age group) provides the number of drivers by age group by state. Aggregation of age groups in this table will be necessary. These data would need to be combined with estimates of population by age group to calculate the driver ratios. The population by age group tablulations are in the *azone_hh_pop_by_age.csv* input file that the user prepared for the *CreateHouseholds* module.
 #
 #</doc>
 
@@ -592,20 +606,16 @@ AssignDrivers <- function(L) {
     if (!is.null(L$Year$Region[[TargetDriverPropName]])) {
       TargetDriverProp <- L$Year$Region[[TargetDriverPropName]]
       DriverProb_ <- rep(0, length(Driver_))
-      if (any(IsUrban_)) {
-        DriverProb_[IsUrban_] <- applyBinomialModel(
-          Model_ls = DriverModel_ls$Metro,
-          Data_df = Per_df[IsUrban_,],
-          ReturnProbs = TRUE
-        )
-      }
-      if (any(!IsUrban_)) {
-        DriverProb_[!IsUrban_] <- applyBinomialModel(
-          Model_ls = DriverModel_ls$NonMetro,
-          Data_df = Per_df[!IsUrban_,],
-          ReturnProbs = TRUE
-        )
-      }
+      DriverProb_[IsUrban_] <- applyBinomialModel(
+        Model_ls = DriverModel_ls$Metro,
+        Data_df = Per_df[IsUrban_,],
+        ReturnProbs = TRUE
+      )
+      DriverProb_[!IsUrban_] <- applyBinomialModel(
+        Model_ls = DriverModel_ls$NonMetro,
+        Data_df = Per_df[!IsUrban_,],
+        ReturnProbs = TRUE
+      )
       Driver_ <- adjustDrivers(Driver_, DriverProb_, TargetDriverProp)
       rm(DriverProb_, TargetDriverProp)
     }

@@ -16,7 +16,7 @@ Description: This package contains modules which predict household vehicle
     higher than the cost per mile of using a car service. The cost of owning
     vehicles is calculated as a function of the vehicle age, type, and vehicle
     miles traveled.
-License: file LICENSE
+License: Apache License 2.0
 LazyData: TRUE
 Depends: R (>= 3.1.0)
 Imports:
