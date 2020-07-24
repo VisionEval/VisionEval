@@ -275,4 +275,11 @@ Components:
     Type: docs
     Path: api                        # so VE_Training_March_13-14_2019 is a subdirectory of "api"
     # Target: "."                    # The default (relative to "ve.docs") for Type: docs
-
+  Getting-Started.md:
+    Type: docs
+    Path: sources
+  RStudio.md:
+    Type: docs
+    Path: build
+    Target: visioneval
+  

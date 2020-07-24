@@ -1,6 +1,6 @@
 # Developing VisionEval using RStudio
 
-As of the June 2020 release of VisionEval, [RStudio Desktop](https://rstudio.com/products/rstudio/download/#download) is supported as the preferred environment for developing and running VisionEval software and scenarios.
+As of the July 2020 release of VisionEval, [RStudio Desktop](https://rstudio.com/products/rstudio/download/#download) is supported as the preferred environment for developing and running VisionEval software and scenarios.
 
 If you are interested in developing or debugging [VisionEval](https://visioneval.org "VisionEval"), you can get started in one of two ways:
 
