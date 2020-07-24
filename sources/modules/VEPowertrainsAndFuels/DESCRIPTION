@@ -1,7 +1,7 @@
 Package: VEPowertrainsAndFuels
 Type: Package
-Title: Default Powertrains And Fuels for ODOT Adopted Plans scenario (xAP)
-Version: 0.9.7
+Title: Assign powertrain and fuel characteristics to vehicles
+Version: 0.9.2
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: AASHTO, ODOT
@@ -10,10 +10,7 @@ Description: Contains modules for inputting default powertrain and fuel
     characteristics and for allowing households to override some of the defaults
     with characteristics for their region. Calculates the carbon intensity of 
     fuels and assigns powertrains and powertrain characteristics to household 
-    vehicles and car service vehicles. The default values are for the Oregon
-    DOT Adopted Plans scenario as of February 25, 2020. The ICEV MPG values
-    by model year were adjusted 6% lower to better match validation targets for
-    fuel consumption. This is the "xAP" version, 2020-07-24.
+    vehicles and car service vehicles.
 License: file LICENSE
 LazyData: TRUE
 Depends: R (>= 3.1.0)
