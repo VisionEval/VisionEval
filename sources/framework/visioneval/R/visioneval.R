@@ -96,7 +96,7 @@ initializeModel <-
       rm(Msg)
       #Otherwise read the preExistingModelState
     } else {
-      if(!"ModelState_ls" %in% ls()){  # Check in "ve.model" environment
+      if(!"ModelState_ls" %in% ls(.GlobalEnv)){  # Check in "ve.model" environment
         # Load modelstate file in the global environment
         assign("ModelState_ls", readModelState(), envir=.GlobalEnv)
       }

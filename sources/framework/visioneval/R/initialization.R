@@ -68,7 +68,6 @@ initModelStateFile <-
       newModelState_ls$Deflators <- read.csv(DeflatorFilePath, as.is = TRUE)
       newModelState_ls$Units <- read.csv(UnitsFilePath, as.is = TRUE)
       assign("ModelState_ls",newModelState_ls,envir=.GlobalEnv)
-      # ModelState_ls <<- newModelState_ls
       save(ModelState_ls, envir=.GlobalEnv, file = "ModelState.Rda")
     }
   }
@@ -89,10 +88,17 @@ initModelStateFile <-
 #'
 #' @param Names_ A string vector of the components to extract from the
 #' ModelState_ls list.
+#' @param localModelState a ModelState_ls structure living somewhere other than
+#'   on the search path. If missing, hunt for global model state
 #' @return A list containing the specified components from the model state file.
 #' @export
-getModelState <- function(Names_ = "All") {
-  State_ls <- ModelState_ls
+getModelState <- function(Names_ = "All", localModelState=NULL) {
+  if ( missing(localModelState) || is.null(localModelState) ) {
+    State_ls <- ModelState_ls
+  } else {
+    cat("Using localModelState")
+    State_ls <- localModelState
+  }
   if (Names_[1] == "All") {
     return(State_ls)
   } else {
@@ -117,34 +123,35 @@ getModelState <- function(Names_ = "All") {
 #' @param ChangeState_ls A named list of components to change in ModelState_ls
 #' @param FileName A string identifying the name of the file that contains
 #' the ModelState_ls list. The default name is 'ModelState.Rda'.
+#' @param localModelState A ModelState_ls structure living somewhere other than
+#'   the global environment.
 #' @return TRUE if the model state list and file are changed.
 #' @export
 setModelState <-
-  function(ChangeState_ls, FileName = "ModelState.Rda") {
-    ModelState_ls <- getModelState()
+  function(ChangeState_ls, FileName = "ModelState.Rda", localModelState=NULL ) {
+    ModelState_ls <- getModelState(localModelState=localModelState)
     for (i in 1:length(ChangeState_ls)) {
       ModelState_ls[[names(ChangeState_ls)[i]]] <- ChangeState_ls[[i]]
     }
     ModelState_ls$LastChanged <- Sys.time()
 
-    # JRaw: why not just do this:
-    #       result <- try(save(ModelState_ls, file=FileName))
-    #       if ( class(result) == 'try-class' ) stop('Could not write to ', FileName)
+    result <- try(save(ModelState_ls, file=FileName))
+    if ( class(result) == 'try-class' ) stop('Could not write to ', FileName)
 
-    i <- 1
-    while ( i <= 5 ){
-      result <- try(save(ModelState_ls, file=FileName))
-      if ( class(result) == 'try-class' ){
-        cat(paste0('setModelState: ', FileName, ' is not currently writeable'))
-        i <- i + 1
-      } else {
-        break()
-      }
-    }
+#     i <- 1
+#     while ( i <= 5 ){
+#       result <- try(save(ModelState_ls, file=FileName))
+#       if ( class(result) == 'try-class' ){
+#         cat(paste0('setModelState: ', FileName, ' is not currently writeable'))
+#         i <- i + 1
+#       } else {
+#         break()
+#       }
+#     }
+# 
+#     if ( i > 5 ) stop('Could not write to ', FileName)
 
-    if ( i > 5 ) stop('Could not write to ', FileName)
-
-    ModelState_ls <<- ModelState_ls
+    if ( missing(localModelState) ) ModelState_ls <<- ModelState_ls
     TRUE
   }
 

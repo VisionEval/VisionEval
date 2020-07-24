@@ -58,12 +58,14 @@ ve.model.path <- function(modelPath=NULL) {
 
 load.model.state <- function(path) {
   ms.env <- new.env()
-  model.state <- file.path(path,"ModelState.Rda")
-  if ( file.exists(model.state) ) {
-    return( visioneval::readModelState(FileName = model.state) )
+  if ( ! grepl("ModelState\\.Rda$",path) ) path <- file.path(path,"ModelState.Rda")
+  if ( file.exists(path) ) {
+    model.state <- visioneval::readModelState(FileName=path, envir=ms.env)
   } else {
-    return( list(0) )
+    model.state <- list()
   }
+  rm(ms.env)
+  return(model.state)
 }
 
 ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
@@ -141,6 +143,13 @@ ve.run.model <- function(verbose=TRUE) {
           cat("Model Stage:",gsub(ve.runtime,"",stage),"\n")
           if ( self$status != "Complete" ) cat("Error:",self$status,"\n")
         }
+        model.state.path <- file.path(self$modelPath[ms],"ModelState.Rda")
+        model.state <- load.model.state(model.state.path)
+        visioneval::setModelState(
+          list(runStatus=self$runStatus[ms]),
+          FileName=model.state.path,
+          localModelState=model.state
+        )
         setwd(owd)
       }
     )
@@ -152,7 +161,7 @@ ve.run.model <- function(verbose=TRUE) {
     self$modelPath,
     load.model.state
   )
-  if ( exists("ModelState_ls",envir=globalenv()) ) rm("ModelState_ls",envir=globalenv())
+#  if ( exists("ModelState_ls",envir=globalenv()) ) rm("ModelState_ls",envir=globalenv())
   return(invisible(self$status))
 }
 
@@ -185,6 +194,10 @@ ve.model.clear <- function(force=FALSE) {
     print(gsub(ve.runtime,"",to.delete))
     if ( force || (force <- confirm("Clear ALL prior model results?")) ) {
       unlink(to.delete,recursive=TRUE)
+      self$modelState <- lapply(
+        self$modelPath,
+        function(x) list()
+      )
       cat("Model results cleared.\n")
     } else {
       cat("Model results NOT cleared.\n")
