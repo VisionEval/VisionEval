@@ -281,7 +281,7 @@ readTables <- function(Year = NULL, Scenario = "Base", Output = "All", Table=TRU
                       Units=NA))
   }
   # Read the model state to gather information
-  ModelState_ls <<- readModelState()
+  ModelState_ls <- readModelState()
   # Define readFromTable Function
   if(ModelState_ls$DatastoreType=="RD"){
     readFromTable <- readFromTableRD
@@ -425,7 +425,7 @@ VERSPMResults <- function(L){
   ScenTab_dt <- cbind(ScenTab_dt,Levels_dt)
   ScenTab_dt <- ScenTab_dt[FinalResults_dt,on=.(Scenario)][order(Scenario)]
   BaseYear <- L$G$BaseYear
-  ModelState_ls <<- readModelState()
+  ModelState_ls <- readModelState()
   ScenTab_dt <- ScenTab_dt[,{
                             Bzone <- Data[Table=="Bzone"][[1]]
                             Marea <- Data[Table=="Marea"][[1]]

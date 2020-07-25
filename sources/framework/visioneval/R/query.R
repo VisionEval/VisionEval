@@ -306,7 +306,8 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
     Out_ls[[tb]] <- list()
     Ds <- names(Tables_ls[[tb]])
     for (Loc in DstoreLocs_) {
-      assign("ModelState_ls", QueryPrep_ls$Listing[[Loc]], env=.GlobalEnv)
+      if ( ! "ve.model" %in% search() ) stop("ve.model environment is not available.")
+      assign("ModelState_ls", QueryPrep_ls$Listing[[Loc]], env=as.environment("ve.model"))
       HasTable <- checkTableExistence(tb, Group, ModelState_ls$Datastore)
       if (HasTable) {
         for (ds in Ds) {

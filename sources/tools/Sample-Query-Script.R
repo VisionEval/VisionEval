@@ -203,7 +203,7 @@ addPctMFI <- function(thisYear,MedianIncome,QPrep_ls,DstoreType="RD") {
   # the specification + framework functions
   # -----------------------------------
   Loc <- QPrep_ls$Dir[1]
-  assign("ModelState_ls",QPrep_ls$Listing[[Loc]],pos=1)
+  assign("ModelState_ls",QPrep_ls$Listing[[Loc]],envir=as.environment("ve.model"))
 
   visioneval::assignDatastoreFunctions(DstoreType) 
   Specs <- visioneval::processModuleSpecs(Specs)

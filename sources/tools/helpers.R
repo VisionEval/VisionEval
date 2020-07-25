@@ -87,7 +87,7 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
     self$modelPath,
     load.model.state
   )
-  if ( exists("ModelState_ls",envir=globalenv()) ) rm("ModelState_ls",envir=globalenv())
+#  if ( exists("ModelState_ls",envir=globalenv()) ) rm("ModelState_ls",envir=globalenv())
   self$runStatus <- sapply(
     simplify=TRUE,
     self$modelState,
@@ -115,12 +115,16 @@ ve.run.model <- function(verbose=TRUE) {
       message(stage)
     }
     owd <- setwd(stage)
-    env.model <- attach(NULL,name="ve.run.model")
+    if ( ! "ve.model" %in% search() ) {
+      envir <- attach(NULL,name="ve.model")
+    } else {
+      envir <- as.environment("ve.model")
+    }
     self$status <- ""
     tryCatch(
       {
         self$status <- "Running"
-        sys.source("run_model.R",envir=as.environment("ve.run.model"))
+        sys.source("run_model.R",envir=envir)
         if (verbose) message("Model stage ",stage," complete")
         self$status <- self$runStatus[ms] <- "Complete"
       },
@@ -144,12 +148,12 @@ ve.run.model <- function(verbose=TRUE) {
           if ( self$status != "Complete" ) cat("Error:",self$status,"\n")
         }
         model.state.path <- file.path(self$modelPath[ms],"ModelState.Rda")
-        model.state <- load.model.state(model.state.path)
-        visioneval::setModelState(
-          list(runStatus=self$runStatus[ms]),
-          FileName=model.state.path,
-          localModelState=model.state
-        )
+        if ( file.exists(model.state.path) ) {
+          visioneval::setModelState(
+            list(runStatus=self$runStatus[ms]),
+            FileName=model.state.path
+          )
+        }
         setwd(owd)
       }
     )
@@ -248,11 +252,10 @@ ve.model.copy <- function(newName=NULL,newPath=NULL) {
     try <- try+1
   }
   newModelPath <- normalizePath(newModelPath,winslash="/",mustWork=FALSE)
-  dir.create(newModelPath)
+  dir.create(newModelPath,showWarnings=FALSE)
   for ( p in 1:self$stageCount ) {
     copy.from <- setdiff(self$dir(path=p),private$artifacts(path=p))
-    copy.to <- file.path(newModelPath,basename(self$modelPath[p]))
-  #  dir.create(newModelPath)
+    copy.to <- newModelPath # file.path(newModelPath,basename(self$modelPath[p]))
     print(copy.to)
     dir.create(copy.to)
     file.copy(copy.from,copy.to,recursive=TRUE)

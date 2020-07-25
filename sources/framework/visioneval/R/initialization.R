@@ -67,8 +67,9 @@ initModelStateFile <-
       newModelState_ls$LastChanged <- Sys.time()
       newModelState_ls$Deflators <- read.csv(DeflatorFilePath, as.is = TRUE)
       newModelState_ls$Units <- read.csv(UnitsFilePath, as.is = TRUE)
-      assign("ModelState_ls",newModelState_ls,envir=.GlobalEnv)
-      save(ModelState_ls, envir=.GlobalEnv, file = "ModelState.Rda")
+      if ( ! "ve.model" %in% search() ) attach(NULL,name="ve.model")
+      assign("ModelState_ls",newModelState_ls,envir=as.environment("ve.model"))
+      save(ModelState_ls, envir=as.environment("ve.model"), file = "ModelState.Rda")
     }
   }
   TRUE
@@ -94,9 +95,10 @@ initModelStateFile <-
 #' @export
 getModelState <- function(Names_ = "All", localModelState=NULL) {
   if ( missing(localModelState) || is.null(localModelState) ) {
-    State_ls <- ModelState_ls
+    if ( ! "ve.model" %in% search() ) stop("Missing ve.model environment.")
+    State_ls <- get("ModelState_ls",as.environment("ve.model"))
   } else {
-    cat("Using localModelState")
+    cat("Using localModelState: ",localModelState,"\n")
     State_ls <- localModelState
   }
   if (Names_[1] == "All") {
@@ -128,8 +130,8 @@ getModelState <- function(Names_ = "All", localModelState=NULL) {
 #' @return TRUE if the model state list and file are changed.
 #' @export
 setModelState <-
-  function(ChangeState_ls, FileName = "ModelState.Rda", localModelState=NULL ) {
-    ModelState_ls <- getModelState(localModelState=localModelState)
+  function(ChangeState_ls, FileName = "ModelState.Rda") {
+    ModelState_ls <- getModelState()
     for (i in 1:length(ChangeState_ls)) {
       ModelState_ls[[names(ChangeState_ls)[i]]] <- ChangeState_ls[[i]]
     }
@@ -151,7 +153,8 @@ setModelState <-
 # 
 #     if ( i > 5 ) stop('Could not write to ', FileName)
 
-    if ( missing(localModelState) ) ModelState_ls <<- ModelState_ls
+    if ( ! "ve.model" %in% search() ) stop("ve.model environment not available.")
+    assign("ModelState_ls", ModelState_ls, envir=as.environment("ve.model"))
     TRUE
   }
 
@@ -190,7 +193,13 @@ readModelState <- function(Names_ = "All", FileName = "ModelState.Rda", envir=NU
 #     if ( i > 5 ) stop('Could not load ', FileName)
 #   }
 
-  if ( missing(envir) || is.null(envir) ) envir <- parent.frame()
+  if ( missing(envir) || is.null(envir) ) {
+    if ( ! "ve.model" %in% search() ) {
+      envir <- attach(NULL,name="ve.model")
+    } else {
+      envir <- as.environment("ve.model")
+    }
+  }
   if (file.exists(FileName)) {
     load(FileName,envir=envir)
   }

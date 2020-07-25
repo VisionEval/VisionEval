@@ -870,13 +870,12 @@ assignDatastoreFunctions <- function(DstoreType) {
   if (DstoreType %in% AllowedDstoreTypes_) {
     DstoreFuncs_ <- lapply(paste0(DstoreNames_,DstoreType),function(x) get(x) ) # make a list of function objects
     names(DstoreFuncs_) <- DstoreNames_
-    ve.model <- grep("^ve\\.model$",search())# check for attached environment
-    if ( length(ve.model)!=1 ) {
+    if ( ! "ve.model" %in% search() ) {
       # ve.model does not exist, so create and attach it
       ve.model <- attach(DstoreFuncs_,name="ve.model")
     } else {
       # ve.model exists, so assign the DStoreFuncs_ to DstoreNames_ in that environment
-      lapply(DstoreNames_,function(n) assign(n,DstoreFuncs_[n],envir=as.environment(ve.model)))
+      lapply(DstoreNames_,function(n) assign(n,DstoreFuncs_[[n]],envir=as.environment("ve.model")))
     }
   } else {
     Msg <-
