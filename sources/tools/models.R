@@ -53,7 +53,7 @@ ve.model.path <- function(modelPath=NULL) {
       stop("Could not locate run_model.R for [",paste(modelPath,collapse=","),"]")
     }
   }
-  normalizePath(modelPath,winslash="/",mustWork=TRUE)
+  return(normalizePath(modelPath,winslash="/",mustWork=TRUE))
 }
 
 load.model.state <- function(path) {
@@ -72,7 +72,7 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
   self$modelPath <- ve.model.path(modelPath)
   names(self$modelPath) <- basename(self$modelPath)
   if ( is.null(modelName) ) {
-    self$modelName <- names(modelPath)[1]
+    self$modelName <- names(self$modelPath)[1]
   } else {
     self$modelName <- modelName
   }
@@ -87,7 +87,10 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
     self$modelPath,
     load.model.state
   )
-#  if ( exists("ModelState_ls",envir=globalenv()) ) rm("ModelState_ls",envir=globalenv())
+  if ( length(self$modelState)>0 && any(unlist(lapply(self$modelState,length))>0) ) {
+    self$index()
+  }
+
   self$runStatus <- sapply(
     simplify=TRUE,
     self$modelState,
@@ -165,7 +168,10 @@ ve.run.model <- function(verbose=TRUE) {
     self$modelPath,
     load.model.state
   )
-#  if ( exists("ModelState_ls",envir=globalenv()) ) rm("ModelState_ls",envir=globalenv())
+  if ( length(self$modelState)>0 && all(unlist(lapply(self$modelState,length))>0) ) {
+    self$index()
+  }
+
   return(invisible(self$status))
 }
 
@@ -189,7 +195,8 @@ ve.artifacts <- function(path=NULL) {
     dstores <- dstores[dir.exists(dstores)]
     logs    <- self$dir(pattern="Log_*.*\\.txt",path=path)
     logs    <- logs[!dir.exists(logs)]
-    return(c(mstates,dstores,logs))
+    outputs <- self$dir(pattern="output",path=path)
+    return(c(mstates,dstores,logs,outputs))
 }
 
 ve.model.clear <- function(force=FALSE) {
@@ -257,10 +264,138 @@ ve.model.copy <- function(newName=NULL,newPath=NULL) {
     copy.from <- setdiff(self$dir(path=p),private$artifacts(path=p))
     copy.to <- newModelPath # file.path(newModelPath,basename(self$modelPath[p]))
     print(copy.to)
-    dir.create(copy.to)
+    dir.create(copy.to,showWarnings=FALSE)
     file.copy(copy.from,copy.to,recursive=TRUE)
   }
   return( openModel(newModelPath,newName) )
+}
+
+# Check if a specified attribute belongs to the Datastore row
+attributeExist <- function(variable, attr_name){
+  if(is.list(variable)){
+    if(!is.na(variable[[1]])){
+      attr_value <- variable[[attr_name]]
+      if(!is.null(attr_value)) return(TRUE)
+    }
+  }
+  return(FALSE)
+}
+
+# Get a specified attribute for a Datastore row
+attributeGet <- function(variable, attr_name){
+  if(is.list(variable)){
+    if(!is.na(variable[[1]])){
+      attr_value <- variable[[attr_name]]
+      if(!is.null(attr_value)) return(attr_value)
+    }
+  }
+  return(NA)
+}
+
+ve.model.index <- function() {
+  # Check that there is a model state
+  # message("indexing model stages...")
+  if ( length(self$modelState)==0 || ! any(unlist(lapply(self$modelState,length))>0) ) {
+    stop("Model does not appear to have been run yet.")
+  }
+
+  # message("Processing model stages...")
+  Index <- data.frame()
+  Inputs <- data.frame()
+  for ( stage in self$stageCount ) {
+    ms <- self$modelState[[stage]]
+    if ( length(ms)==0 ) next
+    ds <- (ms$Datastore)
+    model.path <- file.path(basename(dirname(self$modelPath[stage])),basename(self$modelPath[stage]))
+
+    # message("Processing ",basename(self$modelPath[stage]))
+    # NOTE: Datastore element ds of ModelState is a data.frame.
+    #       The attributes column contains a list for each row
+    # Datastore elements with a "FILE" attribute are inputs; we want the outputs
+    # the non-FILE elements are creations living in the Datastore (i.e. not inputs => outputs)
+    InputIndex <- sapply(ds$attributes, attributeExist, "FILE")
+    Description <- sapply(ds$attributes, attributeGet, "DESCRIPTION",simplify=TRUE) # should yield a character vector
+    Module <- sapply(ds$attributes, attributeGet, "MODULE",simplify=TRUE) # should yield a character vector
+    Units <- sapply(ds$attributes, attributeGet, "UNITS",simplify=TRUE) # should yield a character vector
+    if ( class(Description) != "character" ) {
+      stop("Expected Description as character vector, instead got ",class(Description))
+    }
+
+    # Build parallel data.frame for Inputs
+    # message("Input data frame...")
+    File <- sapply(ds$attributes, attributeGet, "FILE",simplify=TRUE) # should yield a character vector
+    inputs <- data.frame(
+      Module = Module[InputIndex],
+      Name = ds$name[InputIndex],
+      File = File[InputIndex],
+      Description = Description[InputIndex],
+      Units = Units[InputIndex],
+      Stage = rep(as.character(stage),length(which(InputIndex))),
+      Path = model.path
+    )
+    Inputs <- rbind(Inputs,inputs)
+    # message("Length of inputs:",nrow(inputs))
+
+    # message("Output data frame...")
+    Description <- Description[!InputIndex]
+    Module <- Module[!InputIndex]
+    Units <- Units[!InputIndex]
+    splitGroupTableName <- strsplit(ds[!InputIndex, "groupname"], "/")
+    if ( length(Description) != length(splitGroupTableName) ) stop("Inconsistent table<->description correspondence")
+    # message("Length of outputs:",length(splitGroupTableName))
+
+    maxLength <- max(unlist(lapply(splitGroupTableName, length)))
+    if ( maxLength != 3 ) {
+      warning("Model state ",self$modelPath[stage],"is incomplete (",maxLength,")")
+      next
+    }
+    splitGroupTableName <- lapply(splitGroupTableName , function(x) c(x, rep(NA, maxLength-length(x))))
+
+    # Add modelPath and Description to Index row
+    # message("Adding Description and modelPath")
+    PathGroupTableName <- list()
+    for ( i in 1:length(splitGroupTableName) ) {
+      PathGroupTableName[[i]] <- c(
+        splitGroupTableName[[i]],
+        Description[i],
+        Units[i],
+        Module[i],
+        as.character(stage),
+        model.path
+      )
+    }
+    if ( any((cls<-lapply(PathGroupTableName,class))!="character") ) {
+      bad.class <- which(cls!="character")
+      print( PathGroupTableName[[bad.class[1]]] )
+      print( length(bad.class) )
+      stop("Non-character vector in Datastore index row")
+    }
+
+    # Using 'do.call' turns each element of the splitGroupTableName list into one argument for rbind.data.frame
+    # By contrast, calling rbind.data.frame(splitGroupTableName) simply converts the list (a single argument) into a
+    # data.frame (so each element becomes one column) Explanation:
+    # https://www.stat.berkeley.edu/~s133/Docall.html
+    # message("Adding to output data.frame")
+    GroupTableName <- data.frame()
+    GroupTableName <- do.call(rbind.data.frame, PathGroupTableName)
+    colnames(GroupTableName) <- c("Group", "Table", "Name","Description", "Units","Module","Stage","Path")
+    # message("length of output data:",nrow(GroupTableName))
+
+    # GroupTableName is now a data.frame with five columns
+    # complete.cases blows away the rows that have any NA values
+    # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each
+    # column)
+    # message("Adding inputs to Inputs data.frame")
+    ccases <- complete.cases(GroupTableName)
+    GroupTableName <- GroupTableName[ccases,]
+    # message("Length of complete.cases:",nrow(GroupTableName))
+    Index <- rbind(Index,GroupTableName)
+    # message("length of Index:",nrow(Index))
+  }
+  # message("Attaching ve.inputs attribute to Index")
+  self$modelIndex <- Index
+  self$modelInputs <- Inputs
+  invisible(list(Index=self$modelIndex,Inputs=self$modelInputs))
 }
 
 ve.model.status <- function(status) {
@@ -277,28 +412,127 @@ ve.print.model <- function() {
   self$status
 }
 
-ve.model.export <- function(
-                       outputFolder   = "output",
-                       includeTables  = character(0),  # default: include all of them
-                       excludeTables  = character(0),  # default: don't exclude any
-                       overwrite      = FALSE,         # TRUE to destroy outputFolder first if it exists
-                       all.tables     = FALSE,         # TRUE will ignore include/exclude and export everything
-                       quiet          = FALSE          # TRUE to suppress all 
-                       ) {
+ve.model.groups <- function(groups) {
   if ( ! all(file.exists(file.path(self$modelPath,"ModelState.Rda"))) ) {
     stop("Model has not been run yet.")
   }
-  for ( p in self$modelPath ) {
-    ve.export(
-      modelStateFile=p,
-      outputFolder=outputFolder,
-      includeTables=includeTables,
-      excludeTables=excludeTables,
-      overwrite=overwrite,
-      all.tables=all.tables,
-      quiet=quiet
+  idxGroups <- unique(self$modelIndex[,c("Group","Stage")])
+  row.names(idxGroups) <- NULL
+  if ( ! missing(groups) ) {
+    if ( is.character(groups) && length(groups)>0 ) {
+      self$groupsSelected <- groups[ groups %in% idxGroups$Group ]
+    } else {
+      self$groupsSelected <- character(0)
+    }
+  }
+  if ( length(self$groupsSelected)==0 ) {
+    idxGroups$Selected <- "Yes"
+  } else {
+    idxGroups$Selected <- ifelse(idxGroups$Group %in% self$groupsSelected,"Yes","No")
+  }
+  return(idxGroups)
+}
+
+ve.group.selected <- function(test.group,groups) {
+  return( test.group %in% groups$Group[groups$Selected=="Yes"] )
+}
+
+ve.model.tables <- function(tables) {
+  if ( ! all(file.exists(file.path(self$modelPath,"ModelState.Rda"))) ) {
+    stop("Model has not been run yet.")
+  }
+  idxTables <- unique(self$modelIndex[,c("Group","Table","Stage")])
+  row.names(idxTables) <- NULL
+  if ( ! missing(tables) ) {
+    if ( is.character(tables) && length(tables)>0 ) {
+      self$tablesSelected <- tables[ tables %in% idxTables$Table ]
+    } else {
+      self$tablesSelected <- character(0)
+    }
+  }
+  group.selected <- ve.group.selected(idxTables$Group,self$groups)
+  if ( length(self$tablesSelected)==0 ) {
+    idxTables$Selected <- ifelse( group.selected, "Yes", "No (!Group)" )
+  } else {
+    idxTables$Selected <- ifelse(
+      idxTables$Table %in% self$tablesSelected,
+      ifelse( group.selected,
+        "Yes","No (!Group)"
+      ),
+      "No")
+  }
+  return(idxTables)
+}
+
+# Build data.frames
+ve.model.extract <- function(
+  stage=NULL,
+  saveTo="output",
+  overwrite=FALSE
+) {
+  if ( ! all(file.exists(file.path(self$modelPath,"ModelState.Rda"))) ) {
+    stop("Model has not been run yet.")
+  }
+  if ( is.null(stage) ) stage <- self$stageCount # Last one should have everything
+  
+  visioneval::assignDatastoreFunctions(self$runParams$DatastoreType)
+  tables <- self$tables
+  tables <- tables[tables$Selected=="Yes",c("Group","Table","Stage")]
+  extract <- with( self$modelIndex,
+    which( Group %in% tables$Group & Table %in% tables$Table & Stage %in% tables$Stage )
+  )
+  extract <- self$modelIndex[extract,c("Name","Table","Group","Stage")]
+  tables <- split( extract$Name, list(extract$Table,extract$Group,extract$Stage) )
+  tables <- tables[which(sapply(tables,length)!=0)]
+  DataSpecs <- lapply( names(tables), function(T.G.S) {
+        TGS <- unlist(strsplit(T.G.S,"\\."))
+        stage <- as.integer(TGS[3])
+        mp <- self$modelPath[stage]
+        ms <- self$modelState[[stage]]
+        dstoreloc <- file.path(mp,ms$DatastoreName)
+        df <- data.frame(
+          Name  = tables[[T.G.S]],
+          Table = TGS[1],
+          Group = TGS[2],
+          Loc   = dstoreloc
+        )
+        list(
+          Data=df,
+          File=paste0(paste(gsub("\\.","_",T.G.S),format(ms$LastChanged,"%Y-%m-%d_%H%M%S"),sep="_"),".csv"),
+          Stage=stage
+        )
+      }
+    )
+  results <- lapply(DataSpecs, function(d) {
+    message("Extracting data for Table ",d$Data$Table[1]," in Group ",d$Data$Group[1])
+        df <- data.frame(
+          apply(d$Data, 1, function(x) {
+            readFromTable(Name=x[1],Table=x[2],Group=x[3],DstoreLoc=x[4],ReadAttr=FALSE)
+          }
+          )
+        )
+        names(df) <- d$Data$Name
+        df
+      }
+    )
+  files <- sapply(DataSpecs, function(x) x$File)
+  stages <- sapply(DataSpecs, function(x) x$Stage)
+  names(results) <- files
+  if ( is.character(saveTo) && nzchar(saveTo) ) {
+    mapply(
+      names(results),
+      stages,
+      FUN=function(f,s) {
+        data <- results[[f]]
+        out.path <- file.path(self$modelPath[s],saveTo)
+        if ( ! dir.exists(out.path) ) dir.create(out.path,recursive=TRUE)
+        fn <- file.path(out.path,f)
+        write.csv(data,file=fn)
+        message("Write output file: ",gsub(ve.runtime,"",fn))
+      }
     )
   }
+  invisible(results)
 }
 
 # Here is VEModel R6 class
@@ -309,6 +543,11 @@ VEModel <- R6::R6Class(
     modelName=NULL,
     modelPath=NULL,
     modelState=NULL,
+    modelOutputs=NULL,
+    modelInputs=NULL,
+    modelIndex=NULL,
+    groupsSelected=character(0),
+    tablesSelected=character(0),
     stageCount=NULL,
     runParams=NULL,
     runStatus=NULL,
@@ -318,10 +557,13 @@ VEModel <- R6::R6Class(
     dir=ve.model.dir,
     clear=ve.model.clear,
     copy=ve.model.copy,
-    export=ve.model.export
+    index=ve.model.index,
+    extract=ve.model.extract
   ),
   active = list(
-    status=ve.model.status
+    status=ve.model.status,
+    groups=ve.model.groups,
+    tables=ve.model.tables
   ),
   private = list(
     runError=NULL,
