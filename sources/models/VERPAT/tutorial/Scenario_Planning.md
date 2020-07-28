@@ -183,6 +183,6 @@ Compare multiple scenarios at a time graphically to quickly assess results
 <img align="center" width="1500" border=1, src="VERPAT-Tutorial-images/scenario324_all_selected.png">
 
 
-The next section in the tutorial is the [[VERPAT Model Description | VERPAT-Tutorial-Model-Description]].  
+The next section in the tutorial is the [Model Description](Model_Description.md).  
 
-[[Overview | VERPAT-Tutorial-Overview]]
+[Overview](Main.md)
