@@ -17,12 +17,12 @@ VERPAT is a further development of RPAT, implemented within the VisionEval frame
 ## Sections
 To learn how to install and run VERPAT for a single scenario, see [[Running the Model | VERPAT-Tutorial-Running-the-Model]], and to learn how to run VERPAT for multiple scenarios implementing combinations of policy options, see [[Multiple Scenarios | VERPAT-Tutorial-Multiple-Scenarios]].  Finally, the section [[Performance Metrics | VERPAT-Tutorial-Performance-Metrics]] describes the output from VERPAT.
 
-  + [[Scenario Planning | Scenario_Planning.md]]: a quick introduction to scenario planning.
-  + [[Model Description | Model_Description.md]]: a description of the VERPAT model.
-  + [[Running the Model | Running_VERPAT.md]]: how to install and run the model.
-  + [[Multiple Scenarios | Multiple_Scenarios.mds]]: how to setup and run multiple model scenarios.
-  + [[Performance Metrics | Performance_Metrics.md]]: model outcomes of particular interest.
-  + [[Inputs and Outputs |Input_Outputs.md]]: detailed list of model inputs and outputs.
+  * [Scenario Planning]Scenario_Planning.md): a quick introduction to scenario planning.
+  * [Model Description](Model_Description.md): a description of the VERPAT model.
+  * [Running the Model](Running_VERPAT.md): how to install and run the model.
+  * [Multiple Scenarios](Multiple_Scenarios.md): how to setup and run multiple model scenarios.
+  * [Performance Metrics](Performance_Metrics.md): model outcomes of particular interest.
+  * [Inputs and Outputs](Input_Outputs.md): detailed list of model inputs and outputs.
 
 ## Notes
 Source for images is [documents/verpat_tutorial.pptx](documents/verpat_tutorial.pptx)
