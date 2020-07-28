@@ -88,7 +88,7 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
     load.model.state
   )
   if ( length(self$modelState)>0 && any(unlist(lapply(self$modelState,length))>0) ) {
-    self$index()
+    private$index()
   }
 
   self$runStatus <- sapply(
@@ -169,7 +169,7 @@ ve.run.model <- function(verbose=TRUE) {
     load.model.state
   )
   if ( length(self$modelState)>0 && all(unlist(lapply(self$modelState,length))>0) ) {
-    self$index()
+    private$index()
   }
 
   return(invisible(self$status))
@@ -188,19 +188,22 @@ confirm <- function(msg) {
   return(conf)
 }
 
-ve.artifacts <- function(path=NULL) {
+ve.artifacts <- function(path=NULL,outputOnly=FALSE) {
+  if ( ! outputOnly ) {
     mstates <- self$dir(pattern=".*(Previous)*ModelState\\.Rda",path=path)
     mstates <- mstates[!dir.exists(mstates)]
     dstores <- self$dir(pattern="Datastore_*",path=path)
     dstores <- dstores[dir.exists(dstores)]
     logs    <- self$dir(pattern="Log_*.*\\.txt",path=path)
     logs    <- logs[!dir.exists(logs)]
-    outputs <- self$dir(pattern="output",path=path)
-    return(c(mstates,dstores,logs,outputs))
+    artifacts <- c(mstates,dstores,logs)
+  } else artifacts <- character(0)
+  outputs <- self$dir(pattern="output",path=path)
+  return(c(artifacts,outputs))
 }
 
-ve.model.clear <- function(force=FALSE) {
-  to.delete <- private$artifacts()
+ve.model.clear <- function(force=FALSE,outputOnly=FALSE) {
+  to.delete <- private$artifacts(outputOnly=outputOnly)
   if ( length(to.delete)>0 ) {
     print(gsub(ve.runtime,"",to.delete))
     if ( force || (force <- confirm("Clear ALL prior model results?")) ) {
@@ -317,9 +320,6 @@ ve.model.index <- function() {
     Description <- sapply(ds$attributes, attributeGet, "DESCRIPTION",simplify=TRUE) # should yield a character vector
     Module <- sapply(ds$attributes, attributeGet, "MODULE",simplify=TRUE) # should yield a character vector
     Units <- sapply(ds$attributes, attributeGet, "UNITS",simplify=TRUE) # should yield a character vector
-    if ( class(Description) != "character" ) {
-      stop("Expected Description as character vector, instead got ",class(Description))
-    }
 
     # Build parallel data.frame for Inputs
     # message("Input data frame...")
@@ -464,24 +464,104 @@ ve.model.tables <- function(tables) {
   return(idxTables)
 }
 
-# Build data.frames
+ve.table.selected <- function(test.table,tables) {
+  return ( test.table %in% tables$Table[tables$Selected=="Yes"] )
+}
+
+ve.model.fields <- function(fields) {
+  # extract fields from the index where groups and tables are selected
+  if ( ! all(file.exists(file.path(self$modelPath,"ModelState.Rda"))) ) {
+    stop("Model has not been run yet.")
+  }
+  idxFields <- self$modelIndex[,c("Group","Table","Name","Stage")]
+  row.names(idxFields) <- NULL
+  if ( ! missing(fields) ) {
+    if ( is.character(fields) && length(fields)>0 ) {
+      self$fieldsSelected <- fields[ fields %in% idxFields$Name ]
+    } else {
+      self$fieldsSelected <- character(0)
+    }
+  }
+  table.selected <- ve.table.selected(idxFields$Table,self$tables)
+  group.selected <- ve.group.selected(idxFields$Group,self$groups)
+  tg.selected <- table.selected & group.selected
+  if ( length(self$fieldsSelected)==0 ) {
+    idxFields$Selected <- ifelse( tg.selected, "Yes", "No (!Table)" )
+  } else {
+    idxFields$Selected <- ifelse(
+      idxFields$Name %in% self$fieldsSelected,
+      ifelse( tg.selected,
+        "Yes","No (!Table)"
+      ),
+      "No")
+  }
+  return(idxFields)
+}
+
+ve.field.selected <- function(test.field,fields) {
+  return ( test.field %in% fields$Name[fields$Selected=="Yes"] )
+}
+
+ve.model.list <- function(selected=TRUE,pattern="",index=FALSE) {
+  if ( ! all(file.exists(file.path(self$modelPath,"ModelState.Rda"))) ) {
+    stop("Model has not been run yet.")
+  }
+  filter <- if ( missing(selected) || selected ) {
+    ve.field.selected( self$modelIndex$Name, self$fields )
+  } else {
+    rep(TRUE,nrow(self$modelIndex))
+  }
+  if ( ! missing(pattern) && is.character(pattern) && nzchar(pattern) ) {
+    filter <- filter & grepl(pattern,self$modelIndex$Name )
+  }
+  if ( missing(index) || ! index ) {
+    ret.fields <- c("Name")
+  } else {
+    ret.fields <- names(self$modelIndex)
+  }
+  ret.value <- self$modelIndex[ filter, ret.fields, drop=TRUE ]
+  if ( class(ret.value)!='character' ) ret.value <- ret.value[order(ret.value$Stage, ret.value$Group, ret.value$Name),]
+  return(ret.value)
+}
+
+ve.model.inputs <- function( fields=FALSE, module="", filename="" ) {
+  if ( ! all(file.exists(file.path(self$modelPath,"ModelState.Rda"))) ) {
+    stop("Model has not been run yet.")
+  }
+  if ( ! missing(fields) && fields ) {
+    ret.fields <- c("File","Name","Description","Units","Module","Stage","Path")
+  } else {
+    ret.fields <- c("Module","File","Stage","Path")
+  }
+
+  filter <- rep(TRUE,nrow(self$modelInputs))
+  if ( !missing(module) && nzchar(module) ) {
+    filter <- filter & grepl(module,self$modelInputs$Module)
+  }
+  if ( !missing(filename) && nzchar(filename) ) {
+    filter <- filter & grepl(filename,self$modelInputs$File)
+  }
+
+  ret.value <- unique(self$modelInputs[ filter, ret.fields ])
+  return( ret.value[order(ret.value$Stage,ret.value$File),] )
+}
+
+# Build data.frames based on selected groups, tables and dataset names
 ve.model.extract <- function(
   stage=NULL,
   saveTo="output",
-  overwrite=FALSE
+  overwrite=FALSE,
+  quiet=FALSE
 ) {
   if ( ! all(file.exists(file.path(self$modelPath,"ModelState.Rda"))) ) {
     stop("Model has not been run yet.")
   }
   if ( is.null(stage) ) stage <- self$stageCount # Last one should have everything
+  saving <- is.character(saveTo) && nzchar(saveTo)[1]
   
   visioneval::assignDatastoreFunctions(self$runParams$DatastoreType)
-  tables <- self$tables
-  tables <- tables[tables$Selected=="Yes",c("Group","Table","Stage")]
-  extract <- with( self$modelIndex,
-    which( Group %in% tables$Group & Table %in% tables$Table & Stage %in% tables$Stage )
-  )
-  extract <- self$modelIndex[extract,c("Name","Table","Group","Stage")]
+  fields <- self$fields
+  extract <- fields[fields$Selected=="Yes",c("Name","Table","Group","Stage")]
   tables <- split( extract$Name, list(extract$Table,extract$Group,extract$Stage) )
   tables <- tables[which(sapply(tables,length)!=0)]
   DataSpecs <- lapply( names(tables), function(T.G.S) {
@@ -504,21 +584,20 @@ ve.model.extract <- function(
       }
     )
   results <- lapply(DataSpecs, function(d) {
-    message("Extracting data for Table ",d$Data$Table[1]," in Group ",d$Data$Group[1])
-        df <- data.frame(
-          apply(d$Data, 1, function(x) {
-            readFromTable(Name=x[1],Table=x[2],Group=x[3],DstoreLoc=x[4],ReadAttr=FALSE)
-          }
-          )
-        )
-        names(df) <- d$Data$Name
-        df
+        if (!quiet && saving ) message("Extracting data for Table ",d$Data$Table[1]," in Group ",d$Data$Group[1])
+        # Do this in a for-loop rather than faster "apply" to avoid dimension and class/type problems.
+        ds.ext <- list()
+        for ( fld in 1:nrow(d$Data) ) {
+          dt <- d$Data[fld,]
+          ds.ext[[dt$Name]] <- readFromTable(Name=dt$Name,Table=dt$Table,Group=dt$Group,DstoreLoc=dt$Loc,ReadAttr=FALSE)
+        }
+        return( data.frame(ds.ext) )
       }
     )
   files <- sapply(DataSpecs, function(x) x$File)
   stages <- sapply(DataSpecs, function(x) x$Stage)
   names(results) <- files
-  if ( is.character(saveTo) && nzchar(saveTo) ) {
+  if ( saving ) {
     mapply(
       names(results),
       stages,
@@ -528,9 +607,11 @@ ve.model.extract <- function(
         if ( ! dir.exists(out.path) ) dir.create(out.path,recursive=TRUE)
         fn <- file.path(out.path,f)
         write.csv(data,file=fn)
-        message("Write output file: ",gsub(ve.runtime,"",fn))
+        if (!quiet) message("Write output file: ",gsub(ve.runtime,"",fn))
       }
     )
+  } else {
+    if (!quiet) message("Returning extracted data as invisible list of data.frames\n(quiet=TRUE to suppress this message)")
   }
   invisible(results)
 }
@@ -548,6 +629,7 @@ VEModel <- R6::R6Class(
     modelIndex=NULL,
     groupsSelected=character(0),
     tablesSelected=character(0),
+    fieldsSelected=character(0),
     stageCount=NULL,
     runParams=NULL,
     runStatus=NULL,
@@ -557,18 +639,21 @@ VEModel <- R6::R6Class(
     dir=ve.model.dir,
     clear=ve.model.clear,
     copy=ve.model.copy,
-    index=ve.model.index,
-    extract=ve.model.extract
+    extract=ve.model.extract,
+    list=ve.model.list,
+    inputs=ve.model.inputs
   ),
   active = list(
     status=ve.model.status,
     groups=ve.model.groups,
-    tables=ve.model.tables
+    tables=ve.model.tables,
+    fields=ve.model.fields
   ),
   private = list(
     runError=NULL,
     ModelState=NULL,
-    artifacts = ve.artifacts
+    artifacts = ve.artifacts,
+    index=ve.model.index
   )
 )
 
