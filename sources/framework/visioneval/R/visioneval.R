@@ -550,15 +550,13 @@ initializeModel <-
               } else {
                 Pkg <-
                   ModulesByPackage_df$Package[ModulesByPackage_df$Module == Call_]
-                Call_ <- c(Pkg, Call_)
+                Call_ <- c(unique(Pkg), Call_)
                 rm(Pkg)
               }
-              # JRaw: The following needs to be an error, as there is no way to
-              # tell which of the different packages would (at runtime) supply
-              # the module for this call (which lacks explicit namespace)
+              # JRaw: It's an error if the same module is provided in distinct packages
               if (length(Call_) > 2 ) {
                 Err <- paste0("Error in runModule call for module ",Call_[length(Call_)],
-                  ". Module is specified in multiple packages: ",
+                  ". Module is specified in multiple distinct packages: ",
                   paste(Call_[-length(Call_)],collapse=", "))
               }
             }
