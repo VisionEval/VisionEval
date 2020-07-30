@@ -1,10 +1,11 @@
 Package: visioneval
 Type: Package
 Title: Software Framework for VisionEval Model System
-Version: 0.91
+Version: 1.00
 Date: 2020-02-09
 Author: Brian Gregor <gregorb@or-analytics.com>["aut", "cre"]
-Maintainer: Brian Gregor <gregorb@or-analytics.com>
+Maintainer: Brian Gregor <gregorb@or-analytics.com>,
+    Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: AASHTO, ODOT, Brian Gregor
 URL: https://github.com/gregorbj/VisionEval
 Description: This package defines all of the functions used to implement the
