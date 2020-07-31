@@ -53,15 +53,27 @@ doc.file.pattern <- "\\.[Rr]*[Mm]d$"  # Include .Rmd files
 # All the documents are .md files and we'll use rmarkdown or knitr to render them
 # into PDF format (also HTML?)
 
-def.inputs <- c(framework="inst/framework_docs",module="inst/module_docs",model=".",script=".",docs="")
+doc.type.names <- c("framework","module","model","script","docs")
 
+# Folders in which to seek documentation
+def.inputs <- c(framework="inst/framework_docs",module="inst/module_docs",model="Tutorial",script=".",docs="")
+
+# Patterns to match for documentation file to include
+def.patterns <- rep(doc.file.pattern,length(doc.type.names))
+names(def.patterns) <- doc.type.names
+def.patterns["module"] <- "\\.[a-zA-Z]*$" # any file in inst/module_docs
+def.patterns["model"] <- ""               # any file of any type in the Tutorial directory
+
+# Whether to hunt recursively or confine search to root documentation folder for the type
+def.recursive <- rep(TRUE,length(doc.type.names))
+def.recurive["model"] <- TRUE
+
+# Specs for documentation to seek
 ve.getdocs <-                  pkgs.db[pkgs.docs,]
 ve.getdocs <- rbind(ve.getdocs,pkgs.db[pkgs.framework,])
 ve.getdocs <- rbind(ve.getdocs,pkgs.db[pkgs.module,])
 ve.getdocs <- rbind(ve.getdocs,pkgs.db[pkgs.model,])
 ve.getdocs <- rbind(ve.getdocs,pkgs.db[pkgs.script,])
-
-multi.dir.re <- "\\|\\|" # regular expression to find delimiter for multiple doc locations
 
 # those are suffixes.
 #   Append to the indicated folder (ve.src/modulename, ve.root
@@ -74,7 +86,8 @@ for ( i in 1:nrow(ve.getdocs) ) {
   input <- def.inputs[type]
 
   if ( type=='module' || type=='framework' ) {
-    root <- ve.src # Use intermediate build
+     # Use intermediate build for module and framework
+    root <- ve.src
   }
 
   ############ Input Directories
@@ -128,36 +141,39 @@ for ( i in 1:nrow(ve.getdocs) ) {
     }
   } else { 
     for (d in doc.dir) {
-      these.files <- dir(d,pattern=doc.file.pattern,full.names=TRUE) #,recursive=TRUE)
+      these.files <- dir(d,pattern=doc.file.pattern,full.names=TRUE, recursive=def.recursive["type"])
       if ( length(these.files)>0 ) {
         doc.files <- c(doc.files,these.files)
       }
     }
   }
   if ( length(doc.files)>0 ) {
-    cat("=== Rendering docs for '",docs$Package,"' (as '",type,"')...",sep="")
+    cat("=== Copying docs for '",docs$Package,"' (as '",type,"')...",sep="")
     up.to.date <- TRUE
     for ( f in doc.files ) {
       # Note that rmarkdown will create output_dir and its components if they
       # do not already exist, so we don't need to
-      expected.of <- file.path(out.dir,sub(doc.file.pattern,".pdf",basename(f)))
+#       expected.of <- file.path(out.dir,sub(doc.file.pattern,".pdf",basename(f)))
+      expected.of <- file.path(out.dir,basename(f))
       if ( newerThan(f,expected.of) ) {
         up.to.date <- FALSE
-        cat("\nRendering",sub(root,"",f),"...")
-        of <- rmarkdown::render(
-          f
-          , output_dir=out.dir
-          , output_format="pdf_document"
-          , quiet=TRUE
-          , param=list(eval=FALSE)
-          # , param=value # do it like this and you can drop options in and out with a single #
-        )
-        cat("\nDone as",sub(file.path(ve.docs),"",of))
-        if ( of != expected.of ) {
-          cat("\nDIFFERENT NAME")
-          cat("\n",of)
-          cat("\n",expected.of)
-        }
+        file.copy(f, expected.of, overwrite=TRUE)
+        cat("Copied",f,"to",sub(ve.docs,basename(ve.docs),expected.of))
+#         cat("\nRendering",sub(root,"",f),"...")
+#         of <- rmarkdown::render(
+#           f
+#           , output_dir=out.dir
+#           , output_format="pdf_document"
+#           , quiet=TRUE
+#           , param=list(eval=FALSE)
+#           # , param=value # do it like this and you can drop options in and out with a single #
+#         )
+#         cat("\nDone as",sub(file.path(ve.docs),"",of))
+#         if ( of != expected.of ) {
+#           cat("\nDIFFERENT NAME")
+#           cat("\n",of)
+#           cat("\n",expected.of)
+#         }
       }
     }
     if ( up.to.date ) {

@@ -48,7 +48,7 @@ cat("Done\n")
 
 cat("Adding",basename(ve.docs),"to runtime base...")
 setwd(file.path(ve.docs,".."))
-zip(installer.base,basename(ve.docs),flags=c("-r9Xq"))
+zip(installer.base,basename(ve.docs),flags=c("-9Xq")) # originally -r9Xq: end user only gets root.
 cat("Done\n")
 
 setwd(owd)
