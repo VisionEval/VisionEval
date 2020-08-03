@@ -2,20 +2,14 @@
 
 The VisionEval software framework is written in the R programming language for statistical computing
 and graphics. The purpose of the model system and framework is to enable models be created in a
-plug-and-play fashion from modules that are also distributed as R packages. A simple R script is
+plug-and-play fashion from modules that are distributed as R packages. A simple R script is
 used to implement a model by initializing the model environment and then calling modules
 successively.
 
-## Video Description of Tool installation, setup, and basic usage
-
-This 45 minute video was recorded during a VisionEval Training at Portland State University in
-September 2019:
-
-<a href="https://youtu.be/-ylFbyLfhbw?t=2203" target="_blank"><img src="Training/VE_Training_PSU_Using.png" 
-alt="VisionEval Training Installation" width="240" height="180" border="5" /></a>
-
-Installation and basic runtime instructions have changed since the video was produced; see below for
-the current instructions.
+Model users need to develop input files to represent their base conditions and any future
+scenarios they would like to evaluate. Once the models have run for each scenario, the results
+can be inspected and extracted for further analysis either in R or in some other data analysis
+environment.
 
 ## Installation and Setup
 
@@ -25,8 +19,9 @@ There are two paths to getting VisionEval running:
    Download a zipped folder with all dependencies include, for a specific version of R. This is the
    simplest way to quickly get VisionEval on your computer. This uses the installers on the
    [Releases](https://github.com/VisionEval/VisionEval/releases) page and further details are available
-   on the [Downloads page of visioneval.org](https://visioneval.org/category/download.html). This
-   currently is designed for the Windows operating system. This path is described first.
+   on the [Downloads page of visioneval.org](https://visioneval.org/category/download.html). Installers
+   are currently only available for the Windows operating system. That path is described in this 
+   document.
 
 2. **Clone or fork repository**\
    If you area a Mac/Linux user, or if you are interested in contributing to the development of
@@ -51,7 +46,7 @@ Once you have R and RStudio installed, you can retrieve the VisionEval installer
 
 #### [Get VisionEval Here](https://github.com/VisionEval/VisionEval/releases/download/v2.0.0/VE-installer-Windows-R4.0.2-latest.zip)
 
-*Note: Almost 700 Mb download! Packaged for R 4.0.2*
+*Note: Almost 650 Mb download! Packaged for R 4.0.2*
 
 The link above will download a .zip file containing the following:
  - The VisionEval framework code
@@ -80,6 +75,20 @@ R), change into your installation folder, and run this R command:
 source("VisionEval.R")
 ```
 
+## Getting Started
+
+This section should explain:
+
+1. Where to find the tutorials for each model (docs/models/ModelName/tutorial).
+1. How to run the sample models.
+1. How to duplicate a sample model so you can make local changes.
+1. How to configure alternate scenarios based on your local model copy
+1. How to run alternate scenarios
+1. How to summarize performance measures for a single model run
+1. How to summarize performance measures for multiple scenarios
+1. How to export the data from a model run so you can examine it with other tools
+1. How to export data from multiple scenarios
+
 ### Debugging and Customizing VisionEval
 
 If you are comfortable with using R, you can debug and customize VisionEval either by retrieving
@@ -92,24 +101,11 @@ customize VisionEval for local data using RStudio without having to retrieve the
 do a full build of the system. See the file `docs\visioneval\RStudio.pdf` for information on using
 the Package Sources.
 
-## Getting Started
-
-This section should explain:
-
-1. Where to find the tutorials for each model (docs/models/ModelName/tutorial).
-1. How to run the sample models.
-1. How to duplicate a sample model so you can make local changes.
-1. How to configure alternate scenarios based on your local model copy
-1. How to run alternate scenarios
-1. How to use the simple scenario visualizer
-1. How to summarize performance measures for a single model run
-1. How to summarize performance measures for multiple scenarios
-1. How to export the data from a model run so you can examine it with other tools
-1. How to export data from multiple scenarios
-
 ## Requirements
 
-If the above installation steps did not succeed, ensure that you have downloaded the appropriate version of VisionEval to match the version of R that you have installed.
+If the above installation steps did not succeed, ensure that you have
+downloaded the appropriate version of VisionEval to match the version
+of R that you have installed.
 
 #### R The current version of VisionEval is built for the latest version of R, 4.0.2.
 

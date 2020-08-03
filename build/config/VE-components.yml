@@ -271,10 +271,6 @@ Components:
     Type: docs
     Path: "."                        # base directory below root to gather docs
     Target: visioneval/api           # output path relative to "ve.docs"
-  VE_Training_March_13-14_2019:
-    Type: docs
-    Path: api                        # so VE_Training_March_13-14_2019 is a subdirectory of "api"
-    # Target: "."                    # The default (relative to "ve.docs") for Type: docs
   Getting-Started.md:
     Type: docs
     Path: sources
@@ -282,4 +278,3 @@ Components:
     Type: docs
     Path: build
     Target: visioneval
-  

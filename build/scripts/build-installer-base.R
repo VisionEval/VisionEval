@@ -48,7 +48,12 @@ cat("Done\n")
 
 cat("Adding",basename(ve.docs),"to runtime base...")
 setwd(file.path(ve.docs,".."))
-zip(installer.base,basename(ve.docs),flags=c("-9Xq")) # originally -r9Xq: end user only gets root.
+# For some reason, getting zip to work with a wildcard isn't doing it...
+# zip(installer.base,paste0(basename(dirname(docs[1])),"\\*.pdf"),flags=c("-9X"))
+docs <- dir(file.path(getwd(),basename(ve.docs)),pattern="*\\.pdf",full.names=TRUE)
+for ( f in docs ) {
+  zip(installer.base,file.path(basename(dirname(f)),basename(f)),flags=c("-9Xq")) # originally -r9Xq: end user only gets root.
+}
 cat("Done\n")
 
 setwd(owd)

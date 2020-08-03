@@ -2,7 +2,7 @@
 
 # Author: Jeremy Raw
 
-# Assemble .md documentation files and compile to PDF in docs folder
+# Assemble .md documentation files into ve.docs and compile top level to PDF in docs folder
 
 # Load runtime configuration
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
@@ -45,7 +45,7 @@ doc.file.pattern <- "\\.[Rr]*[Mm]d$"  # Include .Rmd files
 # Documentation for modules is constructed in build-modules.R using a
 # framework function, and placed in src/<module>/inst/module_docs for the module.
 
-# Documents for framework are prebuilt and found in ve.root/api
+# The framework has its docs (build in a separate install step) in visioneval/framework_docs
 
 # Documents for models are found in ve.root/models/<model_name>
 # "tools" are just a special kind of model (model_name == "tools")
@@ -66,7 +66,8 @@ def.patterns["model"] <- ""               # any file of any type in the Tutorial
 
 # Whether to hunt recursively or confine search to root documentation folder for the type
 def.recursive <- rep(TRUE,length(doc.type.names))
-def.recurive["model"] <- TRUE
+names(def.recursive)<-doc.type.names
+def.recursive["model"] <- FALSE
 
 # Specs for documentation to seek
 ve.getdocs <-                  pkgs.db[pkgs.docs,]
@@ -141,43 +142,53 @@ for ( i in 1:nrow(ve.getdocs) ) {
     }
   } else { 
     for (d in doc.dir) {
-      these.files <- dir(d,pattern=doc.file.pattern,full.names=TRUE, recursive=def.recursive["type"])
+      these.files <- dir(d,pattern=doc.file.pattern,full.names=TRUE, recursive=def.recursive[type])
       if ( length(these.files)>0 ) {
         doc.files <- c(doc.files,these.files)
       }
     }
   }
-  if ( length(doc.files)>0 ) {
+  if ( length(doc.files)>0 ) { # Don't do anything if there are no docs of this type
     cat("=== Copying docs for '",docs$Package,"' (as '",type,"')...",sep="")
     up.to.date <- TRUE
+    if ( ! dir.exists(out.dir) ) dir.create(out.dir,recursive=TRUE)
     for ( f in doc.files ) {
-      # Note that rmarkdown will create output_dir and its components if they
-      # do not already exist, so we don't need to
-#       expected.of <- file.path(out.dir,sub(doc.file.pattern,".pdf",basename(f)))
       expected.of <- file.path(out.dir,basename(f))
       if ( newerThan(f,expected.of) ) {
         up.to.date <- FALSE
         file.copy(f, expected.of, overwrite=TRUE)
-        cat("Copied",f,"to",sub(ve.docs,basename(ve.docs),expected.of))
-#         cat("\nRendering",sub(root,"",f),"...")
-#         of <- rmarkdown::render(
-#           f
-#           , output_dir=out.dir
-#           , output_format="pdf_document"
-#           , quiet=TRUE
-#           , param=list(eval=FALSE)
-#           # , param=value # do it like this and you can drop options in and out with a single #
-#         )
-#         cat("\nDone as",sub(file.path(ve.docs),"",of))
-#         if ( of != expected.of ) {
-#           cat("\nDIFFERENT NAME")
-#           cat("\n",of)
-#           cat("\n",expected.of)
-#         }
+        cat("Copied",f,"to",sub(ve.docs,basename(ve.docs),expected.of),"\n")
       }
     }
     if ( up.to.date ) {
       cat("Up to date.\n")
     } else cat("\n")
+  }
+}
+
+# As of VisionEval 2.0, only render to PDFs the top level of the docs folder
+# Only pdf's from that folder will be copied into the installer.
+for ( f in dir(pattern=doc.file.pattern,ve.docs,full.names=TRUE) ) {
+  expected.of <- file.path(ve.docs,sub(doc.file.pattern,".pdf",basename(f)))
+  if ( file.exists(expected.of) && newerThan(f,expected.of) ) {
+    cat("Rendering",sub(root,"",f),"...")
+    of <- rmarkdown::render(
+      f
+      , output_dir=ve.docs
+      , output_format="pdf_document"
+      , quiet=TRUE
+      , param=list(eval=FALSE)
+      # , param=value # do it like this and you can drop options in and out with a single #
+    )
+    cat("\nDone as",sub(ve.docs,"",of))
+    if ( of != expected.of ) {
+      cat("\nDIFFERENT NAME")
+      cat("\n",of)
+      cat("\n",expected.of)
+    } else {
+      cat("\n")
+    }
+  } else {
+    cat("Up to date:",sub(dirname(ve.docs),"",expected.of),"\n")
   }
 }
