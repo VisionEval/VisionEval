@@ -1123,6 +1123,8 @@ CalculateCongestionBase <- function(L) {
     CongModel_ls$CongPriceParmVa_ma$ArtExt["Metro", L$G$Year]
 
   # Calculate the MPG adjustment, travel time and travel delay
+  # JRaw: bug here - Value of Time should use L$Global$Model$ValueOfTime, but that's not
+  # defined for VERPAT (which is where this module is used)
   CongResults_ls <- calcCongestion(Model_ls=CongModel_ls, DvmtByVehType=DvmtByVehType_vc,
                                   PerCapFwyLnMi=PerCapFwyLnMi_vc, PerCapArtLnMi=PerCapArtLnMi_vc,
                                   Population=Population_vc, BasePopulation=BasePopulation_vc,
