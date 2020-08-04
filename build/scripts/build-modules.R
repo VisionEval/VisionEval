@@ -251,6 +251,8 @@ for ( module in seq_along(package.names) ) {
       message("Executing tests from ",test.script,"\n")
       callr::rscript(script=test.script,wd=build.dir,libpath=.libPaths(),fail_on_status=FALSE)
       message("Completed test script.")
+    } else {
+      cat("\nNot running tests.\n\n")
     }
   }
 

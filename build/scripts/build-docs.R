@@ -170,7 +170,7 @@ for ( i in 1:nrow(ve.getdocs) ) {
 # Only pdf's from that folder will be copied into the installer.
 for ( f in dir(pattern=doc.file.pattern,ve.docs,full.names=TRUE) ) {
   expected.of <- file.path(ve.docs,sub(doc.file.pattern,".pdf",basename(f)))
-  if ( file.exists(expected.of) && newerThan(f,expected.of) ) {
+  if ( ! file.exists(expected.of) || newerThan(f,expected.of) ) {
     cat("Rendering",sub(root,"",f),"...")
     of <- rmarkdown::render(
       f
