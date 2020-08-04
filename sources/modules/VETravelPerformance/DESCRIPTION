@@ -16,7 +16,7 @@ Description: Contains modules for calculating fuel consumption, emissions,
     vehicles, heavy trucks, and public transit modes.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
 	dplyr,
