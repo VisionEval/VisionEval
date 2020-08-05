@@ -304,14 +304,6 @@ initializeModel <-
       #----------------------------
       #Get the model state
       G <- getModelState()
-      #Define function to get the directory path
-      # JRaw: use dirname and basename built-in functions
-      splitPath <- function(FilePath) {
-        FilePathSplit_ <- unlist(strsplit(FilePath, "/"))
-        Dir <- paste(FilePathSplit_[-length(FilePathSplit_)], collapse = "/")
-        File <- FilePathSplit_[length(FilePathSplit_)]
-        list(Dir = Dir, File = File)
-      }
       #Define function to load model state file to assigned name
       assignLoadModelState <- function(FileName) {
         TempEnv <- new.env()
@@ -321,9 +313,8 @@ initializeModel <-
       #Normalized path name of the datastore used in the model run
       RunDstoreName <-
         normalizePath(G$DatastoreName, winslash = "/", mustWork = FALSE)
-      # JRaw: use dirname and basename built-in functions
-      RunDstoreDir <- splitPath(RunDstoreName)$Dir
-      RunDstoreFile <- splitPath(RunDstoreName)$File
+      RunDstoreDir <- dirname(RunDstoreName)
+      RunDstoreFile <- basename(RunDstoreName)
       #--------------------------------------------------------
       #Save previous datastore and model state if SaveDatastore
       #--------------------------------------------------------
