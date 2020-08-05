@@ -16,6 +16,10 @@ cat("Installing to:",.libPaths()[1],"\n")
 #   Github
 
 ve.components <- yaml::yaml.load_file(Sys.getenv("VE_COMPONENTS",unset="build/config/VE-components.yml"))
+rversions     <- yaml::yaml.load_file(file.path("build/R-versions.yml"))
+this.R        <- paste(R.version[c("major","minor")],collapse=".")
+CRAN          <- rversions[[this.R]]$CRAN
+BioC.version  <- basename(dirname(rversions[[this.R]]$BioC)) # looks like "https://www.bioconductor.org/packages/3.11/bioc"
 
 # cat("Components:\n")
 # print(ve.components)
@@ -57,7 +61,7 @@ new.pkgs <- sought.pkgs[ ! (sought.pkgs %in% installed.packages()[,"Package"]) ]
 if( length(new.pkgs) > 0 ) {
   cat("Installing new packages:\n")
   print(new.pkgs)
-  install.packages(new.pkgs)
+  install.packages(new.pkgs,repos="https://cloud.r-project.org")
 }
-devtools::install_bioc(paste("3.6",unique(pkgs.db[pkgs.db$Type=="BioC","Package"]),sep="/"))
+devtools::install_bioc(paste(BioC.version,unique(pkgs.db[pkgs.db$Type=="BioC","Package"]),sep="/"))
 devtools::install_github(unique(pkgs.db[pkgs.db$Type=="Github","Package"]))
