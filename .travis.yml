@@ -1,5 +1,6 @@
 language: r
-r: release
+r: 3.6
+# "release" (4.0) version of R has broken rgdal, 2020-08-05
 dist: xenial
 cache:
     - packages
