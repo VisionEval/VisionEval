@@ -21,14 +21,14 @@ local({
   # pkgbuild should be in ve-lib
   if ( ! pkgbuild::has_build_tools() ) {
     if ( .Platform$OS.type == "Windows" ) {
-      _Msg <- paste0(
+      msg <- paste0(
         "Please install Rtools 4.0 for Windows, and make sure it is available in the system PATH.\n",
         "https://cran.r-project.org/bin/windows/Rtools/"
       )
     } else {
-      _Msg <- "R Build environment is not available."
+      msg <- "R Build environment is not available."
     }
-    stop(_Msg)
+    stop(msg)
   }
 
   # Establish the VisionEval development tree root
