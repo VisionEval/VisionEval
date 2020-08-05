@@ -15,7 +15,7 @@ cat("Installing to:",.libPaths()[1],"\n")
 #   BioConductor
 #   Github
 
-ve.components <- yaml::yaml.load_file(Sys.getenv("VE_COMPONENTS",unset="build/VE-components.yml"))
+ve.components <- yaml::yaml.load_file(Sys.getenv("VE_COMPONENTS",unset="build/config/VE-components.yml"))
 
 # cat("Components:\n")
 # print(ve.components)
