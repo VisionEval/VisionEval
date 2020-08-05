@@ -19,7 +19,7 @@ local({
 
   # Check that Rtools or a development environment is available.
   # pkgbuild should be in ve-lib
-  if ( ! pkgbuild::has_build_tools() ) {
+  if ( requireNamespace("pkgbuild", quietly=TRUE) && ! pkgbuild::has_build_tools() ) {
     if ( .Platform$OS.type == "Windows" ) {
       msg <- paste0(
         "Please install Rtools 4.0 for Windows, and make sure it is available in the system PATH.\n",
