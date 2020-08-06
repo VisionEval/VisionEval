@@ -47,7 +47,7 @@ Locations: # "Root" elements are variables defined in "Roots" section
         description: build source packages here (plus tests, if requested)
     ve.docs:          # Required
         root: ve.output
-        augment: branch
+        augment: version
         path: docs
         description: install framework and module docs here
     ve.external:      # Where to clone Github repository (default ve.root+external+RepoName)
