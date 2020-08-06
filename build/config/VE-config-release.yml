@@ -5,16 +5,12 @@ RunTests: FALSE
 Roots:                          # Require ve.root and ve.output at a minimum
     ve.root: ..                 # relative to "build" folder (should be git root for VisionEval-dev)
     ve.output: ../built         # default ("built" adjacent to "build")
-    ve.wiki: ../../VE-wiki      # path to clone of wiki repository
 Components:                     # Where to find wiki components (right here)
     ve.root:
         Root: ve.installer      # refers to ve.root/build
         Config: config/VE-components.yml
         Exclude:
           - VEGUI
-    ve.wiki:
-        Root: ve.installer      # refers to ve.root/build
-        Config: config/VE-wiki-components.yml
 
 # Intended to add .md documents as PDFs in the end-user installer.
 

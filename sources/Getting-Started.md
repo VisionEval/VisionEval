@@ -1,28 +1,25 @@
-Getting Started with VisionEval
-===============================
+---
+title: Getting Started with VisionEval
+---
 
 <a name='overview'>Overview</a>
 -------------------------------
 
-The VisionEval strategic modeling system allows rapid evaluation of land
-use and transportation scenarios to support scenario planning, and to
-develop strategies to manage transportation system performance.
+The VisionEval strategic modeling system allows rapid evaluation of land use and transportation
+scenarios to support scenario planning, and to develop strategies to manage transportation system
+performance.
 
-Configuring and running VisionEval scenarios is simpler and faster than
-using traditional travel demand models, and more flexible and detailed
-than using traditional spreadsheet sketch models. While VisionEval
-outputs are limited in spatial resolution, the system is very detailed
-in its analysis of demographics and behavioral responses to a variety of
-transportation policies and system improvements (captured in a broad
-range of computed performance metrics.
+Configuring and running VisionEval scenarios is simpler and faster than using traditional travel
+demand models, and more flexible and detailed than using traditional spreadsheet sketch models.
+While VisionEval outputs are limited in spatial resolution, the system is very detailed in its
+analysis of demographics and behavioral responses to a variety of transportation policies and system
+improvements (captured in a broad range of computed performance metrics).
 
-More detailed information on how VisionEval works and what it can do is
-contained in the Concepts Primer, included in the VisionEval binary
-installation as a PDF file but also [available online at the VisionEval
-Wiki](https://github.com/VisionEval/VisionEval/wiki)
+More detailed information on how VisionEval works and what it can do is contained in the [Concepts
+Primer](https://github.com/VisionEval/VisionEval/wiki/VisionEval-Primer).
 
-The remainder of this document explains the mechanics of VisionEval: how
-to install it, and what to do with it after it is installed.
+The remainder of this document explains the mechanics of VisionEval: how to install it, and what to
+do with it after it is installed.
 
 -   [Overview](#overview)
 -   [Installation and Setup](#installation)
@@ -46,6 +43,7 @@ which R is available. There are two paths to installing VisionEval:
     -   [R, at least version 3.6.x](https://cran.r-project.org), and
     -   [RStudio](https://www.rstudio.com/products/rstudio/download/ "Download RStudio")
         (a widely-used independent R Visual Environment)
+<br/><br/>
 
 2.  **Copy, clone or 'fork' the system code repository**\\ If you area a
     Mac/Linux user, or if you are interested in contributing to the
@@ -63,30 +61,27 @@ which R is available. There are two paths to installing VisionEval:
 
 #### Pre-requisites
 
-You will need: - [R, at least version 3.6.x](https://cran.r-project.org)
-------------------------------------------------------------------------
-
-[RStudio](https://www.rstudio.com/products/rstudio/download/ "Download RStudio")
+You will need:
+   - [R, at least version 3.6.x](https://cran.r-project.org)
+   - [RStudio](https://www.rstudio.com/products/rstudio/download/ "Download RStudio")
 
 Once you have R and RStudio installed, you can retrieve the VisionEval
 installer itself:
 
 #### Installer
 
-***[Get VisionEval
-Here](https://github.com/VisionEval/VisionEval/releases/download/v2.0.0/VE-installer-Windows-R4.0.2-latest.zip)***
+***[Get VisionEval Here](https://github.com/VisionEval/VisionEval/releases/download/v2.0.0/VE-installer-Windows-R4.0.2-latest.zip)***
 
 *Note: Almost 650 Mb download! Packaged for R 4.0.2*
 
-The link above will download a .zip file containing the following: - The
-VisionEval framework code - Sample models including VE-RSPM, VE-RPAT,
-VE-State and VE-ScenarioViewer - All necessary R packages -
-Documentation (this document and the Concepts Primer)
+The link above will download a .zip file containing the following:
+  - The VisionEval framework code
+  - Sample models including VE-RSPM, VE-RPAT, VE-State and VE-ScenarioViewer
+  - All necessary R packages
+  - Documentation (this Getting Started document)
 
-[See this
-page](https://github.com/VisionEval/VisionEval/releases/tag/v2.0.0) for
-other R versions (3.6.1 - 4.0.2) and eventually for other operating
-systems.
+[See this page](https://github.com/VisionEval/VisionEval/releases/tag/v2.0.0) for other R versions
+(3.6.1 - 4.0.2) and eventually for other operating systems.
 
 #### Completing the Installation
 
@@ -228,7 +223,8 @@ You can run the sample scenario like this:
 
 The model will give you progress updates as it runs:
 
-<code> Running model stage:
+~~~
+  Running model stage:
   C:/Users/MyVisionEval/Documents/VisionEval/models/MY-RSPM
   run_model.R: script entered
   run_model.R: library visioneval loaded
@@ -242,10 +238,11 @@ The model will give you progress updates as it runs:
   ...
   [1] "2020-08-15 10:56:13 -- Starting module 'CalculatePtranEnergyAndEmissions' for year '2038'."
   [1] "2020-08-15 10:56:15 -- Finish module 'CalculatePtranEnergyAndEmissions' for year '2038'."
-  run_model.R: run complete.</code><code style="color: red">
-  Model stage C:/Users/jeremy.raw/Git-Repos/VisionEval-dev/built/visioneval/3.6.3/runtime/models/VERSPM complete</code><code>
+  run_model.R: run complete.
+  Model stage C:/Users/jeremy.raw/Git-Repos/VisionEval-dev/built/visioneval/3.6.3/runtime/models/VERSPM complete
   Model Stage: /models/MY-RSPM
-  Status: Complete</code>
+  Status: Complete
+~~~
 
 If errors are reported and you would like to see the log, you can open
 this file from RStudio's file pane (in the directory in which your model
@@ -264,9 +261,9 @@ model again, you should clear the results like this:
 VisionEval will ask you for confirmation, and if you type 'y' and press
 `<Enter>`, the output files will be erased. You'll see something this:
 
-<code> \[1\] "/models/MY-RSPM/ModelState.Rda"  
-\[2\] "/models/MY-RSPM/Datastore"  
-\[3\] "/models/MY-RSPM/Log\_2020-08-15\_10\_50\_20.txt"
+<code> [1] "/models/MY-RSPM/ModelState.Rda"  
+[2] "/models/MY-RSPM/Datastore"  
+[3] "/models/MY-RSPM/Log\_2020-08-15\_10\_50\_20.txt"
 </code><code style="color: blue"> Clear ALL prior model results? (y/n/c)
 y</code><code> Model results cleared. </code>
 

@@ -169,13 +169,13 @@ for ( i in 1:nrow(ve.getdocs) ) {
 # As of VisionEval 2.0, only render to PDFs the top level of the docs folder
 # Only pdf's from that folder will be copied into the installer.
 for ( f in dir(pattern=doc.file.pattern,ve.docs,full.names=TRUE) ) {
-  expected.of <- file.path(ve.docs,sub(doc.file.pattern,".pdf",basename(f)))
+  expected.of <- file.path(ve.docs,sub(doc.file.pattern,".html",basename(f)))
   if ( ! file.exists(expected.of) || newerThan(f,expected.of) ) {
     cat("Rendering",sub(root,"",f),"...")
     of <- rmarkdown::render(
       f
       , output_dir=ve.docs
-      , output_format="pdf_document"
+      , output_format="html_document"
       , quiet=TRUE
       , param=list(eval=FALSE)
       # , param=value # do it like this and you can drop options in and out with a single #
