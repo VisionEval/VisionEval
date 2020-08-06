@@ -123,20 +123,17 @@ initializeModel <-
         "",
         normalizePath(DatastoreName, winslash = "/", mustWork = FALSE))
       #Define function to get the directory path
-      # JRaw: Much simpler just to do this, using built in path management functions
-      #    RunDstoreDir <- dirname(RunDstoreName)
-      #    LoadDstoreDir <- ifelse(is.null(DatastoreName),"",dirname(LoadDstoreName))
 
       getDirPath <- function(FilePath) {
         FilePathSplit_ <- unlist(strsplit(FilePath, "/"))
         paste(FilePathSplit_[-length(FilePathSplit_)], collapse = "/")
       }
       #Get path for run datastore and load datastore
-      RunDstoreDir <- getDirPath(RunDstoreName)
+      RunDstoreDir <- dirname(RunDstoreName)
       LoadDstoreDir <- ifelse(
         is.null(DatastoreName),
         "",
-        getDirPath(LoadDstoreName)
+        dirname(LoadDstoreName)
       )
       #-------------------------------------------------------------------
       #First round of error checks on datastore conflicts, loading, saving
@@ -339,14 +336,13 @@ initializeModel <-
         LoadDstoreName <-
           normalizePath(DatastoreName, winslash = "/", mustWork = FALSE)
         #Path of directory where datastore is to be loaded from
-        # JRaw: use dirname and basename built-in functions
-        LoadDstoreDir <- splitPath(LoadDstoreName)$Dir
+        LoadDstoreDir <- dirname(LoadDstoreName)
         #Name of the loaded datastore file
-        LoadDstoreFile <- splitPath(LoadDstoreName)$File
+        LoadDstoreFile <- basename(LoadDstoreName)
         #Identify where loaded datastore is relative to run datastore
-        SameName <- LoadDstoreName == RunDstoreName
-        SameDir <- LoadDstoreDir == RunDstoreDir
-        #Copy and load the model state file for the load datastore
+        SameName <- (LoadDstoreName == RunDstoreName)
+        SameDir <- (LoadDstoreDir == RunDstoreDir)
+        # Copy and load the model state file for the load datastore
         if (SameDir) {
           file.rename("PreviousModelState.Rda", "LoadModelState.Rda")
         } else {
@@ -356,18 +352,18 @@ initializeModel <-
         # JRaw: This will fail with undefined variable if SameDir is TRUE
         LoadModelState_ls <- assignLoadModelState(LoadModelStateFileName)
         file.remove(LoadModelStateFileName)
-        #Copy load datastore if not same as run datastore
+        # Copy load datastore if not same as run datastore
         if (LoadDstoreDir != RunDstoreDir) {
           file.copy(LoadDstoreName, RunDstoreDir, recursive = TRUE)
         }
-        #Renames the datastore to be the name specified for the model run
+        # Renames the datastore to be the name specified for the model run
         if (LoadDstoreFile != RunDstoreFile) {
           file.rename(
             file.path(RunDstoreDir, LoadDstoreFile),
             RunDstoreName
           )
         }
-        #Copy the datastore inventory to the ModelState_ls
+        # Copy the datastore inventory to the ModelState_ls
         ModelState_ls$Datastore <- LoadModelState_ls$Datastore
         ModelState_ls$RequiredVEPackages <- if ( "RequiredVEPackages" %in% names(LoadModelState_ls) ) {
           unique(c(LoadModelState_ls$RequiredVEPackages,LoadModelState_ls$ModuleCalls_df$PackageName))
