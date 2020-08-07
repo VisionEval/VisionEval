@@ -676,15 +676,13 @@ verpat <- function(Scenarios=FALSE) {
   model
 }
 
-verspm <- function(Scenarios=FALSE,MM=FALSE,VehAdj=FALSE) {
+verspm <- function(Scenarios=FALSE,MM=FALSE) {
   if ( scenarios ) {
     model <- openModel("VERSPM_Scenarios")
   } else if ( mm ) {
     model <- openModel("VERSPM_MM")
-  } else if ( withAdj ) {
-    model <- openModel("VERSPM_VehAdj")
   } else {
-    model <- openModel("models/VERSPM")
+    model <- openModel("VERSPM")
   }
   model$run()
   model

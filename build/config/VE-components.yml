@@ -120,16 +120,16 @@ Components:
       - usethis
     VE:
       - VE2001NHTS
-  VEHouseholdVehiclesWithAdj:
-    Type: module
-    Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 2 }
-    CRAN:
-      - ordinal
-      - reshape2
-      - usethis
-    VE:
-      - VE2001NHTS
+#   VEHouseholdVehiclesWithAdj:
+#     Type: module
+#     Path: sources/modules
+#     Test: { Script: tests/scripts/test.R, Group: 2 }
+#     CRAN:
+#       - ordinal
+#       - reshape2
+#       - usethis
+#     VE:
+#       - VE2001NHTS
   VELandUse:
     Type: module
     Path: sources/modules
@@ -220,10 +220,10 @@ Components:
     Type: model
     Path: sources/models
     Test: { Script: Test1/run_model.R, Group: 5 }    
-  VERSPM-VehAdj:
-    Type: model
-    Path: sources/models
-    Test: { Script: Test1/run_model.R, Group: 5 }    
+#   VERSPM-VehAdj:
+#     Type: model
+#     Path: sources/models
+#     Test: { Script: Test1/run_model.R, Group: 5 }    
   VERSPM_Scenarios:
     Type: model
     Path: sources/models
