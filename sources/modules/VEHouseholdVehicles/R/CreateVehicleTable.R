@@ -5,7 +5,7 @@
 #<doc>
 #
 ## CreateVehicleTable Module
-#### June 5, 2020
+#### September 10, 2018
 #
 #This module creates a vehicle table and populates it with household ID and geography fields.
 #
@@ -121,7 +121,6 @@ CreateVehicleTableSpecifications <- list(
       NAME =
         items("HhId",
               "Azone",
-              "Bzone",
               "Marea"),
       TABLE = "Household",
       GROUP = "Year",
@@ -176,7 +175,6 @@ CreateVehicleTableSpecifications <- list(
         items("HhId",
               "VehId",
               "Azone",
-              "Bzone",
               "Marea"),
       TABLE = "Vehicle",
       GROUP = "Year",
@@ -189,7 +187,6 @@ CreateVehicleTableSpecifications <- list(
         items("Unique household ID",
               "Unique vehicle ID",
               "Azone ID",
-              "Bzone ID",
               "Marea ID")
     ),
     item(
@@ -288,17 +285,12 @@ CreateVehicleTable <- function(L) {
   Out_ls$Year$Vehicle$HhId <- HhId_Ve
   attributes(Out_ls$Year$Vehicle$HhId)$SIZE <- max(nchar(HhId_Ve))
   #Add vehicle ID to table
-  #Note: ignore group quarters households that are under 15 years old (i.e. are
-  #not driving age) by definition, these have no vehicle access.
   Out_ls$Year$Vehicle$VehId <-
-    paste(HhId_Ve, unlist(sapply(NumVeh_Hh[NumVeh_Hh > 0], function(x) 1:x)), sep = "-")
+    paste(HhId_Ve, unlist(sapply(NumVeh_Hh, function(x) 1:x)), sep = "-")
   attributes(Out_ls$Year$Vehicle$VehId)$SIZE <- max(nchar(Out_ls$Year$Vehicle$VehId))
   #Add Azone ID to table
   Out_ls$Year$Vehicle$Azone <- rep(L$Year$Household$Azone, NumVeh_Hh)
   attributes(Out_ls$Year$Vehicle$Azone)$SIZE <- max(nchar(Out_ls$Year$Vehicle$Azone))
-  #Add Bzone ID to table
-  Out_ls$Year$Vehicle$Bzone <- rep(L$Year$Household$Bzone, NumVeh_Hh)
-  attributes(Out_ls$Year$Vehicle$Bzone)$SIZE <- max(nchar(Out_ls$Year$Vehicle$Bzone))
   #Add Marea ID to table
   Out_ls$Year$Vehicle$Marea <- rep(L$Year$Household$Marea, NumVeh_Hh)
   attributes(Out_ls$Year$Vehicle$Marea)$SIZE <- max(nchar(Out_ls$Year$Vehicle$Marea))

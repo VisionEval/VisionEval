@@ -66,8 +66,8 @@ The model and all of its independent variables are significant, but it only expl
 |Prediction        | Proportion|
 |:-----------------|----------:|
 |Under Predict     |      0.269|
-|Correctly Predict |      0.462|
-|Over Predict      |      0.269|
+|Correctly Predict |      0.460|
+|Over Predict      |      0.271|
 
 ## How the Module Works
 

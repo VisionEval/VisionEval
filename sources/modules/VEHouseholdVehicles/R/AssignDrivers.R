@@ -5,7 +5,7 @@
 #<doc>
 #
 ## AssignDrivers Module
-#### September 6, 2018
+#### July 8, 2020
 #
 #This module assigns drivers by age group to each household as a function of the numbers of persons and workers by age group, the household income, land use characteristics, and public transit availability. Users may specify the relative driver licensing rate relative to the model estimation data year in order to account for observed or projected changes in licensing rates.
 #
@@ -201,29 +201,29 @@ AssignDriversSpecifications <- list(
     item(
       NAME =
         items(
-          "Drv15to19AdjProp",
-          "Drv20to29AdjProp",
-          "Drv30to54AdjProp",
-          "Drv55to64AdjProp",
-          "Drv65PlusAdjProp"),
-      FILE = "region_hh_driver_adjust_prop.csv",
+          "DrvPerPrsn15to19",
+          "DrvPerPrsn20to29",
+          "DrvPerPrsn30to54",
+          "DrvPerPrsn55to64",
+          "DrvPerPrsn65Plus"),
+      FILE = "region_hh_ave_driver_per_capita.csv",
       TABLE = "Region",
       GROUP = "Year",
-      TYPE = "double",
-      UNITS = "proportion",
+      TYPE = "compound",
+      UNITS = "DRV/PRSN",
       NAVALUE = -1,
       SIZE = 0,
-      PROHIBIT = c("NA", "< 0"),
+      PROHIBIT = c("NA", "< 0", "> 1"),
       ISELEMENTOF = "",
-      UNLIKELY = c("> 1.5"),
+      UNLIKELY = "",
       TOTAL = "",
       DESCRIPTION =
         items(
-          "Target proportion of unadjusted model number of drivers 15 to 19 years old (1 = no adjustment)",
-          "Target proportion of unadjusted model number of drivers 20 to 29 years old (1 = no adjustment)",
-          "Target proportion of unadjusted model number of drivers 30 to 54 years old (1 = no adjustment)",
-          "Target proportion of unadjusted model number of drivers 55 to 64 years old (1 = no adjustment)",
-          "Target proportion of unadjusted model number of drivers 65 or older (1 = no adjustment)"
+          "Target ratio of drivers to persons in the 15 to 19 years old age group",
+          "Target ratio of drivers to persons in the 20 to 29 years old age group",
+          "Target ratio of drivers to persons in the 30 to 54 years old age group",
+          "Target ratio of drivers to persons in the 55 to 64 years old age group",
+          "Target ratio of drivers to persons in the 65 or older age group"
         ),
       OPTIONAL = TRUE
     )
@@ -233,16 +233,16 @@ AssignDriversSpecifications <- list(
     item(
       NAME =
         items(
-          "Drv15to19AdjProp",
-          "Drv20to29AdjProp",
-          "Drv30to54AdjProp",
-          "Drv55to64AdjProp",
-          "Drv65PlusAdjProp"),
+          "DrvPerPrsn15to19",
+          "DrvPerPrsn20to29",
+          "DrvPerPrsn30to54",
+          "DrvPerPrsn55to64",
+          "DrvPerPrsn65Plus"),
       TABLE = "Region",
       GROUP = "Year",
-      TYPE = "double",
-      UNITS = "proportion",
-      PROHIBIT = c("NA", "< 0"),
+      TYPE = "compound",
+      UNITS = "DRV/PRSN",
+      PROHIBIT = c("NA", "< 0", "> 1"),
       ISELEMENTOF = "",
       OPTIONAL = TRUE
     ),
@@ -587,54 +587,32 @@ AssignDrivers <- function(L) {
         Per_df[!IsUrban_,]
       )
     }
-    # Get the driver age category adjustment prop
-    DrvAdjPropName <- paste0("Drv", Bin, "AdjProp")
-    if (!is.null(L$Year$Region[[DrvAdjPropName]])) {
-      DrvAdjProp <- L$Year$Region[[DrvAdjPropName]]
-    } else {
-      DrvAdjProp <- 1
-    }
-    # If the adjustment prop is not 1, then adjust drivers
-    if (DrvAdjProp != 1) {
-      ModelDriverProp <- sum(Driver_) / length(Driver_)
-      TargetDriverProp <- DrvAdjProp * ModelDriverProp
-      MaxDrvAdjProp <- 1 / ModelDriverProp
-      #If the target driver proportion is >= 1 all are drivers and error
-      if (TargetDriverProp >=  1) {
-        #Make all persons drivers
-        Driver_[] <- 1
-        #Add error message
-        Msg <- paste0(
-          "Error during run of AssignDrivers module! ",
-          "The value of ", DrvAdjPropName, " will result in ",
-          round(TargetDriverProp, 3),
-          " times more drivers than people in that age category. ",
-          "Reduce the value of ", DrvAdjPropName,
-          " in the 'region_hh_driver_adjust_prop.csv' input file ",
-          "to be no greater than ", round(MaxDrvAdjProp, 3), ".")
-        addErrorMsg("Out_ls", Msg)
-        rm(Msg)
-      } else {
-        DriverProb_ <- rep(0, length(Driver_))
+    #Adjust drivers if there is a target driver proportion for the bin
+    TargetDriverPropName <- paste0("DrvPerPrsn", Bin)
+    if (!is.null(L$Year$Region[[TargetDriverPropName]])) {
+      TargetDriverProp <- L$Year$Region[[TargetDriverPropName]]
+      DriverProb_ <- rep(0, length(Driver_))
+      if (any(IsUrban_)) {
         DriverProb_[IsUrban_] <- applyBinomialModel(
           Model_ls = DriverModel_ls$Metro,
           Data_df = Per_df[IsUrban_,],
           ReturnProbs = TRUE
         )
+      }
+      if (any(!IsUrban_)) {
         DriverProb_[!IsUrban_] <- applyBinomialModel(
           Model_ls = DriverModel_ls$NonMetro,
           Data_df = Per_df[!IsUrban_,],
           ReturnProbs = TRUE
         )
-        Driver_ <- adjustDrivers(Driver_, DriverProb_, TargetDriverProp)
-        rm(DriverProb_)
       }
-      rm(ModelDriverProp, TargetDriverProp)
+      Driver_ <- adjustDrivers(Driver_, DriverProb_, TargetDriverProp)
+      rm(DriverProb_, TargetDriverProp)
     }
     NumDrivers_Hh <- tapply(Driver_, Per_df$HhId, sum)
     HhIdx <- match(names(NumDrivers_Hh), L$Year$Household$HhId)
     Out_ls$Year$Household[[BinName]][HhIdx] <- unname(NumDrivers_Hh)
-    rm(BinName, Per_df, Driver_, IsUrban_, DrvAdjPropName, NumDrivers_Hh, HhIdx)
+    rm(BinName, Per_df, Driver_, IsUrban_, TargetDriverPropName, NumDrivers_Hh, HhIdx)
   }
 
   #Tabulate number of driving age persons in each household
