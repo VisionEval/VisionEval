@@ -51,9 +51,7 @@ Tests_ls <- list(
        RequiredPackages = "VEPowertrainsAndFuels"),
   list(ModuleName = "CalculatePtranEnergyAndEmissions",
        LoadDatastore = TRUE, SaveDatastore = TRUE, DoRun = TRUE,
-       RequiredPackages = "VEPowertrainsAndFuels"),
-  list(ModuleName = "CalculateSafetyMeasures",
-       LoadDatastore = TRUE, SaveDatastore = TRUE, DoRun = TRUE)
+       RequiredPackages = "VEPowertrainsAndFuels")
 )
 
 #Set up, run tests, and save test results
