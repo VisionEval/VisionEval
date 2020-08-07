@@ -239,7 +239,7 @@ The model will give you progress updates as it runs:
   [1] "2020-08-15 10:56:13 -- Starting module 'CalculatePtranEnergyAndEmissions' for year '2038'."
   [1] "2020-08-15 10:56:15 -- Finish module 'CalculatePtranEnergyAndEmissions' for year '2038'."
   run_model.R: run complete.
-  Model stage C:/Users/jeremy.raw/Git-Repos/VisionEval-dev/built/visioneval/3.6.3/runtime/models/VERSPM complete
+  Model stage C:/Users/MyVisionEval/Documents/VisionEval/models/VERSPM complete
   Model Stage: /models/MY-RSPM
   Status: Complete
 ~~~
@@ -299,10 +299,9 @@ Extracting information from a completed model run should be done with
 the VisionEval command line interface. First, make sure your model has
 run to completion, for example by doing this:
 
-<code style='color: blue'>
   myrspm &lt;- openModel("MY-RSPM")
-  myrspm$status </code><code>
-  [1] "Complete"</code>
+  myrspm$status
+  [1] "Complete"
 
 If it doesn't say "Complete", please review the instructions above for
 setting up and running a scenario.
@@ -314,90 +313,90 @@ complex and difficult to manipulate manually, so you should use the VisionEval c
 
 The Datastore is organized hierarchically into "Groups" and "Tables", with each Table containing "Fields" (a.k.a. "Datasets"), each of which is a vector of values organized by model geography, household ID or vehicle ID.  You can list the available Groups by doing this:
 
-<code style="color: blue">rspm$groups
-</code><code>   Group Stage Selected
-1   2010     1      Yes
-2 Global     1      Yes
-3   2038     1      Yes
-</code>
+    rspm$groups
+    Group    Stage Selected
+    1   2010     1      Yes
+    2 Global     1      Yes
+    3   2038     1      Yes
 
 You can list Tables by doing this:
 
-<code style="color: blue">rspm$tables
-</code><code>    Group     Table Stage Selected
-1    2010     Azone     1      Yes
-2    2010 Household     1      Yes
-3    2010     Bzone     1      Yes
-4    2010    Worker     1      Yes
-5    2010     Marea     1      Yes
-6    2010   Vehicle     1      Yes
-7    2010    Region     1      Yes
-8  Global    Region     1      Yes
-9  Global     Marea     1      Yes
-10   2038     Azone     1      Yes
-11   2038 Household     1      Yes
-12   2038     Bzone     1      Yes
-13   2038    Worker     1      Yes
-14   2038     Marea     1      Yes
-15   2038   Vehicle     1      Yes
-16   2038    Region     1      Yes
-</code>
+    rspm$tables
+    Group         Table Stage Selected
+    1    2010     Azone     1      Yes
+    2    2010 Household     1      Yes
+    3    2010     Bzone     1      Yes
+    4    2010    Worker     1      Yes
+    5    2010     Marea     1      Yes
+    6    2010   Vehicle     1      Yes
+    7    2010    Region     1      Yes
+    8  Global    Region     1      Yes
+    9  Global     Marea     1      Yes
+    10   2038     Azone     1      Yes
+    11   2038 Household     1      Yes
+    12   2038     Bzone     1      Yes
+    13   2038    Worker     1      Yes
+    14   2038     Marea     1      Yes
+    15   2038   Vehicle     1      Yes
+    16   2038    Region     1      Yes
 
 You can get the available Fields by doing this:
 
-<code style="color: blue">flds <- rspm$fields</code>
+    flds <- rspm$fields
 
 We have in this example saved the result (an R `data.frame`) into a variable, since it has a lot of rows (the default RSPM model and scenario geography generates 473 rows). You can inspect that using R data.frame operations, or you can save it out to an external comma-separated values (CSV) file like this:
 
-<code style="color: blue">write.csv(flds,file="Field-List.csv")</code>
+    write.csv(flds,file="Field-List.csv")
 
 To extract all the data from a scenario Datastore, you can execute this instruction:
 
-<code style="color: blue">rspm$extract()</code>
+    rspm$extract()
 
 That will create a directory called `output` adjacent to the scenario `inputs` folder where it will write one comma-separated file for each Table, naming the files after the Group, Table and the date and time at which the model was run (_NOT_ the date and time at which the data was extracted).
 
 The default is to extract all Groups and Tables, and all the Fields within them.  You can select a subset just by pushing a list of names into the Groups, Tables or Fields.  For example, the following commands will generate output files containing only the scenario years 2010 and 2038 from the sample model, and leaving out the Global group:
 
-<code style="color: blue">rspm$groups <- c("2010","2038")</code>
+    rspm$groups <- c("2010","2038")
 
 The groups will now look like this:
 
-<code style="color: blue">rspm$groups
-</code><code>   Group Stage Selected
-1   2010     1      Yes
-2 Global     1      No
-3   2038     1      Yes
-</code>
+    rspm$groups
+    Group    Stage Selected
+    1   2010     1      Yes
+    2 Global     1      No
+    3   2038     1      Yes
 
 To clear a selection of `groups` (or `tables` or `fields`), you can just push an empty list, like this:
 
-<code style="color: blue">rspm$groups <- ""</code>
+    rspm$groups <- ""
 
 And then the groups will again have everything selected.
 
-<code style="color: blue">rspm$groups
-</code><code>   Group Stage Selected
-1   2010     1      Yes
-2 Global     1      Yes
-3   2038     1      Yes
-</code>
+    rspm$groups
+    Group    Stage Selected
+    1   2010     1      Yes
+    2 Global     1      Yes
+    3   2038     1      Yes
 
 If you want to manipulate the model results within R, using R functions and packages, you can do the following:
 
-<code style="color: blue">results <- rspm$extract(saveTo=FALSE)</code>
+    results <- rspm$extract(saveTo=FALSE)
 
-That instruction creates an R list of R data.frames, each of which contains a single Datastore table. Be aware that extract loads the entire Datastore into memory. So if your model is large, you may want to select a subset of groups or tables. Or you can just save the outputs into files and then load those back into R one at a time for further processing.
+That instruction creates an R list of R data.frames, each of which contains a single Datastore
+table. Be aware that extract loads the entire Datastore into memory. So if your model is large, you
+may want to select a subset of groups or tables. Or you can just save the outputs into files and
+then load those back into R one at a time for further processing.
 
-The `saveTo` option can be used to specify an alternate directory, so you can do something like the following to create an alternate output directory with only selected groups or tables:
+The `saveTo` option can be used to specify an alternate directory, so you can do something like the
+following to create an alternate output directory with only selected groups or tables:
 
-<code style="color: blue">rspm$groups <- c("2010","2038")
-rspm$extract(saveTo="years-only")
-</code>
+    rspm$groups <- c("2010","2038")
+    rspm$extract(saveTo="years-only")
 
 You will then find a directory called `years-only` next to the model scenario `inputs` containing the extracted subset.
 
-Finally, if you try to do a new Datastore extract into an existing folder (`outputs` or whatever), VisionEval will tell you that the directory already has things in it.  You should specify the `overwrite` parameter like this to replace the existing files:
+Finally, if you try to do a new Datastore extract into an existing folder (`outputs` or whatever),
+VisionEval will tell you that the directory already has things in it. You should specify the
+`overwrite` parameter like this to replace the existing files:
 
-<code style="color: blue">rspm$extract(saveTo="years-only",overwrite=TRUE)
-</code>
+    rspm$extract(saveTo="years-only",overwrite=TRUE)

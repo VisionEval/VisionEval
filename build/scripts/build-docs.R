@@ -169,26 +169,28 @@ for ( i in 1:nrow(ve.getdocs) ) {
 # As of VisionEval 2.0, only render to PDFs the top level of the docs folder
 # Only pdf's from that folder will be copied into the installer.
 for ( f in dir(pattern=doc.file.pattern,ve.docs,full.names=TRUE) ) {
-  expected.of <- file.path(ve.docs,sub(doc.file.pattern,".html",basename(f)))
-  if ( ! file.exists(expected.of) || newerThan(f,expected.of) ) {
-    cat("Rendering",sub(root,"",f),"...")
-    of <- rmarkdown::render(
-      f
-      , output_dir=ve.docs
-      , output_format="html_document"
-      , quiet=TRUE
-      , param=list(eval=FALSE)
-      # , param=value # do it like this and you can drop options in and out with a single #
-    )
-    cat("\nDone as",sub(ve.docs,"",of))
-    if ( of != expected.of ) {
-      cat("\nDIFFERENT NAME")
-      cat("\n",of)
-      cat("\n",expected.of)
+  for ( ext in c("html","pdf") ) {
+    expected.of <- file.path(ve.docs,sub(doc.file.pattern,paste0(".",ext),basename(f)))
+    if ( ! file.exists(expected.of) || newerThan(f,expected.of) ) {
+      cat("Rendering",sub(root,"",f),"...")
+      of <- rmarkdown::render(
+        f
+        , output_dir=ve.docs
+        , output_format=paste0(ext,"_document")
+        , quiet=TRUE
+        , param=list(eval=FALSE)
+        # , param=value # do it like this and you can drop options in and out with a single #
+      )
+      cat("\nDone as",sub(ve.docs,"",of))
+      if ( of != expected.of ) {
+        cat("\nDIFFERENT NAME")
+        cat("\n",of)
+        cat("\n",expected.of)
+      } else {
+        cat("\n")
+      }
     } else {
-      cat("\n")
+      cat("Up to date:",sub(dirname(ve.docs),"",expected.of),"\n")
     }
-  } else {
-    cat("Up to date:",sub(dirname(ve.docs),"",expected.of),"\n")
   }
 }
