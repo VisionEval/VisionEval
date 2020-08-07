@@ -61,13 +61,13 @@ def.inputs <- c(framework="inst/framework_docs",module="inst/module_docs",model=
 # Patterns to match for documentation file to include
 def.patterns <- rep(doc.file.pattern,length(doc.type.names))
 names(def.patterns) <- doc.type.names
-def.patterns["module"] <- "\\.[a-zA-Z]*$" # any file in inst/module_docs
-def.patterns["model"] <- ""               # any file of any type in the Tutorial directory
+def.patterns["module"] <- "\\.*"   # any file in inst/module_docs
+def.patterns["model"] <- "\\.*"    # any file of any type in the Tutorial directory
 
 # Whether to hunt recursively or confine search to root documentation folder for the type
 def.recursive <- rep(TRUE,length(doc.type.names))
-names(def.recursive)<-doc.type.names
-def.recursive["model"] <- FALSE
+names(def.recursive) <- doc.type.names
+# def.recursive["model"] <- FALSE
 
 # Specs for documentation to seek
 ve.getdocs <-                  pkgs.db[pkgs.docs,]
@@ -135,14 +135,14 @@ for ( i in 1:nrow(ve.getdocs) ) {
   doc.files <- character(0)
   if ( type=='docs' && ! dir.exists(doc.dir) ) {
     # if doc.dir is a specific file (presumed .md), skip directory processing
-    if ( !file.exists(doc.dir) || length(grep(doc.file.pattern,doc.dir))==0 ) {
+    if ( !file.exists(doc.dir) || length(grep(def.patterns['docs'],doc.dir))==0 ) {
       stop("Could not find .md file on 'docs' Path (",doc.dir,") for ",docs$Package)
     } else {
       doc.files = doc.dir
     }
   } else { 
     for (d in doc.dir) {
-      these.files <- dir(d,pattern=doc.file.pattern,full.names=TRUE, recursive=def.recursive[type])
+      these.files <- dir(d,pattern=def.patterns[type],full.names=TRUE, recursive=def.recursive[type])
       if ( length(these.files)>0 ) {
         doc.files <- c(doc.files,these.files)
       }
@@ -166,7 +166,7 @@ for ( i in 1:nrow(ve.getdocs) ) {
   }
 }
 
-# As of VisionEval 2.0, only render to PDFs the top level of the docs folder
+# As of VisionEval 2.0, only render to PDFs and HTML the top level .md files in the docs folder
 # Only pdf's from that folder will be copied into the installer.
 for ( f in dir(pattern=doc.file.pattern,ve.docs,full.names=TRUE) ) {
   for ( ext in c("html","pdf") ) {
