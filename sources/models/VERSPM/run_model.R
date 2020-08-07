@@ -9,6 +9,8 @@ cat('run_model.R: script entered\n')
 library(visioneval)
 cat('run_model.R: library visioneval loaded\n')
 
+planType <- 'callr'
+
 #Initialize model
 #----------------
 initializeModel(
@@ -22,7 +24,6 @@ initializeModel(
   SaveDatastore = TRUE
   )  
 cat('run_model.R: initializeModel completed\n')
-
 #Run all demo module for all years
 #---------------------------------
 for(Year in getYears()) {
@@ -40,13 +41,13 @@ for(Year in getYears()) {
   runModule("AssignCarSvcAvailability",        "VELandUse",             RunFor = "AllYears",    RunYear = Year)
   runModule("AssignTransitService",            "VETransportSupply",     RunFor = "AllYears",    RunYear = Year)
   runModule("AssignRoadMiles",                 "VETransportSupply",     RunFor = "AllYears",    RunYear = Year)
-  runModule("AssignDrivers",                   "VEHouseholdVehicles",   RunFor = "AllYears",    RunYear = Year)
-  runModule("AssignVehicleOwnership",          "VEHouseholdVehicles",   RunFor = "AllYears",    RunYear = Year)
-  runModule("AssignVehicleType",               "VEHouseholdVehicles",   RunFor = "AllYears",    RunYear = Year)
-  runModule("CreateVehicleTable",              "VEHouseholdVehicles",   RunFor = "AllYears",    RunYear = Year)
-  runModule("AssignVehicleAge",                "VEHouseholdVehicles",   RunFor = "AllYears",    RunYear = Year)
-  runModule("CalculateVehicleOwnCost",         "VEHouseholdVehicles",   RunFor = "AllYears",    RunYear = Year)
-  runModule("AdjustVehicleOwnership",          "VEHouseholdVehicles",   RunFor = "AllYears",    RunYear = Year)
+  runModule("AssignDrivers",                   "VEHouseholdVehiclesWithAdj",   RunFor = "AllYears",    RunYear = Year)
+  runModule("AssignVehicleOwnership",          "VEHouseholdVehiclesWithAdj",   RunFor = "AllYears",    RunYear = Year)
+  runModule("AssignVehicleType",               "VEHouseholdVehiclesWithAdj",   RunFor = "AllYears",    RunYear = Year)
+  runModule("CreateVehicleTable",              "VEHouseholdVehiclesWithAdj",   RunFor = "AllYears",    RunYear = Year)
+  runModule("AssignVehicleAge",                "VEHouseholdVehiclesWithAdj",   RunFor = "AllYears",    RunYear = Year)
+  runModule("CalculateVehicleOwnCost",         "VEHouseholdVehiclesWithAdj",   RunFor = "AllYears",    RunYear = Year)
+  runModule("AdjustVehicleOwnership",          "VEHouseholdVehiclesWithAdj",   RunFor = "AllYears",    RunYear = Year)
   runModule("CalculateHouseholdDvmt",          "VEHouseholdTravel",     RunFor = "AllYears",    RunYear = Year)
   runModule("CalculateAltModeTrips",           "VEHouseholdTravel",     RunFor = "AllYears",    RunYear = Year)
   runModule("CalculateVehicleTrips",           "VEHouseholdTravel",     RunFor = "AllYears",    RunYear = Year)
