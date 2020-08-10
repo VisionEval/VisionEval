@@ -160,6 +160,11 @@ clean all-clean: $(VE_MAKEVARS) build-clean docs-clean # Reset everything except
 
 clean-clean: all-clean dev-clean # Scorched earth: reset all installer artifacts
 
+rm-module:
+# By default,VE_DELETE is not set, and this will just print a message
+# Use 'VE_DELETE=VEHouseholdVehicles make rm-module' to delete all traces of VEHouseholdVehicles
+	$(RSCRIPT) scripts/clean-module.R --args $(VE_DELETE)
+
 # The remaining targets build the various VisionEval pieces
 
 # Make sure configuration is up to date
