@@ -16,6 +16,8 @@ then
 fi
 
 pushd $1
+rm -rf inst/module_docs # Don't need these for testing; just confuses devtools::check
+
 # TEST_SCRIPT=${2:-${VE_SCRIPT:-tests/scripts/test.R}}
 # echo TEST_SCRIPT=${TEST_SCRIPT}
 Rscript -e "devtools::check('.',cran=FALSE,error_on='error')"
