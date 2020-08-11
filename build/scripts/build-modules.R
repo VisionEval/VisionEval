@@ -216,7 +216,7 @@ for ( module in seq_along(package.names) ) {
     }
     if ( dir.exists(build.dir) || file.exists(build.dir) ) unlink(build.dir,recursive=TRUE) # Get rid of the build directory and start fresh
     pkg.files <- dir(package.paths[module],recursive=TRUE,all.files=FALSE) # not hidden files, relative to package.paths[module]
-    pkg.dirs <- dirname(pkg.files)
+    pkg.dirs <- c(dirname(pkg.files),"data")
     lapply( grep("^\\.$",invert=TRUE,value=TRUE,unique(file.path(build.dir,pkg.dirs))), FUN=function(x) { dir.create(x, showWarnings=FALSE, recursive=TRUE ) } )
     invisible(file.copy(from=file.path(package.paths[module],pkg.files),to=file.path(build.dir,pkg.files),overwrite=TRUE, recursive=FALSE))
     if ( ! dir.exists(build.dir) ) {
