@@ -5,11 +5,11 @@ RunTests: FALSE
 Roots:                          # Require ve.root and ve.output at a minimum
     ve.root: ..                 # relative to "build" folder (should be git root for VisionEval-dev)
     ve.output: ../built         # default ("built" adjacent to "build")
-#     ve.wiki: ../../VE-wiki    # path to clone of wiki repository
-# Components:                   # Where to find wiki components (right here)
-#     ve.wiki:
-#         Root: ve.installer
-#         Config: build/config/VE-wiki-components.yml
+    ve.wiki: ../../VE-wiki      # path to clone of wiki repository
+Components:                     # Where to find wiki components (right here)
+    ve.wiki:
+        Root: ve.installer
+        Config: config/VE-wiki-components.yml
 
 Locations: # "Root" elements are variables defined in "Roots" section
     # path is relative to "augmented" root (depending on "augment" element)
