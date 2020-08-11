@@ -669,16 +669,16 @@ VEModel <- R6::R6Class(
 )
 
 # The openModel function is the only thing exported
-openModel <- function(modelPath,modelName=NULL) {
-  return( VEModel$new(modelPath=modelPath,modelName=modelName) )
+openModel <- function(modelPath, modelName = NULL) {
+  return( VEModel$new(modelPath = modelPath, modelName = modelName) )
 }
 
 # The following functions run the command line model versions per the
 # Getting Started document.  Optional "scenarios" argument, if TRUE, will
 # run the scenarios version of the test models.
 
-verpat <- function(Scenarios=FALSE) {
-  if ( ! scenarios ) {
+verpat <- function(Scenarios = FALSE) {
+  if ( ! Scenarios ) {
     model <- openModel("VERPAT")
   } else {
     model <- openModel("VERPAT_Scenarios")
@@ -687,10 +687,10 @@ verpat <- function(Scenarios=FALSE) {
   model
 }
 
-verspm <- function(Scenarios=FALSE,MM=FALSE) {
-  if ( scenarios ) {
+verspm <- function(Scenarios = FALSE, MM = FALSE) {
+  if ( Scenarios ) {
     model <- openModel("VERSPM_Scenarios")
-  } else if ( mm ) {
+  } else if ( MM ) {
     model <- openModel("VERSPM_MM")
   } else {
     model <- openModel("VERSPM")
@@ -699,7 +699,7 @@ verspm <- function(Scenarios=FALSE,MM=FALSE) {
   model
 }
 
-vestate <- function(staged=FALSE) {
+vestate <- function(staged = FALSE) {
   if ( ! staged ) {
     model <- openModel("VE-State")
   } else {
