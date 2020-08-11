@@ -65,6 +65,7 @@ jobs:
           script:
             - bash build/travis/make-module.sh sources/modules/VESimTransportSupply
             - bash build/travis/make-module.sh sources/modules/VETravelPerformance
+            - bash build/travis/make-module.sh sources/modules/VETravelDemandMM
         - stage: Models (RPAT, RSPM, VE-State Part 1)
           script: bash build/travis/run-model.sh sources/models/VERPAT/run_model.R
         - script: bash build/travis/run-model.sh sources/models/VERSPM/run_model.R
