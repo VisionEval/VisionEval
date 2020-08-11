@@ -25,6 +25,7 @@ initializeModel(
 cat('run_model.R: initializeModel completed\n')
 #Run all demo module for all years
 #---------------------------------
+requirePackage("VETravelDemandMM")
 for(Year in getYears()) {
   runModule("CreateHouseholds",                "VESimHouseholds",       RunFor = "AllYears",    RunYear = Year)
   runModule("PredictWorkers",                  "VESimHouseholds",       RunFor = "AllYears",    RunYear = Year)

@@ -417,11 +417,11 @@ initializeModel <-
 
     # Report any required packages that are not also in module calls
     umc <- unique(ModuleCalls_df$PackageName)
-    rpk <- unique(RequiredPkg_)
-    if ( any( not.in.umc <- ! (rpk %in% umc) ) ) {
-      for ( p in rpk[not.in.umc] ) message(paste("Package",p,"is required"))
+    explicitRequired_ <- unique(RequiredPkg_)
+    if ( any( not.in.umc <- ! (explicitRequired_ %in% umc) ) ) {
+      for ( p in explicitRequired_[not.in.umc] ) message(paste("Package",p,"is required"))
     }
-    RequiredPkg_ <- c(umc,rpk)
+    RequiredPkg_ <- c(umc,explicitRequired_)
 
     #Get list of installed packages
     #Check that all module packages are in list of installed packages
@@ -487,6 +487,8 @@ initializeModel <-
     #create combined list of all specifications
     #JRaw: AllSpecs_ls is optionally used to simulate the model run, then discarded
     #      However, parsing the specs as we build AllSpecs_ls does critical error checking
+    # ModulesByPackage_df lists all modules available in the packages
+    # ModuleCalls_df lists only modules that appear in runModule commands
     Errors_ <- character(0)
     AllSpecs_ls <- list()
     for (i in 1:nrow(ModuleCalls_df)) {
@@ -512,59 +514,76 @@ initializeModel <-
       } else {
         AllSpecs_ls[[i]]$Specs <- Specs_ls
       }
-      #If the 'Call' spec is not null, check the called module
-      if (!is.null(Specs_ls$Call)) {
-        #If it is a list of module calls
-        if (is.list(Specs_ls$Call)) {
-          #Iterate through module calls
-          for (j in 1:length(Specs_ls$Call)) {
-            Call_ <- unlist(strsplit(Specs_ls$Call[[j]], "::"))
-            #Check module availability
-            if (length(Call_) == 2) {
-              Err <-
-                checkModuleExists(
-                  Call_[2],
-                  Call_[1],
-                  InstalledPkgs_,
-                  c(Module = ModuleName, Package = PackageName))
-            }
-            if (length(Call_) == 1) {
-              if (!Call_ %in% ModulesByPackage_df$Module) {
-                Err <- paste0("Error in runModule call for module ", Call_,
-                              ". It is not present in any package identified in ",
-                              "the model run script. Please add",
-                              'requirePackage("<package-with-module>") to the script.')
+      #If the 'Call' spec is not null and is a list, check the called module
+      if (!is.null(Specs_ls$Call) && is.list(Specs_ls$Call)) {
+        #Iterate through module calls
+        for (j in 1:length(Specs_ls$Call)) {
+          Call_ <- unlist(strsplit(Specs_ls$Call[[j]], "::"))
+          #Check module availability
+          if (length(Call_) == 2) { # package explicitly specified
+            Err <-
+            checkModuleExists(
+              Call_[2],
+              Call_[1],
+              InstalledPkgs_,
+              c(Module = ModuleName, Package = PackageName))
+          } else  {
+            if (length(Call_) == 1) { # only module name is provided
+              if (! any(Call_ %in% ModulesByPackage_df$Module) ) {
+                Err <- c(
+                  paste0("Error in runModule call for module ", Call_,"."),
+                  "It is not present in any package already identified in the model run script.",
+                  "Please add requirePackage(<package-with-module>) to the script."
+                )
               } else {
-                Pkg <-
-                  ModulesByPackage_df$Package[ModulesByPackage_df$Module == Call_]
-                Call_ <- c(unique(Pkg), Call_)
-                rm(Pkg)
+                callPkgs_ <- ModuleCalls_df$PackageName[Call_ %in% ModuleCalls_df$ModuleName]
+                if ( length(callPkgs_)==1 ) { # use existing explicit call to module
+                  Call_ <- c( callPkgs_, Call_ )
+                } else  { # callPkgs_ is probably length 0, but could also have more than 1
+                  Pkg <- ModulesByPackage_df$Package[ModulesByPackage_df$Module == Call_]
+                  Call_ <- c(unique(Pkg), Call_)
+                  if (length(Call_) > 2 ) { # More than one package contains the module
+                    callPkgs_ <- Call_[-length(Call_)]
+                    callModule_ <- Call_[length(Call_)]
+                    testPkgs_ <- callPkgs_[callPkgs_ %in% explicitRequired_]
+                    if ( length(testPkgs_) == 0 ) testPkgs_ <- callPkgs_  # No explicit required package
+                    if ( length(testPkgs_) > 1 ) { # Could not resolve by explicit required package
+                      Msg_ <- paste("Providing module",callModule_,"from package",testPkgs_[1])
+                      Warn_ <- c(
+                        Msg_,
+                        paste("Also present in: ", paste(testPkgs_[2:length(testPkgs_)],collapse=", ")),
+                        "Use requirePackage() to force selection."
+                      )
+                      message(Msg_)
+                      writeLog(Warn_)
+                    } else { # Resolved to exactly one package with the module
+                      writeLog(paste("Provided module",callModule_,"from Package",testPkgs_[1]))
+                    }
+                    Call_ <- c(testPkgs_[1],callModule_) # Use the first package found, unless explicit
+                  }
+                }
               }
-              # JRaw: It's an error if the same module is provided in distinct packages
-              if (length(Call_) > 2 ) {
-                Err <- paste0("Error in runModule call for module ",Call_[length(Call_)],
-                  ". Module is specified in multiple distinct packages: ",
-                  paste(Call_[-length(Call_)],collapse=", "))
-              }
+            } else {
+              Err <- paste("Cannot fathom Call specification:",Specs_ls$Call[[j]])
             }
+          }
+          if (length(Err) > 0) {
+            Errors_ <- c(Errors_, Err)
+            next()
+          }
+          # Load and check the module specifications and add Get specs if
+          # there are no specification errors
+          for (i in 1:(length(Call_)-1)) { # Code above forces length(Call_) always to be 2 or fail
+            CallSpecs_ls <-
+            processModuleSpecs(getModuleSpecs(Call_[length(Call_)], Call_[i]))
+            Err <- checkModuleSpecs(CallSpecs_ls, Call_[length(Call_)])
             if (length(Err) > 0) {
               Errors_ <- c(Errors_, Err)
               next()
-            }
-            #Load and check the module specifications and add Get specs if
-            #there are no specification errors
-            for (i in 1: (length(Call_)-1)) {
-              CallSpecs_ls <-
-                processModuleSpecs(getModuleSpecs(Call_[length(Call_)], Call_[i]))
-              Err <- checkModuleSpecs(CallSpecs_ls, Call_[length(Call_)])
-              if (length(Err) > 0) {
-                Errors_ <- c(Errors_, Err)
-                next()
-              } else {
-                AllSpecs_ls[[i]]$Specs$Get <-
-                  c(AllSpecs_ls[[i]]$Specs$Get <- Specs_ls$Get)
-              }            
-			 }
+            } else {
+              AllSpecs_ls[[i]]$Specs$Get <-
+              c(AllSpecs_ls[[i]]$Specs$Get <- Specs_ls$Get)
+            }            
           }
         }
       }
