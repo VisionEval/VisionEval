@@ -574,10 +574,8 @@ if (!file.exists("inst/extdata/Transit_df.rds"))  {
 #' }
 #' @source MakeSimBzoneEstDataset.R script.
 "SimLandUseData_df"
-if (!file.exists("data/SimLandUseData_df.rda"))  {
-  SimLandUseData_df <- createSimLandUseDataset()
-  usethis::use_data(SimLandUseData_df, overwrite = TRUE)
-}
+SimLandUseData_df <- createSimLandUseDataset()
+usethis::use_data(SimLandUseData_df, overwrite = TRUE)
 
 
 #====================

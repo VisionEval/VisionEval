@@ -19,7 +19,8 @@ Suggests:
     knitr
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+Roxygen: list(load='source')
+RoxygenNote: 7.1.1
 Collate:
         'CalculateCongestionBase.R'
         'CalculateCongestionFuture.R'

@@ -1,3 +1,6 @@
+#' @include CalculateHouseholdDvmt.R
+NULL
+
 #=================
 #DivertSovTravel.R
 #=================
@@ -186,7 +189,7 @@ Hh_df <- Hh_df[complete.cases(Hh_df[, Keep_]),]
 #Only keep cases for households having vehicles
 Hh_df <- Hh_df[Hh_df$Vehicles > 0,]
 #Clean up
-rm(DvmtModel_ls, Include_, IsMetro, Keep_)
+rm(Include_, IsMetro, Keep_)
 
 #Calculate mileage in SOV tours having lengths 20 miles or shorter
 #-----------------------------------------------------------------

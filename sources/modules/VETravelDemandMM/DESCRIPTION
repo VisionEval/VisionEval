@@ -24,14 +24,15 @@ Imports:
     rmarkdown,
     usethis,
     data.table,
+    visioneval,
     VE2001NHTS
 Suggests:
     knitr,
     NHTS2009,
     SLD
 VignetteBuilder: knitr
+Roxygen: list(load="pkgload")
 RoxygenNote: 7.1.0
 Remotes:
-    VisionEval/VisionEval-Dev/sources/framework/visioneval@development,
     cities-lab/NHTS2009,
     cities-lab/SLD

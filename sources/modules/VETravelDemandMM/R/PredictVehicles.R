@@ -138,7 +138,6 @@ PredictVehiclesSpecifications <- list(
 #' }
 "PredictVehiclesSpecifications"
 usethis::use_data(PredictVehiclesSpecifications, overwrite = TRUE)
-rm(PredictVehiclesSpecifications)
 
 
 #=======================================================

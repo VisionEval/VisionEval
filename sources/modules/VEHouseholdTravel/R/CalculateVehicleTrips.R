@@ -1,3 +1,6 @@
+#' @include CalculateHouseholdDvmt.R
+NULL
+
 #=======================
 #CalculateVehicleTrips.R
 #=======================
@@ -134,7 +137,7 @@ Hh_df$AveDvmt[!Hh_df$IsMetro] <-
 #Cap at 99th percentile
 MaxAveDvmt <- quantile(Hh_df$AveDvmt, probs = 0.99, na.rm = TRUE)
 Hh_df$AveDvmt[Hh_df$AveDvmt > MaxAveDvmt] <- MaxAveDvmt
-rm(DvmtModel_ls, MaxAveDvmt)
+rm(MaxAveDvmt)
 
 #Define function to simulate average trip length
 #-----------------------------------------------

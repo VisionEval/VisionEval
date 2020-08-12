@@ -422,7 +422,6 @@ CreateSimBzonesSpecifications <- list(
 #' @source CreateSimBzones.R script.
 "CreateSimBzonesSpecifications"
 usethis::use_data(CreateSimBzonesSpecifications, overwrite = TRUE)
-rm(CreateSimBzonesSpecifications)
 
 
 #=======================================================

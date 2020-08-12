@@ -1,3 +1,6 @@
+#' @include CreateEstimationDatasets.R
+NULL
+
 #================
 #PredictWorkers.R
 #================
@@ -93,7 +96,6 @@ PropHhWkr_HtAg <- calcWorkerProportions(Hh_df)
 #' @source PredictWorkers.R script.
 "PropHhWkr_HtAg"
 usethis::use_data(PropHhWkr_HtAg, overwrite = TRUE)
-rm(calcWorkerProportions, Hh_df)
 
 
 #================================================
@@ -263,7 +265,6 @@ PredictWorkersSpecifications <- list(
 #' @source PredictWorkers.R script.
 "PredictWorkersSpecifications"
 usethis::use_data(PredictWorkersSpecifications, overwrite = TRUE)
-rm(PredictWorkersSpecifications)
 
 
 #=======================================================

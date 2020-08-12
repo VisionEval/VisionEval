@@ -1,3 +1,6 @@
+#' @include CalculateTravelDemand.R
+NULL
+
 #===================
 #CalculateTravelDemandFuture.R
 #===================
@@ -24,10 +27,10 @@
 
 
 #Load Dvmt assignment models
-load("./data/DvmtLmModels_ls.rda")
+load("data/DvmtLmModels_ls.rda")
 
 #Load PHEV/HEV model data
-load("./data/PhevModelData_ls.rda")
+load("data/PhevModelData_ls.rda")
 
 #Load default values for Travel Demand module
 load("./data/TravelDemandDefaults_ls.rda")

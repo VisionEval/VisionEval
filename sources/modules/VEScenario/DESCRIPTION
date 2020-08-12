@@ -19,19 +19,20 @@ Imports:
     future.callr,
     jsonlite,
     data.table,
-	dplyr,
-	magrittr,
-	readr,
-	tidyr
+    dplyr,
+    magrittr,
+    readr,
+    tidyr
 Suggests:
     knitr
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 7.1.0
+Roxygen: list(load='source')
+RoxygenNote: 7.1.1
 Collate:
-		'NewScenarioSet.R'	
-        'BuildScenarios.R'
-        'RunScenarios.R'
-        'VERPATResults.R'
-        'VERSPMResults.R'
-        'ViewResults.R'
+    'NewScenarioSet.R'	
+    'BuildScenarios.R'
+    'RunScenarios.R'
+    'VERPATResults.R'
+    'VERSPMResults.R'
+    'ViewResults.R'

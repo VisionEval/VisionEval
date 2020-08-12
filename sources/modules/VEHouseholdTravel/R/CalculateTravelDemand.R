@@ -1,3 +1,6 @@
+#' @include LoadDefaultValues.R
+NULL
+
 #===================
 #CalculateTravelDemand.R
 #===================
@@ -81,7 +84,7 @@ usethis::use_data(DvmtLmModels_ls, overwrite = TRUE)
 #Save PHEV/HEV model data
 #------------------------
 #Load PHEV/HEV model data object
-load("./data-raw/PhevModelData_ls.rda")
+load("data-raw/PhevModelData_ls.rda")
 #' PHEV/HEV model
 #'
 #' A list containing PHEV/HEV model data
@@ -99,7 +102,7 @@ load("./data-raw/PhevModelData_ls.rda")
 usethis::use_data(PhevModelData_ls, overwrite = TRUE)
 
 #Load default values for Travel Demand module
-load("./data/TravelDemandDefaults_ls.rda")
+load("data/TravelDemandDefaults_ls.rda")
 
 
 #================================================

@@ -149,7 +149,6 @@ PredictDriversSpecifications <- list(
 #' }
 "PredictDriversSpecifications"
 usethis::use_data(PredictDriversSpecifications, overwrite = TRUE)
-rm(PredictDriversSpecifications)
 
 
 #=======================================================

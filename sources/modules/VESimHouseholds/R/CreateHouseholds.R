@@ -1,3 +1,6 @@
+#' @include CreateEstimationDatasets.R
+NULL
+
 #==================
 #CreateHouseholds.R
 #==================
@@ -100,7 +103,6 @@ HtProb_HtAp <- calcHhAgeTypes(Hh_df)
 #' @source CreateHouseholds.R script.
 "HtProb_HtAp"
 usethis::use_data(HtProb_HtAp, overwrite = TRUE)
-rm(calcHhAgeTypes, Hh_df)
 
 
 #================================================
@@ -389,7 +391,6 @@ CreateHouseholdsSpecifications <- list(
 #' @source CreateHouseholds.R script.
 "CreateHouseholdsSpecifications"
 usethis::use_data(CreateHouseholdsSpecifications, overwrite = TRUE)
-rm(CreateHouseholdsSpecifications)
 
 
 #=======================================================

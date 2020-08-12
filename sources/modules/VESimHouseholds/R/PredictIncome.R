@@ -1,3 +1,6 @@
+#' @include CreateEstimationDatasets.R
+NULL
+
 #===============
 #PredictIncome.R
 #===============
@@ -226,7 +229,7 @@ lines(density(IncEst_), lty = 2)
 legend("topright", legend = c("Observed", "Predicted"), lty = c(1,2))
 dev.off()
 #Clean up
-rm(Hh_df, IncObs_, HHIncomeTarget, MeanCompare_df)
+rm(IncObs_, HHIncomeTarget, MeanCompare_df)
 
 #Save the household income model
 #-------------------------------
@@ -317,8 +320,6 @@ plot(
 lines(density(IncEst_), lty = 2)
 legend("topright", legend = c("Observed", "Predicted"), lty = c(1,2))
 dev.off()
-#Clean up
-rm(Hh_df, IncObs_, HHIncomeTarget, MeanCompare_df)
 
 #Save the group quarters income model
 #------------------------------------

@@ -1,3 +1,6 @@
+#' @include LoadDefaultValues.R
+NULL
+
 #===========================
 #AssignHhVehiclePowertrain.R
 #===========================
@@ -87,9 +90,6 @@
 #and the proportion of travel powered by each will differ depending on
 #day-to-day household travel patterns. A model is estimated to calculate those
 #proportions.
-
-#Load PowertrainFuelDefaults_ls to make it available as a global variable
-load("./data/PowertrainFuelDefaults_ls.rda")
 
 #-------------------------------------------------------
 #Model proportions of PHEV travel powered by electricity

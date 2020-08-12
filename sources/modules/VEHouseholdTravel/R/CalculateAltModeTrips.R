@@ -1,3 +1,6 @@
+#' @include CalculateHouseholdDvmt.R
+NULL
+
 #=======================
 #CalculateAltModeTrips.R
 #=======================
@@ -212,7 +215,7 @@ AltModeModels_ls$NonMetro <-
 "AltModeModels_ls"
 usethis::use_data(AltModeModels_ls, overwrite = TRUE)
 
-rm(DvmtModel_ls, Hh_df, MetroBikeModel_ls, MetroHh_df, MetroTransitModel_ls,
+rm(Hh_df, MetroBikeModel_ls, MetroHh_df, MetroTransitModel_ls,
    MetroWalkModel_ls, NonMetroBikeModel_ls, NonMetroHh_df,
    NonMetroTransitModel_ls, NonMetroWalkModel_ls, IndepVars_, IsMetro_, Vars_,
    estimateAltModeTripModel)

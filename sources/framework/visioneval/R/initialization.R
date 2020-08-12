@@ -125,8 +125,6 @@ getModelState <- function(Names_ = "All", localModelState=NULL) {
 #' @param ChangeState_ls A named list of components to change in ModelState_ls
 #' @param FileName A string identifying the name of the file that contains
 #' the ModelState_ls list. The default name is 'ModelState.Rda'.
-#' @param localModelState A ModelState_ls structure living somewhere other than
-#'   the global environment.
 #' @return TRUE if the model state list and file are changed.
 #' @export
 setModelState <-

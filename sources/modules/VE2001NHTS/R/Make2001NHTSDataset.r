@@ -79,6 +79,7 @@ Nhts2001Repo <-
 #Load NHTS household data
 #------------------------
 #Download data from repository and process if it has not already been done
+message(getwd())
 if (!file.exists("data-raw/Hh_df.rda")) {
   Hh_df <- getZipDatasetFromRepo(Nhts2001Repo, "HHPUB")
   Keep_ <- c("HOUSEID", "AGE_P1", "AGE_P2", "AGE_P3", "AGE_P4", "AGE_P5",
@@ -881,7 +882,6 @@ rm(Dt_df, toProperName, toVecFrom1DAry)
 #' National Transit Database (2002), and Make2001NHTSDataset.R script.
 "Hh_df"
 usethis::use_data(Hh_df, overwrite = TRUE)
-rm(Hh_df)
 
 
 #========================
@@ -908,7 +908,6 @@ rm(Hh_df)
 #' @source 2001 National Household Travel Survey and Make2001NHTSDataset.R script.
 "Veh_df"
 usethis::use_data(Veh_df, overwrite = TRUE)
-rm(Veh_df)
 
 
 #=====================
@@ -942,7 +941,6 @@ rm(Veh_df)
 #'  @source 2001 National Household Travel Survey and Make2001NHTSDataset.R script.
 "HhTours_df"
 usethis::use_data(HhTours_df, overwrite = TRUE)
-rm(HhTours_df)
 
 
 #=======================
@@ -974,4 +972,3 @@ rm(HhTours_df)
 #'  @source 2001 National Household Travel Survey and Make2001NHTSDataset.R script.
 "Per_df"
 usethis::use_data(Per_df, overwrite = TRUE)
-rm(Per_df)
