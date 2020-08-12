@@ -26,6 +26,9 @@ if ( ! suppressWarnings(require("rcmdcheck",quietly=TRUE)) ) {
 if ( ! suppressWarnings(require("rmarkdown",quietly=TRUE)) ) {
   install.packages("rmarkdown", lib=dev.lib, type=.Platform$pkgType )
 }
+if ( ! suppressWarnings(requireNamespace("withr",quietly=TRUE)) ) {
+  install.packages("withr", lib=dev.lib, type=.Platform$pkgType )
+}
 
 message("========== BUILD FRAMEWORK ==========")
 
@@ -216,6 +219,8 @@ for ( module in seq_along(package.names) ) {
     }
     if ( dir.exists(build.dir) || file.exists(build.dir) ) unlink(build.dir,recursive=TRUE) # Get rid of the build directory and start fresh
     pkg.files <- dir(package.paths[module],recursive=TRUE,all.files=FALSE) # not hidden files, relative to package.paths[module]
+    dot.files <- dir(package.paths[module],pattern="^\\.RBuildignore$",all.files=TRUE)
+    if ( length(dot.files)>0 ) pkg.files <- c(pkg.files,dot.files)
     pkg.dirs <- dirname(pkg.files)
     lapply( grep("^\\.$",invert=TRUE,value=TRUE,unique(file.path(build.dir,pkg.dirs))), FUN=function(x) { dir.create(x, showWarnings=FALSE, recursive=TRUE ) } )
     invisible(file.copy(from=file.path(package.paths[module],pkg.files),to=file.path(build.dir,pkg.files),overwrite=TRUE, recursive=FALSE))
@@ -229,15 +234,24 @@ for ( module in seq_along(package.names) ) {
 
   # Step 4: Check the module in order to rebuild the /data directory in build.dir
   if ( ! package.built ) {
+    cat("++++++++++ Pre-build / Document ",package.names[module]," in ",build.dir,"\n",sep="")
+    withr::with_dir(build.dir,devtools::document())
     cat("++++++++++ Checking and pre-processing ",package.names[module]," in ",build.dir,"\n",sep="")
-    # Run the module tests (prior to building anything)
-    # Note that "check.dir" here is created within "check_dir=build.dir"
-    check.results <- devtools::check(build.dir,check_dir=build.dir,error_on="error")
+    # Run the module check (prior to building anything)
+    # Run Roxygen with load='source' option in package DESCRIPTION
+    # Requires us to set the working directory outside devtools:check, otherwise it gets very
+    # confused about where to put the generated /data elements.
+    # Need to set "check.dir" location explicitly to "check_dir=build.dir" (otherwise lost in space)
+    check.results <- withr::with_dir(build.dir,devtools::check(".",check_dir=build.dir,document=FALSE,error_on="error"))
     cat("++++++++++ Check results\n")
     print(check.results)
     # devtools::check leaves the package loaded after its test installation to a temporary library
     # Therefore we need to explicitly detach it so we can install it properly later on
-    detach(paste("package:",package.names[module],sep=""),character.only=TRUE,unload=TRUE)
+    if ( (bogus.package <- paste("package:",package.names[module],sep="")) %in% search() ) {
+      cat("Detaching",bogus.package,"\n")
+      print(search())
+      detach(bogus.package,character.only=TRUE,unload=TRUE)
+    }
 
     # Then get rid of the temporary (and possibly obsolete) source package that is left behind
     # Must build again rather than use that built package, because the results of devtools::check
