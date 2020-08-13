@@ -51,6 +51,19 @@ if ( ve.binary.build ) {
 ve.packages  <- pkgs.db[pkgs.module,]
 
 package.names <- ve.packages$Package
+ve.only.build <- Sys.getenv("VE_ONLY_BUILD","")
+if ( nzchar(ve.only.build[1]) ) { # will always have at least one "exclusion" but it may be empty
+  ve.only.build <- unlist(strsplit(ve.only.build,"[:blank:]*,[:blank:]*"))
+  package.names <- intersect(package.names,ve.only.build) # only (re)build certain packages
+  cat("++++++++++ Only building:",paste0(ve.only.build,collapese=", "),"\n")
+} else {
+  ve.only.build <- character(0)
+}
+if ( length(package.names) == 0 ) {
+  cat("++++++++++ Nothing to build due to VE_ONLY_BUILD:",paste0(ve.only.build,collapese=", "),"\n")
+  quit(status=0)
+}
+
 package.paths <- file.path(ve.packages[,"Root"], ve.packages[,"Path"], package.names)
 # Want to assert that all of these eventually have the same length!
 # cat("Number of names:",length(package.names),"\n")
@@ -97,6 +110,9 @@ if (ve.runtests) {
 
 num.src <- 0
 num.bin <- 0
+
+# Get list of installed packages, for checking obsoleteness etc below
+
 pkgs.info <- installed.packages(lib.loc=ve.lib)[,c("Package","Version")]
 pkgs.installed <- pkgs.info[,"Package"]
 pkgs.version <- pkgs.info[,"Version"]
@@ -163,8 +179,26 @@ for ( module in seq_along(package.names) ) {
     }
   }
 
-  # Step 2: Determine package status (built, installed)
+  # Step 2: Determine package status (built, installed).
+  # Force to "unbuilt" if package is in VE_ONLY_BUILD
   build.dir <- file.path(ve.src,package.names[module])
+  if ( length(ve.only.build)>0 && nzchar(ve.only.build[1]) ) {
+    cat("+++++++++++++REMOVING PREVIOUS BUILD FILES\n")
+    local({
+      pkg.src <- modulePath(package.names[module],built.path.src)
+      if ( length(pkg.src)>0 ) { # built source package
+        pkg.src <- file.path(built.path.src,pkg.src)
+      } else pkg.src <- character(0)
+      pkg.bin <- modulePath(package.names[module],built.path.binary)
+      if ( length(pkg.bin)>0 ) { # built binary package
+        pkg.bin <- file.path(built.path.binary,pkg.bin)
+      } else pkg.bin <- character(0)
+      if ( length(pkg.src)>0 )     { unlink(pkg.src); cat(pkg.src,"\n") } else cat("No Source Package.\n")
+      if ( length(pkg.bin)>0 )     { unlink(pkg.bin); cat(pkg.bin,"\n") } else cat("No Binary Package.\n")
+    })
+    if ( dir.exists( build.dir) ) { unlink(build.dir,recursive=TRUE); cat(build.dir,"\n") } else cat("No Build Directory.\n")
+    cat("++++++++++++ Done removing previous files\n")
+  }
   check.dir <- file.path(build.dir,paste0(package.names[module],".Rcheck"))
   if ( debug ) cat( build.dir,"exists:",dir.exists(build.dir),"\n")
   if ( ve.binary.build ) {
@@ -206,7 +240,13 @@ for ( module in seq_along(package.names) ) {
     ! is.na( pkgs.installed[package.names[module]] ) &&
     samePkgVersion(package.paths[module],pkgs.version[package.names[module]])
   )
-  if ( ! package.installed ) cat(package.names[module],"is NOT installed\n")
+  if ( ! package.installed ) {
+    cat(package.names[module],"is NOT installed\n")
+    if ( package.names[module] %in% pkgs.installed ) { # installed version is obsolete
+      cat("Removing obsolete module package version:",pkgs.version[package.names[module]],"\n")
+      remove.packages(package.names[module],lib=ve.lib)
+    }
+  }
 
   # Step 3: If package is not built, (re-)copy package source to ve.src
   # On Windows: ve.src copy is used to build source and binary packages and to run tests
@@ -220,10 +260,19 @@ for ( module in seq_along(package.names) ) {
       cat("++++++++++ Copying module source",package.paths[module],"to build/test environment...\n")
     }
     if ( dir.exists(build.dir) || file.exists(build.dir) ) unlink(build.dir,recursive=TRUE) # Get rid of the build directory and start fresh
-    pkg.files <- dir(package.paths[module],recursive=TRUE,all.files=FALSE) # not hidden files, relative to package.paths[module]
-    pkg.files <- grep("^data/",pkg.files,value=TRUE,invert=TRUE)
-    dot.files <- dir(package.paths[module],pattern="^\\.RBuildignore$",all.files=TRUE)
-    if ( length(dot.files)>0 ) pkg.files <- c(pkg.files,dot.files)
+    all.files <- dir(package.paths[module],recursive=TRUE,all.files=FALSE) # not hidden files, relative to package.paths[module]
+    pkg.files <- grep("^data/",all.files,value=TRUE,invert=TRUE)
+    if ( length(all.files)!=length(pkg.files) ) {
+      data.files <- setdiff(all.files,pkg.files)
+      cat("Ignoring pre-built data files in data/ directory\n")
+      print(data.files)
+    }
+    dot.files <- dir(package.paths[module],pattern="^\\.Rbuildignore$",all.files=TRUE)
+    if ( length(dot.files)>0 ) {
+      pkg.files <- c(pkg.files,dot.files)
+    } else {
+      message("No .Rbuildignore found in",package.paths[module],"\n")
+    }
     pkg.dirs <- c(dirname(pkg.files),"data")
     lapply( grep("^\\.$",invert=TRUE,value=TRUE,unique(file.path(build.dir,pkg.dirs))),
       FUN=function(x) { dir.create(x, showWarnings=FALSE, recursive=TRUE ) } )
@@ -335,10 +384,6 @@ for ( module in seq_along(package.names) ) {
     if ( ! package.installed ) {
       # On Windows, install from the binary package
       cat("++++++++++ Installing built package:",built.package,"\n")
-      if ( package.names[module] %in% pkgs.installed ) {
-        cat("First removing obsolete package version:",pkgs.version[package.names[module]],"\n")
-        remove.packages(package.names[module],lib=ve.lib)
-      }
       install.packages(built.package, repos=NULL, lib=ve.lib, type=ve.build.type) # so they will be available for later modules
     }
   } else { # source build
