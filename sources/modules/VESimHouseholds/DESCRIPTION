@@ -14,10 +14,9 @@ Description: This package contains several modules which create synthetic
     VELandUse package.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
-    visioneval,
-    usethis
+    visioneval
 Suggests:
     knitr,
     rmarkdown

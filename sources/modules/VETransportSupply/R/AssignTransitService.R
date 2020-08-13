@@ -287,7 +287,7 @@ rm(ServiceInp_ls)
 #' }
 #' @source AssignTransitService.R script.
 "BusEquivalents_df"
-usethis::use_data(BusEquivalents_df, overwrite = TRUE)
+visioneval::saveDataset(BusEquivalents_df, overwrite = TRUE)
 
 #Save the vehicle mile factors
 #-----------------------------
@@ -318,7 +318,7 @@ usethis::use_data(BusEquivalents_df, overwrite = TRUE)
 #' }
 #' @source AssignTransitService.R script.
 "VehMiFactors_df"
-usethis::use_data(VehMiFactors_df, overwrite = TRUE)
+visioneval::saveDataset(VehMiFactors_df, overwrite = TRUE)
 
 #Save the urbanized area bus equivalency data
 #--------------------------------------------
@@ -339,7 +339,7 @@ usethis::use_data(VehMiFactors_df, overwrite = TRUE)
 #' }
 #' @source AssignTransitService.R script.
 "UZABusEqRevMile_df"
-usethis::use_data(UZABusEqRevMile_df, overwrite = TRUE)
+visioneval::saveDataset(UZABusEqRevMile_df, overwrite = TRUE)
 
 #Clean up
 rm(TransitParam_ls)
@@ -510,7 +510,7 @@ AssignTransitServiceSpecifications <- list(
 #' }
 #' @source AssignTransitService.R script.
 "AssignTransitServiceSpecifications"
-usethis::use_data(AssignTransitServiceSpecifications, overwrite = TRUE)
+visioneval::saveDataset(AssignTransitServiceSpecifications, overwrite = TRUE)
 
 
 #=======================================================

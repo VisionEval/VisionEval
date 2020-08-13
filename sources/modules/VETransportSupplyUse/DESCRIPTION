@@ -11,10 +11,9 @@ Description: This package contains modules that creates attributes for utilizati
       transportation supplies.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.4.0)
+Depends: R (>= 3.6.0)
 Imports:
-    visioneval,
-    usethis
+    visioneval
 Suggests:
     knitr
 VignetteBuilder: knitr

@@ -42,7 +42,7 @@ load("inst/extdata/TruckBusAgeDist_.RData")
 #' }
 #' @source CalculateTravelDemand.R script.
 "TruckBusAgeDist_mx"
-usethis::use_data(TruckBusAgeDist_mx, overwrite = TRUE)
+visioneval::saveDataset(TruckBusAgeDist_mx, overwrite = TRUE)
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
 #================================================
@@ -906,7 +906,7 @@ ReportRPATMetricsSpecifications <- list(
 #' }
 #' @source ReportRPATMetrics.R script.
 "ReportRPATMetricsSpecifications"
-usethis::use_data(ReportRPATMetricsSpecifications, overwrite = TRUE)
+visioneval::saveDataset(ReportRPATMetricsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

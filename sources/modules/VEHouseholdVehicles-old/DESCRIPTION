@@ -23,7 +23,6 @@ Imports:
     visioneval,
     ordinal,
     reshape2,
-    usethis,
     VE2001NHTS
 Suggests:
     knitr

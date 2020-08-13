@@ -114,7 +114,7 @@ ViewResultsSpecifications <- list(
 #' }
 #' @source ViewResults.R script.
 "ViewResultsSpecifications"
-usethis::use_data(ViewResultsSpecifications, overwrite = TRUE)
+visioneval::saveDataset(ViewResultsSpecifications, overwrite = TRUE)
 
 #Main module function run scenarios
 #------------------------------------------------------------------

@@ -118,7 +118,7 @@ AssignCarSvcAvailabilitySpecifications <- list(
 #' }
 #' @source AssignCarSvcAvailability.R script.
 "AssignCarSvcAvailabilitySpecifications"
-usethis::use_data(AssignCarSvcAvailabilitySpecifications, overwrite = TRUE)
+visioneval::saveDataset(AssignCarSvcAvailabilitySpecifications, overwrite = TRUE)
 
 
 #=======================================================

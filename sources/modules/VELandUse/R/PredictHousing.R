@@ -206,7 +206,7 @@ rm(Hh_df)
 #' }
 #' @source PredictHousing.R script.
 "HouseTypeModel_ls"
-usethis::use_data(HouseTypeModel_ls, overwrite = TRUE)
+visioneval::saveDataset(HouseTypeModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -505,7 +505,7 @@ PredictHousingSpecifications <- list(
 #' }
 #' @source PredictHousing.R script.
 "PredictHousingSpecifications"
-usethis::use_data(PredictHousingSpecifications, overwrite = TRUE)
+visioneval::saveDataset(PredictHousingSpecifications, overwrite = TRUE)
 
 
 #=======================================================

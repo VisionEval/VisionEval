@@ -19,10 +19,9 @@ LazyData: TRUE
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-	dplyr,
+    dplyr,
     filesstrings,
     stringr,
-    usethis,
     VEPowertrainsAndFuels,
     VEHouseholdTravel
 Encoding: UTF-8

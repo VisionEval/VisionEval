@@ -347,7 +347,7 @@ rm(Depr_AgVt, Depr_MiBt, Depr_MiVt, DeprProp_MiVt, OwnCost_df, Value_AgVt,
 #' }
 #' @source AdjustVehicleOwnership.R script.
 "VehOwnCost_ls"
-usethis::use_data(VehOwnCost_ls, overwrite = TRUE)
+visioneval::saveDataset(VehOwnCost_ls, overwrite = TRUE)
 
 #---------------------------------
 #Pay-as-you-drive insurance choice
@@ -396,7 +396,7 @@ PaydWts_ <- c(
 #' }
 #' @source CalculateVehicleOwnCost.R script.
 "PaydWts_"
-usethis::use_data(PaydWts_, overwrite = TRUE)
+visioneval::saveDataset(PaydWts_, overwrite = TRUE)
 
 
 #================================================
@@ -717,7 +717,7 @@ CalculateVehicleOwnCostSpecifications <- list(
 #' }
 #' @source CalculateVehicleOwnCost.R script.
 "CalculateVehicleOwnCostSpecifications"
-usethis::use_data(CalculateVehicleOwnCostSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculateVehicleOwnCostSpecifications, overwrite = TRUE)
 
 
 #=======================================================

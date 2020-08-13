@@ -233,7 +233,7 @@ CalculateCarbonIntensitySpecifications <- list(
 #' }
 #' @source CalculateCarbonIntensity.R script.
 "CalculateCarbonIntensitySpecifications"
-usethis::use_data(CalculateCarbonIntensitySpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculateCarbonIntensitySpecifications, overwrite = TRUE)
 
 
 #=======================================================

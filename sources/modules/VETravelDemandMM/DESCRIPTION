@@ -11,9 +11,7 @@ Description: This package contains a module for the VisionEval framework that si
 License: file LICENSE
 LazyData: TRUE
 Encoding: UTF-8
-Depends:
-    R (>= 3.4.0),
-	visioneval
+Depends:  R (>= 3.6.0)
 Imports:
     dplyr,
     purrr,
@@ -22,7 +20,6 @@ Imports:
     tidyr,
     pscl,
     rmarkdown,
-    usethis,
     data.table,
     visioneval,
     VE2001NHTS

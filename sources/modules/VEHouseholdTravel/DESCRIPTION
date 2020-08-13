@@ -13,10 +13,9 @@ Description: Contains modules for predicting household average DVMT, trips by
     slower vehicle modes (bike etc.)
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    usethis,
     VE2001NHTS,
     data.table,
     pscl

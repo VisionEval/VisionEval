@@ -15,7 +15,6 @@ LazyData: TRUE
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    usethis,
     VEHouseholdTravel,
     filesstrings,
     jsonlite

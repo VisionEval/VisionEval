@@ -18,12 +18,11 @@ Description: This package contains modules which predict household vehicle
     miles traveled.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
     ordinal,
     reshape2,
-    usethis,
     VE2001NHTS
 Suggests:
     knitr

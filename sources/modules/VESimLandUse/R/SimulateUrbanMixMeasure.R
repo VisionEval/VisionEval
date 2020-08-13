@@ -76,7 +76,7 @@ UrbanMixModel_ls <- VELandUse::UrbanMixModel_ls
 #' }
 #' @source CalculateUrbanMixMeasure.R script.
 "UrbanMixModel_ls"
-usethis::use_data(UrbanMixModel_ls, overwrite = TRUE)
+visioneval::saveDataset(UrbanMixModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -252,7 +252,7 @@ SimulateUrbanMixMeasureSpecifications <- list(
 #' }
 #' @source SimulateUrbanMixMeasure.R script.
 "SimulateUrbanMixMeasureSpecifications"
-usethis::use_data(SimulateUrbanMixMeasureSpecifications, overwrite = TRUE)
+visioneval::saveDataset(SimulateUrbanMixMeasureSpecifications, overwrite = TRUE)
 
 
 #=======================================================

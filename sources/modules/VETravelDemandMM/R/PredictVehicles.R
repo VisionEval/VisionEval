@@ -137,7 +137,7 @@ PredictVehiclesSpecifications <- list(
 #'  \item{Set}{module outputs to be written to the datastore}
 #' }
 "PredictVehiclesSpecifications"
-usethis::use_data(PredictVehiclesSpecifications, overwrite = TRUE)
+visioneval::saveDataset(PredictVehiclesSpecifications, overwrite = TRUE)
 
 
 #=======================================================

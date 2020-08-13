@@ -229,7 +229,7 @@ CalculatePtranEnergyAndEmissionsSpecifications <- list(
 #' }
 #' @source CalculatePtranEnergyAndEmissions.R script.
 "CalculatePtranEnergyAndEmissionsSpecifications"
-usethis::use_data(CalculatePtranEnergyAndEmissionsSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculatePtranEnergyAndEmissionsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

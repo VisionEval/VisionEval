@@ -620,7 +620,7 @@ DvmtModel_ls$EstimationStats <- EstimationStats_ls
 #' used in developing the final models.
 #' @source HouseholdDvmtQuantileEstimation.R
 "DvmtModel_ls"
-usethis::use_data(DvmtModel_ls, overwrite = TRUE)
+visioneval::saveDataset(DvmtModel_ls, overwrite = TRUE)
 
 #Clean Up
 #--------

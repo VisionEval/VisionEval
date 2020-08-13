@@ -13,10 +13,9 @@ Description: This package contains several modules which create simulated
     inputs related to SimBzones.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    usethis,
     plot3D,
     VELandUse,
     VESimLandUseData

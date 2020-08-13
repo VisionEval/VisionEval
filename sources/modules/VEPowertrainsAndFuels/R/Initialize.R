@@ -349,7 +349,7 @@ InitializeSpecifications <- list(
 #' }
 #' @source Initialize.R script.
 "InitializeSpecifications"
-usethis::use_data(InitializeSpecifications, overwrite = TRUE)
+visioneval::saveDataset(InitializeSpecifications, overwrite = TRUE)
 
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL

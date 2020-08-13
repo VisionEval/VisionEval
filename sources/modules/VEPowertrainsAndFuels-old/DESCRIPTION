@@ -13,10 +13,9 @@ Description: Contains modules for inputting default powertrain and fuel
     vehicles and car service vehicles.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    usethis,
     VE2001NHTS,
     VEHouseholdTravel,
     data.table

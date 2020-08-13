@@ -277,7 +277,7 @@ AssignDevTypesSpecifications <- list(
 #' }
 #' @source AssignDevTypes.R script.
 "AssignDevTypesSpecifications"
-usethis::use_data(AssignDevTypesSpecifications, overwrite = TRUE)
+visioneval::saveDataset(AssignDevTypesSpecifications, overwrite = TRUE)
 
 
 #=======================================================

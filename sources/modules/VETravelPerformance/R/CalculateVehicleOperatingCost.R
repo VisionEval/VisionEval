@@ -476,7 +476,7 @@ OpCosts_ls <- list(
 #' }
 #' @source CalculateVehicleOperatingCost.R script.
 "OpCosts_ls"
-usethis::use_data(OpCosts_ls, overwrite = TRUE)
+visioneval::saveDataset(OpCosts_ls, overwrite = TRUE)
 rm(VehCost_AgTy, AAAOpCost_, RelBLSOpCost_, CO2eCost_, Deflators_Yr, OtherExtCost_)
 
 
@@ -1063,7 +1063,7 @@ CalculateVehicleOperatingCostSpecifications <- list(
 #' }
 #' @source CalculateVehicleOperatingCost.R script.
 "CalculateVehicleOperatingCostSpecifications"
-usethis::use_data(CalculateVehicleOperatingCostSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculateVehicleOperatingCostSpecifications, overwrite = TRUE)
 
 
 #=======================================================

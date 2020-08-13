@@ -119,7 +119,7 @@ AssignLifeCycleSpecifications <- list(
 #' }
 #' @source AssignLifeCycle.R script.
 "AssignLifeCycleSpecifications"
-usethis::use_data(AssignLifeCycleSpecifications, overwrite = TRUE)
+visioneval::saveDataset(AssignLifeCycleSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -331,7 +331,7 @@ AdjustVehicleOwnershipSpecifications <- list(
 #' }
 #' @source AdjustVehicleOwnership.R script.
 "AdjustVehicleOwnershipSpecifications"
-usethis::use_data(AdjustVehicleOwnershipSpecifications, overwrite = TRUE)
+visioneval::saveDataset(AdjustVehicleOwnershipSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -114,7 +114,7 @@ BuildScenariosSpecifications <- list(
 #' }
 #' @source BuildScenarios.R script.
 "BuildScenariosSpecifications"
-usethis::use_data(BuildScenariosSpecifications, overwrite = TRUE)
+visioneval::saveDataset(BuildScenariosSpecifications, overwrite = TRUE)
 
 
 #=======================================================

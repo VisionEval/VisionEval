@@ -91,7 +91,7 @@ rm(AllNames_, LocType_, UzaNames_, UzaNamesPad_, UzaNames_mx)
 #' }
 #' @source Initialize.R script.
 "UzaProfileNames_ls"
-usethis::use_data(UzaProfileNames_ls, overwrite = TRUE)
+visioneval::saveDataset(UzaProfileNames_ls, overwrite = TRUE)
 
 
 #================================================
@@ -377,7 +377,7 @@ InitializeSpecifications <- list(
 #' }
 #' @source Initialize.R script.
 "InitializeSpecifications"
-usethis::use_data(InitializeSpecifications, overwrite = TRUE)
+visioneval::saveDataset(InitializeSpecifications, overwrite = TRUE)
 
 
 #=======================================================

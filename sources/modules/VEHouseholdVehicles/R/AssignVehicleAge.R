@@ -156,7 +156,7 @@ rm(MaxAge, TotWt_AgIgTy, AgeIncJointProp_AgIgTy, AutoAgeIncDF_AgIg,
 #' }
 #' @source AssignVehicleAge.R script.
 "VehicleAgeModel_ls"
-usethis::use_data(VehicleAgeModel_ls, overwrite = TRUE)
+visioneval::saveDataset(VehicleAgeModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -340,7 +340,7 @@ AssignVehicleAgeSpecifications <- list(
 #' }
 #' @source AssignVehicleAge.R script.
 "AssignVehicleAgeSpecifications"
-usethis::use_data(AssignVehicleAgeSpecifications, overwrite = TRUE)
+visioneval::saveDataset(AssignVehicleAgeSpecifications, overwrite = TRUE)
 
 
 #=======================================================

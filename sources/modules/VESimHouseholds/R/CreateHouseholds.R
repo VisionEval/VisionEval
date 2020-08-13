@@ -102,7 +102,7 @@ HtProb_HtAp <- calcHhAgeTypes(Hh_df)
 #' @format A matrix having 950 rows (for Oregon data) and 6 colums:
 #' @source CreateHouseholds.R script.
 "HtProb_HtAp"
-usethis::use_data(HtProb_HtAp, overwrite = TRUE)
+visioneval::saveDataset(HtProb_HtAp, overwrite = TRUE)
 
 
 #================================================
@@ -390,7 +390,15 @@ CreateHouseholdsSpecifications <- list(
 #' }
 #' @source CreateHouseholds.R script.
 "CreateHouseholdsSpecifications"
+<<<<<<< Updated upstream
 usethis::use_data(CreateHouseholdsSpecifications, overwrite = TRUE)
+<<<<<<< Updated upstream
+=======
+rm(CreateHouseholdsSpecifications)
+=======
+visioneval::saveDataset(CreateHouseholdsSpecifications, overwrite = TRUE)
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 
 
 #=======================================================

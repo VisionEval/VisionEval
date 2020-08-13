@@ -169,7 +169,7 @@ rm(TourMiles_df, TourMiles_ls, TourMiles_SzX, HhSizeCat_, PropMilesPerWkr_Sz)
 #'  }
 #' @source AssignDemandManagement.R
 "TdmModel_ls"
-usethis::use_data(TdmModel_ls, overwrite = TRUE)
+visioneval::saveDataset(TdmModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -340,7 +340,7 @@ AssignDemandManagementSpecifications <- list(
 #' }
 #' @source AssignDemandManagement.R script.
 "AssignDemandManagementSpecifications"
-usethis::use_data(AssignDemandManagementSpecifications, overwrite = TRUE)
+visioneval::saveDataset(AssignDemandManagementSpecifications, overwrite = TRUE)
 
 
 #=======================================================

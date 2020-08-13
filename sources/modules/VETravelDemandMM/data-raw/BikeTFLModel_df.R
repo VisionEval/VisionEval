@@ -58,4 +58,4 @@ BikeTFLModel_df <- Model_df %>%
   mutate(model=map(model, TrimModel))
 
 #' save Model_df to `data/`
-usethis::use_data(BikeTFLModel_df, overwrite = TRUE)
+visioneval::saveDataset(BikeTFLModel_df, overwrite = TRUE)

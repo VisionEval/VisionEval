@@ -333,7 +333,7 @@ rm(Inp_ls, SpeedSmoothEffect_df, Spd_)
 #' }
 #' @source CalculateMpgMpkwhAdjustments.R script.
 "MpgMpkwhAdj_ls"
-usethis::use_data(MpgMpkwhAdj_ls, overwrite = TRUE)
+visioneval::saveDataset(MpgMpkwhAdj_ls, overwrite = TRUE)
 
 
 #================================================
@@ -541,7 +541,7 @@ CalculateMpgMpkwhAdjustmentsSpecifications <- list(
 #' }
 #' @source CalculateMpgMpkwhAdjustments.R script.
 "CalculateMpgMpkwhAdjustmentsSpecifications"
-usethis::use_data(CalculateMpgMpkwhAdjustmentsSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculateMpgMpkwhAdjustmentsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

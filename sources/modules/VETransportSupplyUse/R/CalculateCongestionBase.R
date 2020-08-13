@@ -27,7 +27,7 @@ load("inst/extdata/CongModel_ls.RData")
 #' parameters that are used in the evaluation of aforementioned models.
 #' @source GreenSTEP version ?.? model.
 "CongModel_ls"
-usethis::use_data(CongModel_ls, overwrite = TRUE)
+visioneval::saveDataset(CongModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -437,7 +437,7 @@ CalculateCongestionBaseSpecifications <- list(
 #' }
 #' @source CalculateCongestionBase.R script.
 "CalculateCongestionBaseSpecifications"
-usethis::use_data(CalculateCongestionBaseSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculateCongestionBaseSpecifications, overwrite = TRUE)
 
 
 #=======================================================

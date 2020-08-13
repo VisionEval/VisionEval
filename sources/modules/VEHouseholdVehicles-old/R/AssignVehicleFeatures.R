@@ -629,7 +629,7 @@ VehOwnModels_ls$VehicleMpgProp <- list(
 #' }
 #' @source AssignVehicleFeatures.R script.
 "VehOwnModels_ls"
-usethis::use_data(VehOwnModels_ls, overwrite = TRUE)
+visioneval::saveDataset(VehOwnModels_ls, overwrite = TRUE)
 
 # Model LtTrk Ownership
 #-------------------------
@@ -649,7 +649,7 @@ LtTruckModels_ls <- list(OwnModel = "-0.786596031795022 * Intercept + 5.00962836
 #' }
 #' @source AssignVehicleFeatures.R script.
 "LtTruckModels_ls"
-usethis::use_data(LtTruckModels_ls, overwrite = TRUE)
+visioneval::saveDataset(LtTruckModels_ls, overwrite = TRUE)
 
 
 #================================================
@@ -975,7 +975,7 @@ AssignVehicleFeaturesSpecifications <- list(
 #' }
 #' @source AssignVehicleFeatures.R script.
 "AssignVehicleFeaturesSpecifications"
-usethis::use_data(AssignVehicleFeaturesSpecifications, overwrite = TRUE)
+visioneval::saveDataset(AssignVehicleFeaturesSpecifications, overwrite = TRUE)
 
 
 #=======================================================

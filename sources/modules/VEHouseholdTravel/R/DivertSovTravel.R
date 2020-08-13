@@ -620,7 +620,7 @@ rm(Hh_df, MetroHh_df, MetroSovTrpLen_ls, NonMetroHh_df, NonMetroSovTrpLen_ls,
 #' qualifying tours.
 #' @source DivertSovTravel.R
 "SovModel_ls"
-usethis::use_data(SovModel_ls, overwrite = TRUE)
+visioneval::saveDataset(SovModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -860,7 +860,7 @@ DivertSovTravelSpecifications <- list(
 #' }
 #' @source DivertSovTravel.R script.
 "DivertSovTravelSpecifications"
-usethis::use_data(DivertSovTravelSpecifications, overwrite = TRUE)
+visioneval::saveDataset(DivertSovTravelSpecifications, overwrite = TRUE)
 
 
 #=======================================================

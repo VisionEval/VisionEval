@@ -272,7 +272,7 @@ rm(MaxOpProp_LM, MaxVals_df)
 #' }
 #' @source BudgetHouseholdDvmt.R script.
 "OpPropModel_ls"
-usethis::use_data(OpPropModel_ls, overwrite = TRUE)
+visioneval::saveDataset(OpPropModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -575,7 +575,7 @@ BudgetHouseholdDvmtSpecifications <- list(
 #' }
 #' @source BudgetHouseholdDvmt.R script.
 "BudgetHouseholdDvmtSpecifications"
-usethis::use_data(BudgetHouseholdDvmtSpecifications, overwrite = TRUE)
+visioneval::saveDataset(BudgetHouseholdDvmtSpecifications, overwrite = TRUE)
 
 
 #=======================================================

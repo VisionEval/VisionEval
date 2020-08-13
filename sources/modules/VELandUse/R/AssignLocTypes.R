@@ -261,7 +261,7 @@ AssignLocTypesSpecifications <- list(
 #' }
 #' @source AssignLocTypes.R script.
 "AssignLocTypesSpecifications"
-usethis::use_data(AssignLocTypesSpecifications, overwrite = TRUE)
+visioneval::saveDataset(AssignLocTypesSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -16,7 +16,8 @@
 #=============================================
 
 ## Suggest to do : Household allocation model estimation
-load("./data-raw/HhAllocationModelCoeff.rda")
+cat("Loading data-raw with getwd = ",getwd(),"\n")
+load("data-raw/HhAllocationModelCoeff.rda")
 HhAllocationModelCoeff_df <- HhAllocationModelCoeff
 rm(HhAllocationModelCoeff)
 
@@ -37,7 +38,7 @@ rm(HhAllocationModelCoeff)
 #' }
 #' @source CalculateBasePlaceTypes.R script.
 "HhAllocationModelCoeff_df"
-usethis::use_data(HhAllocationModelCoeff_df, overwrite = TRUE)
+visioneval::saveDataset(HhAllocationModelCoeff_df, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -264,7 +265,7 @@ CalculateBasePlaceTypesSpecifications <- list(
 #' }
 #' @source CalculateBasePlaceTypes.R script.
 "CalculateBasePlaceTypesSpecifications"
-usethis::use_data(CalculateBasePlaceTypesSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculateBasePlaceTypesSpecifications, overwrite = TRUE)
 
 
 #=======================================================

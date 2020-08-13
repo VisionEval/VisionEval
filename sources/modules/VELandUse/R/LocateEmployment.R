@@ -266,7 +266,7 @@ LocateEmploymentSpecifications <- list(
 #' }
 #' @source LocateEmployment.R script.
 "LocateEmploymentSpecifications"
-usethis::use_data(LocateEmploymentSpecifications, overwrite = TRUE)
+visioneval::saveDataset(LocateEmploymentSpecifications, overwrite = TRUE)
 
 
 #=======================================================

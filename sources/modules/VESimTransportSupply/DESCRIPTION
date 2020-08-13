@@ -15,10 +15,9 @@ Description: This package contains several modules which attribute the
     in conjunction with the VESimLandUse package.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    usethis,
     VESimLandUse,
     VETransportSupply
 Suggests:

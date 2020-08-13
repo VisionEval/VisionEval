@@ -78,7 +78,7 @@ DvmtLmModels_ls$NonMetro <- list(
 #' }
 #' @source CalculateTravelDemand.R script.
 "DvmtLmModels_ls"
-usethis::use_data(DvmtLmModels_ls, overwrite = TRUE)
+visioneval::saveDataset(DvmtLmModels_ls, overwrite = TRUE)
 
 
 #Save PHEV/HEV model data
@@ -99,7 +99,7 @@ load("data-raw/PhevModelData_ls.rda")
 #' }
 #' @source RPAT model
 "PhevModelData_ls"
-usethis::use_data(PhevModelData_ls, overwrite = TRUE)
+visioneval::saveDataset(PhevModelData_ls, overwrite = TRUE)
 
 #Load default values for Travel Demand module
 load("data/TravelDemandDefaults_ls.rda")
@@ -1132,7 +1132,7 @@ CalculateTravelDemandSpecifications <- list(
 #' }
 #' @source CalculateTravelDemand.R script.
 "CalculateTravelDemandSpecifications"
-usethis::use_data(CalculateTravelDemandSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculateTravelDemandSpecifications, overwrite = TRUE)
 
 
 #=======================================================

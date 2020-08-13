@@ -182,7 +182,7 @@ DriverModel_ls <- list(
 #' }
 #' @source AssignDrivers.R script.
 "DriverModel_ls"
-usethis::use_data(DriverModel_ls, overwrite = TRUE)
+visioneval::saveDataset(DriverModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -451,7 +451,7 @@ AssignDriversSpecifications <- list(
 #' }
 #' @source AssignDrivers.R script.
 "AssignDriversSpecifications"
-usethis::use_data(AssignDriversSpecifications, overwrite = TRUE)
+visioneval::saveDataset(AssignDriversSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -482,7 +482,7 @@ rm(estimateCongestionModel)
 #'
 #' @source CalculateCongestion.R script.
 "CongestedProportions_ls"
-usethis::use_data(CongestedProportions_ls, overwrite = TRUE)
+visioneval::saveDataset(CongestedProportions_ls, overwrite = TRUE)
 
 
 #---------------------------------------------------------
@@ -597,7 +597,7 @@ rm(BaseSpeedInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "BaseSpeeds_df"
-usethis::use_data(BaseSpeeds_df, overwrite = TRUE)
+visioneval::saveDataset(BaseSpeeds_df, overwrite = TRUE)
 
 
 #----------------------------------------------------
@@ -631,7 +631,7 @@ rm(BaseTravelRate_mx, Delay_mx)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Delay_df"
-usethis::use_data(Delay_df, overwrite = TRUE)
+visioneval::saveDataset(Delay_df, overwrite = TRUE)
 
 
 #-------------------------------------------
@@ -686,7 +686,7 @@ rm(RampMeteringInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Ramp_df"
-usethis::use_data(Ramp_df, overwrite = TRUE)
+visioneval::saveDataset(Ramp_df, overwrite = TRUE)
 
 
 #-------------------------------------------------
@@ -741,7 +741,7 @@ rm(IncidentManagementInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Incident_df"
-usethis::use_data(Incident_df, overwrite = TRUE)
+visioneval::saveDataset(Incident_df, overwrite = TRUE)
 
 
 #------------------------------------------------
@@ -796,7 +796,7 @@ rm(SignalCoordinationInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Signal_df"
-usethis::use_data(Signal_df, overwrite = TRUE)
+visioneval::saveDataset(Signal_df, overwrite = TRUE)
 
 
 #--------------------------------------
@@ -851,7 +851,7 @@ rm(AccessManagementInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Access_df"
-usethis::use_data(Access_df, overwrite = TRUE)
+visioneval::saveDataset(Access_df, overwrite = TRUE)
 
 
 #-----------------------------------
@@ -1064,7 +1064,7 @@ rm(Lambda_df, Ums_df)
 #' }
 #' @source CalculateRoadPerformance.R script.
 "DvmtSplit_LM"
-usethis::use_data(DvmtSplit_LM, overwrite = TRUE)
+visioneval::saveDataset(DvmtSplit_LM, overwrite = TRUE)
 
 
 #=========================================================================
@@ -1140,7 +1140,7 @@ rm(NhtsTripDistTimeInp_ls, NhtsTripDistTime_df, Rg, NhtsSpeed_df)
 #' }
 #' @source CalculateRoadPerformance.R script.
 "UrbanRuralAveSpeed_ls"
-usethis::use_data(UrbanRuralAveSpeed_ls, overwrite = TRUE)
+visioneval::saveDataset(UrbanRuralAveSpeed_ls, overwrite = TRUE)
 
 
 #================================================
@@ -1487,7 +1487,7 @@ CalculateRoadPerformanceSpecifications <- list(
 #' }
 #' @source CalculateRoadPerformance.R script.
 "CalculateRoadPerformanceSpecifications"
-usethis::use_data(CalculateRoadPerformanceSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculateRoadPerformanceSpecifications, overwrite = TRUE)
 
 
 #=======================================================

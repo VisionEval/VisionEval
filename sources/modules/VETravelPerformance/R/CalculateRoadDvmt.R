@@ -534,7 +534,7 @@ CalculateRoadDvmtSpecifications <- list(
 #' }
 #' @source CalculateRoadDvmt.R script.
 "CalculateRoadDvmtSpecifications"
-usethis::use_data(CalculateRoadDvmtSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculateRoadDvmtSpecifications, overwrite = TRUE)
 
 
 #=======================================================

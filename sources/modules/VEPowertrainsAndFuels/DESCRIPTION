@@ -16,10 +16,9 @@ Description: Contains modules for inputting default powertrain and fuel
     fuel consumption. This is the "xAP" version, 2020-07-24.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    usethis,
     VE2001NHTS,
     VEHouseholdTravel,
     data.table

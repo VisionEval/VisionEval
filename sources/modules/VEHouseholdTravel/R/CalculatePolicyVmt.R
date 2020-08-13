@@ -41,7 +41,7 @@ LtVehOwnModels_ls$NonMetro <- "-0.0864599943963062 * Intercept + 0.1561530952889
 #' }
 #' @source AssignVehicleFeatures.R script.
 "LtVehOwnModels_ls"
-usethis::use_data(LtVehOwnModels_ls, overwrite = TRUE)
+visioneval::saveDataset(LtVehOwnModels_ls, overwrite = TRUE)
 
 # Load the DVMT assignment model
 load("data/DvmtLmModels_ls.rda")
@@ -82,7 +82,7 @@ AveSovPropModels_ls$Parm <- list(
 #' }
 #' @source CalculatePolicyVmt.R script.
 "AveSovPropModels_ls"
-usethis::use_data(AveSovPropModels_ls, overwrite = TRUE)
+visioneval::saveDataset(AveSovPropModels_ls, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -1309,7 +1309,7 @@ CalculatePolicyVmtSpecifications <- list(
 #' }
 #' @source CalculatePolicyVmt.R script.
 "CalculatePolicyVmtSpecifications"
-usethis::use_data(CalculatePolicyVmtSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CalculatePolicyVmtSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -235,7 +235,7 @@ CreateVehicleTableSpecifications <- list(
 #' }
 #' @source CreateVehicleTable.R script.
 "CreateVehicleTableSpecifications"
-usethis::use_data(CreateVehicleTableSpecifications, overwrite = TRUE)
+visioneval::saveDataset(CreateVehicleTableSpecifications, overwrite = TRUE)
 
 
 #=======================================================

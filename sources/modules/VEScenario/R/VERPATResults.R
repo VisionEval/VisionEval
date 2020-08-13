@@ -103,7 +103,7 @@ VERPATOutputConfig <- list(
 #' }
 #' @source VERPATResults.R script.
 "VERPATOutputConfig"
-usethis::use_data(VERPATOutputConfig, overwrite = TRUE)
+visioneval::saveDataset(VERPATOutputConfig, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -218,7 +218,7 @@ VERPATResultsSpecifications <- list(
 #' }
 #' @source VERPATResults.R script.
 "VERPATResultsSpecifications"
-usethis::use_data(VERPATResultsSpecifications, overwrite = TRUE)
+visioneval::saveDataset(VERPATResultsSpecifications, overwrite = TRUE)
 
 
 # TableNames <- c("Azone", "Bzone", "Marea", "IncomeGroup", "FuelType")

@@ -88,7 +88,7 @@ rm(UzaNames_, UzaNamesPad_, UzaNames_mx, UzaDvmtNames_df)
 #' }
 #' @source Initialize.R script.
 "UzaDvmtNames_ls"
-usethis::use_data(UzaDvmtNames_ls, overwrite = TRUE)
+visioneval::saveDataset(UzaDvmtNames_ls, overwrite = TRUE)
 
 
 #================================================
@@ -372,7 +372,7 @@ InitializeSpecifications <- list(
 #' }
 #' @source Initialize.R script.
 "InitializeSpecifications"
-usethis::use_data(InitializeSpecifications, overwrite = TRUE)
+visioneval::saveDataset(InitializeSpecifications, overwrite = TRUE)
 
 
 #=======================================================
