@@ -881,7 +881,7 @@ rm(Dt_df, toProperName, toVecFrom1DAry)
 #' @source 2001 National Household Travel Survey, Highway Statistics (2001),
 #' National Transit Database (2002), and Make2001NHTSDataset.R script.
 "Hh_df"
-usethis::use_data(Hh_df, overwrite = TRUE)
+visioneval::saveDataset(Hh_df, overwrite = TRUE)
 
 
 #========================
@@ -907,7 +907,7 @@ usethis::use_data(Hh_df, overwrite = TRUE)
 #' }
 #' @source 2001 National Household Travel Survey and Make2001NHTSDataset.R script.
 "Veh_df"
-usethis::use_data(Veh_df, overwrite = TRUE)
+visioneval::saveDataset(Veh_df, overwrite = TRUE)
 
 
 #=====================
@@ -940,7 +940,7 @@ usethis::use_data(Veh_df, overwrite = TRUE)
 #'  }
 #'  @source 2001 National Household Travel Survey and Make2001NHTSDataset.R script.
 "HhTours_df"
-usethis::use_data(HhTours_df, overwrite = TRUE)
+visioneval::saveDataset(HhTours_df, overwrite = TRUE)
 
 
 #=======================
@@ -971,4 +971,4 @@ usethis::use_data(HhTours_df, overwrite = TRUE)
 #'  }
 #'  @source 2001 National Household Travel Survey and Make2001NHTSDataset.R script.
 "Per_df"
-usethis::use_data(Per_df, overwrite = TRUE)
+visioneval::saveDataset(Per_df, overwrite = TRUE)
