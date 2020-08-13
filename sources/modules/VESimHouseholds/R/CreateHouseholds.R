@@ -390,15 +390,7 @@ CreateHouseholdsSpecifications <- list(
 #' }
 #' @source CreateHouseholds.R script.
 "CreateHouseholdsSpecifications"
-<<<<<<< Updated upstream
-usethis::use_data(CreateHouseholdsSpecifications, overwrite = TRUE)
-<<<<<<< Updated upstream
-=======
-rm(CreateHouseholdsSpecifications)
-=======
 visioneval::saveDataset(CreateHouseholdsSpecifications, overwrite = TRUE)
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
 
 #=======================================================

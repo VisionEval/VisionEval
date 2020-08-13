@@ -80,9 +80,6 @@ Nhts2001Repo <-
 #------------------------
 #Download data from repository and process if it has not already been done
 if (!file.exists("data-raw/Hh_df.rda")) {
-=======
-if (!file.exists("data-raw/Hh_df.rda") && !file.exists("data/HH_df.rda")) {
->>>>>>> Stashed changes
   Hh_df <- getZipDatasetFromRepo(Nhts2001Repo, "HHPUB")
   Keep_ <- c("HOUSEID", "AGE_P1", "AGE_P2", "AGE_P3", "AGE_P4", "AGE_P5",
              "AGE_P6", "AGE_P7", "AGE_P8", "AGE_P9", "AGE_P10", "AGE_P11",

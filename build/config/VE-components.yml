@@ -41,8 +41,6 @@ Components:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
-    CRAN:
-      - usethis
   VEScenario:
     Type: module
     Path: sources/modules
@@ -52,13 +50,10 @@ Components:
       - future
       - future.callr
       - jsonlite
-      - usethis
   VESimHouseholds:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
-    CRAN:
-      - usethis
   VESimLandUseData:
     Type: module
     Path: sources/modules
@@ -66,26 +61,20 @@ Components:
     CRAN:
       - stringr
       - tidycensus
-      - usethis
   VESyntheticFirms:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
     CRAN:
       - reshape
-      - usethis
   VETransportSupply:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
-    CRAN:
-      - usethis
   VETransportSupplyUse:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
-    CRAN:
-      - usethis
   VEHouseholdTravel:
     Type: module
     Path: sources/modules
@@ -93,7 +82,6 @@ Components:
     CRAN:
       - data.table
       - pscl
-      - usethis
     VE:
       - VE2001NHTS
   VETravelDemandMM:
@@ -109,7 +97,6 @@ Components:
       - MASS 
       - pscl
       - rmarkdown
-      - usethis               
   VEHouseholdVehicles:
     Type: module
     Path: sources/modules
@@ -117,9 +104,17 @@ Components:
     CRAN:
       - ordinal
       - reshape2
-      - usethis
     VE:
       - VE2001NHTS
+#   VEHouseholdVehiclesWithAdj:
+#     Type: module
+#     Path: sources/modules
+#     Test: { Script: tests/scripts/test.R, Group: 2 }
+#     CRAN:
+#       - ordinal
+#       - reshape2
+#     VE:
+#       - VE2001NHTS
   VELandUse:
     Type: module
     Path: sources/modules
@@ -127,7 +122,6 @@ Components:
     CRAN:
       - fields
       - geosphere
-      - usethis
     VE:
       - VE2001NHTS
       - VESimHouseholds
@@ -137,7 +131,6 @@ Components:
     Test: { Script: tests/scripts/test.R, Group: 3 }
     CRAN:
       - data.table
-      - usethis
     VE:
       - VE2001NHTS
       - VEHouseholdTravel
@@ -149,7 +142,6 @@ Components:
     CRAN:
       - filesstrings
       - jsonlite
-      - usethis
     VE:
       - VEHouseholdTravel
       - VETravelDemandMM
@@ -160,7 +152,6 @@ Components:
     Test: { Script: tests/scripts/test.R, Group: 3 }
     CRAN:
       - plot3D
-      - usethis
     VE:
       - VELandUse
       - VESimLandUseData
@@ -171,7 +162,6 @@ Components:
     CRAN:
       - filesstrings
       - stringr
-      - usethis
       - dplyr
     VE:
       - VEHouseholdTravel
@@ -180,8 +170,6 @@ Components:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 4 }
-    CRAN:
-      - usethis
     VE:
       - VESimLandUse
       - VETransportSupply

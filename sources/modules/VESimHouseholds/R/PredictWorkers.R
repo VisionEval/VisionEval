@@ -264,15 +264,7 @@ PredictWorkersSpecifications <- list(
 #' }
 #' @source PredictWorkers.R script.
 "PredictWorkersSpecifications"
-<<<<<<< Updated upstream
-usethis::use_data(PredictWorkersSpecifications, overwrite = TRUE)
-<<<<<<< Updated upstream
-=======
-rm(PredictWorkersSpecifications)
-=======
 visioneval::saveDataset(PredictWorkersSpecifications, overwrite = TRUE)
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
 
 #=======================================================
