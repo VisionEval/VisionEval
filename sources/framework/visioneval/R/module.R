@@ -307,6 +307,43 @@ loadPackageDataset <- function(DatasetName, DefaultPackage = NULL) {
   }
 }
 
+# Helper function to extract an object's name
+undot <- function(.dots) {
+  if (length(.dots) == 0L) return(character(0))
+  is_name <- vapply(.dots, is.symbol, logical(1))
+  if (any(!is_name)) return(character(0))
+  objs <- vapply(.dots, as.character, character(1))
+  return(objs[1])
+}
+
+#SAVE A VE PACKAGE DATASET
+#=========================
+#' Save a VisionEval package dataset to the data/ folder during package build
+#'
+#' \code{saveDataset} a visioneval framework module developer function
+#' which saves a dataset to the data/ directory during package build.
+#'
+#' This function is used to save a dataset during module estimation and when
+#' building module specifications. Using this function is the
+#' preferred alternative to hard-wiring saving a dataset using usthis::use_data
+#' or other means as it does suitable error-checking.
+#'
+#' @param dataset A string identifying the name of the object containing
+#' the dataset.
+#' @param overwrite If TRUE; otherwise only save if no existing file
+#' @return The dataset name if it was saved successfully, otherwise an empty character vector
+#' @export
+saveDataset <- function(dataset,overwrite=TRUE) {
+  dataset <- deparse(substitute(dataset))
+  if ( length(dataset)!=1 ) stop("Unable to deparse dataset name.")
+  if ( ! dir.exists("data") ) stop("Data directory not found in ",getwd())
+  file <- file.path("data",paste0(dataset,".rda"))
+  if ( file.exists(file) && ! overwrite ) stop("File not overwritten.")
+  cat("Saving '",dataset,"' to '",file,"' ... ",sep="")
+  save(dataset,file=file)
+  if ( ! file.exists(file) ) { traceback(); stop("File NOT saved!\n") } else cat("Saved\n")
+  return(dataset)
+}
 
 #CHECK MODULE OUTPUTS FOR CONSISTENCY WITH MODULE SPECIFICATIONS
 #===============================================================

@@ -53,7 +53,7 @@ ve.packages  <- pkgs.db[pkgs.module,]
 package.names <- ve.packages$Package
 ve.only.build <- Sys.getenv("VE_ONLY_BUILD","")
 if ( nzchar(ve.only.build[1]) ) { # will always have at least one "exclusion" but it may be empty
-  ve.only.build <- unlist(strsplit(ve.only.build,"[:blank:]*,[:blank:]*"))
+  ve.only.build <- unlist(strsplit(ve.only.build," *, *"))
   package.names <- intersect(package.names,ve.only.build) # only (re)build certain packages
   cat("++++++++++ Only building:",paste0(ve.only.build,collapese=", "),"\n")
 } else {
