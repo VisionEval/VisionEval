@@ -91,7 +91,7 @@ rm(AllNames_, LocType_, UzaNames_, UzaNamesPad_, UzaNames_mx)
 #' }
 #' @source Initialize.R script.
 "UzaProfileNames_ls"
-visioneval::saveDataset(UzaProfileNames_ls, overwrite = TRUE)
+visioneval::savePackageDataset(UzaProfileNames_ls, overwrite = TRUE)
 
 
 #================================================
@@ -377,7 +377,7 @@ InitializeSpecifications <- list(
 #' }
 #' @source Initialize.R script.
 "InitializeSpecifications"
-visioneval::saveDataset(InitializeSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(InitializeSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -1158,4 +1158,3 @@ documentModule("Initialize")
 #   SaveDatastore = TRUE,
 #   DoRun = TRUE
 # )
-

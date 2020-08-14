@@ -206,7 +206,7 @@ rm(Hh_df)
 #' }
 #' @source PredictHousing.R script.
 "HouseTypeModel_ls"
-visioneval::saveDataset(HouseTypeModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(HouseTypeModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -505,7 +505,7 @@ PredictHousingSpecifications <- list(
 #' }
 #' @source PredictHousing.R script.
 "PredictHousingSpecifications"
-visioneval::saveDataset(PredictHousingSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(PredictHousingSpecifications, overwrite = TRUE)
 
 
 #=======================================================

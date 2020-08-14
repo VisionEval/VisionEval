@@ -332,7 +332,7 @@ CalculateHouseholdDvmtSpecifications <- list(
 #'  \item{Set}{module outputs to be written to the datastore}
 #' }
 "CalculateHouseholdDvmtSpecifications"
-visioneval::saveDataset(CalculateHouseholdDvmtSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateHouseholdDvmtSpecifications, overwrite = TRUE)
 
 
 #=======================================================

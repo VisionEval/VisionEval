@@ -1,7 +1,8 @@
 Package: VEPowertrainsAndFuels
 Type: Package
 Title: Default Powertrains And Fuels for ODOT Adopted Plans scenario (xAP)
-Version: 0.9.7
+Version: 2.0.0
+Date: 2020-08-14
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: AASHTO, ODOT

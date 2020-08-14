@@ -119,7 +119,7 @@ AssignLifeCycleSpecifications <- list(
 #' }
 #' @source AssignLifeCycle.R script.
 "AssignLifeCycleSpecifications"
-visioneval::saveDataset(AssignLifeCycleSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignLifeCycleSpecifications, overwrite = TRUE)
 
 
 #=======================================================

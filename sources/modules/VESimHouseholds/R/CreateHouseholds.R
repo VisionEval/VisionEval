@@ -102,7 +102,7 @@ HtProb_HtAp <- calcHhAgeTypes(Hh_df)
 #' @format A matrix having 950 rows (for Oregon data) and 6 colums:
 #' @source CreateHouseholds.R script.
 "HtProb_HtAp"
-visioneval::saveDataset(HtProb_HtAp, overwrite = TRUE)
+visioneval::savePackageDataset(HtProb_HtAp, overwrite = TRUE)
 
 
 #================================================
@@ -390,7 +390,7 @@ CreateHouseholdsSpecifications <- list(
 #' }
 #' @source CreateHouseholds.R script.
 "CreateHouseholdsSpecifications"
-visioneval::saveDataset(CreateHouseholdsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CreateHouseholdsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

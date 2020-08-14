@@ -1,8 +1,8 @@
 Package: VEScenario
 Type: Package
 Title: Builds and run VERPAT scenarios
-Version: 0.1
-Date: 07/02/2018
+Version: 2.0.0
+Date: 2020-08-14
 Author: Aditya Gore <aditya.gore@rsginc.com> [cre], Ben Stabler <ben.stabler@rsginc.com> [cre],  Brian Gregor <gregor@or-analytics.com> [auth]
 Maintainer: Aditya Gore <aditya.gore@rsginc.com>, Ben Stabler <ben.stabler@rsginc.com>
 Copyright: AASHTO

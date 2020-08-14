@@ -272,7 +272,7 @@ rm(MaxOpProp_LM, MaxVals_df)
 #' }
 #' @source BudgetHouseholdDvmt.R script.
 "OpPropModel_ls"
-visioneval::saveDataset(OpPropModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(OpPropModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -575,7 +575,7 @@ BudgetHouseholdDvmtSpecifications <- list(
 #' }
 #' @source BudgetHouseholdDvmt.R script.
 "BudgetHouseholdDvmtSpecifications"
-visioneval::saveDataset(BudgetHouseholdDvmtSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(BudgetHouseholdDvmtSpecifications, overwrite = TRUE)
 
 
 #=======================================================

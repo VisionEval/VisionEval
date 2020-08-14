@@ -58,7 +58,7 @@ HouseTypeModel_ls <- VELandUse::HouseTypeModel_ls
 #' }
 #' @source PredictHousing.R script.
 "HouseTypeModel_ls"
-visioneval::saveDataset(HouseTypeModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(HouseTypeModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -351,7 +351,7 @@ SimulateHousingSpecifications <- list(
 #' }
 #' @source SimulateHousing.R script.
 "SimulateHousingSpecifications"
-visioneval::saveDataset(SimulateHousingSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(SimulateHousingSpecifications, overwrite = TRUE)
 
 
 #=======================================================

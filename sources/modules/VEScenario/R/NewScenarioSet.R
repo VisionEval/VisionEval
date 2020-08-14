@@ -92,7 +92,7 @@ Set = items(
 #' }
 #' @source NewScenarioSet.R script.
 "NewScenarioSetSpecifications"
-visioneval::saveDataset(NewScenarioSetSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(NewScenarioSetSpecifications, overwrite = TRUE)
 
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL

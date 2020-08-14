@@ -122,7 +122,7 @@ ApplyDvmtReductionsSpecifications <- list(
 #' }
 #' @source ApplyDvmtReductions.R script.
 "ApplyDvmtReductionsSpecifications"
-visioneval::saveDataset(ApplyDvmtReductionsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(ApplyDvmtReductionsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

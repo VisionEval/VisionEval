@@ -534,7 +534,7 @@ CalculateRoadDvmtSpecifications <- list(
 #' }
 #' @source CalculateRoadDvmt.R script.
 "CalculateRoadDvmtSpecifications"
-visioneval::saveDataset(CalculateRoadDvmtSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateRoadDvmtSpecifications, overwrite = TRUE)
 
 
 #=======================================================

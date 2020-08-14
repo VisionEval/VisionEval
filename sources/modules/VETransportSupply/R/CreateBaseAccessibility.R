@@ -205,7 +205,7 @@ CreateBaseAccessibilitySpecifications <- list(
 #' }
 #' @source CreateBaseAccessibility.R script.
 "CreateBaseAccessibilitySpecifications"
-visioneval::saveDataset(CreateBaseAccessibilitySpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CreateBaseAccessibilitySpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -380,7 +380,7 @@ CalculateComEnergyAndEmissionsSpecifications <- list(
 #' }
 #' @source CalculateComEnergyAndEmissions.R script.
 "CalculateComEnergyAndEmissionsSpecifications"
-visioneval::saveDataset(CalculateComEnergyAndEmissionsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateComEnergyAndEmissionsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -137,7 +137,7 @@ AssignRoadMilesSpecifications <- list(
 #' }
 #' @source AssignRoadMiles.R script.
 "AssignRoadMilesSpecifications"
-visioneval::saveDataset(AssignRoadMilesSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignRoadMilesSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -114,7 +114,7 @@ BuildScenariosSpecifications <- list(
 #' }
 #' @source BuildScenarios.R script.
 "BuildScenariosSpecifications"
-visioneval::saveDataset(BuildScenariosSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(BuildScenariosSpecifications, overwrite = TRUE)
 
 
 #=======================================================

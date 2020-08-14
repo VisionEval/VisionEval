@@ -249,7 +249,7 @@ rm(IncObs_, HHIncomeTarget, MeanCompare_df)
 #' }
 #' @source PredictIncome.R script.
 "HHIncModel_ls"
-visioneval::saveDataset(HHIncModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(HHIncModel_ls, overwrite = TRUE)
 
 #Estimate the group quarters linear income model
 #-----------------------------------------------
@@ -339,7 +339,7 @@ dev.off()
 #' }
 #' @source PredictIncome.R script.
 "GQIncModel_ls"
-visioneval::saveDataset(GQIncModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(GQIncModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -477,7 +477,7 @@ PredictIncomeSpecifications <- list(
 #' }
 #' @source PredictIncome.R script.
 "PredictIncomeSpecifications"
-visioneval::saveDataset(PredictIncomeSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(PredictIncomeSpecifications, overwrite = TRUE)
 
 
 #=======================================================

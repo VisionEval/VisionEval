@@ -95,7 +95,7 @@ PropHhWkr_HtAg <- calcWorkerProportions(Hh_df)
 #' for each household type.:
 #' @source PredictWorkers.R script.
 "PropHhWkr_HtAg"
-visioneval::saveDataset(PropHhWkr_HtAg, overwrite = TRUE)
+visioneval::savePackageDataset(PropHhWkr_HtAg, overwrite = TRUE)
 
 
 #================================================
@@ -264,7 +264,7 @@ PredictWorkersSpecifications <- list(
 #' }
 #' @source PredictWorkers.R script.
 "PredictWorkersSpecifications"
-visioneval::saveDataset(PredictWorkersSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(PredictWorkersSpecifications, overwrite = TRUE)
 
 
 #=======================================================

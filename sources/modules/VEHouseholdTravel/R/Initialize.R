@@ -79,7 +79,7 @@ InitializeSpecifications <- list(
 #' }
 #' @source Initialize.R script.
 "InitializeSpecifications"
-visioneval::saveDataset(InitializeSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(InitializeSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -62,4 +62,4 @@ TransitTFLModel_df <- Model_df %>%
   mutate(model=map(model, TrimModel))
 
 #' save Model_df to `data/`
-visioneval::saveDataset(TransitTFLModel_df, overwrite = TRUE)
+visioneval::savePackageDataset(TransitTFLModel_df, overwrite = TRUE)

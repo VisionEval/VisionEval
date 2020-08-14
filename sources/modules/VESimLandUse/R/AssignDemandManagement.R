@@ -58,7 +58,7 @@ TdmModel_ls <- VELandUse::TdmModel_ls
 #'  }
 #' @source AssignDemandManagement.R
 "TdmModel_ls"
-visioneval::saveDataset(TdmModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(TdmModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -272,7 +272,7 @@ AssignDemandManagementSpecifications <- list(
 #' }
 #' @source AssignDemandManagement.R script.
 "AssignDemandManagementSpecifications"
-visioneval::saveDataset(AssignDemandManagementSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignDemandManagementSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -443,4 +443,3 @@ documentModule("AssignDemandManagement")
 #   SaveDatastore = TRUE,
 #   DoRun = TRUE
 # )
-

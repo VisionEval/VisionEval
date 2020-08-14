@@ -42,4 +42,4 @@ VehiclesModel_df <- Model_df %>%
   mutate(model=map(model, TrimModel))
 
 #' save Model_df to `data/`
-visioneval::saveDataset(VehiclesModel_df, overwrite = TRUE)
+visioneval::savePackageDataset(VehiclesModel_df, overwrite = TRUE)

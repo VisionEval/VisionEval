@@ -182,7 +182,7 @@ DriverModel_ls <- list(
 #' }
 #' @source AssignDrivers.R script.
 "DriverModel_ls"
-visioneval::saveDataset(DriverModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(DriverModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -451,7 +451,7 @@ AssignDriversSpecifications <- list(
 #' }
 #' @source AssignDrivers.R script.
 "AssignDriversSpecifications"
-visioneval::saveDataset(AssignDriversSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignDriversSpecifications, overwrite = TRUE)
 
 
 #=======================================================

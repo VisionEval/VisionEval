@@ -1,8 +1,8 @@
 Package: VEGUI
 Type: Package
 Title: VisionEval Graphical User Interface
-Version: 0.1
-Date: 03/15/18
+Version: 2.0.0
+Date: 2020-08-14
 Author: Aditya Gore <aditya.gore@rsginc.com> [cre], Ben Stabler <ben.stabler@rsginc.com> [cre]
 Maintainer: Aditya Gore <aditya.gore@rsginc.com>, Ben Stabler <ben.stabler@rsginc.com>
 Copyright: AASHTO

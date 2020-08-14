@@ -232,7 +232,7 @@ CreateVehicleTableSpecifications <- list(
 #' }
 #' @source CreateVehicleTable.R script.
 "CreateVehicleTableSpecifications"
-visioneval::saveDataset(CreateVehicleTableSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CreateVehicleTableSpecifications, overwrite = TRUE)
 
 
 #=======================================================

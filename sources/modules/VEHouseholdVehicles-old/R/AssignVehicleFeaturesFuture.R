@@ -306,7 +306,7 @@ AssignVehicleFeaturesFutureSpecifications <- list(
 #' }
 #' @source AssignVehicleFeaturesFuture.R script.
 "AssignVehicleFeaturesFutureSpecifications"
-visioneval::saveDataset(AssignVehicleFeaturesFutureSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignVehicleFeaturesFutureSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -309,7 +309,7 @@ AssignVehicleFeaturesFutureSpecifications <- list(
 #' }
 #' @source AssignVehicleFeaturesFuture.R script.
 "AssignVehicleFeaturesFutureSpecifications"
-visioneval::saveDataset(AssignVehicleFeaturesFutureSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignVehicleFeaturesFutureSpecifications, overwrite = TRUE)
 
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL

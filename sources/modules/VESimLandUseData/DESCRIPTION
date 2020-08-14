@@ -1,8 +1,8 @@
 Package: VESimLandUseData
 Type: Package
 Title: Create dataset used for estimating land use simulation models
-Version: 0.9.0
-Date: 10/31/18
+Version: 2.0.0
+Date: 2020-08-14
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: Oregon Department of Transportation

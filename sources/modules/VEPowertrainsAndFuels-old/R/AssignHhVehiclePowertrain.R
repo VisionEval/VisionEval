@@ -242,7 +242,7 @@ rm(Vm, Rg, smoothLookup, calcElectricProp)
 #' }
 #' @source CalculateHhEnergyAndEmissions.R script.
 "PhevElecProp_ls"
-visioneval::saveDataset(PhevElecProp_ls, overwrite = TRUE)
+visioneval::savePackageDataset(PhevElecProp_ls, overwrite = TRUE)
 
 
 #================================================
@@ -621,7 +621,7 @@ AssignHhVehiclePowertrainSpecifications <- list(
 #' }
 #' @source AssignHhVehiclePowertrain.R script.
 "AssignHhVehiclePowertrainSpecifications"
-visioneval::saveDataset(AssignHhVehiclePowertrainSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignHhVehiclePowertrainSpecifications, overwrite = TRUE)
 
 
 #=======================================================

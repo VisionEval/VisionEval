@@ -54,4 +54,4 @@ TransitPMTModel_df <-  Model_df %>%
   mutate(model=map(model, TrimModel))
 
 #' save Model_df to `data/`
-visioneval::saveDataset(TransitPMTModel_df, overwrite = TRUE)
+visioneval::savePackageDataset(TransitPMTModel_df, overwrite = TRUE)

@@ -148,7 +148,7 @@ PredictDriversSpecifications <- list(
 #'  \item{Set}{module outputs to be written to the datastore}
 #' }
 "PredictDriversSpecifications"
-visioneval::saveDataset(PredictDriversSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(PredictDriversSpecifications, overwrite = TRUE)
 
 
 #=======================================================

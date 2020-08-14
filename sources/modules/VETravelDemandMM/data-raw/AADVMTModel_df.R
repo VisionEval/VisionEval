@@ -46,4 +46,4 @@ AADVMTModel_df <- model_df %>%
   mutate(model=map(model, TrimModel))
 
 #' save model_df to `data/`
-visioneval::saveDataset(AADVMTModel_df, overwrite = TRUE)
+visioneval::savePackageDataset(AADVMTModel_df, overwrite = TRUE)

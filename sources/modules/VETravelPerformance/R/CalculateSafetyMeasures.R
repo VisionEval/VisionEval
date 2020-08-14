@@ -270,7 +270,7 @@ CalculateSafetyMeasuresSpecifications <- list(
 #' }
 #' @source CalculateSafetyMeasures.R script.
 "CalculateSafetyMeasuresSpecifications"
-visioneval::saveDataset(CalculateSafetyMeasuresSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateSafetyMeasuresSpecifications, overwrite = TRUE)
 
 
 #=======================================================

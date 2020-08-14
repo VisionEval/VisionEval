@@ -483,7 +483,7 @@ CalculateAltModeTripsSpecifications <- list(
 #'  \item{Set}{module outputs to be written to the datastore}
 #' }
 "CalculateAltModeTripsSpecifications"
-visioneval::saveDataset(CalculateAltModeTripsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateAltModeTripsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

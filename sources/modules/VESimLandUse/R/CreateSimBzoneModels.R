@@ -1853,7 +1853,7 @@ SimBzone_ls$UaProfiles$AveD4cModel_ls <- AveD4cModel_ls
 #' }
 #' @source CreateSimBzoneModels.R script.
 "SimBzone_ls"
-visioneval::saveDataset(SimBzone_ls, overwrite = TRUE)
+visioneval::savePackageDataset(SimBzone_ls, overwrite = TRUE)
 
 #Save place type related data values computed in the script
 #----------------------------------------------------------
@@ -1880,7 +1880,7 @@ UsaBlkGrpTypes_df <- rbind(Ua_df[,Keep_], Tn_df[,Keep_], Ru_df[,Keep_])
 #' }
 #' @source CreateSimBzoneModels.R script.
 "UsaBlkGrpTypes_df"
-visioneval::saveDataset(UsaBlkGrpTypes_df, overwrite = TRUE)
+visioneval::savePackageDataset(UsaBlkGrpTypes_df, overwrite = TRUE)
 
 
 
@@ -1890,4 +1890,3 @@ visioneval::saveDataset(UsaBlkGrpTypes_df, overwrite = TRUE)
 #Run module automatic documentation
 #----------------------------------
 documentModule("CreateSimBzoneModels")
-

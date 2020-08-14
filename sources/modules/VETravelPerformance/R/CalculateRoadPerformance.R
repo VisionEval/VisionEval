@@ -482,7 +482,7 @@ rm(estimateCongestionModel)
 #'
 #' @source CalculateCongestion.R script.
 "CongestedProportions_ls"
-visioneval::saveDataset(CongestedProportions_ls, overwrite = TRUE)
+visioneval::savePackageDataset(CongestedProportions_ls, overwrite = TRUE)
 
 
 #---------------------------------------------------------
@@ -579,6 +579,19 @@ row.names(BaseSpeeds_df) <- BaseSpeeds_df$Level
 BaseSpeeds_df <- BaseSpeeds_df[,-1]
 rm(BaseSpeedInp_ls)
 
+#----------------------------------------------------
+#Calculate and save recurring and non-recurring delay
+#----------------------------------------------------
+BaseTravelRate_mx <- 1 / as.matrix(BaseSpeeds_df)
+Delay_mx <- sweep(BaseTravelRate_mx, 2, BaseTravelRate_mx[1,], "-")
+Delay_df <- data.frame(
+  Fwy_Rcr = Delay_mx[,"Fwy_Rcr"],
+  Fwy_NonRcr = Delay_mx[,"Fwy"] - Delay_mx[,"Fwy_Rcr"],
+  Art_Rcr = Delay_mx[,"Art_Rcr"],
+  Art_NonRcr = Delay_mx[,"Art"] - Delay_mx[,"Art_Rcr"]
+)
+rm(BaseTravelRate_mx, Delay_mx)
+
 #' Base arterial and freeway speeds by congestion level
 #'
 #' Base speeds on freeways and arterials by congestion level
@@ -597,21 +610,8 @@ rm(BaseSpeedInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "BaseSpeeds_df"
-visioneval::saveDataset(BaseSpeeds_df, overwrite = TRUE)
+visioneval::savePackageDataset(BaseSpeeds_df, overwrite = TRUE)
 
-
-#----------------------------------------------------
-#Calculate and save recurring and non-recurring delay
-#----------------------------------------------------
-BaseTravelRate_mx <- 1 / as.matrix(BaseSpeeds_df)
-Delay_mx <- sweep(BaseTravelRate_mx, 2, BaseTravelRate_mx[1,], "-")
-Delay_df <- data.frame(
-  Fwy_Rcr = Delay_mx[,"Fwy_Rcr"],
-  Fwy_NonRcr = Delay_mx[,"Fwy"] - Delay_mx[,"Fwy_Rcr"],
-  Art_Rcr = Delay_mx[,"Art_Rcr"],
-  Art_NonRcr = Delay_mx[,"Art"] - Delay_mx[,"Art_Rcr"]
-)
-rm(BaseTravelRate_mx, Delay_mx)
 
 #' Freeway and arterial recurring and non-recurring delay by congestion level
 #'
@@ -631,7 +631,7 @@ rm(BaseTravelRate_mx, Delay_mx)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Delay_df"
-visioneval::saveDataset(Delay_df, overwrite = TRUE)
+visioneval::savePackageDataset(Delay_df, overwrite = TRUE)
 
 
 #-------------------------------------------
@@ -686,7 +686,7 @@ rm(RampMeteringInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Ramp_df"
-visioneval::saveDataset(Ramp_df, overwrite = TRUE)
+visioneval::savePackageDataset(Ramp_df, overwrite = TRUE)
 
 
 #-------------------------------------------------
@@ -741,7 +741,7 @@ rm(IncidentManagementInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Incident_df"
-visioneval::saveDataset(Incident_df, overwrite = TRUE)
+visioneval::savePackageDataset(Incident_df, overwrite = TRUE)
 
 
 #------------------------------------------------
@@ -796,7 +796,7 @@ rm(SignalCoordinationInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Signal_df"
-visioneval::saveDataset(Signal_df, overwrite = TRUE)
+visioneval::savePackageDataset(Signal_df, overwrite = TRUE)
 
 
 #--------------------------------------
@@ -851,7 +851,7 @@ rm(AccessManagementInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Access_df"
-visioneval::saveDataset(Access_df, overwrite = TRUE)
+visioneval::savePackageDataset(Access_df, overwrite = TRUE)
 
 
 #-----------------------------------
@@ -1064,7 +1064,7 @@ rm(Lambda_df, Ums_df)
 #' }
 #' @source CalculateRoadPerformance.R script.
 "DvmtSplit_LM"
-visioneval::saveDataset(DvmtSplit_LM, overwrite = TRUE)
+visioneval::savePackageDataset(DvmtSplit_LM, overwrite = TRUE)
 
 
 #=========================================================================
@@ -1140,7 +1140,7 @@ rm(NhtsTripDistTimeInp_ls, NhtsTripDistTime_df, Rg, NhtsSpeed_df)
 #' }
 #' @source CalculateRoadPerformance.R script.
 "UrbanRuralAveSpeed_ls"
-visioneval::saveDataset(UrbanRuralAveSpeed_ls, overwrite = TRUE)
+visioneval::savePackageDataset(UrbanRuralAveSpeed_ls, overwrite = TRUE)
 
 
 #================================================
@@ -1487,7 +1487,7 @@ CalculateRoadPerformanceSpecifications <- list(
 #' }
 #' @source CalculateRoadPerformance.R script.
 "CalculateRoadPerformanceSpecifications"
-visioneval::saveDataset(CalculateRoadPerformanceSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateRoadPerformanceSpecifications, overwrite = TRUE)
 
 
 #=======================================================

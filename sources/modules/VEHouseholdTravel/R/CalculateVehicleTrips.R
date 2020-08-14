@@ -395,7 +395,7 @@ rm(capMaxVals, MetroHh_df, NonMetroHh_df, Hh_df, findPower, MetroAveTrpLen_ls,
 #' contains a string representing a hurdle model for computing household trips.
 #' @source CalculateVehicleTrips.R script.
 "VehTrpLenModel_ls"
-visioneval::saveDataset(VehTrpLenModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(VehTrpLenModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -586,7 +586,7 @@ CalculateVehicleTripsSpecifications <- list(
 #' }
 #' @source CalculateVehicleTrips.R script.
 "CalculateVehicleTripsSpecifications"
-visioneval::saveDataset(CalculateVehicleTripsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateVehicleTripsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

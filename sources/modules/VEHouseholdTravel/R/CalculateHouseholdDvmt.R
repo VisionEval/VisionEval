@@ -622,7 +622,7 @@ DvmtModel_ls$EstimationStats <- EstimationStats_ls
 #' used in developing the final models.
 #' @source CalculateHouseholdDVMT.R
 "DvmtModel_ls"
-visioneval::saveDataset(DvmtModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(DvmtModel_ls, overwrite = TRUE)
 
 #Clean Up
 #--------
@@ -844,7 +844,7 @@ CalculateHouseholdDvmtSpecifications <- list(
 #' }
 #' @source CalculateHouseholdDvmt.R script.
 "CalculateHouseholdDvmtSpecifications"
-visioneval::saveDataset(CalculateHouseholdDvmtSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateHouseholdDvmtSpecifications, overwrite = TRUE)
 
 
 #=======================================================

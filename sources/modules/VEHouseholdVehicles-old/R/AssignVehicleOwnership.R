@@ -199,7 +199,7 @@ rm(Hh_df, EstData_df)
 #' }
 #' @source AssignVehicleOwnership.R script.
 "AutoOwnModels_ls"
-visioneval::saveDataset(AutoOwnModels_ls, overwrite = TRUE)
+visioneval::savePackageDataset(AutoOwnModels_ls, overwrite = TRUE)
 
 
 #================================================
@@ -374,7 +374,7 @@ AssignVehicleOwnershipSpecifications <- list(
 #' }
 #' @source AssignVehicleOwnership.R script.
 "AssignVehicleOwnershipSpecifications"
-visioneval::saveDataset(AssignVehicleOwnershipSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignVehicleOwnershipSpecifications, overwrite = TRUE)
 
 
 #=======================================================

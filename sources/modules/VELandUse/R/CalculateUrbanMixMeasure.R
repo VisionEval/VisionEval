@@ -145,7 +145,7 @@ rm(Data_df)
 #' }
 #' @source CalculateUrbanMixMeasure.R script.
 "UrbanMixModel_ls"
-visioneval::saveDataset(UrbanMixModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(UrbanMixModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -295,7 +295,7 @@ CalculateUrbanMixMeasureSpecifications <- list(
 #' }
 #' @source CalculateUrbanMixMeasure.R script.
 "CalculateUrbanMixMeasureSpecifications"
-visioneval::saveDataset(CalculateUrbanMixMeasureSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateUrbanMixMeasureSpecifications, overwrite = TRUE)
 
 
 #=======================================================

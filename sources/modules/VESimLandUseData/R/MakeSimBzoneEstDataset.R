@@ -575,7 +575,7 @@ if (!file.exists("inst/extdata/Transit_df.rds"))  {
 #' @source MakeSimBzoneEstDataset.R script.
 "SimLandUseData_df"
 SimLandUseData_df <- createSimLandUseDataset()
-visioneval::saveDataset(SimLandUseData_df, overwrite = TRUE)
+visioneval::savePackageDataset(SimLandUseData_df, overwrite = TRUE)
 
 
 #====================

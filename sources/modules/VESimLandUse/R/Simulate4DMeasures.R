@@ -308,7 +308,7 @@ Simulate4DMeasuresSpecifications <- list(
 #' }
 #' @source Simulate4DMeasures.R script.
 "Simulate4DMeasuresSpecifications"
-visioneval::saveDataset(Simulate4DMeasuresSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(Simulate4DMeasuresSpecifications, overwrite = TRUE)
 
 
 #=======================================================

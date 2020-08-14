@@ -122,7 +122,7 @@ verspm_output_config_txt <-
   #' }
   #' @source VERSPMResults.R script.
   "VERSPMOutputConfig"
-  visioneval::saveDataset(VERSPMOutputConfig, overwrite = TRUE)
+  visioneval::savePackageDataset(VERSPMOutputConfig, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -237,7 +237,7 @@ VERSPMResultsSpecifications <- list(
 #' }
 #' @source VERSPMResults.R script.
 "VERSPMResultsSpecifications"
-visioneval::saveDataset(VERSPMResultsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(VERSPMResultsSpecifications, overwrite = TRUE)
 
 
 # TableNames <- c("Azone", "Bzone", "Marea", "IncomeGroup", "FuelType")

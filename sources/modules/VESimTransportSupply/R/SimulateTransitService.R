@@ -86,7 +86,7 @@ BusEquivalents_df <- VETransportSupply::BusEquivalents_df
 #' }
 #' @source AssignTransitService.R script.
 "BusEquivalents_df"
-visioneval::saveDataset(BusEquivalents_df, overwrite = TRUE)
+visioneval::savePackageDataset(BusEquivalents_df, overwrite = TRUE)
 
 #Load and save the vehicle mile factors
 #--------------------------------------
@@ -122,7 +122,7 @@ VehMiFactors_df <- VETransportSupply::VehMiFactors_df
 #' }
 #' @source AssignTransitService.R script.
 "VehMiFactors_df"
-visioneval::saveDataset(VehMiFactors_df, overwrite = TRUE)
+visioneval::savePackageDataset(VehMiFactors_df, overwrite = TRUE)
 
 #Load and save the D4c model parameters
 #--------------------------------------
@@ -152,7 +152,7 @@ D4cModels_ls$AveD4cModel_ls <- VESimLandUse::SimBzone_ls$UaProfiles$AveD4cModel_
 #' }
 #' @source SimulateTransitService.R script
 "D4cModels_ls"
-visioneval::saveDataset(D4cModels_ls, overwrite = TRUE)
+visioneval::savePackageDataset(D4cModels_ls, overwrite = TRUE)
 
 
 #================================================
@@ -371,7 +371,7 @@ SimulateTransitServiceSpecifications <- list(
 #' }
 #' @source SimulateTransitService.R script.
 "SimulateTransitServiceSpecifications"
-visioneval::saveDataset(SimulateTransitServiceSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(SimulateTransitServiceSpecifications, overwrite = TRUE)
 
 
 #=======================================================

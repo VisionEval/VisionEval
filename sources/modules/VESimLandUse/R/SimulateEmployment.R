@@ -192,7 +192,7 @@ SimulateEmploymentSpecifications <- list(
 #' }
 #' @source SimulateEmployment.R script.
 "SimulateEmploymentSpecifications"
-visioneval::saveDataset(SimulateEmploymentSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(SimulateEmploymentSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -213,7 +213,7 @@ AltModeModels_ls$NonMetro <-
 #' components;
 #' @source CalculateAltModeTrips.R.
 "AltModeModels_ls"
-visioneval::saveDataset(AltModeModels_ls, overwrite = TRUE)
+visioneval::savePackageDataset(AltModeModels_ls, overwrite = TRUE)
 
 rm(Hh_df, MetroBikeModel_ls, MetroHh_df, MetroTransitModel_ls,
    MetroWalkModel_ls, NonMetroBikeModel_ls, NonMetroHh_df,
@@ -410,7 +410,7 @@ CalculateAltModeTripsSpecifications <- list(
 #' }
 #' @source CalculateAltModeTrips.R script.
 "CalculateAltModeTripsSpecifications"
-visioneval::saveDataset(CalculateAltModeTripsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateAltModeTripsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

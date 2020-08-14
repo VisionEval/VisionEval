@@ -243,7 +243,7 @@ rm(Hh_df)
 #' }
 #' @source AssignVehicleType.R script.
 "VehicleTypeModel_ls"
-visioneval::saveDataset(VehicleTypeModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(VehicleTypeModel_ls, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -438,7 +438,7 @@ AssignVehicleTypeSpecifications <- list(
 #' }
 #' @source AssignVehicleType.R script.
 "AssignVehicleTypeSpecifications"
-visioneval::saveDataset(AssignVehicleTypeSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignVehicleTypeSpecifications, overwrite = TRUE)
 
 
 #=======================================================
