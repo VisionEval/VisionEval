@@ -311,7 +311,7 @@ loadPackageDataset <- function(DatasetName, DefaultPackage = NULL) {
 #=========================
 #' Save a VisionEval package dataset to the data/ folder during package build
 #'
-#' \code{saveDataset} a visioneval framework module developer function
+#' \code{savePackageDataset} a visioneval framework module developer function
 #' which saves a dataset to the data/ directory during package build.
 #'
 #' This function is used to save a dataset during module estimation and when
@@ -321,19 +321,49 @@ loadPackageDataset <- function(DatasetName, DefaultPackage = NULL) {
 #'
 #' @param dataset A string identifying the name of the object containing
 #' the dataset.
-#' @param overwrite If TRUE; otherwise only save if no existing file
+#' @param overwrite During the SAVE phase and if FALSE, do not overwrite an existing file in data/ space
+#' @param keep  During the BUILD phase and if TRUE, do not reomve the object from the R/ space
 #' @param compress Optionally specify a different compression mode
 #' @return The dataset name if it was saved successfully, otherwise an empty character vector
 #' @export
-saveDataset <- function(dataset,overwrite=TRUE,compress="bzip2") {
+savePackageDataset <- function(dataset,overwrite=TRUE,keep=FALSE,compress="xz") {
   dsname <- deparse(substitute(dataset))
   if ( length(dsname)!=1 ) stop("Unable to deparse dataset name.")
   if ( ! dir.exists("data") ) stop("Data directory not found in ",getwd())
   file <- file.path("data",paste0(dsname,".rda"))
-  if ( file.exists(file) && ! overwrite ) stop("File not overwritten.")
-  cat("Saving '",dsname,"' to '",file,"' ... ",sep="")
-  save(list=dsname,file=file,compress=compress,envir=parent.frame())
-  if ( ! file.exists(file) ) { traceback(); stop("File NOT saved!\n") } else cat("Saved\n")
+  build.phase <- toupper(Sys.getenv("VE_BUILD_PHASE","SAVE"))
+  if ( build.phase == "SAVE" ) {
+    if ( file.exists(file) && ! overwrite ) {
+      message("Existing '",dsname,"' not overwritten due to overwrite=FALSE.")
+    } else {
+      cat("Saving '",dsname,"' to '",file,"' ... ",sep="")
+      save(list=dsname,file=file,compress=compress,envir=parent.frame())
+      if ( ! file.exists(file) ) { traceback(); stop("File NOT saved!\n") } else cat("Saved\n")
+    }
+  } else if (build.phase == "BUILD" ) {
+    # During the BUILD phase, we won't keep the dataset unless explicitly requested.
+    # Some modules will break (e.g. using variable as an exported function default
+    # parameter) if the object is removed. The "Undefined Global Variable" message
+    # from R CMD check will identify variables that are used in that wrong way.
+    # Currently, they won't get deleted if they hadn't already been saved to a data/ set.
+    # The right way is to save the variable to data/ and then reload it inside the
+    # function if the variable default is not a usable value (e.g. NULL)
+    Msg_ <- paste(dsname,"in R/ space")
+    if ( ! keep ) {
+      rm(list=dsname,envir=parent.frame())
+      if ( dsname %in% ls(parent.frame()) ) {
+        stop("Failed to remove ",Msg_)
+      } else {
+        message("Removed ",Msg_)
+      }
+    } else {
+      message("Keeping",Msg_)
+    }
+  } else {
+    message("Unknown VE_BUILD_PHASE for savePackageDataset: ",build.phase)
+    stop('VE_BUILD_PHASE = one.of("SAVE","BUILD")')
+  }
+  
   return(dsname)
 }
 
@@ -1735,6 +1765,10 @@ getRegisteredGetSpecs <-
 #' @export
 #' @import knitr
 documentModule <- function(ModuleName){
+
+  # Do not bother to re-run if in BUILD phase (only processed during
+  # documentation/check step).
+  if ( toupper(Sys.getenv("VE_BUILD_PHASE","SAVE")) != "SAVE" ) return()
 
   #Make vignettes directory if doesn't exist
   #-----------------------------------------

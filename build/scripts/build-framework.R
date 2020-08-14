@@ -58,7 +58,7 @@ if ( nzchar(ve.only.build[1]) ) { # will always have at least one "exclusion" bu
   cat("++++++++++ Only building:",paste0(ve.only.build,collapese=", "),"\n")
 }
 if ( length(package.names) == 0 ) {
-  cat("++++++++++ Nothing to build due to VE_ONLY_BUILD:",paste0(ve.only.build,collapese=", "),"\n")
+  cat("++++++++++ Framework not built due to VE_ONLY_BUILD:",paste0(ve.only.build,collapese=", "),"\n")
   quit(status=0)
 }
 

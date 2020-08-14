@@ -150,7 +150,7 @@ installer-clean: $(VE_MAKEVARS) installer-reset # remove the installers for rebu
 	[[ -n "$(VE_ZIPOUT)" ]] && rm -f $(VE_ZIPOUT)/*.zip
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
 
-repository-clean: clean # Reset the CRAN, BioConductor and Github dependency packages for fresh download
+repository-clean: # Reset the CRAN, BioConductor and Github dependency packages for fresh download
 	[[ -n "$(VE_DEPS)" ]] && rm -rf $(VE_DEPS)/*
 
 dev-clean: $(VE_MAKEVARS) build-reset # Reset the developer packages for VE-Installer itself

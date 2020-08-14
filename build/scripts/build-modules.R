@@ -309,7 +309,7 @@ for ( module in seq_along(package.names) ) {
     }
   }
 
-  # Step 4: Check the module in order to rebuild the /data directory in build.dir
+  # Step 4: Run devtools::document() separately to rebuild the /data directory
   if ( ! package.built ) {
     cat("++++++++++ Pre-build / Document ",package.names[module],"\nin ",build.dir,"\n",sep="")
     withr::with_dir(build.dir,devtools::document())
@@ -322,19 +322,20 @@ for ( module in seq_along(package.names) ) {
     check.results <- withr::with_dir(build.dir,devtools::check(".",check_dir=build.dir,document=FALSE,error_on="error"))
     cat("++++++++++ Check results\n")
     print(check.results)
-    # devtools::check leaves the package loaded after its test installation to a temporary library
+    # devtools::document leaves the package loaded after its test installation to a temporary library
     # Therefore we need to explicitly detach it so we can install it properly later on
     if ( (bogus.package <- paste("package:",package.names[module],sep="")) %in% search() ) {
       cat("Detaching",bogus.package,"\n")
-      print(search())
       detach(bogus.package,character.only=TRUE,unload=TRUE)
+      print(search())
     }
 
-    # Then get rid of the temporary (and possibly obsolete) source package that is left behind
+    # TO TEST: Might be able to move this built source package to built.path.src instead
+    # Also get rid of the temporary (and possibly obsolete) source package that is left behind
     # Must build again rather than use that built package, because the results of devtools::check
     #   updates (but does not include) any files in /data
-    tmp.build <- file.path(build.dir,modulePath(package.names[module],build.dir))
-    if ( length(tmp.build)>0 && file.exists(tmp.build) ) unlink(tmp.build)
+#     tmp.build <- file.path(build.dir,modulePath(package.names[module],build.dir))
+#     if ( length(tmp.build)>0 && file.exists(tmp.build) ) unlink(tmp.build)
 
     # Run the tests on build.dir if requested
     if ( ve.runtests ) {
@@ -353,50 +354,64 @@ for ( module in seq_along(package.names) ) {
     obsolete <- dir(built.path.src,pattern=paste0(package.names[module],"*_"))
     if ( length(obsolete)>0 ) cat("obsolete:",obsolete,"\n")
     unlink( file.path(built.path.src,obsolete) )
+# TO TEST: do we need to rebuild here? Could use results of "check" for source package
     src.module <- devtools::build(build.dir, path=built.path.src)
     num.src <- num.src + 1
   }
 
   # Step 6: Build the binary package (Windows or Mac) and install the package
-  if ( ve.binary.build ) {
-    # Binary build and install works a little differently from source
-    if ( ! package.built ) {
-      # Rebuild the binary package from the ve.src folder
-      # We do this on Windows (rather than building from the source package) because
-      # we want to use devtools::build, but a bug in devtools prior to R 3.5.3 or so
-      # prevents devtools:build from correctly building from a source package (it
-      # requires an unpacked source directory, which we have in build.dir)
-      cat("building",package.names[module],"from",build.dir,"as",ve.build.type,"\n")
-      cat("building into",built.path.binary,"\n")
 
-      obsolete <- dir(built.path.binary,pattern=paste0(package.names[module],"*_"))
-      if ( length(obsolete)>0 ) cat("obsolete:",obsolete,"\n")
-      unlink( file.path(built.path.binary,obsolete) )
-      built.package <- devtools::build(build.dir,path=built.path.binary,binary=TRUE)
-      if ( length(built.package) > 1 ) { # Fix weird bug that showed up in R 3.6.2 devtools::build
-        built.package <- grep("zip$",built.package,value=TRUE)
+  tryCatch(
+    {
+      # VE_BUILD_PHASE="BUILD" says remove package datasets from R/ space (see visioneval/R/module.R)
+      # Tells visioneval::savePackageDataset to remove the dataset object rather than save it again
+      # Running devtools::document() will have already saved the dataset for the old-style modules
+      # New style modules (e.g. VETravelDemandMM) have pre-built data which gets copied into data/
+      # above (see the 'hack' which will eventually become standard procedure). So they don't use
+      # visioneval::savePackageDataset and don't need/are immune to this flag.
+      Sys.setenv(VE_BUILD_PHASE="BUILD")
+      if ( ve.binary.build ) {
+        # Binary build and install works a little differently from source
+        if ( ! package.built ) {
+          # Rebuild the binary package from the ve.src folder
+          # We do this on Windows (rather than building from the source package) because
+          # we want to use devtools::build, but a bug in devtools prior to R 3.5.3 or so
+          # prevents devtools:build from correctly building from a source package (it
+          # requires an unpacked source directory, which we have in build.dir)
+          cat("building",package.names[module],"from",build.dir,"as",ve.build.type,"\n")
+          cat("building into",built.path.binary,"\n")
+
+          obsolete <- dir(built.path.binary,pattern=paste0(package.names[module],"*_"))
+          if ( length(obsolete)>0 ) cat("obsolete:",obsolete,"\n")
+          unlink( file.path(built.path.binary,obsolete) )
+          built.package <- devtools::build(build.dir,path=built.path.binary,binary=TRUE)
+          if ( length(built.package) > 1 ) { # Fix weird bug that showed up in R 3.6.2 devtools::build
+            built.package <- grep("zip$",built.package,value=TRUE)
+          }
+          num.bin <- num.bin + 1
+        } else {
+          cat("Existing binary package:",package.names[module],ifelse(package.installed,"(Already Installed)",""),"\n")
+          built.package <- file.path(built.path.binary, modulePath(package.names[module], built.path.binary))
+        }
+        if ( ! package.installed ) {
+          # On Windows, install from the binary package
+          cat("++++++++++ Installing built package:",built.package,"\n")
+          install.packages(built.package, repos=NULL, lib=ve.lib, type=ve.build.type) # so they will be available for later modules
+        }
+      } else { # source build
+        # Just do installation directly from source package (no binary package created)
+        if ( ! package.installed ) {
+          cat("++++++++++ Installing source package:",src.module,"\n")
+          if ( package.names[module] %in% pkgs.installed ) remove.package(package.names[module])
+          install.packages(src.module, repos=NULL, lib=ve.lib, type="source")
+          cat("++++++++++ DONE",package.names[module],"\n\n")
+        } else {
+          cat("Existing source package",package.names[module],"(Already Installed)\n")
+        }
       }
-      num.bin <- num.bin + 1
-    } else {
-      cat("Existing binary package:",package.names[module],ifelse(package.installed,"(Already Installed)",""),"\n")
-      built.package <- file.path(built.path.binary, modulePath(package.names[module], built.path.binary))
-    }
-    if ( ! package.installed ) {
-      # On Windows, install from the binary package
-      cat("++++++++++ Installing built package:",built.package,"\n")
-      install.packages(built.package, repos=NULL, lib=ve.lib, type=ve.build.type) # so they will be available for later modules
-    }
-  } else { # source build
-    # Just do installation directly from source package (no binary package created)
-    if ( ! package.installed ) {
-      cat("++++++++++ Installing source package:",src.module,"\n")
-      if ( package.names[module] %in% pkgs.installed ) remove.package(package.names[module])
-      install.packages(src.module, repos=NULL, lib=ve.lib, type="source")
-      cat("++++++++++ DONE",package.names[module],"\n\n")
-    } else {
-      cat("Existing source package",package.names[module],"(Already Installed)\n")
-    }
-  }
+    }, # we define no handlers: conditions are just passed through to the parent after calling finally
+    finally = Sys.unsetenv("VE_BUILD_PHASE")
+  )
 }
 
 # Update the repository PACKAGES files (source and binary) if we rebuilt any

@@ -2,17 +2,6 @@
 
 Components:
 
-# "Type: install' components simply list "independent" R dependencies (for building modules)
-# Need to revisit whether this section is still needed, and what exactly should be in it (rmarkdown?)
-  install:
-    Type: install
-    Test: { Group: 0 }
-    CRAN:
-      - devtools
-      - knitr
-      - roxygen2
-      - yaml
-
 # "Type: module" components are built and installed as R packages
 # "Type: framework" works like a module, but is built first; also it has a different implied
 #        documentation location
@@ -34,7 +23,6 @@ Components:
       - jsonlite
       - stringr
       - filesstrings
-      - knitr
     BioC:
       - rhdf5
   VE2001NHTS:
@@ -89,14 +77,12 @@ Components:
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 2 }
     CRAN:
-      - devtools
       - dplyr
       - purrr
       - tidyr
       - splines
       - MASS 
       - pscl
-      - rmarkdown
   VEHouseholdVehicles:
     Type: module
     Path: sources/modules
