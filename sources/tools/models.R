@@ -10,6 +10,7 @@
 # https://www.tidyverse.org/blog/2019/11/roxygen2-7-0-0/#r6-documentation
 # https://roxygen2.r-lib.org/articles/rd.html#r6
 
+# tool.contents <- c("openModel","verpat","verspm","vestate","go")
 tool.contents <- c("openModel","verpat","verspm","vestate","go")
 
 requireNamespace("jsonlite")
@@ -109,11 +110,17 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
   self$status <- self$runStatus[length(self$runStatus)]
 }
 
-ve.run.model <- function(verbose=TRUE) {
+ve.run.model <- function(verbose=TRUE,path=NULL) {
   pathLength <- length(self$modelPath)
-  for ( ms in 1:self$stageCount ) {
+  stageStart <- if ( ! is.null(path) ) path else 1
+  for ( ms in stageStart:self$stageCount ) {
     stage <- self$modelPath[ms]
     if ( verbose ) {
+      if ( is.na(stage) ) {
+        message("ms: ",ms)
+        message("stageStart: ",stageStart)
+        stop("bad first stage")
+      }
       message("Running model stage:")
       message(stage)
     }
@@ -188,6 +195,8 @@ confirm <- function(msg) {
   return(conf)
 }
 
+# outputOnly will just delete the extraction results
+# (not the model run)
 ve.artifacts <- function(path=NULL,outputOnly=FALSE) {
   if ( ! outputOnly ) {
     mstates <- self$dir(pattern=".*(Previous)*ModelState\\.Rda",path=path)
@@ -202,8 +211,8 @@ ve.artifacts <- function(path=NULL,outputOnly=FALSE) {
   return(c(artifacts,outputs))
 }
 
-ve.model.clear <- function(force=FALSE,outputOnly=FALSE) {
-  to.delete <- private$artifacts(outputOnly=outputOnly)
+ve.model.clear <- function(force=FALSE,outputOnly=FALSE,path=NULL) {
+  to.delete <- private$artifacts(path=path,outputOnly=outputOnly)
   if ( length(to.delete)>0 ) {
     print(gsub(ve.runtime,"",to.delete))
     if ( force || (force <- confirm("Clear ALL prior model results?")) ) {
@@ -696,14 +705,4 @@ vestate <- function(staged=FALSE) {
   }
   model$run()
   model
-}
-
-go <- function() {
-  if ( ! dir.exists("models/JRSPM") ) {
-    rspm <- openModel("VERSPM")$copy("JRSPM")
-  } else {
-    rspm <- openModel("JRSPM")
-    rspm$clear(force=TRUE)
-  }
-  rspm$run()
 }

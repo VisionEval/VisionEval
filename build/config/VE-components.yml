@@ -20,6 +20,7 @@ Components:
     Path: sources/framework
     Test: { Script: tests/scripts/test.R, Group: 0 }
     CRAN: 
+      - knitr
       - jsonlite
       - stringr
       - filesstrings

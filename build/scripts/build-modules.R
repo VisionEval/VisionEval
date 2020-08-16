@@ -88,8 +88,12 @@ if ( debug>1 ) {
   print(paste(package.names,source.modules[package.names],file.exists(source.modules[package.names]),sep=":"))
 }
 
+# Oonfigure the build process
+ve.express <- Sys.getenv("VE_EXPRESS","NO") != "NO"
+if ( ve.express ) cat("Express build.\n") else stop("Must have ve.express.\n")
+
 # Copy test elements from components, if requested in configuration
-if (ve.runtests) {
+if (ve.runtests && ! ve.express) {
   # Copy any additional test folders to ve.src
   # Mostly for "Test_Data", but any set of stuff needed for all tests
   ve.src.files <- pkgs.db[pkgs.test,]
@@ -212,7 +216,7 @@ for ( module in seq_along(package.names) ) {
     package.built <- (me <- moduleExists(package.names[module], built.path.binary)) &&
                      (sc <- moduleExists(package.names[module], built.path.src)) &&
                      (de <- ( dir.exists(build.dir) && ! newerThan(package.paths[module],build.dir,quiet=(!debug))) ) &&
-                     (ck <- dir.exists(check.dir) ) &&
+                     (ck <- ( ve.express || dir.exists(check.dir) ) ) &&
                      (nt <- ! newerThan( quiet=(debug<2),
                               src.module,
                               file.path(built.path.binary,
@@ -259,7 +263,10 @@ for ( module in seq_along(package.names) ) {
     } else {
       cat("++++++++++ Copying module source",package.paths[module],"to build/test environment...\n")
     }
-    if ( dir.exists(build.dir) || file.exists(build.dir) ) unlink(build.dir,recursive=TRUE) # Get rid of the build directory and start fresh
+    if ( ! ve.express ) {
+      if ( dir.exists(build.dir) || file.exists(build.dir) )
+        unlink(build.dir,recursive=TRUE) # Get rid of the build directory and start fresh
+    }
     all.files <- dir(package.paths[module],recursive=TRUE,all.files=FALSE) # not hidden files, relative to package.paths[module]
     pkg.files <- grep("^data/",all.files,value=TRUE,invert=TRUE)
     if ( length(all.files)!=length(pkg.files) ) {
@@ -312,17 +319,24 @@ for ( module in seq_along(package.names) ) {
   # Step 4: Run devtools::document() separately to rebuild the /data directory
   if ( ! package.built ) {
     cat("++++++++++ Pre-build / Document ",package.names[module],"\nin ",build.dir,"\n",sep="")
-    withr::with_dir(build.dir,devtools::document())
-    cat("++++++++++ Checking and pre-processing ",package.names[module],"\nin ",build.dir,"\n",sep="")
-    # Run the module check (prior to building anything)
-    # Run Roxygen with load='source' option in package DESCRIPTION
-    # Requires us to set the working directory outside devtools:check, otherwise it gets very
-    # confused about where to put the generated /data elements.
-    # Need to set "check.dir" location explicitly to "check_dir=build.dir" (otherwise lost in space)
-    check.results <- withr::with_dir(build.dir,devtools::check(".",check_dir=build.dir,document=FALSE,error_on="error"))
-    cat("++++++++++ Check results\n")
-    print(check.results)
-    # devtools::document leaves the package loaded after its test installation to a temporary library
+    if ( ve.express ) {
+      withr::with_dir(build.dir,devtools::document(roclets=c("collate","namespace")))
+    } else {
+      withr::with_dir(build.dir,devtools::document())
+    }
+    if ( ! ve.express ) {
+      cat("++++++++++ Checking and pre-processing ",package.names[module],"\nin ",build.dir,"\n",sep="")
+      # Run the module check (prior to building anything)
+      # Run Roxygen with load='source' option in package DESCRIPTION
+      # Requires us to set the working directory outside devtools:check, otherwise it gets very
+      # confused about where to put the generated /data elements.
+      # Need to set "check.dir" location explicitly to "check_dir=build.dir" (otherwise lost in space)
+      check.results <- withr::with_dir(build.dir,devtools::check(".",check_dir=build.dir,document=FALSE,error_on="error"))
+      cat("++++++++++ Check results\n")
+      print(check.results)
+    }
+    
+    # devtools::document with load_pkgload leaves the package loaded to a temporary library
     # Therefore we need to explicitly detach it so we can install it properly later on
     if ( (bogus.package <- paste("package:",package.names[module],sep="")) %in% search() ) {
       cat("Detaching",bogus.package,"\n")
@@ -330,15 +344,16 @@ for ( module in seq_along(package.names) ) {
       print(search())
     }
 
-    # TO TEST: Might be able to move this built source package to built.path.src instead
+    # TO TEST: Might be able to move/copy tmp.build source package to built.path.src instead of deleting
+    # it; then build binary and install from that version.
     # Also get rid of the temporary (and possibly obsolete) source package that is left behind
     # Must build again rather than use that built package, because the results of devtools::check
     #   updates (but does not include) any files in /data
-#     tmp.build <- file.path(build.dir,modulePath(package.names[module],build.dir))
-#     if ( length(tmp.build)>0 && file.exists(tmp.build) ) unlink(tmp.build)
+    tmp.build <- file.path(build.dir,modulePath(package.names[module],build.dir))
+    if ( length(tmp.build)>0 && file.exists(tmp.build) ) unlink(tmp.build)
 
     # Run the tests on build.dir if requested
-    if ( ve.runtests ) {
+    if ( ve.runtests && ! ve.express ) {
       test.script <- file.path(build.dir,ve.packages$Test[module])
       message("Executing tests from ",test.script,"\n")
       callr::rscript(script=test.script,wd=build.dir,libpath=.libPaths(),fail_on_status=FALSE)

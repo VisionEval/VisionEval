@@ -206,7 +206,7 @@ for ( module in seq_along(package.names) ) {
     me <- de <- ck <- nt <- vr <- as.logical(NA)
     package.built <- (me <- moduleExists(package.names[module], built.path.binary)) &&
                      (de <- ( dir.exists(build.dir) && ! newerThan(package.paths[module],build.dir,quiet=(!debug))) ) &&
-                     (ck <- dir.exists(check.dir) ) &&
+#                     (ck <- dir.exists(check.dir) ) &&
                      (nt <- ! newerThan( quiet=(debug<2),
                               src.module,
                               file.path(built.path.binary,

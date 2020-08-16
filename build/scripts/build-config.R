@@ -228,7 +228,7 @@ evalq(
     target.time <- file.mtime(tgtpath)
     source.newest <- order(source.time,decreasing=TRUE)
     target.newest <- order(target.time,decreasing=TRUE)
-    if (!quiet) cat("Source path:",srcpath[source.newest[1]],strftime(source.time[source.newest[1]],"%d/%m/%y %H:%M:%S"),"\n")
+    if (!quiet) cat("Source:",srcpath[source.newest[1]],strftime(source.time[source.newest[1]],"%d/%m/%y %H:%M:%S"),"\n")
     if (!quiet) cat("Target:",tgtpath[target.newest[1]],strftime(target.time[target.newest[1]],"%d/%m/%y %H:%M:%S"),"\n")
     newer <- source.time[source.newest[1]] > target.time[target.newest[1]]
     if (!quiet) cat("Newer:",newer,"\n")
