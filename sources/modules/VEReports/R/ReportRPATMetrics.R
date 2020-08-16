@@ -28,7 +28,15 @@ library(visioneval)
 #SECTION 1: ESTIMATE AND SAVE MODEL PARAMETERS
 #=============================================
 
-load("inst/extdata/TruckBusAgeDist_.RData")
+#Load the alternative mode trip models from GreenSTEP
+TruckBusAgeDist_name <- 
+  if ( dir.exists("inst/extdata") ) {
+    "inst/extdata/TruckBusAgeDist_.RData"
+  } else {
+    system.file("extdata", "TruckBusAgeDist_.RData", package = "REReports")
+  }
+load(TruckBusAgeDist_name)
+
 #Save Truck and Bus age distribution data
 #-----------------------------
 #' Truck and Bus age distribution data
@@ -42,7 +50,7 @@ load("inst/extdata/TruckBusAgeDist_.RData")
 #' }
 #' @source CalculateTravelDemand.R script.
 "TruckBusAgeDist_mx"
-visioneval::savePackageDataset(TruckBusAgeDist_mx, overwrite = TRUE)
+
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
 #================================================
