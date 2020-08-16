@@ -621,6 +621,9 @@ CalculateMpgMpkwhAdjustments <- function(L) {
   #-------------------------------------------------------------------------
   #Calculates speed smoothing maximum factors by road class for a given vehicle
   #type based on the estimated congested speeds
+
+  MpgMpkwhAdj_ls <- VETravelPerformance::MpgMpkwhAdj_ls
+
   calcMaxSpdSmAdj <- function(vt) {
     #Choose the speed smoothing factor model
     if (vt == "Ldv"){

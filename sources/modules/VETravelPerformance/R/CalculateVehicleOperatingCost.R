@@ -1103,6 +1103,8 @@ CalculateVehicleOperatingCost <- function(L) {
   #Proportion of vehicle DVMT on urban roads
   UrbanVmtProp_Ve <- L$Year$Household$UrbanDvmtProp[HhToVehIdx_Ve]
 
+  OpCosts_ls <- VETravelPerformance::OpCosts_ls
+
   #Calculate vehicle cost components
   #---------------------------------
   #Calculate maintenance, repair, tire cost per mile (only for owned vehicles)

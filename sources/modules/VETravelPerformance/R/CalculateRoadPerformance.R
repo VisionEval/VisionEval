@@ -513,6 +513,7 @@ visioneval::savePackageDataset(CongestedProportions_ls, overwrite = TRUE)
 calculateCongestion <-
   function(RoadType, LaneMi, DVMT) {
     #Extract the lookup table
+    CongestedProportions_ls <- VETravelPerformance::CongestedProportions_ls
     Lookup_LvCl <-
       CongestedProportions_ls[[RoadType]]
     #Calculate roadway demand
@@ -1854,6 +1855,7 @@ CalculateRoadPerformance <- function(L) {
   #---------------------------------------------------
   #Define function to calculate the rural to urban average road speed ratio
   calcUrbRurHhSpeedRatio <- function() {
+    UrbanRuralAveSpeed_ls <- VETravelPerformance::UrbanRuralAveSpeed_ls
     UHPU_ <- L$Year$Marea$UrbanHhPropUrbanDvmt
     RHPU_ <- L$Year$Marea$NonUrbanHhPropUrbanDvmt
     HSR <- UrbanRuralAveSpeed_ls$SpeedRatio
