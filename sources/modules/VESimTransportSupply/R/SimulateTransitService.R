@@ -58,35 +58,38 @@ library(visioneval)
 #' @import VETransportSupply
 #
 #Import bus equivalency factors
+
 BusEquivalents_df <- VETransportSupply::BusEquivalents_df
-#Save the bus equivalency factors
-#' Bus equivalency factors
-#'
-#' Bus revenue mile equivalency factors to convert revenue miles for various
-#' modes to bus-equivalent revenue miles.
-#'
-#' @format A data frame with 8 rows and 2 variables containing factors for
-#' converting revenue miles of various modes to bus equivalent revenue miles.
-#' Mode names are 2-character codes corresponding to consolidated mode types.
-#' Consolidated mode types represent modes that have similar characteristics and
-#' bus equivalency values. The consolidate mode codes and their meanings are as
-#' follows:
-#' DR = Demand-responsive
-#' VP = Vanpool and similar
-#' MB = Standard motor bus
-#' RB = Bus rapid transit and commuter bus
-#' MG = Monorail/automated guideway
-#' SR = Streetcar/trolley bus/inclined plain
-#' HR = Heavy Rail/Light Rail
-#' CR = Commuter Rail/Hybrid Rail/Cable Car/Aerial Tramway
-#'
-#' \describe{
-#'   \item{Mode}{abbreviation for consolidated mode}
-#'   \item{BusEquivalents}{numeric factor for converting revenue miles to bus equivalents}
-#' }
-#' @source AssignTransitService.R script.
-"BusEquivalents_df"
-visioneval::savePackageDataset(BusEquivalents_df, overwrite = TRUE)
+NULL
+
+# #Save the bus equivalency factors
+# #' Bus equivalency factors
+# #'
+# #' Bus revenue mile equivalency factors to convert revenue miles for various
+# #' modes to bus-equivalent revenue miles.
+# #'
+# #' @format A data frame with 8 rows and 2 variables containing factors for
+# #' converting revenue miles of various modes to bus equivalent revenue miles.
+# #' Mode names are 2-character codes corresponding to consolidated mode types.
+# #' Consolidated mode types represent modes that have similar characteristics and
+# #' bus equivalency values. The consolidate mode codes and their meanings are as
+# #' follows:
+# #' DR = Demand-responsive
+# #' VP = Vanpool and similar
+# #' MB = Standard motor bus
+# #' RB = Bus rapid transit and commuter bus
+# #' MG = Monorail/automated guideway
+# #' SR = Streetcar/trolley bus/inclined plain
+# #' HR = Heavy Rail/Light Rail
+# #' CR = Commuter Rail/Hybrid Rail/Cable Car/Aerial Tramway
+# #'
+# #' \describe{
+# #'   \item{Mode}{abbreviation for consolidated mode}
+# #'   \item{BusEquivalents}{numeric factor for converting revenue miles to bus equivalents}
+# #' }
+# #' @source AssignTransitService.R script.
+# "BusEquivalents_df"
+# visioneval::savePackageDataset(BusEquivalents_df, overwrite = TRUE)
 
 #Load and save the vehicle mile factors
 #--------------------------------------

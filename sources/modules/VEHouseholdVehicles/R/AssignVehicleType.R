@@ -491,6 +491,7 @@ AssignVehicleType <- function(L) {
     Data_df$Density[Data_df$Density == 0] <- 1e-6
     Data_df$LogDensity <- log(Data_df$Density)
     #Run the model
+    VehicleTypeModel_ls <- VEHouseholdVehicles::VehicleTypeModel_ls
     VehType_Hx <-
       applyBinomialModel(
         VehicleTypeModel_ls,

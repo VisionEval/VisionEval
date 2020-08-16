@@ -393,7 +393,9 @@ AssignDemandManagement <- function(L) {
 
   #Calculate household DVMT proportional reduction
   #-----------------------------------------------
-  #Calculate the proportion of household DVMT that worker DVMT per worker
+  #Calculate the proportion of household DVMT that worker DVMT per
+  #worker
+  if ( ! exists("TdmModel_ls") ) TdmModel_ls <- VELandUse::TdmModel_ls
   HhSizeIdx_ <- L$Year$Household$HhSize
   HhSizeIdx_[HhSizeIdx_ > 8] <- 8
   PropMilesPerWkr_Hh <- TdmModel_ls$PropMilesPerWkr[HhSizeIdx_]

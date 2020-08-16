@@ -471,6 +471,8 @@ AssignVehicleOwnership <- function(L) {
 
   #Make a vehicle probability matrix
   #---------------------------------
+  AutoOwnModels_ls <- VEHouseholdVehicles::AutoOwnModels_ls
+
   #Identify Urban households
   IsUrban <- Hh_df$LocType == "Urban"
   #No vehicle probability

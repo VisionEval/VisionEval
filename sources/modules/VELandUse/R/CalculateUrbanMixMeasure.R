@@ -354,6 +354,7 @@ CalculateUrbanMixMeasure <- function(L) {
 
   #Define a function to apply the model to match mix target if there is one
   #------------------------------------------------------------------------
+  UrbanMixModel_ls <- VELandUse::UrbanMixModel_ls
   matchMixTarget <- function(D_df, MixTarget) {
     D_df$Intercept <- 1
     Odds_ <- exp(eval(parse(text = UrbanMixModel_ls$Formula), envir = D_df))

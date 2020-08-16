@@ -10,7 +10,7 @@
 # https://www.tidyverse.org/blog/2019/11/roxygen2-7-0-0/#r6-documentation
 # https://roxygen2.r-lib.org/articles/rd.html#r6
 
-tool.contents <- c("openModel","verpat","verspm","vestate")
+tool.contents <- c("openModel","verpat","verspm","vestate","go")
 
 requireNamespace("jsonlite")
 requireNamespace("R6")
@@ -696,4 +696,14 @@ vestate <- function(staged=FALSE) {
   }
   model$run()
   model
+}
+
+go <- function() {
+  if ( ! dir.exists("models/JRSPM") ) {
+    rspm <- openModel("VERSPM")$copy("JRSPM")
+  } else {
+    rspm <- openModel("JRSPM")
+    rspm$clear(force=TRUE)
+  }
+  rspm$run()
 }

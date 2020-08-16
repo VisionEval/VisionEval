@@ -15,7 +15,6 @@
 #=============================================
 
 ## Suggest to do : Household allocation model estimation
-cat("Loading data-raw with getwd = ",getwd(),"\n")
 if ( dir.exists("data-raw") ) {
   load("data-raw/HhAllocationModelCoeff.rda")
   HhAllocationModelCoeff_df <- HhAllocationModelCoeff

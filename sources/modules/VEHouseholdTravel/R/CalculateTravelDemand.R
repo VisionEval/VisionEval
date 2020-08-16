@@ -106,10 +106,6 @@ if ( dir.exists("data-raw") ) {
 "PhevModelData_ls"
 visioneval::savePackageDataset(PhevModelData_ls, overwrite = TRUE)
 
-#Load default values for Travel Demand module
-load("data/TravelDemandDefaults_ls.rda")
-
-
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
 #================================================

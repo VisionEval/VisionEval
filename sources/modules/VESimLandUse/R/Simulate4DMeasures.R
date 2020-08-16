@@ -326,17 +326,15 @@ visioneval::savePackageDataset(Simulate4DMeasuresSpecifications, overwrite = TRU
 #'
 #' This function simulates pedestrian network design measure, D3bpo4, as defined
 #' by the U.S. Environmental Protection Agency (EPA) in the Smart Location
-#' Database (SLD). SLD documentation is included in the inst/extdata/sources
-#' directory of the VESimLandUseData package. In short, D3bpo4 is a measure of
-#' 'intersection density in terms of pedestrian-oriented intersections having
-#' four or more legs per square mile'. D3bpo4 is simulated as a function of the
-#' place type of the SimBzone (LocType, AreaType, DevType) and the average
-#' D3bpo4 value for the urbanized area (or town or rural area) where the
-#' SimBzone is located. A base average value by urbanized area and towns as a
-#' whole and rural areas as a whole in the CreateSimBzoneModels module. User
-#' inputs adjust the values (e.g. increase average by 50%). The D3bpo4
-#' model estimated by the CreateSimBzoneModels module is used to calculate the
-#' SimBzone value.
+#' Database (SLD). SLD documentation is included in the data-raw
+#' directory of the VESimLandUseData package in the source#distribution. In short,
+#' D3bpo4 is a measure of intersection density in terms of pedestrian-oriented intersections having
+#' four or more legs per square mile'. D3bpo4 is simulated as a function of the place type of the
+#' SimBzone (LocType, AreaType, DevType) and the average D3bpo4 value for the urbanized area (or town
+#' or rural area) where the SimBzone is located. A base average value by urbanized area and towns as
+#' a whole and rural areas as a whole in the CreateSimBzoneModels module. User inputs adjust the
+#' values (e.g. increase average by 50%). The D3bpo4 model estimated by the CreateSimBzoneModels
+#' module is used to calculate the SimBzone value.
 #'
 #' @param AveD3bpo4_ a numeric vector identifying for all the SimBzones_ the
 #' average D3bpo4 value for the place where each SimBzone is located. For

@@ -647,6 +647,7 @@ PredictHousing <- function(L) {
       L$Year$Household$Azone[!IsGQ_Hh]
     )
   Az <- names(Hh_df_Az)
+  HouseTypeModel_ls <- VELandUse::HouseTypeModel_ls
   for (az in Az) {
     #Calculate the single family housing proportion
     SFDU <- sum(L$Year$Bzone$SFDU[L$Year$Bzone$Azone == az])

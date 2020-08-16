@@ -43,22 +43,22 @@
 #--------------------------------------------------
 TdmModel_ls <- VELandUse::TdmModel_ls
 
-#Save the TDM model data
-#-----------------------
-#' Travel demand management models
-#'
-#' A list of components used to predict the reduction in household DVMT as a
-#' consequence of participation in individualized marketing programs and
-#' employee commute options programs
-#'
-#' @format A list containing two vectors:
-#' \describe{
-#'  \item{PropDvmtReduce}{named vector of the proportional reduction in DVMT due to TDM program participation (names are ECO and IMP)}
-#'  \item{PropMilesPerWkr}{named vector of the ratio of work tour DVMT per worker to total DVMT (names are household size 1 to 8)}
-#'  }
-#' @source AssignDemandManagement.R
-"TdmModel_ls"
-visioneval::savePackageDataset(TdmModel_ls, overwrite = TRUE)
+NULL # Don't need to save this - we'll go back to the well when needed
+# #Save the TDM model data
+# #-----------------------
+# #' Travel demand management models
+# #'
+# #' A list of components used to predict the reduction in household DVMT as a
+# #' consequence of participation in individualized marketing programs and
+# #' employee commute options programs
+# #'
+# #' @format A list containing two vectors:
+# #' \describe{
+# #'  \item{PropDvmtReduce}{named vector of the proportional reduction in DVMT due to TDM program participation (names are ECO and IMP)}
+# #'  \item{PropMilesPerWkr}{named vector of the ratio of work tour DVMT per worker to total DVMT (names are household size 1 to 8)}
+# #'  }
+# "TdmModel_ls"
+# visioneval::savePackageDataset(TdmModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -256,23 +256,24 @@ AssignDemandManagementSpecifications <- list(
   )
 )
 
-#Save the data specifications list
-#---------------------------------
-#' Specifications list for AssignDemandManagement module
-#'
-#' A list containing specifications for the AssignDemandManagement module.
-#'
-#' @format A list containing 4 components:
-#' \describe{
-#'  \item{RunBy}{the level of geography that the module is run at}
-#'  \item{Inp}{scenario input data to be loaded into the datastore for this
-#'  module}
-#'  \item{Get}{module inputs to be read from the datastore}
-#'  \item{Set}{module outputs to be written to the datastore}
-#' }
-#' @source AssignDemandManagement.R script.
-"AssignDemandManagementSpecifications"
-visioneval::savePackageDataset(AssignDemandManagementSpecifications, overwrite = TRUE)
+NULL # Don't need to save this - we'll go back to the well when needed
+# #Save the data specifications list
+# #---------------------------------
+# #' Specifications list for AssignDemandManagement module
+# #'
+# #' A list containing specifications for the AssignDemandManagement module.
+# #'
+# #' @format A list containing 4 components:
+# #' \describe{
+# #'  \item{RunBy}{the level of geography that the module is run at}
+# #'  \item{Inp}{scenario input data to be loaded into the datastore for this
+# #'  module}
+# #'  \item{Get}{module inputs to be read from the datastore}
+# #'  \item{Set}{module outputs to be written to the datastore}
+# #' }
+# #' @source AssignDemandManagement.R script.
+# "AssignDemandManagementSpecifications"
+# visioneval::savePackageDataset(AssignDemandManagementSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -378,6 +379,7 @@ AssignDemandManagement <- function(L) {
   #Calculate the proportion of household DVMT that is worker DVMT per worker
   HhSizeIdx_ <- L$Year$Household$HhSize
   HhSizeIdx_[HhSizeIdx_ > 8] <- 8
+  TdmModel_ls < VESimLandUse::TdmModel_ls
   PropMilesPerWkr_Hh <- TdmModel_ls$PropMilesPerWkr[HhSizeIdx_]
   #Calculate the proportional reduction in DVMT due to ECO participation
   EcoDvmtReduction_Hh <-

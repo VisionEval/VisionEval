@@ -333,9 +333,17 @@ savePackageDataset <- function(dataset,overwrite=TRUE,keep=FALSE,compress="xz") 
   file <- file.path("data",paste0(dsname,".rda"))
   build.phase <- toupper(Sys.getenv("VE_BUILD_PHASE","SAVE"))
   if ( build.phase == "SAVE" ) {
-    if ( file.exists(file) && ! overwrite ) {
-      message("Existing '",dsname,"' not overwritten due to overwrite=FALSE.")
-    } else {
+    if ( file.exists(file) ) {
+      if ( ! overwrite ) {
+        message("Existing '",dsname,"' not overwritten due to overwrite=FALSE.")
+      } else if ( Sys.getenv("VE_EXPRESS","NO")!="NO" ) {
+        message("Existing '",dsname,"' skipped for VE_EXPRESS.")
+        overwrite = FALSE
+      } else {
+        cat("Not overwriting, ") # May never get here if build re-creates src/ directory
+      }
+    }
+    if ( overwrite ) {
       cat("Saving '",dsname,"' to '",file,"' ... ",sep="")
       save(list=dsname,file=file,compress=compress,envir=parent.frame())
       if ( ! file.exists(file) ) { traceback(); stop("File NOT saved!\n") } else cat("Saved\n")

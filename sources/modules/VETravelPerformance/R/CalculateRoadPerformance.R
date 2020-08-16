@@ -882,6 +882,7 @@ visioneval::savePackageDataset(Access_df, overwrite = TRUE)
 #' @export
 calculateSpeeds <- function(OpsDeployment_, OtherOpsEffects_mx = NULL) {
   #Calculate recurring and non-recurring (incident-related) delay
+  BaseSpeeds_df <- VETravelPerformance::BaseSpeeds_df
   BaseTravelRate_mx <- 1 / as.matrix(BaseSpeeds_df)
   Delay_mx <-
     sweep(BaseTravelRate_mx, 2, BaseTravelRate_mx[1,], "-")
@@ -893,6 +894,10 @@ calculateSpeeds <- function(OpsDeployment_, OtherOpsEffects_mx = NULL) {
   )
   rm(Delay_mx)
   #Calculate operations management delay reduction effects
+  Ramp_df <- VETravelPerformance::Ramp_df
+  Incident_df <- VETravelPerformance::Incident_df
+  Signal_df <- VETravelPerformance::Signal_df
+  Access_df <- VETravelPerformance::Access_df
   RampFactor_mx <-
     1 - OpsDeployment_["RampMeterDeployProp"] * as.matrix(Ramp_df) / 100
   IncidentFactor_mx <-
@@ -1551,6 +1556,7 @@ CalculateRoadPerformance <- function(L) {
     LogPop = log1p(L$Year$Marea$UrbanPop),
     LnMiRatio = L$Year$Marea$FwyLaneMi / L$Year$Marea$ArtLaneMi
   )
+  DvmtSplit_LM <- VETravelPerformance::DvmtSplit_LM
   Lambda_Ma <- unname(predict(DvmtSplit_LM, newdata = DvmtSplitData_df))
   names(Lambda_Ma) <- Ma
   Lambda_Ma[Ma == "None"] <- NA

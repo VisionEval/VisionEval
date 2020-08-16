@@ -920,6 +920,8 @@ DivertSovTravel <- function(L) {
     #Calculate proportions of household DVMT in SOV tours of non-rural households
     #----------------------------------------------------------------------------
     #Calculate proportion of household DVMT in SOV tours
+    SovModel_ls <- VEHouseholdTravel::SovModel_ls
+
     SovDvmtProp_Hh <- applyLinearModel(SovModel_ls$SovPropModel, Hh_df)
     #Calculate proportion for non-rural households. Diversion to bike and
     #similar modes only considered reasonable for non-rural households
