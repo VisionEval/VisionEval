@@ -339,14 +339,14 @@ savePackageDataset <- function(dataset,overwrite=TRUE,keep=FALSE,compress="xz") 
       } else if ( Sys.getenv("VE_EXPRESS","NO")!="NO" ) {
         message("Existing '",dsname,"' skipped for VE_EXPRESS.")
         overwrite = FALSE
-      } else {
-        cat("Not overwriting, ") # May never get here if build re-creates src/ directory
       }
     }
     if ( overwrite ) {
       cat("Saving '",dsname,"' to '",file,"' ... ",sep="")
       save(list=dsname,file=file,compress=compress,envir=parent.frame())
       if ( ! file.exists(file) ) { traceback(); stop("File NOT saved!\n") } else cat("Saved\n")
+    } else {
+      cat("Not overwriting, ")
     }
   } else if (build.phase == "BUILD" ) {
     # During the BUILD phase, we won't keep the dataset unless explicitly requested.
