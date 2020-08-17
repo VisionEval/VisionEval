@@ -86,6 +86,8 @@ Is0D4 <- D4_df$D4c == 0
 
 #Save service ratio parameters values and average values by size for unlisted
 #----------------------------------------------------------------------------
+SimBzone_ls <- VESimLandUse::SimBzone_ls
+
 D4ServiceRatio_Ux <- UaD4_df$D4ServiceRatio
 names(D4ServiceRatio_Ux) <- rownames(UaD4_df)
 D4ServiceRatio_Sz <- tapply(UaD4_df$D4ServiceRatio, UaD4_df$UaSize, mean)

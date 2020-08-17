@@ -256,7 +256,6 @@ AssignDemandManagementSpecifications <- list(
   )
 )
 
-NULL # Don't need to save this - we'll go back to the well when needed
 # #Save the data specifications list
 # #---------------------------------
 # #' Specifications list for AssignDemandManagement module
@@ -272,8 +271,8 @@ NULL # Don't need to save this - we'll go back to the well when needed
 # #'  \item{Set}{module outputs to be written to the datastore}
 # #' }
 # #' @source AssignDemandManagement.R script.
-# "AssignDemandManagementSpecifications"
-# visioneval::savePackageDataset(AssignDemandManagementSpecifications, overwrite = TRUE)
+"AssignDemandManagementSpecifications"
+visioneval::savePackageDataset(AssignDemandManagementSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -379,7 +378,6 @@ AssignDemandManagement <- function(L) {
   #Calculate the proportion of household DVMT that is worker DVMT per worker
   HhSizeIdx_ <- L$Year$Household$HhSize
   HhSizeIdx_[HhSizeIdx_ > 8] <- 8
-  TdmModel_ls < VESimLandUse::TdmModel_ls
   PropMilesPerWkr_Hh <- TdmModel_ls$PropMilesPerWkr[HhSizeIdx_]
   #Calculate the proportional reduction in DVMT due to ECO participation
   EcoDvmtReduction_Hh <-

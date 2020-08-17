@@ -59,10 +59,8 @@ library(visioneval)
 #
 #Import bus equivalency factors
 
-BusEquivalents_df <- VETransportSupply::BusEquivalents_df
-NULL
-
 # #Save the bus equivalency factors
+# We'll just load these as needed below
 # #' Bus equivalency factors
 # #'
 # #' Bus revenue mile equivalency factors to convert revenue miles for various
@@ -96,36 +94,37 @@ NULL
 #' @import VETransportSupply
 #
 #Load the vehicle mile factors
-VehMiFactors_df <- VETransportSupply::VehMiFactors_df
-#Save the vehicle mile factors
-#' Revenue miles to vehicle miles conversion factors
-#'
-#' Vehicle mile factors convert revenue miles for various modes to vehicle
-#' miles for those modes.
-#'
-#' @format A data frame with 8 rows and 2 variables containing factors for
-#' converting revenue miles of various modes to vehicle miles.
-#' Mode names are 2-character codes corresponding to consolidated mode types.
-#' Consolidated mode types represent modes that have similar characteristics and
-#' bus equivalency values. The consolidate mode codes and their meanings are as
-#' follows:
-#' DR = Demand-responsive
-#' VP = Vanpool and similar
-#' MB = Standard motor bus
-#' RB = Bus rapid transit and commuter bus
-#' MG = Monorail/automated guideway
-#' SR = Streetcar/trolley bus/inclined plain
-#' HR = Heavy Rail/Light Rail
-#' CR = Commuter Rail/Hybrid Rail/Cable Car/Aerial Tramway
-#'
-#' \describe{
-#'   \item{Mode}{abbreviation for consolidated mode}
-#'   \item{VehMiFactors}{numeric factors for converting revenue miles to
-#'   vehicle miles}
-#' }
-#' @source AssignTransitService.R script.
-"VehMiFactors_df"
-visioneval::savePackageDataset(VehMiFactors_df, overwrite = TRUE)
+# Just load as needed below
+# Don't save locally: go back to the well if needed
+# #Save the vehicle mile factors
+# #' Revenue miles to vehicle miles conversion factors
+# #'
+# #' Vehicle mile factors convert revenue miles for various modes to vehicle
+# #' miles for those modes.
+# #'
+# #' @format A data frame with 8 rows and 2 variables containing factors for
+# #' converting revenue miles of various modes to vehicle miles.
+# #' Mode names are 2-character codes corresponding to consolidated mode types.
+# #' Consolidated mode types represent modes that have similar characteristics and
+# #' bus equivalency values. The consolidate mode codes and their meanings are as
+# #' follows:
+# #' DR = Demand-responsive
+# #' VP = Vanpool and similar
+# #' MB = Standard motor bus
+# #' RB = Bus rapid transit and commuter bus
+# #' MG = Monorail/automated guideway
+# #' SR = Streetcar/trolley bus/inclined plain
+# #' HR = Heavy Rail/Light Rail
+# #' CR = Commuter Rail/Hybrid Rail/Cable Car/Aerial Tramway
+# #'
+# #' \describe{
+# #'   \item{Mode}{abbreviation for consolidated mode}
+# #'   \item{VehMiFactors}{numeric factors for converting revenue miles to
+# #'   vehicle miles}
+# #' }
+# #' @source AssignTransitService.R script.
+# "VehMiFactors_df"
+# visioneval::savePackageDataset(VehMiFactors_df, overwrite = TRUE)
 
 #Load and save the D4c model parameters
 #--------------------------------------
@@ -134,11 +133,17 @@ visioneval::savePackageDataset(VehMiFactors_df, overwrite = TRUE)
 #Make a list to store model components
 D4cModels_ls <- list()
 #Load D4c percentiles by place type
+
+SimBzone_ls <- VESimLandUse::SimBzone_ls
+
 D4cModels_ls$NormD4_PtQt <- VESimLandUse::SimBzone_ls$UaProfiles$NormD4_PtQt
 #Load D4 supply ratios
 D4cModels_ls$D4SupplyRatio_Ua <- VESimLandUse::SimBzone_ls$UaProfiles$D4SupplyRatio_Ua
 #Load linear model to predict urbanized area average D4c value
 D4cModels_ls$AveD4cModel_ls <- VESimLandUse::SimBzone_ls$UaProfiles$AveD4cModel_ls
+
+rm(SimBzone_ls)
+
 #Save the D4c models
 #' D4c simulation models
 #'
@@ -405,6 +410,9 @@ SimulateTransitService <- function(L) {
   #------
   #Fix seed as synthesis involves sampling
   set.seed(L$G$Seed)
+
+  BusEquivalents_df <- VETransportSupply::BusEquivalents_df
+
   #Define vector of modes
   Md <- as.character(BusEquivalents_df$Mode)
   #Define vector of Mareas
@@ -436,6 +444,8 @@ SimulateTransitService <- function(L) {
   #Calculate vehicle miles by vehicle type
   #---------------------------------------
   #Make vector of vehicle miles factors conforming with RevMi_df
+  VehMiFactors_df <- VETransportSupply::VehMiFactors_df
+
   VehMiFactors_Md <- VehMiFactors_df$VehMiFactors
   names(VehMiFactors_Md) <- VehMiFactors_df$Mode
   VehMiFactors_Md <- VehMiFactors_Md[names(RevMi_df)]
@@ -465,6 +475,8 @@ SimulateTransitService <- function(L) {
   #Calculate Marea urban average D4c
   #---------------------------------
   #Get estimated average D4c values where exist
+  D4cModels_ls <- VESimTransportSupply::D4cModels_ls
+
   UaName_Ma <- setNames(L$Global$Marea$UzaProfileName, Ma)
   AveD4c_Ma <- setNames(numeric(length(Ma)), Ma)
   for (ma in Ma) {

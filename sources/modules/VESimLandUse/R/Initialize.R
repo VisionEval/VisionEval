@@ -1062,6 +1062,7 @@ Initialize <- function(L) {
 
   #Check each assigned UzaProfileName for consistency
   #--------------------------------------------------
+  UzaProfileNames_ls <- VESimLandUse::UzaProfileNames_ls
   UzaNames_ <- UzaProfileNames_ls$Names
   Marea_ <- L$Data$Global$Marea$Geo
   UzaProfileName_ <- L$Data$Global$Marea$UzaProfileName

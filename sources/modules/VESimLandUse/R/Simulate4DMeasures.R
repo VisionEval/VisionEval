@@ -421,6 +421,8 @@ Simulate4DMeasures <- function(L) {
 
   #Calculate pedestrian network design measure
   #-------------------------------------------
+  SimBzone_ls <- VESimLandUse::SimBzone_ls
+
   IsRural <- D_df$LocType == "Rural"
   IsTown <- D_df$LocType == "Town"
   IsUrban <- D_df$LocType == "Urban"
