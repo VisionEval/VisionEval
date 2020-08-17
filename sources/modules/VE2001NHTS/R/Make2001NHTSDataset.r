@@ -979,6 +979,3 @@ if ( exists( "Per_df" ) ) visioneval::savePackageDataset(Per_df, overwrite = TRU
 
 rm( list=grep("_$",ls(),value=TRUE) )
 rm( list=c("Ages_HhPr","Drvs_HhPr","Nhts2001Repo","ToursByHh_df","Transit2001_df","Wkrs_HhPr") )
-
-obj.sizes <- (sapply(ls(), function(x) object.size(get(x))))
-cat(paste0(paste(names(obj.sizes),obj.sizes,sep=": "),collapse="\n"),"\n")

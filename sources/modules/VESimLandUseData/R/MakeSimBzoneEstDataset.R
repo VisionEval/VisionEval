@@ -535,7 +535,7 @@ if ( dir.exists("data-raw") ) {
 
   SimLandUseData_df <- createSimLandUseDataset()
 } else {
-  load("SimLandUseData_df.rda")
+  load("data/SimLandUseData_df.rda")
 }
 
 #Process and save the sim land use model estimation data if not already done

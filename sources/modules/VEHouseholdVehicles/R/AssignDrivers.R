@@ -161,6 +161,7 @@ DriverModel_ls <- list(
   Metro = MetroDriverModel_ls,
   NonMetro = NonMetroDriverModel_ls
 )
+rm(D_df)
 
 #Save the driver choice model
 #----------------------------
@@ -499,6 +500,8 @@ AssignDrivers <- function(L) {
 
   #Function to make a model dataset for an age bin
   #-----------------------------------------------
+  Hh_df <- VE2001NHTS::Hh_df
+  
   makeModelDataset <- function(Bin) {
     # Make data frame for households that have persons in the age group
     Hh_df <- data.frame(

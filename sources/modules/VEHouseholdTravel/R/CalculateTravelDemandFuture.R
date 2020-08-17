@@ -26,14 +26,14 @@ NULL
 ## Use estimation data set to create models
 
 
-#Load Dvmt assignment models
-load("data/DvmtLmModels_ls.rda")
-
-#Load PHEV/HEV model data
-load("data/PhevModelData_ls.rda")
-
-#Load default values for Travel Demand module
-load("./data/TravelDemandDefaults_ls.rda")
+# #Load Dvmt assignment models
+# load("data/DvmtLmModels_ls.rda")
+# 
+# #Load PHEV/HEV model data
+# load("data/PhevModelData_ls.rda")
+# 
+# #Load default values for Travel Demand module
+# load("./data/TravelDemandDefaults_ls.rda")
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS

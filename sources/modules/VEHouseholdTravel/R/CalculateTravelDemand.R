@@ -2221,9 +2221,8 @@ CalculateTravelDemand <- function(L) {
   # Calculate average electricity CO2e per KWh
   #---------------------------------------------
   if(!"Electricity" %in% L$Global$Fuel$Fuel){
-    if(!exists("TravelDemandDefaults_ls")){
-      TravelDemandDefaults_ls <- VEHouseholdTravel::TravelDemandDefaults_ls
-    }
+    TravelDemandDefaults_ls <- VEHouseholdTravel::TravelDemandDefaults_ls
+
     CI_df <- TravelDemandDefaults_ls$CarbonIntensity_df
     RegionName_ <- strsplit(L$G$Region, " ")[[1]]
     StateCode_ <- L$G$State
