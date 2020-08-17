@@ -257,7 +257,8 @@ for ( module in seq_along(package.names) ) {
   if ( ! package.built ) {
     if ( debug>1 ) {
       # Dump list of package source files if debugging
-      pkg.files <- file.path(package.paths[module],dir(package.paths[module],recursive=TRUE))
+      pkg.files <- file.path(package.paths[module],dir(package.paths[module],recursive=TRUE,all.files=TRUE))
+      if ( ! any(grepl("Rbuildignore",pkg.files)) ) stop("No .Rbuildignore for package ",package.names[module])
       cat(paste("Copying",pkg.files,"to",build.dir,"\n",sep=" "),sep="")
     } else {
       cat("++++++++++ Copying module source",package.paths[module],"to build/test environment...\n")

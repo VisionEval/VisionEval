@@ -1,288 +1,0 @@
-nohup: ignoring input
-R_HOME = C:/Users/Jeremy.Raw/R\R-4.0.2 
-R Version     : R 4.0.2 [using "C:/Users/Jeremy.Raw/R/R-4.0.2/bin/x64/R.exe"]
-Configuration : config/VE-config.yml
-Git Branch    : visioneval
-[[ -n "C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/dev/logs/visioneval/4.0.2" ]] && rm -rf C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/dev/logs/visioneval/4.0.2/*
-rm -f ve-output-visioneval-4.0.2.make
-: Build Environment:
-:     R Version = 4.0.2
-: Configuration = config/VE-config.yml
-:    Git branch = visioneval
-"C:/Users/Jeremy.Raw/R/R-4.0.2/bin/x64/R.exe" --vanilla --slave --quiet --no-init-file -f scripts/build-config.R
-========== BUILD CONFIGURATION ==========
-Setting build to current directory.
-Building for R version 4.0.2 
-Loading Configuration File: config/VE-config.yml 
-Using branch via environment: visioneval 
-Building in (and around) C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/built 
-Logging into C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/dev/logs/visioneval/4.0.2 
-make.target: C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/build/ve-output-visioneval-4.0.2.make 
-Loading Components...
-Parsing dependencies...
-
-Saving runtime configuration to:
-C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/dev/logs/visioneval/4.0.2/dependencies.RData
-"C:/Users/Jeremy.Raw/R/R-4.0.2/bin/x64/R.exe" --vanilla --slave --quiet --no-init-file -f scripts/build-repository.R
-Loading required package: tools
-========== GATHER DEPENDENCIES (CRAN / BioConductor) ==========
-Repository location: C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/built/visioneval/4.0.2/pkg-dependencies 
-VE dependency repository up to date with BioConductor
-"C:/Users/Jeremy.Raw/R/R-4.0.2/bin/x64/R.exe" --vanilla --slave --quiet --no-init-file -f scripts/build-external.R
-========== BUILD EXTERNAL (GITHUB) DEPENDENCIES ==========
-No external packages configured.
-"C:/Users/Jeremy.Raw/R/R-4.0.2/bin/x64/R.exe" --vanilla --slave --quiet --no-init-file -f scripts/build-velib.R
-========== BUILD RUNTIME LIBRARY ==========
-All dependencies accounted for in ve-lib (C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/built/visioneval/4.0.2/ve-lib)
-"C:/Users/Jeremy.Raw/R/R-4.0.2/bin/x64/R.exe" --vanilla --slave --quiet --no-init-file -f scripts/build-framework.R
-========== BUILD FRAMEWORK ==========
-Existing framework binary package: visioneval (Already Installed) 
-Framework source package up to date
-Framework binary package up to date
-++++++++++ Done building  and installing VisionEval framework.
-"C:/Users/Jeremy.Raw/R/R-4.0.2/bin/x64/R.exe" --vanilla --slave --quiet --no-init-file -f scripts/build-modules.R
-========== BUILD MODULES ==========
-Existing binary package: VE2001NHTS (Already Installed) 
-Existing binary package: VEScenario (Already Installed) 
-++++++++++ UPDATING package VESimHouseholds 
-from C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/sources/modules/VESimHouseholds (Exists:  TRUE )
-VESimHouseholds is NOT built
-VESimHouseholds is NOT installed
-Removing obsolete module package version: 2.0.0 
-++++++++++ Copying module source C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/sources/modules/VESimHouseholds to build/test environment...
-Ignoring pre-built data files in data/ directory
-[1] "data/AssignLifeCycleSpecifications.rda" 
-[2] "data/CreateHouseholdsSpecifications.rda"
-[3] "data/GQIncModel_ls.rda"                 
-[4] "data/Hh_df.rda"                         
-[5] "data/HHIncModel_ls.rda"                 
-[6] "data/HtProb_HtAp.rda"                   
-[7] "data/PredictIncomeSpecifications.rda"   
-[8] "data/PredictWorkersSpecifications.rda"  
-[9] "data/PropHhWkr_HtAg.rda"                
-++++++++++ Pre-build / Document VESimHouseholds
-in C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/built/visioneval/4.0.2/src/VESimHouseholds
-Updating VESimHouseholds documentation
-Loading required package: visioneval
-Saving 'Hh_df' to 'data/Hh_df.rda' ... Saved
-Saving 'HtProb_HtAp' to 'data/HtProb_HtAp.rda' ... Saved
-Saving 'CreateHouseholdsSpecifications' to 'data/CreateHouseholdsSpecifications.rda' ... Saved
-Saving 'PropHhWkr_HtAg' to 'data/PropHhWkr_HtAg.rda' ... Saved
-Saving 'PredictWorkersSpecifications' to 'data/PredictWorkersSpecifications.rda' ... Saved
-Saving 'HHIncModel_ls' to 'data/HHIncModel_ls.rda' ... Saved
-Saving 'GQIncModel_ls' to 'data/GQIncModel_ls.rda' ... Saved
-Saving 'PredictIncomeSpecifications' to 'data/PredictIncomeSpecifications.rda' ... Saved
-Saving 'AssignLifeCycleSpecifications' to 'data/AssignLifeCycleSpecifications.rda' ... Saved
-Writing NAMESPACE
-Writing NAMESPACE
-Writing Hh_df.Rd
-Writing HtProb_HtAp.Rd
-Writing CreateHouseholdsSpecifications.Rd
-Writing createHhByAge.Rd
-Writing PropHhWkr_HtAg.Rd
-Writing PredictWorkersSpecifications.Rd
-Writing HHIncModel_ls.Rd
-Writing GQIncModel_ls.Rd
-Writing PredictIncomeSpecifications.Rd
-Writing AssignLifeCycleSpecifications.Rd
-++++++++++ Checking and pre-processing VESimHouseholds
-in C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/built/visioneval/4.0.2/src/VESimHouseholds
--- Building ------------------------------------------------- VESimHouseholds --
-Setting env vars:
-* CFLAGS    : -Wall -pedantic
-* CXXFLAGS  : -Wall -pedantic
-* CXX11FLAGS: -Wall -pedantic
---------------------------------------------------------------------------------
-      v  checking for file 'C:\Users\jeremy.raw\Git-Repos\VisionEval-dev-nextgen\built\visioneval\4.0.2\src\VESimHouseholds/DESCRIPTION'
-      -  preparing 'VESimHouseholds':
-   checking DESCRIPTION meta-information ...     checking DESCRIPTION meta-information ...   v  checking DESCRIPTION meta-information
-      -  checking for LF line-endings in source and make files and shell scripts
-      -  checking for empty or unneeded directories
-      -  building 'VESimHouseholds_2.0.0.tar.gz'
-     
--- Checking ------------------------------------------------- VESimHouseholds --
-Setting env vars:
-* _R_CHECK_CRAN_INCOMING_REMOTE_: FALSE
-* _R_CHECK_CRAN_INCOMING_       : FALSE
-* _R_CHECK_FORCE_SUGGESTS_      : FALSE
-* NOT_CRAN                      : true
--- R CMD check -----------------------------------------------------------------
-* using log directory 'C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/built/visioneval/4.0.2/src/VESimHouseholds/VESimHouseholds.Rcheck'
-* using R version 4.0.2 (2020-06-22)
-* using platform: x86_64-w64-mingw32 (64-bit)
-* using session charset: ISO8859-1
-* using options '--no-manual --as-cran'
-* checking for file 'VESimHouseholds/DESCRIPTION' ... OK
-* checking extension type ... Package
-* this is package 'VESimHouseholds' version '2.0.0'
-* checking package namespace information ... OK
-* checking package dependencies ... OK
-* checking if this is a source package ... OK
-* checking if there is a namespace ... OK
-* checking for executable files ... OK
-* checking for hidden files and directories ... OK
-* checking for portable file names ... OK
-* checking whether package 'VESimHouseholds' can be installed ... OK
-* checking installed package size ... NOTE
-  installed size is 22.1Mb
-  sub-directories of 1Mb or more:
-    R         4.9Mb
-    data     11.3Mb
-    extdata   5.7Mb
-* checking package directory ... OK
-* checking for future file timestamps ... OK
-* checking DESCRIPTION meta-information ... OK
-* checking top-level files ... OK
-* checking for left-over files ... OK
-* checking index information ... OK
-* checking package subdirectories ... OK
-* checking R files for non-ASCII characters ... OK
-* checking R files for syntax errors ... OK
-* checking whether the package can be loaded ... OK
-* checking whether the package can be loaded with stated dependencies ... OK
-* checking whether the package can be unloaded cleanly ... OK
-* checking whether the namespace can be loaded with stated dependencies ... OK
-* checking whether the namespace can be unloaded cleanly ... OK
-* checking loading without being on the library search path ... OK
-* checking dependencies in R code ... OK
-* checking S3 generic/method consistency ... OK
-* checking replacement functions ... OK
-* checking foreign function calls ... OK
-* checking R code for possible problems ... NOTE
-PredictWorkers : <local>: no visible binding for global variable 'Year'
-Undefined global functions or variables:
-  Year
-* checking Rd files ... OK
-* checking Rd metadata ... OK
-* checking Rd line widths ... OK
-* checking Rd cross-references ... OK
-* checking for missing documentation entries ... OK
-* checking for code/documentation mismatches ... OK
-* checking Rd \usage sections ... OK
-* checking Rd contents ... OK
-* checking for unstated dependencies in examples ... OK
-* checking contents of 'data' directory ... OK
-* checking data for non-ASCII characters ... OK
-* checking data for ASCII and uncompressed saves ... OK
-* checking examples ... NONE
-* checking for non-standard things in the check directory ... OK
-* checking for detritus in the temp directory ... OK
-* DONE
-
-Status: 2 NOTEs
-See
-  'C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/built/visioneval/4.0.2/src/VESimHouseholds/VESimHouseholds.Rcheck/00check.log'
-for details.
-
-
-++++++++++ Check results
--- R CMD check results ------------------------------ VESimHouseholds 2.0.0 ----
-Duration: 1m 28.8s
-
-> checking installed package size ... NOTE
-    installed size is 22.1Mb
-    sub-directories of 1Mb or more:
-      R         4.9Mb
-      data     11.3Mb
-      extdata   5.7Mb
-
-> checking R code for possible problems ... NOTE
-  PredictWorkers : <local>: no visible binding for global variable 'Year'
-  Undefined global functions or variables:
-    Year
-
-0 errors v | 0 warnings v | 2 notes x
-
-Not running tests.
-
-obsolete: VESimHouseholds_2.0.0.tar.gz 
-         checking for file 'C:\Users\jeremy.raw\Git-Repos\VisionEval-dev-nextgen\built\visioneval\4.0.2\src\VESimHouseholds/DESCRIPTION' ...  v  checking for file 'C:\Users\jeremy.raw\Git-Repos\VisionEval-dev-nextgen\built\visioneval\4.0.2\src\VESimHouseholds/DESCRIPTION'
-      -  preparing 'VESimHouseholds':
-   checking DESCRIPTION meta-information ...     checking DESCRIPTION meta-information ...   v  checking DESCRIPTION meta-information
-      -  checking for LF line-endings in source and make files and shell scripts
-      -  checking for empty or unneeded directories
-      -  building 'VESimHouseholds_2.0.0.tar.gz'
-     
-building VESimHouseholds from C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/built/visioneval/4.0.2/src/VESimHouseholds as win.binary 
-building into C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/built/visioneval/4.0.2/pkg-ve-repo/bin/windows/contrib/4.0 
-obsolete: VESimHouseholds_2.0.0.zip 
-  -  installing to library 'C:/Users/jeremy.raw/rtools40/tmp/Rtmp2zyNxl/temp_libpath317c3e5763d'
-  -  installing *source* package 'VESimHouseholds' ...
-     ** using staged installation
-     ** R
-     ** data
-     *** moving datasets to lazyload DB
-     ** inst
-     ** byte-compile and prepare package for lazy loading
-     Removed Hh_df in R/ space
-   Removed HtProb_HtAp in R/ space
-   Removed CreateHouseholdsSpecifications in R/ space
-   Removed PropHhWkr_HtAg in R/ space
-   Removed PredictWorkersSpecifications in R/ space
-   Removed HHIncModel_ls in R/ space
-   Removed GQIncModel_ls in R/ space
-   Removed PredictIncomeSpecifications in R/ space
-   Removed AssignLifeCycleSpecifications in R/ space
-     ** help
-     *** installing help indices
-     converting help for package        converting help for package 'VESimHouseholds'
-     finding HTML links ...         finding HTML links ... done
-              AssignLifeCycle                         html           AssignLifeCycle                         html  
-       AssignLifeCycleSpecifications           html           AssignLifeCycleSpecifications           html  
-       CreateHouseholds                        html           CreateHouseholds                        html  
-       CreateHouseholdsSpecifications          html           CreateHouseholdsSpecifications          html  
-       GQIncModel_ls                           html           GQIncModel_ls                           html  
-       HHIncModel_ls                           html           HHIncModel_ls                           html  
-       Hh_df                                   html           Hh_df                                   html  
-       HtProb_HtAp                             html           HtProb_HtAp                             html  
-       PredictIncome                           html           PredictIncome                           html  
-       PredictIncomeSpecifications             html           PredictIncomeSpecifications             html  
-       PredictWorkers                          html           PredictWorkers                          html  
-       PredictWorkersSpecifications            html           PredictWorkersSpecifications            html  
-       PropHhWkr_HtAg                          html           PropHhWkr_HtAg                          html  
-       createGrpHhByAge                        html  
-       createHhByAge                           html  
-       estimateIncomeModel                     html  
-   ** building package indices
-     ** testing if installed package can be loaded from temporary location
-     *** arch - i386
-     *** arch - x64
-     ** testing if installed package can be loaded from final location
-     *** arch - i386
-     *** arch - x64
-     ** testing if installed package keeps a record of temporary installation path
-  -  MD5 sums
-     packaged installation of 'VESimHouseholds' as VESimHouseholds_2.0.0.zip
-  -  DONE (VESimHouseholds)
-++++++++++ Installing built package: C:/Users/jeremy.raw/Git-Repos/VisionEval-dev-nextgen/built/visioneval/4.0.2/pkg-ve-repo/bin/windows/contrib/4.0/VESimHouseholds_2.0.0.zip 
-package 'VESimHouseholds' successfully unpacked and MD5 sums checked
-Existing binary package: VESimLandUseData (Already Installed) 
-Existing binary package: VESyntheticFirms (Already Installed) 
-Existing binary package: VETransportSupply (Already Installed) 
-Existing binary package: VETransportSupplyUse (Already Installed) 
-Existing binary package: VEHouseholdTravel (Already Installed) 
-Existing binary package: VEHouseholdVehicles (Already Installed) 
-Existing binary package: VELandUse (Already Installed) 
-Existing binary package: VETravelDemandMM (Already Installed) 
-Existing binary package: VEPowertrainsAndFuels (Already Installed) 
-Existing binary package: VEReports (Already Installed) 
-Existing binary package: VESimLandUse (Already Installed) 
-Existing binary package: VESimTransportSupply (Already Installed) 
-Existing binary package: VETravelPerformance (Already Installed) 
-Warning message:
-roxygen2 requires Encoding: UTF-8 
-Warning message:
-roxygen2 requires Encoding: UTF-8
-Writing source PACKAGES file
-Writing binary PACKAGES file
-++++++++++ Done building  and installing VisionEval packages.
-"C:/Users/Jeremy.Raw/R/R-4.0.2/bin/x64/R.exe" --vanilla --slave --quiet --no-init-file -f scripts/build-runtime.R
-========== BUILD RUNTIME ENVIRONMENT (scripts, models) ==========
-Copying boilerplate files...
-Boilerplate runtime is up to date
-Script sources...
-Script files are up to date.
-Model sources...
-Model files are up to date.
-Runtime setup is complete.
-Build complete
