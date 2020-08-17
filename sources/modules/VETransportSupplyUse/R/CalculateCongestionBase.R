@@ -6,8 +6,8 @@
 # and other roadways.
 
 
-
-library(visioneval)
+# Only for testing
+# library(visioneval)
 
 #=============================================
 #SECTION 1: ESTIMATE AND SAVE MODEL PARAMETERS
@@ -20,6 +20,7 @@ CongModel_name <-
     system.file("extdata", "CongModel_ls.Rdata", package = "VETransportSupplyUse")
   }
 load(CongModel_name)
+visioneval::savePackageDataset(CongModel_ls, overwrite = TRUE)
 
 #' Congestion models and required parameters.
 #'

@@ -86,7 +86,7 @@ visioneval::savePackageDataset(DvmtLmModels_ls, overwrite = TRUE)
 #Load PHEV/HEV model data object
 if ( dir.exists("data-raw") ) {
   load("data-raw/PhevModelData_ls.rda")
-} else {
+} else if ( file.exists("data/PhevModelData_ls.rda") ) {
   load("data/PhevModelData_ls.rda")
 }
 
@@ -2141,6 +2141,8 @@ CalculateTravelDemand <- function(L) {
   EvRangePropYr_df[,RangeNames_] <- apply(EvRangePropYr_df[,RangeNames_], 2, as.integer)
   EvRangePropYr_df <- EvRangePropYr_df[, c("AutoRange", "AutoPropEv", "AutoMpkwh", "LtTruckRange",
                                            "LtTruckPropEv", "LtTruckMpkwh")]
+
+  PhevModelData_ls <- VEHouseholdTravel::PhevModelData_ls
 
   PhevResults_ <- assignPHEV(Hh_df = Hh_df[HasVeh_Hh, HhVar_],
                              Veh_df = Vehicles_df[, VehVar_],
