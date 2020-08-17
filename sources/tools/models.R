@@ -10,7 +10,6 @@
 # https://www.tidyverse.org/blog/2019/11/roxygen2-7-0-0/#r6-documentation
 # https://roxygen2.r-lib.org/articles/rd.html#r6
 
-# tool.contents <- c("openModel","verpat","verspm","vestate","go")
 tool.contents <- c("openModel","verpat","verspm","vestate","go")
 
 requireNamespace("jsonlite")
@@ -116,11 +115,6 @@ ve.run.model <- function(verbose=TRUE,path=NULL) {
   for ( ms in stageStart:self$stageCount ) {
     stage <- self$modelPath[ms]
     if ( verbose ) {
-      if ( is.na(stage) ) {
-        message("ms: ",ms)
-        message("stageStart: ",stageStart)
-        stop("bad first stage")
-      }
       message("Running model stage:")
       message(stage)
     }
@@ -170,6 +164,7 @@ ve.run.model <- function(verbose=TRUE,path=NULL) {
     if (verbose) {
       cat("Status:",self$status,"\n")
     }
+    if ( self$status != "Complete" ) break;
   }
   self$modelState <- lapply(
     self$modelPath,
@@ -259,8 +254,9 @@ ve.model.copy <- function(newName=NULL,newPath=NULL) {
     } else {
       newPath <- dirname(self$modelPath[1])
     }
+  } else {
+    if ( ! dir.exists(newPath) ) newPath <- dirname(newPath)
   }
-  if ( ! dir.exists(newPath) ) newPath <- dirname(newPath)
   newPath <- normalizePath(newPath,winslash="/",mustWork=TRUE)
   if ( is.null(newName) ) newName <- paste0(self$modelName,"-Copy")
   newModelPath <- file.path(newPath,newName)
@@ -270,15 +266,21 @@ ve.model.copy <- function(newName=NULL,newPath=NULL) {
     newModelPath <- file.path(newPath,tryName)
     try <- try+1
   }
+  get.destination <- if ( self$stageCount == 1 ) {
+    function(modelPath,...) modelPath
+  } else {
+    function(modelPath,basenameStage) file.path(modelPath,basenameStage)
+  }
   newModelPath <- normalizePath(newModelPath,winslash="/",mustWork=FALSE)
   dir.create(newModelPath,showWarnings=FALSE)
   for ( p in 1:self$stageCount ) {
     copy.from <- setdiff(self$dir(path=p),private$artifacts(path=p))
-    copy.to <- newModelPath # file.path(newModelPath,basename(self$modelPath[p]))
+    copy.to <- get.destination(newModelPath,basename(self$modelPath[p]))
     print(copy.to)
     dir.create(copy.to,showWarnings=FALSE)
     file.copy(copy.from,copy.to,recursive=TRUE)
   }
+    
   return( openModel(newModelPath,newName) )
 }
 
@@ -705,4 +707,14 @@ vestate <- function(staged=FALSE) {
   }
   model$run()
   model
+}
+
+go <- function(clear=1,path=1,verbose=TRUE) {
+  if ( ! dir.exists("models/JRSPM") ) {
+    rspm <- openModel("VERSPM")$copy("JRSPM")
+  } else {
+    rspm <- openModel("JRSPM")
+    rspm$clear(force=TRUE,path=clear)
+  }
+  rspm$run(path=path,verbose)
 }
