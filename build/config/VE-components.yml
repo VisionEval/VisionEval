@@ -229,6 +229,8 @@ Components:
     Type: script
     Path: sources
     CRAN:
+      - futile.logger
+      - tryCatchLog
       - import
       - R6
       - jsonlite

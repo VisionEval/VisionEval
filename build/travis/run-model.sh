@@ -9,9 +9,22 @@ then
   export R_LIBS_USER=${BUILD_LIB}:${R_LIBS_USER}
 fi
 
-MODEL_DIR=$(dirname $1)
+MODEL_PATH=$1
+MODEL_DIR=$(dirname $MODEL_PATH)
 MODEL_DIR=${MODEL_DIR:-.}
 
-pushd ${MODEL_DIR}
-Rscript -e "tryCatch( source('$(basename $1)') )"
-popd
+RUNNER=/sources/tools/models.R
+
+echo Running R to run the model...
+Rscript -e << RUNSCRIPT
+tryCatch( {
+  require(visioneval,quietly=TRUE)
+  cat("Importing model API\n")
+  import::here(openModel,.from='$RUNNER')
+  ve.runtime <- '/sources'
+  model <- openModel('$MODEL_PATH')
+  cat("Running model",model\$modelName,"\n")
+  model\$run()
+  }
+)
+RUNSCRIPT

@@ -10,11 +10,13 @@
 # https://www.tidyverse.org/blog/2019/11/roxygen2-7-0-0/#r6-documentation
 # https://roxygen2.r-lib.org/articles/rd.html#r6
 
-tool.contents <- c("openModel","verpat","verspm","vestate","go")
+tool.contents <- c("openModel","verpat","verspm","vestate")
 
 requireNamespace("jsonlite")
 requireNamespace("R6")
 requireNamespace("visioneval")
+requireNamespace("futile.logger")
+requireNamespace("tryCatchLog")
 
 # Function: ve.model.path
 # Determine if parameter is a list of locations of run_model.R riles
@@ -125,7 +127,8 @@ ve.run.model <- function(verbose=TRUE,path=NULL) {
       envir <- as.environment("ve.model")
     }
     self$status <- ""
-    tryCatch(
+    futile.logger::flog.threshold(futile.logger::WARN)
+    tryCatchLog::tryCatchLog(
       {
         self$status <- "Running"
         sys.source("run_model.R",envir=envir)
@@ -707,14 +710,4 @@ vestate <- function(staged = FALSE) {
   }
   model$run()
   model
-}
-
-go <- function(clear=1,path=1,verbose=TRUE) {
-  if ( ! dir.exists("models/JRSPM") ) {
-    rspm <- openModel("VERSPM")$copy("JRSPM")
-  } else {
-    rspm <- openModel("JRSPM")
-    rspm$clear(force=TRUE,path=clear)
-  }
-  rspm$run(path=path,verbose)
 }

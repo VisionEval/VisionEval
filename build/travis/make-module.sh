@@ -16,18 +16,12 @@ then
 fi
 
 pushd $1
-rm -rf inst/module_docs # Don't need these for testing; just confuses devtools::check
+mkdir -p data  # No error if already exists, but must exist to document/install
 
 # TEST_SCRIPT=${2:-${VE_SCRIPT:-tests/scripts/test.R}}
 # echo TEST_SCRIPT=${TEST_SCRIPT}
-Rscript -e "devtools::check('.',cran=FALSE,error_on='error')"
-# if [ -f ${TEST_SCRIPT} ]
-# then
-# 	echo Executing ${TEST_SCRIPT} in $(pwd)
-# 	Rscript -e "tryCatch( source('${TEST_SCRIPT}') )"
-# else
-# 	echo ${TEST_SCRIPT} does not exist in $(pwd)
-# fi
+echo Documenting "(basename $(pwd))"
+Rscript -e "devtools::document()" # estimates models, creates NAMESPACE, help docs
 echo Installing "$(basename $(pwd))" to ${BUILD_LIB}
 R CMD INSTALL -l "${BUILD_LIB}" . # Save the installed package for later use
 popd
