@@ -13,18 +13,22 @@ MODEL_PATH=$1
 MODEL_DIR=$(dirname $MODEL_PATH)
 MODEL_DIR=${MODEL_DIR:-.}
 
-RUNNER=/sources/tools/models.R
+RUNNER=sources/tools/models.R
 
-echo Running R to run the model...
-Rscript -e << RUNSCRIPT
+echo Running the model...
+echo Model Path ${MODEL_PATH}
+cat >run-script.R <<RUNSCRIPT
 tryCatch( {
   require(visioneval,quietly=TRUE)
   cat("Importing model API\n")
-  import::here(openModel,.from='$RUNNER')
-  ve.runtime <- '/sources'
-  model <- openModel('$MODEL_PATH')
+  import::here(openModel,.from='${RUNNER}')
+  ve.runtime <- 'sources'
+  model <- openModel('${MODEL_PATH}')
   cat("Running model",model\$modelName,"\n")
   model\$run()
-  }
+  },
+  error=function(e) { print(e); quit(status=1) }
 )
 RUNSCRIPT
+echo Processed Run Script:
+R --vanilla --slave --quiet -f run-script.R

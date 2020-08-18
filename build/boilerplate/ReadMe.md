@@ -1,10 +1,7 @@
-# Boilerplat Folder
+# Boilerplate Folder
 
-The `boilerplate` consists of scripts that are copied into the runtime
-root folder.  The scripts will install the runtime library for the current
-platform and set up an .RData file the loads the VisionEval framework.
+The `boilerplate` consists of assets that are used in the build process, but are
+not part of the end-user source.  The only remaining boilerplate asset right now
+is the base HTML file used to construct the visual_docs viewer (only available
+on the develoepr side after building the "docs" target).
 
-The `build-runtime.R` in the `scripts` directory simply copies these
-into the runtime root where they can be used to activate the
-developer's built runtime environment, or zipped up into both the
-online and offline installers.

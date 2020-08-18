@@ -518,7 +518,7 @@ evalq(
   catn("Parsing dependencies...\n")
 
   pkgs.db <- data.frame(Type="Type",Package="Package",Target="Target",Root="Root",Path="Path",Group=0,Test="Test")
-  save.types <- c("framework","module","model","script","test","docs")
+  save.types <- c("framework","module","model","runtime","script","test","docs")
   # iterate over build.comps, creating dependencies
   for ( pkg in names(build.comps) ) {
     it <- build.comps[[pkg]]
@@ -588,6 +588,7 @@ evalq(
   pkgs.framework <- which(pkgs.db$Type=="framework")
   pkgs.module    <- which(pkgs.db$Type=="module")
   pkgs.model     <- which(pkgs.db$Type=="model")
+  pkgs.runtime   <- which(pkgs.db$Type=="runtime")
   pkgs.script    <- which(pkgs.db$Type=="script")
   pkgs.test      <- which(pkgs.db$Type=="test")
   pkgs.docs      <- which(pkgs.db$Type=="docs")
@@ -631,6 +632,7 @@ evalq(
     , "pkgs.framework"
     , "pkgs.module"
     , "pkgs.model"
+    , "pkgs.runtime"
     , "pkgs.script"
     , "pkgs.test"
     , "pkgs.docs"

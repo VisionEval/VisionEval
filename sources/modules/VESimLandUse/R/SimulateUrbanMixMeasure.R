@@ -54,6 +54,12 @@
 #' @import visioneval
 #' @import VELandUse
 
+# TODO: it's bad practice to make a second dataset with the same name
+# as in another package. Is VELandUse ever not loaded when we do
+# VESimLandUse - the implication here is that it is, but there's no
+# way to enforce that. There's not evidence that is ever used except
+# locally.
+
 #Load the urban mixed-use model estimated by the CalculateUrbanMixMeasure
 #module in the VELandUse package
 #------------------------------------------------------------------------
@@ -77,7 +83,6 @@ UrbanMixModel_ls <- VELandUse::UrbanMixModel_ls
 #' @source CalculateUrbanMixMeasure.R script.
 "UrbanMixModel_ls"
 visioneval::savePackageDataset(UrbanMixModel_ls, overwrite = TRUE)
-
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -298,7 +303,7 @@ idUrbanMixBzones <- function(Hh_BzHt, Den_Bz, Target) {
   Bz <- names(Den_Bz)
   Hh_BzHt <- Hh_BzHt[Bz,]
   Hh_Bz <- rowSums(Hh_BzHt)
-  UrbanMixModel_ls <- VESimLandUse::UrbanMixModel_ls
+  UrbanMixModel_ls <- VELandUse::UrbanMixModel_ls
   #Calculate probabilities by Bzone for SF and Mf
   Prob_BzHt <- 0 * Hh_BzHt
   Prob_BzHt[,"SFDU"] <-

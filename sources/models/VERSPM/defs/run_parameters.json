@@ -7,14 +7,5 @@
   "Years": ["2010", "2038"],
   "DatastoreName": "Datastore",
   "DatastoreType": "RD",
-  "Seed": 1,
-  "RequiredVEPackages": [
-    "VESimHouseholds",
-    "VELandUse",
-    "VETransportSupply",
-    "VEHouseholdVehicles",
-    "VEHouseholdTravel",
-    "VEPowertrainsAndFuels",
-    "VETravelPerformance"
-  ]
+  "Seed": 1
 }

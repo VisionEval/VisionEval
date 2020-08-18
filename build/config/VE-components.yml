@@ -199,6 +199,14 @@ Components:
     Type: model
     Path: sources/models
 
+# "Type: runtime" components are copied recursively to the runtime root
+# Their name is used to find them under the Path but unlike "script" components
+#   no subdirectory is created
+
+  runtime:
+    Type: runtime
+    Path: sources # copies sources/runtime/* to ve.runtime
+
 # "Type: script" components are copied to the runtime root under their name
   LICENSE:
     Type: script

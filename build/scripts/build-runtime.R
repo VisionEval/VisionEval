@@ -14,9 +14,6 @@ message("========== BUILD RUNTIME ENVIRONMENT (scripts, models) ==========")
 
 # Copy the runtime boilerplate
 
-# Set the boilperplate folder
-ve.boilerplate <- file.path(ve.installer,"boilerplate")
-
 # Get the boilerplate files from boilerplate.lst
 # boilerplate.lst just contains a list of the files to copy to runtime separated by
 # whitespace (easiest just to do one file/directory name per line.
@@ -24,33 +21,56 @@ ve.boilerplate <- file.path(ve.installer,"boilerplate")
 # Copy the boilerplate files, checking to see if what we expected was there.
 # WARNING: this won't work with boilerplate **directories**, only **files**
 
-bp.file.list <- scan(file=file.path(ve.boilerplate, "boilerplate.lst"),
-                     quiet=TRUE, what=character())
+# cat("Copying boilerplate files...\n")
+# # Set the boilperplate folder
+# ve.boilerplate <- file.path(ve.installer,"boilerplate")
+# 
+# # bp.file.list <- scan(file=file.path(ve.boilerplate, "boilerplate.lst"),
+#                      quiet=TRUE, what=character())
+# 
+# bp.files <- file.path(ve.boilerplate, bp.file.list)
+# if ( length(bp.files) > 0 ) {
+#   any.newer <- FALSE
+#   for ( f in bp.files ) {
+#     any.newer <- any( any.newer, newerThan(f,file.path(ve.runtime,basename(f))) )
+#   }
+#   success <- FALSE
+#   if ( any.newer ) {
+#     # there may be nothing to recurse into...
+#     cat(paste("Copying Boilerplate File: ", bp.files),sep="\n")
+#     success <- suppressWarnings(file.copy(bp.files, ve.runtime, recursive=TRUE))
+#     if ( ! all(success) ) {
+#       cat("WARNING!\n")
+#       print(paste("Failed to copy boilerplate: ", basename(bp.files[!success])))
+#       cat("which may not be a problem (e.g. .Rprofile missing)\n")
+#       cat(".Rprofile is principally intended to house default ve.remote for online installer.\n")
+#       cat("If something else is missing, you should revisit boilerplate/boilerplate.(bash.)lst\n")
+#     }
+#   } else {
+#     cat("Boilerplate runtime is up to date\n")
+#   }
+# } else {
+#   stop("No boilerplate files defined to setup runtime!")
+# }
 
-cat("Copying boilerplate files...\n")
-bp.files <- file.path(ve.boilerplate, bp.file.list)
-if ( length(bp.files) > 0 ) {
+# Get the VisionEval runtime files
+# This will process the 'runtime'
+
+cat("Runtime sources...\n")
+copy.runtime <- pkgs.db[pkgs.runtime,c("Path","Package")]
+copy.paths <- dir(file.path(copy.runtime$Root, copy.runtime$Path, copy.runtime$Package),full.names=TRUE)
+if ( length(copy.paths) > 0 ) {
   any.newer <- FALSE
-  for ( f in bp.files ) {
-    any.newer <- any( any.newer, newerThan(f,file.path(ve.runtime,basename(f))) )
+  for ( f in seq_along(copy.paths) ) {
+    newer <- newerThan(copy.paths[f], ve.runtime)
+    any.newer <- any( any.newer, newer )
   }
-  success <- FALSE
   if ( any.newer ) {
-    # there may be nothing to recurse into...
-    cat(paste("Copying Boilerplate File: ", bp.files),sep="\n")
-    success <- suppressWarnings(file.copy(bp.files, ve.runtime, recursive=TRUE))
-    if ( ! all(success) ) {
-      cat("WARNING!\n")
-      print(paste("Failed to copy boilerplate: ", basename(bp.files[!success])))
-      cat("which may not be a problem (e.g. .Rprofile missing)\n")
-      cat(".Rprofile is principally intended to house default ve.remote for online installer.\n")
-      cat("If something else is missing, you should revisit boilerplate/boilerplate.(bash.)lst\n")
-    }
+    cat(paste("Copying Runtime: ", copy.paths),sep="\n")
+    invisible(file.copy(copy.paths, ve.runtime, recursive=TRUE))
   } else {
-    cat("Boilerplate runtime is up to date\n")
+    cat("Runtime files are up to date.\n")
   }
-} else {
-  stop("No boilerplate files defined to setup runtime!")
 }
 
 # Create the R version tag in the runtime folder

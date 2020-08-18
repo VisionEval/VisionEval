@@ -45,8 +45,8 @@ CalculateHouseholdDvmtSpecifications <- list(
   #Level of geography module is applied at
   RunBy = "Region",
   ##Specify input data
-  Inp = items(
-    item(
+  Inp = visioneval::items(
+    visioneval::item(
       NAME = "CENSUS_R",
       FILE = "marea_census_r.csv",
       TABLE = "Marea",
@@ -60,7 +60,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       DESCRIPTION = "CENSUS_R"       
     )
   ),
-  #   item(
+  #   visioneval::item(
   #     NAME = "metro",
   #     FILE = "marea_metro.csv",
   #     TABLE = "Marea",
@@ -73,8 +73,8 @@ CalculateHouseholdDvmtSpecifications <- list(
   #   )
   # ),
   #Specify data to be loaded from data store
-  Get = items(
-    item(
+  Get = visioneval::items(
+    visioneval::item(
       NAME = "HhId",
       TABLE = "Household",
       GROUP = "Year",
@@ -83,7 +83,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       PROHIBIT = "",
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME =
         items("HhSize",
               "Workers",
@@ -97,7 +97,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "Income",
       TABLE = "Household",
       GROUP = "Year",
@@ -108,7 +108,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "LifeCycle",
       TABLE = "Household",
       GROUP = "Year",
@@ -119,7 +119,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       ISELEMENTOF = c("00", "01", "02", "03", "04", "09", "10"),
       SIZE = 2
     ),
-    item(
+    visioneval::item(
       NAME = "Vehicles",
       TABLE = "Household",
       GROUP = "Year",
@@ -130,7 +130,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "LocType",
       TABLE = "Household",
       GROUP = "Year",
@@ -142,7 +142,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       SIZE = 5,
       DESCRIPTION = "Location type (Urban, Town, Rural) of the place where the household resides"
     ),
-    item(
+    visioneval::item(
       NAME = "Bzone",
       TABLE = "Household",
       GROUP = "Year",
@@ -152,7 +152,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       PROHIBIT = "",
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "Bzone",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -162,7 +162,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       PROHIBIT = "",
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "D1B",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -173,7 +173,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "D2A_WRKEMP",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -184,7 +184,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "D2A_EPHHM",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -195,7 +195,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "D3bpo4",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -206,7 +206,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       PROHIBIT = "NA",
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "D4c",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -217,7 +217,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "Marea",
       TABLE = "Marea",
       GROUP = "Year",
@@ -227,7 +227,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       PROHIBIT = "",
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "CENSUS_R",
       #FILE = "marea_census_r.csv",
       TABLE = "Marea",
@@ -238,7 +238,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       ISELEMENTOF = c("NE", "S", "W", "MW"),
       SIZE = 2
     ),
-    item(
+    visioneval::item(
       NAME = "FwyLaneMiPC",
       TABLE = "Marea",
       GROUP = "Year",
@@ -249,7 +249,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "TranRevMiPC",
       TABLE = "Marea",
       GROUP = "Year",
@@ -260,7 +260,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "Marea",
       TABLE = "Household",
       GROUP = "Year",
@@ -269,7 +269,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       PROHIBIT = "",
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "LocType",
       TABLE = "Household",
       GROUP = "Year",
@@ -282,8 +282,8 @@ CalculateHouseholdDvmtSpecifications <- list(
   ),
   
   #Specify data to saved in the data store
-  Set = items(
-    item(
+  Set = visioneval::items(
+    visioneval::item(
       NAME = "Dvmt",
       TABLE = "Household",
       GROUP = "Year",
@@ -295,7 +295,7 @@ CalculateHouseholdDvmtSpecifications <- list(
       SIZE = 0,
       DESCRIPTION = "Average daily vehicle miles traveled by the household in autos or light trucks"
     ),
-    item(
+    visioneval::item(
       NAME = items(
         "UrbanHhDvmt",
         "TownHhDvmt",

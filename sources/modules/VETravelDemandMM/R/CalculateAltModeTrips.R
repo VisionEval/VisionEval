@@ -57,8 +57,8 @@ CalculateAltModeTripsSpecifications <- list(
   #Level of geography module is applied at
   RunBy = "Region",
   ##Specify input data
-  Inp = items(
-    item(
+  Inp = visioneval::items(
+    visioneval::item(
       NAME = "CENSUS_R",
       FILE = "marea_census_r.csv",
       TABLE = "Marea",
@@ -71,7 +71,7 @@ CalculateAltModeTripsSpecifications <- list(
       UNLIKELY = "",
       DESCRIPTION = "CENSUS_R"       
     )
-    # item(
+    # visioneval::item(
     #   NAME = "D3apo",
     #   FILE = "bzone_network_design2.csv",
     #   TABLE = "Bzone",
@@ -86,7 +86,7 @@ CalculateAltModeTripsSpecifications <- list(
     #   TOTAL = "",
     #   DESCRIPTION = "Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database)"
     # ),
-    # item(
+    # visioneval::item(
     #   NAME = "D3bmm4",
     #   FILE = "bzone_network_design3.csv",
     #   TABLE = "Bzone",
@@ -101,7 +101,7 @@ CalculateAltModeTripsSpecifications <- list(
     #   TOTAL = "",
     #   DESCRIPTION = "Intersection density in terms of pedestrian-oriented intersections having four or more legs per square mile (Ref: EPA 2010 Smart Location Database)"
     # )
-    # item(
+    # visioneval::item(
     #   NAME =
     #     items(
     #       "D3apo",
@@ -127,7 +127,7 @@ CalculateAltModeTripsSpecifications <- list(
     # )
     
   ),
-  #   item(
+  #   visioneval::item(
   #     NAME = "metro",
   #     FILE = "marea_metro.csv",
   #     TABLE = "Marea",
@@ -140,8 +140,8 @@ CalculateAltModeTripsSpecifications <- list(
   #   )
   # ),
   #Specify data to be loaded from data store
-  Get = items(
-    item(
+  Get = visioneval::items(
+    visioneval::item(
       NAME = "HhId",
       TABLE = "Household",
       GROUP = "Year",
@@ -150,7 +150,7 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = "",
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "Dvmt",
       TABLE = "Household",
       GROUP = "Year",
@@ -162,9 +162,9 @@ CalculateAltModeTripsSpecifications <- list(
       SIZE = 0,
       DESCRIPTION = "Average daily vehicle miles traveled by the household in autos or light trucks"
     ),
-    item(
+    visioneval::item(
       NAME =
-        items("HhSize",
+        list("HhSize",
               "Workers",
               "Drivers",
               "Age0to14",
@@ -176,7 +176,7 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "Income",
       TABLE = "Household",
       GROUP = "Year",
@@ -187,7 +187,7 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "LifeCycle",
       TABLE = "Household",
       GROUP = "Year",
@@ -198,7 +198,7 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = c("00", "01", "02", "03", "04", "09", "10"),
       SIZE = 2
     ),
-    item(
+    visioneval::item(
       NAME = "Vehicles",
       TABLE = "Household",
       GROUP = "Year",
@@ -209,7 +209,7 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "Bzone",
       TABLE = "Household",
       GROUP = "Year",
@@ -219,7 +219,7 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = "",
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "LocType",
       TABLE = "Household",
       GROUP = "Year",
@@ -231,7 +231,7 @@ CalculateAltModeTripsSpecifications <- list(
       SIZE = 5,
       DESCRIPTION = "Location type (Urban, Town, Rural) of the place where the household resides"
     ),
-    item(
+    visioneval::item(
       NAME = "Bzone",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -241,7 +241,7 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = "",
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "D1B",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -252,7 +252,7 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "D2A_WRKEMP",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -263,7 +263,7 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "D2A_EPHHM",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -274,7 +274,7 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    # item(
+    # visioneval::item(
     #   NAME = "D3apo",
     #   TABLE = "Bzone",
     #   GROUP = "Year",
@@ -286,7 +286,7 @@ CalculateAltModeTripsSpecifications <- list(
     #   ISELEMENTOF = ""
     # ),
 
-    item(
+    visioneval::item(
       NAME = "D3bpo4",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -297,7 +297,7 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = "NA",
       ISELEMENTOF = ""
     ),
-    # item(
+    # visioneval::item(
     #   NAME = "D3bmm4",
     #   TABLE = "Bzone",
     #   GROUP = "Year",
@@ -308,7 +308,7 @@ CalculateAltModeTripsSpecifications <- list(
     #   PROHIBIT = "NA",
     #   ISELEMENTOF = ""
     # ),
-    item(
+    visioneval::item(
       NAME = "D4c",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -319,7 +319,7 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "D5",
       TABLE = "Bzone",
       GROUP = "Year",
@@ -330,7 +330,7 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     ),
-    item(
+    visioneval::item(
       NAME = "Marea",
       TABLE = "Marea",
       GROUP = "Year",
@@ -340,7 +340,7 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = "",
       ISELEMENTOF = ""
     ),
-    # item(
+    # visioneval::item(
     #   NAME = "TRPOPDEN",
     #   TABLE = "Bzone",
     #   GROUP = "Year",
@@ -351,7 +351,7 @@ CalculateAltModeTripsSpecifications <- list(
     #   ISELEMENTOF = "",
     #   SIZE = 0
     # ),    
-    # # item(
+    # # visioneval::item(
     # #   NAME = "ZeroVeh",
     # #   TABLE = "Household",
     # #   GROUP = "Year",
@@ -361,7 +361,7 @@ CalculateAltModeTripsSpecifications <- list(
     # #   ISELEMENTOF = ""
     # # ),
     # 
-    item(
+    visioneval::item(
       NAME = "CENSUS_R",
       #FILE = "marea_census_r.csv",
       TABLE = "Marea",
@@ -372,7 +372,7 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = c("NE", "S", "W", "MW"),
       SIZE = 2
     ),
-    item(
+    visioneval::item(
       NAME = "FwyLaneMiPC",
       TABLE = "Marea",
       GROUP = "Year",
@@ -383,7 +383,7 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = "",
       SIZE = 0
     ),
-    item(
+    visioneval::item(
       NAME = "TranRevMiPC",
       TABLE = "Marea",
       GROUP = "Year",
@@ -398,10 +398,10 @@ CalculateAltModeTripsSpecifications <- list(
   
   #Specify data to saved in the data store
  
-  Set = items(
-    item(
+  Set = visioneval::items(
+    visioneval::item(
       NAME =
-        items("WalkTrips",
+        list("WalkTrips",
               "BikeTrips",
               "TransitTrips"),
       TABLE = "Household",
@@ -412,15 +412,15 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = "",
       SIZE = 0,
-      DESCRIPTION = items(
+      DESCRIPTION = list(
         "Average number of walk trips per year by household members",
         "Average number of bicycle trips per year by household members",
         "Average number of public transit trips per year by household members"
       )
     ),    
-    item(
+    visioneval::item(
       NAME =
-        items("WalkAvgTripDist",
+        list("WalkAvgTripDist",
               "BikeAvgTripDist",
               "TransitAvgTripDist"),
       TABLE = "Household",
@@ -430,15 +430,15 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = "",
       SIZE = 0,
-      DESCRIPTION = items(
+      DESCRIPTION = list(
         "Daily walking average trip length",
         "Daily biking average trip length",
         "Daily transit average trip length"
       )
     ),
-    item(
+    visioneval::item(
       NAME =
-        items("WalkPMT",
+         list("WalkPMT",
               "BikePMT",
               "TransitPMT"),
       TABLE = "Household",
@@ -449,7 +449,7 @@ CalculateAltModeTripsSpecifications <- list(
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = "",
       SIZE = 0,
-      DESCRIPTION = items(
+      DESCRIPTION = list(
         "Daily walking person miles traveled by all members of the household",
         "Daily biking person miles traveled by all members of the household",
         "Daily transit person miles traveled by all members of the household"

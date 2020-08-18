@@ -15,18 +15,27 @@ cat("Installing to:",.libPaths()[1],"\n")
 #   BioConductor
 #   Github
 
+# Note: the VE-config-travis.yml is a special abbreviated version that won't work with ve.build
+# It is only used to be able to exclude components that we don't want to test with Travis-CI
+
 ve.components <- yaml::yaml.load_file(Sys.getenv("VE_COMPONENTS",unset="build/config/VE-components.yml"))
+ve.config     <- yaml::yaml.load_file(Sys.getenv("VE_CONFIG",unset="build/config/VE-config-travis.yml"))
 rversions     <- yaml::yaml.load_file(file.path("build/R-versions.yml"))
 this.R        <- paste(R.version[c("major","minor")],collapse=".")
 CRAN          <- rversions[[this.R]]$CRAN
 BioC.version  <- basename(dirname(rversions[[this.R]]$BioC)) # looks like "https://www.bioconductor.org/packages/3.11/bioc"
 
-# cat("Components:\n")
-# print(ve.components)
-# cat("\n")
+exclude <- character(0)
+if ( "Components" %in% ve.config ) {
+  if ( "Exclude" %in% ve.config$Components ) {
+    exclude <- ve.config$Components$Exclude
+  }
+} 
+
 pkgs.db <- data.frame(Type="Type",Package="Package",Source="Source")
 
 items <- ve.components[["Components"]]
+items <- setdiff(items,exclude)
 for ( pkg in names(items) ) {
   it <- items[[pkg]]
   if ( "CRAN" %in% names(it) ) {
@@ -63,5 +72,7 @@ if( length(new.pkgs) > 0 ) {
   print(new.pkgs)
   install.packages(new.pkgs,repos="https://cloud.r-project.org")
 }
-devtools::install_bioc(paste(BioC.version,unique(pkgs.db[pkgs.db$Type=="BioC","Package"]),sep="/"))
-devtools::install_github(unique(pkgs.db[pkgs.db$Type=="Github","Package"]))
+BioC <- unique(pkgs.db[pkgs.db$Type=="BioC","Package"])
+if ( length(BioC)>0 ) devtools::install_bioc(paste(BioC.version,BioC,sep="/"))
+ghub <- unique(pkgs.db[pkgs.db$Type=="Github","Package"])
+if ( length(ghub)>0 ) devtools::install_github(ghub)

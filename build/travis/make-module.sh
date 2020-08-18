@@ -20,8 +20,7 @@ mkdir -p data  # No error if already exists, but must exist to document/install
 
 # TEST_SCRIPT=${2:-${VE_SCRIPT:-tests/scripts/test.R}}
 # echo TEST_SCRIPT=${TEST_SCRIPT}
-echo Documenting "(basename $(pwd))"
-Rscript -e "devtools::document()" # estimates models, creates NAMESPACE, help docs
+Rscript -e "roxygen2::roxygenise()" # estimates models, creates NAMESPACE, help docs, data
 echo Installing "$(basename $(pwd))" to ${BUILD_LIB}
 R CMD INSTALL -l "${BUILD_LIB}" . # Save the installed package for later use
 popd

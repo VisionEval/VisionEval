@@ -67,15 +67,15 @@ jobs:
             - bash build/travis/make-module.sh sources/modules/VETravelPerformance
             - bash build/travis/make-module.sh sources/modules/VETravelDemandMM
         - stage: Models (RPAT, RSPM, VE-State Part 1)
-          script: bash build/travis/run-model.sh sources/models/VERPAT/run_model.R
-        - script: bash build/travis/run-model.sh sources/models/VERSPM/run_model.R
-        - script: bash build/travis/run-model.sh sources/models/VERSPM_MM/run_model.R
-        - script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-1/run_model.R
+          script: bash build/travis/run-model.sh sources/models/VERPAT
+        - script: bash build/travis/run-model.sh sources/models/VERSPM
+        - script: bash build/travis/run-model.sh sources/models/VERSPM_MM
+        - script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-1
         - stage: Models (VE-State, Part 2)
-          script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-2/run_model.R
+          script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-2
         - stage: Models (VE-State, Part 3)
-          script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-3/run_model.R
+          script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-3
         - stage: Models (VE-State, Part 4)
-          script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-4/run_model.R
+          script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-4
         - stage: Cleanup
           script: rm -rf $VE_LIBRARY/*
