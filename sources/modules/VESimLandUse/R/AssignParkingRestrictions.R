@@ -583,7 +583,7 @@ AssignParkingRestrictions <- function(L) {
       RetSvcEmp_Bx <- with(L$Year$Bzone, RetEmp + SvcEmp)[BzInMa]
       PkgCost_Bx <- PkgCost_Bz[BzInMa] * NonWorkPkgCostProp_Bz[BzInMa]
       OtherPkgCost_Bx[IsUrban] <-
-        sum(RetSvcEmp_Bx[IsUrban] * PkgCost_Bx[IsUrban]) / sum(RetSvcEmp_Bx[IsUrban])
+        sum(RetSvcEmp_Bx[IsUrban] * PkgCost_Bx[IsUrban]) / max(1,sum(RetSvcEmp_Bx[IsUrban]))
       setNames(OtherPkgCost_Bx, Bx)
     })
     #Assign other parking cost to households
