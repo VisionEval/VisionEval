@@ -39,12 +39,13 @@ ve.model.path <- function(modelPath=NULL) {
       stop("Could not locate model directory for [",paste(modelPath,dir.exists(modelPath),sep=":",collapse=","),"]")
     }
   }
-  # Figure out if we can use modelPath to find "run_model.R" script(s)
-  if ( all ( file.exists(modelPath) & toupper(basename(modelPath))=="run_model.R" ) ) {
+  # Figure out if we can use modelPath to find "run_model.R"
+  # script(s)
+  if ( all ( file.exists(modelPath) & toupper(basename(modelPath))=="RUN_MODEL.R" ) ) {
     # Provided full path to run_model.R (possibly more than one)
     modelPath <- dirname(modelPath)
   } else if ( ! all( file.exists( file.path(modelPath,"run_model.R") ) ) ) {
-    if ( length(modelPath)==1 ) {
+    if ( length(modelPath)==1 ) { # no run_model.R in modelPath
       # Check for staged model (must be single root directory)
       subs <- dir(modelPath,full.names=TRUE)
       modelPath <- subs[dir.exists(subs) & file.exists(file.path(subs,"run_model.R"))]
@@ -74,7 +75,13 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
   self$modelPath <- ve.model.path(modelPath)
   names(self$modelPath) <- basename(self$modelPath)
   if ( is.null(modelName) ) {
-    self$modelName <- names(self$modelPath)[1]
+    self$modelName <- if ( length(self$modelPath)>1 ) {
+       # default modelName for multi-stage model is basename of
+       # the directory containing the first stage subdirectory
+      basename( dirname(self$modelPath[1]) )
+    } else { # For a one-stage model it is the basename of the first path itself
+      names(self$modelPath)[1]
+    }
   } else {
     self$modelName <- modelName
   }
@@ -111,7 +118,26 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
   self$status <- self$runStatus[length(self$runStatus)]
 }
 
-ve.run.model <- function(verbose=TRUE,path=NULL) {
+log.level <- function(level) {
+  legal.levels <- list(
+    "DEBUG"=futile.logger::DEBUG,
+    "ERROR"=futile.logger::ERROR,
+    "FATAL"=futile.logger::FATAL,
+    "INFO"=futile.logger::INFO,
+    "TRACE"=futile.logger::TRACE,
+    "WARN"=futile.logger::WARN
+  )
+  if ( level %in% names(legal.levels) ) {
+    return(legal.levels[level])
+  } else {
+    return(legal.levels["ERROR"])
+  }
+}
+
+ve.run.model <- function(verbose=TRUE,path=NULL,stage=NULL,log="ERROR") {
+  # Unlike .dir the path/stage says where to start - the run will
+  # then continue by running that stage then each following stage
+  if ( missing(path) ) path <- stage    # Still might be NULL; allow alias
   pathLength <- length(self$modelPath)
   stageStart <- if ( ! is.null(path) ) path else 1
   for ( ms in stageStart:self$stageCount ) {
@@ -127,7 +153,7 @@ ve.run.model <- function(verbose=TRUE,path=NULL) {
       envir <- as.environment("ve.model")
     }
     self$status <- ""
-    futile.logger::flog.threshold(futile.logger::WARN)
+    futile.logger::flog.threshold(log.level(log))
     tryCatchLog::tryCatchLog(
       {
         self$status <- "Running"
@@ -180,7 +206,10 @@ ve.run.model <- function(verbose=TRUE,path=NULL) {
   return(invisible(self$status))
 }
 
-ve.model.dir <- function(pattern=NULL,recursive=FALSE,shorten="",path=NULL) {
+ve.model.dir <- function(pattern=NULL,recursive=FALSE,shorten="",path=NULL,stage=NULL) {
+  # path/stage can be a vector of discrete stages (e.g. c(1,3); only
+  # those will be inspected.
+  if ( missing(path) ) path <- stage
   if ( is.null(path) ) path<-c(1:self$stageCount)
   files <- dir(self$modelPath[path],pattern=pattern,recursive=recursive,full.names=TRUE)
   if ( nzchar(shorten) ) files <- gsub(shorten,"",files)
@@ -193,9 +222,10 @@ confirm <- function(msg) {
   return(conf)
 }
 
-# outputOnly will just delete the extraction results
+# outputOnly will just report the extraction results
 # (not the model run)
-ve.artifacts <- function(path=NULL,outputOnly=FALSE) {
+ve.artifacts <- function(path=NULL,stage=NULL,outputOnly=FALSE) {
+  if ( missing(path) ) path <- stage
   if ( ! outputOnly ) {
     mstates <- self$dir(pattern=".*(Previous)*ModelState\\.Rda",path=path)
     mstates <- mstates[!dir.exists(mstates)]
@@ -209,7 +239,14 @@ ve.artifacts <- function(path=NULL,outputOnly=FALSE) {
   return(c(artifacts,outputs))
 }
 
-ve.model.clear <- function(force=FALSE,outputOnly=FALSE,path=NULL) {
+ve.model.clear <- function(force=FALSE,outputOnly=NULL,path=NULL,stage=NULL) {
+  if ( missing(path) ) path <- stage
+  if ( missing( outputOnly ) ) {
+    # If "output" exists in any stage, only offer to clear outputs
+    # unless the user manually overrides. Makes it harder to
+    # accidentally delete a model run.
+    outputOnly = any( dir.exists( file.path(self$modelPath,"output") ) )
+  }
   to.delete <- private$artifacts(path=path,outputOnly=outputOnly)
   if ( length(to.delete)>0 ) {
     print(gsub(ve.runtime,"",to.delete))
@@ -526,7 +563,7 @@ ve.model.list <- function(selected=TRUE,pattern="",index=FALSE) {
     rep(TRUE,nrow(self$modelIndex))
   }
   if ( ! missing(pattern) && is.character(pattern) && nzchar(pattern) ) {
-    filter <- filter & grepl(pattern,self$modelIndex$Name )
+    filter <- filter & grepl(pattern,self$modelIndex$Name,ignore.case=TRUE )
   }
   if ( missing(index) || ! index ) {
     ret.fields <- c("Name")
@@ -535,7 +572,7 @@ ve.model.list <- function(selected=TRUE,pattern="",index=FALSE) {
   }
   ret.value <- self$modelIndex[ filter, ret.fields, drop=TRUE ]
   if ( class(ret.value)!='character' ) ret.value <- ret.value[order(ret.value$Stage, ret.value$Group, ret.value$Name),]
-  return(ret.value)
+  return(unique(ret.value))
 }
 
 ve.model.inputs <- function( fields=FALSE, module="", filename="" ) {

@@ -57,12 +57,13 @@ message("========== BUILD RUNTIME ENVIRONMENT (scripts, models) ==========")
 # This will process the 'runtime'
 
 cat("Runtime sources...\n")
-copy.runtime <- pkgs.db[pkgs.runtime,c("Path","Package")]
-copy.paths <- dir(file.path(copy.runtime$Root, copy.runtime$Path, copy.runtime$Package),full.names=TRUE)
+copy.runtime <- pkgs.db[pkgs.runtime,c("Root","Path","Package")]
+paths <- file.path(copy.runtime$Root, copy.runtime$Path, copy.runtime$Package)
+copy.paths <- dir(paths,full.names=TRUE)
 if ( length(copy.paths) > 0 ) {
   any.newer <- FALSE
   for ( f in seq_along(copy.paths) ) {
-    newer <- newerThan(copy.paths[f], ve.runtime)
+    newer <- newerThan(copy.paths[f], file.path(ve.runtime,basename(copy.paths[f])))
     any.newer <- any( any.newer, newer )
   }
   if ( any.newer ) {

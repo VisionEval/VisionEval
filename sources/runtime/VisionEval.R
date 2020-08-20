@@ -16,8 +16,6 @@ if ( length(env.loc)==0 ) {
   attach(NULL,name=env.loc)
 }
 
-assign("ve.RData","VisionEval.RData",pos=env.loc)
-
 # Check the R version (redundant on Windows, but saves having to
 # have a separate VisionEval.R for Linux/Mac)
 
@@ -55,15 +53,7 @@ local({
   }
 })
 
-# Load runtime locations, if available
-if ( file.exists(ve.RData) ) { # in the current/startup directory
-  load(ve.RData,envir=as.environment(env.loc))
-  if ( exists("ve.lib") && ! ve.lib %in% .libPaths() ) {
-    ve.lib <- .libPaths(c(ve.lib,.libPaths()))
-  }
-}
-
-# Set the runtime directory (could be overridden in ve.RData)
+# Set the runtime directory (could be overridden from development environment)
 if ( ! exists("ve.runtime") ) {
   assign("ve.runtime",getwd(),pos=env.loc)
 } else {
@@ -143,8 +133,7 @@ local( {
         }
       }
 
-      # Save environment to VisionEval.RData
-      save(file=ve.RData,ve.runtime,ve.lib)
+      # Set .libPaths()
       .libPaths(c(ve.lib,.libPaths()))
 
       install.success <- exists("ve.lib") && length(grep("^visioneval",dir(ve.lib)))>0
