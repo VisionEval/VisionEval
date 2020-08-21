@@ -320,9 +320,9 @@ for ( module in seq_along(package.names) ) {
   if ( ! package.built ) {
     cat("++++++++++ Pre-build / Document ",package.names[module],"\nin ",build.dir,"\n",sep="")
     if ( ve.express ) {
-      withr::with_dir(build.dir,devtools::document(roclets=c("collate","namespace")))
+      withr::with_dir(build.dir,roxygen2::roxygenise(roclets=c("collate","namespace")))
     } else {
-      withr::with_dir(build.dir,devtools::document())
+      withr::with_dir(build.dir,roxygen2::roxygenize())
     }
     if ( ! ve.express ) {
       cat("++++++++++ Checking and pre-processing ",package.names[module],"\nin ",build.dir,"\n",sep="")

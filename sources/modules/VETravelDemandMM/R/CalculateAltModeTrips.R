@@ -51,6 +51,8 @@
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
 #================================================
 
+require(visioneval,quietly=TRUE)
+
 #Define the data specifications
 #------------------------------
 CalculateAltModeTripsSpecifications <- list(
@@ -735,7 +737,7 @@ CalculateAltModeTrips <- function(L) {
 #===============================================================
 #Run module automatic documentation
 #----------------------------------
-documentModule("CalculateAltModeTrips")
+visioneval::documentModule("CalculateAltModeTrips")
 
 #====================
 #SECTION 5: TEST CODE

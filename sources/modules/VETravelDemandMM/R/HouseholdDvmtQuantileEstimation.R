@@ -638,7 +638,7 @@ rm(
 #===============================================================
 #Run module automatic documentation
 #----------------------------------
-documentModule("HouseholdDvmtQuantileEstimation")
+visioneval::documentModule("HouseholdDvmtQuantileEstimation")
 
 #Test code to check specifications, loading inputs, and whether datastore
 #contains data needed to run module. Return input list (L) to use for developing

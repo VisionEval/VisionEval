@@ -485,7 +485,7 @@ CalculateHouseholdDvmt <- function(L) {
 #===============================================================
 #Run module automatic documentation
 #----------------------------------
-documentModule("CalculateHouseholdDvmt")
+visioneval::documentModule("CalculateHouseholdDvmt")
 
 #====================
 #SECTION 5: TEST CODE

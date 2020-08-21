@@ -239,7 +239,7 @@ PredictDrivers <- function(L) {
 #===============================================================
 #Run module automatic documentation
 #----------------------------------
-documentModule("PredictDrivers")
+visioneval::documentModule("PredictDrivers")
 
 #====================
 #SECTION 5: TEST CODE

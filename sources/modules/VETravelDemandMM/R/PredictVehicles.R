@@ -231,7 +231,7 @@ PredictVehicles <- function(L) {
 #===============================================================
 #Run module automatic documentation
 #----------------------------------
-documentModule("PredictVehicles")
+visioneval::documentModule("PredictVehicles")
 
 #====================
 #SECTION 5: TEST CODE

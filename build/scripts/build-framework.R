@@ -271,7 +271,7 @@ for ( module in seq_along(package.names) ) {
   # Step 4: Check the module in order to rebuild the /data directory in build.dir
   if ( ! package.built ) {
     cat("++++++++++ Pre-build / Document ",package.names[module]," in ",build.dir,"\n",sep="")
-    withr::with_dir(build.dir,devtools::document())
+    withr::with_dir(build.dir,roxygen2::roxygenise())
     cat("++++++++++ Checking and pre-processing ",package.names[module]," in ",build.dir,"\n",sep="")
     # Run the module check (prior to building anything)
     # Run Roxygen with load='source' option in package DESCRIPTION
