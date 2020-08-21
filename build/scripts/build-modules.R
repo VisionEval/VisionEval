@@ -322,7 +322,7 @@ for ( module in seq_along(package.names) ) {
     if ( ve.express ) {
       withr::with_dir(build.dir,roxygen2::roxygenise(roclets=c("collate","namespace")))
     } else {
-      withr::with_dir(build.dir,roxygen2::roxygenize())
+      withr::with_dir(build.dir,roxygen2::roxygenise())
     }
     if ( ! ve.express ) {
       cat("++++++++++ Checking and pre-processing ",package.names[module],"\nin ",build.dir,"\n",sep="")
