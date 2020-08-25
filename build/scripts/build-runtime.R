@@ -59,7 +59,7 @@ message("========== BUILD RUNTIME ENVIRONMENT (scripts, models) ==========")
 cat("Runtime sources...\n")
 copy.runtime <- pkgs.db[pkgs.runtime,c("Root","Path","Package")]
 paths <- file.path(copy.runtime$Root, copy.runtime$Path, copy.runtime$Package)
-copy.paths <- dir(paths,all.files=TRUE,full.names=TRUE)
+copy.paths <- dir(paths,all.files=TRUE,full.names=TRUE,no..=TRUE)
 if ( length(copy.paths) > 0 ) {
   any.newer <- FALSE
   for ( f in seq_along(copy.paths) ) {
