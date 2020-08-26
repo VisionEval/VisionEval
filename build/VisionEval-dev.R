@@ -53,7 +53,8 @@ evalq(
       targets=character(0),
       r.version=paste(R.version[c("major","minor")],collapse="."),
       config=character(0), # defaults to config/VE-config.yml
-      flags=character(0),
+      express=TRUE, # if FALSE, will run devtools::check; otherwise build as rapidly as possible
+      flags=character(0), # flags for VE_CONFIG or VE_EXPRESS will override the direct flag 
       use.git=FALSE
     ) {
       owd<-setwd(file.path(ve.root,"build"))
@@ -70,6 +71,11 @@ evalq(
             if ( file.exists(config) ) {
               Sys.setenv(VE_CONFIG=config)
             }
+          }
+          if ( express ) {
+            Sys.setenv(VE_EXPRESS="YES")
+          } else {
+            Sys.unsetenv("VE_EXPRESS")
           }
           # Force our own version of VE_BRANCH
           Sys.setenv(VE_BRANCH=getLocalBranch(ve.root,use.git))
