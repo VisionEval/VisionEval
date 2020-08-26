@@ -27,6 +27,7 @@
 #=================================================
 #SECTION 1: ESTIMATE AND SAVE Scenario PARAMETERS
 #=================================================
+  
 
 # Save VERSPM OUTPUT config file
 
@@ -121,11 +122,7 @@ verspm_output_config_txt <-
   #' }
   #' @source VERSPMResults.R script.
   "VERSPMOutputConfig"
-  usethis::use_data(VERSPMOutputConfig, overwrite = TRUE)
-
-
-
-
+  visioneval::savePackageDataset(VERSPMOutputConfig, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -240,7 +237,7 @@ VERSPMResultsSpecifications <- list(
 #' }
 #' @source VERSPMResults.R script.
 "VERSPMResultsSpecifications"
-usethis::use_data(VERSPMResultsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(VERSPMResultsSpecifications, overwrite = TRUE)
 
 
 # TableNames <- c("Azone", "Bzone", "Marea", "IncomeGroup", "FuelType")
@@ -284,7 +281,7 @@ readTables <- function(Year = NULL, Scenario = "Base", Output = "All", Table=TRU
                       Units=NA))
   }
   # Read the model state to gather information
-  ModelState_ls <<- readModelState()
+  ModelState_ls <- readModelState()
   # Define readFromTable Function
   if(ModelState_ls$DatastoreType=="RD"){
     readFromTable <- readFromTableRD
@@ -428,7 +425,7 @@ VERSPMResults <- function(L){
   ScenTab_dt <- cbind(ScenTab_dt,Levels_dt)
   ScenTab_dt <- ScenTab_dt[FinalResults_dt,on=.(Scenario)][order(Scenario)]
   BaseYear <- L$G$BaseYear
-  ModelState_ls <<- readModelState()
+  ModelState_ls <- readModelState()
   ScenTab_dt <- ScenTab_dt[,{
                             Bzone <- Data[Table=="Bzone"][[1]]
                             Marea <- Data[Table=="Marea"][[1]]
@@ -473,7 +470,12 @@ VERSPMResults <- function(L){
                               AirPollutionEm=AirPollutionEm, FuelUse=FuelUse,
                               VehicleCost=VehicleCost, VehicleCostLow=VehicleCostLow)
                           },by=c("Scenario", InputLabels_ar)]
-
+  
+  # Write the output to csv file
+  write.csv(ScenTab_dt,
+            file.path(ModelPath, L$Global$Model$ScenarioOutputFolder, "VERSPM_scenario_results.csv"),
+            row.names = F)
+  
   # Write the output to JSON file
   JSON <- toJSON(ScenTab_dt)
   JSON <- paste("var data = ", JSON, ";", sep="")

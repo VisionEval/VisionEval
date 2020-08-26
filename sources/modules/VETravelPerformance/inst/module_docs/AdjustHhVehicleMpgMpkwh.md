@@ -68,7 +68,7 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |LdIceFactor         |Marea     |Year  |double    |proportion |<= 0         |                           |
 |LdHevFactor         |Marea     |Year  |double    |proportion |<= 0         |                           |
 |LdEvFactor          |Marea     |Year  |double    |proportion |<= 0         |                           |
-|HhId                |Household |Year  |character |ID         |NA           |                           |
+|HhId                |Household |Year  |character |ID         |             |                           |
 |IsEcoDrive          |Household |Year  |integer   |binary     |NA           |0, 1                       |
 |LocType             |Household |Year  |character |category   |NA           |Urban, Town, Rural         |
 |Vehicles            |Household |Year  |vehicles  |VEH        |NA, < 0      |                           |

@@ -206,7 +206,7 @@ rm(Hh_df)
 #' }
 #' @source PredictHousing.R script.
 "HouseTypeModel_ls"
-usethis::use_data(HouseTypeModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(HouseTypeModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -505,7 +505,7 @@ PredictHousingSpecifications <- list(
 #' }
 #' @source PredictHousing.R script.
 "PredictHousingSpecifications"
-usethis::use_data(PredictHousingSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(PredictHousingSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -647,6 +647,7 @@ PredictHousing <- function(L) {
       L$Year$Household$Azone[!IsGQ_Hh]
     )
   Az <- names(Hh_df_Az)
+  HouseTypeModel_ls <- VELandUse::HouseTypeModel_ls
   for (az in Az) {
     #Calculate the single family housing proportion
     SFDU <- sum(L$Year$Bzone$SFDU[L$Year$Bzone$Azone == az])

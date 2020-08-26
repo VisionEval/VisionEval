@@ -1,6 +1,6 @@
 ## VisionEval Model System Design and Users Guide
 **Brian Gregor, Oregon Systems Analytics LLC**  
-**February 19, 2019**  
+**February 14, 2020**  
 **DRAFT**
 
 
@@ -51,7 +51,7 @@ The model system will allow new capabilities to be added in a plug-and-play fash
 
 
 - **Loose Coupling**
-This objective is closely related to the *modularity* objective. Loose coupling is necessary if modules are to be added to or removed from models in a plug-and-play fashion. Loose coupling means that the parameter estimation for a submodel is independent of the parameter estimation of any other submodel. It also means that there is no direct communication between modules. All communication between modules is carried out through the transfer of data that is mediated by the software framework.  
+This objective is closely related to the *modularity* objective. Loose coupling is necessary if modules are to be added to or removed from models in a plug-and-play fashion. Loose coupling means that the parameter estimation for a submodel is independent of the parameter estimation of any other submodel. It also means that dependencies be modules are well defined and minimized. Most communication between modules is carried out through the transfer of data that is mediated by the software framework.  
 
 
 - **Openness**  
@@ -159,11 +159,19 @@ for(Year in getYears()) {
 
 A full model run script is shown in Appendix A.   
 
-The script calls two functions that are defined by the software framework; *initializeModel* and *runModule*. The *initializeModel* function initializes the model environment and model datastore, checks that all necessary modules are installed, and checks whether all module data dependencies can be satisfied. The arguments of the *initializeModel* function identify where key model definition data are found. The *runModule* function, as the name suggests, runs a module. The arguments of the *runModule* function identify the name of the module to be run, the package the module is in, and whether the module should be run for all years, only the base year, or for all years except for the base year. This approach makes it easy for users to combine modules in a 'plug-and-play' fashion. One simply identifies the modules that will be run and the sequence that they will be run in. This is possible in large part for the following reasons:  
+The script calls two functions that are defined by the software framework; *initializeModel* and *runModule*. The *initializeModel* function initializes the model environment and model datastore, checks that all necessary modules are installed, and checks whether all module data dependencies can be satisfied. The arguments of the *initializeModel* function identify where key model definition data are found. The *initializeModel* function allows users to load an existing datastore. This functionality is useful for scenario management, retaining and building upon the results of previous model runs. For example, a set scenarios could be managed in the following manner using the capability for loading datastores:  
+- A base year model is calibrated and validated
+- Future land use scenarios are developed and run (e.g. 3 different scenarios having different growth and development assumptions). Each land use scenario loads the datastore for the base year model.
+- Future transportation policy scenarios are developed and run for each land use scenario (e.g. 3 different scenarios having different policy assumptions). Each transportion policy scenario loads the datastore for a land use scenario model run.
+
+The *runModule* function, as the name suggests, runs a module. The arguments of the *runModule* function identify the name of the module to be run, the package the module is in, and whether the module should be run for all years, only the base year, or for all years except for the base year. This approach makes it easy for users to combine modules in a 'plug-and-play' fashion. One simply identifies the modules that will be run and the sequence that they will be run in. This is possible in large part for the following reasons:  
 1) The modules are loosely coupled. Modules only communicate to one another by passing information to and from the datastore or by calling the services of another module. Module calling is described in detail in section 8.1.2.2.
 2) The framework establishes standards for key shared aspects of modules including how data attributes are specified and how geography is represented.  
 3) Every module includes detailed specifications for the data that are inputs to the module and for the data that are outputs from the module. These data specifications serve as contracts that the framework software enforces.  
-  These features and how they are designed are described in detail in following sections.  
+
+The runModule function and how it is implemented by the software framework allows developers and advanced users to create different module variants and save them in a package having a different name. Users can then identify the alternative package in the runModule function call to use the variant version. For example, the VEPowertrainsAndFuels package includes data and modules that model key vehicle powertrain characteristics such as powertrain type proportions (ICEV, HEV, PHEV, BEV) by vehicle type and vehicle model year. A developer or advanced used could create package version that reflects Energy Information Agency (EIA) projections and name it VEPowertrainsAndFuelsxEIA, and another version which reflects California zero emissions vehicle standards and name it VEPowertrainsAndFuelsxCAZEV. The user could then specify which package version they want to run in the runModule function call. This functionality also allows developers and advanced users to test out module changes without altering an 'official' package.
+
+These features and how they are designed are described in detail in following sections.  
 
 ### 6. Model Layer Description
 The model layer is composed of:  
@@ -187,7 +195,7 @@ my_model
 |____defs
 |    |   run_parameters.json
 |    |   model_parameters.json
-|    |   geography.csv  
+|    |   geo.csv  
 |    |   units.csv  
 |    |   deflators.csv  
 |  
@@ -207,7 +215,7 @@ The "ModelState.Rda" file is a R binary file that contains a list that holds key
 
 The "logXXXX.txt" file is a text file that is created when the model is initialized. This log file is used to record model run progress and any error or warning messages. The 'XXXX' part of the name is the date and time when the log file is created.
 
-The "datastore" is a file or directory that contains the central datastore for the model. The VisionEval framework supports multiple types of datastore. Currently, two types are supported. One type stores all data in a single binary [HDF5]() file. With this type, the datastore file is named "datastore.h5". The other type stores datasets in the form of native R data files. Files are stored in a hierarchical directory structure with the top-level directory named "Datastore". The logical structure of these two datastore types are very similar and are described in detail below. Users may use a different name for this file by specifying the name to be used in "parameters.json" file (see below). 
+The "datastore" is a file or directory that contains the central datastore for the model. The VisionEval framework supports multiple types of datastore. Currently, two types are supported. The preferred type (designated RD) stores datasets in the form of native R data files. Files are stored in a hierarchical directory structure with the top-level directory named "Datastore". Another type (designated H5) stores all data in a single binary [HDF5]() file. The logical structure of these two datastore types are very similar and are described in detail below. Users specify the datastore name in the "parameters.json" file (see below). 
 
 The "defs" directory contains all of the definition files needed to support the model run. Five files are required to be present in this directory: "run_parameters.json", "model_parameters.json", "geography.csv", "deflators.csv", and "units.csv".   
 
@@ -229,23 +237,17 @@ The "run_parameters.json" file specifies the following parameters:
 
 - **DatastoreName** The name of the datastore. It can be any name that is valid for the operating system. It is recommended that this be named "datastore.h5" for HDF5 datastores and "Datastore" for R data file datastores.  
 
-- **DatastoreType** A 2-letter abbreviation identifying the datastore type: "H5" for HDF5 datastore, "RD" for R data file datastore. The framework uses the DatastoreType abbreviation to choose the functions used to initialize the datastore and interact with it. 
+- **DatastoreType** A 2-letter abbreviation identifying the datastore type: "RD" for R data file datastore, "H5" for HDF5 datastore. The framework uses the DatastoreType abbreviation to choose the functions used to initialize the datastore and interact with it. 
 
-- **DatastoreReferences** This optional parameter is a listing of other datastores that the framework should look for requested data in. This capability to reference other datastores enables users to split their model runs into stages to efficiently manage scenarios. For example, a user may wish to model how several transportation scenarios work with each of a few land use scenarios. To do this, the user could first set up and run the model for each of the land use scenarios. The user could then set up the transportation scenarios and make copies for each of the land use scenarios. Then the user would for each of the transportation scenarios reference the datastore of the land use scenario that it is associated with. Note that referenced datastores must have the same DatastoreType as the model datastore. For example, if the model datastore type is "H5", then all referenced datastores must be "H5" as well. The DatastoreReferences entry would look something like the following (the meaning of the entries is explained below):  
-  "DatastoreReferences": {  
-    "Global": "../BaseYear/datastore.h5",  
-    "2010": "../BaseYear/datastore.h5"  
-  }
-  
 - **Seed** This is a number that modules use as a random seed to make model runs reproducible.
 
-- **RequiredVEPackages** Lists all of the VisionEval packages that contain modules that are called by the model.
+- **RequiredVEPackages** Lists all of the VisionEval packages that contain modules that are called by the model. Note that the required packages that are listed must be consistent with the packages that are identified in the *run_model.R* script.
 
 The "model_parameters.json" can contain global parameters for a particular model configuration that may be used by multiple modules. For example, a model configuration to be a GreenSTEP model may require some parameters that are not required by a model configuration for an RSPM model. Parameters in this file should not include parameters that are specific to a module or data that would more properly be model inputs. While this file is available to establish global model parameters such as the value of time, it should be used sparingly in order enhance transferrability of modules between different models.
 
 The "geography.csv" file describes all of the geographic relationships for the model and the names of geographic entities in a [CSV-formatted](https://en.wikipedia.org/wiki/Comma-separated_values) text file. The CSV format, like the JSON format is a plain text file. It is used rather than the JSON format because the geographic relationships are best described in table form and the CSV format is made for tabular data. In addition, a number of different open source and commercial spreadsheet and GIS programs can export tabular data in a CSV-formatted files. The structure of the model system geography is described in detail in Section 6.2 below.  
 
-The "units.csv" file describes the default units to be used for storing complex data types in the model. The VisionEval model system keeps track of the types and units of measure of all data that is processed. The model system recognizes 4 primitive data types, a number of complex data types (e.g. currency, distance), and a compound data type. The primitive data types are data types recognized by the R language: 'double', 'integer', 'character', and 'logical'. The complex data types such as 'distance' and 'time' define types of data that have defined measurement units and factors for converting between units. The compound data type combines two or more complex data types whose units are defined in an expression (e.g. MI/HR where MI is the complex unit for miles and HR is the complex unit for hours). The *units.csv* describes the default units used to store complex data types in the datastore. The file structure and an example are described in more detail in Section 6.3 below.
+The "units.csv" file describes the default units to be used for storing complex data types in the model. The VisionEval model system keeps track of the types and units of measure of all data that are processed. The model system recognizes 4 primitive data types, a number of complex data types (e.g. currency, distance), and a compound data type. The primitive data types are data types recognized by the R language: 'double', 'integer', 'character', and 'logical'. The complex data types such as 'distance' and 'time' define types of data that have defined measurement units and factors for converting between units. The compound data type combines two or more complex data types whose units are defined in an expression (e.g. MI/HR where MI is the complex unit for miles and HR is the complex unit for hours). The *units.csv* describes the default units used to store complex data types in the datastore. The file structure and an example are described in more detail in Section 6.3 below.
 
 The "deflators.csv" file defines the annual deflator values, such as the consumer price index, that are used to convert currency values between different years for currency demonination. The file structure and an example are described in more detail in Section 6.4 below.
 
@@ -261,7 +263,7 @@ Following is the definition of the geographic structure of the VisionEval model 
 The region is the entire model area. Large-scale characteristics that don't vary across the region are specified at the region level. Examples include fuel prices and the carbon intensities of fuels.  
 
 - **Azones**  
-Azones are large subdivisions of the region containing populations that are similar in size to those of counties or Census Public Use Microdata Areas (PUMA). The counties used in the GreenSTEP and EERPAT models and metropolitan divisions used in the RSPM are examples of Azones. Azones are used to represent population and economic characteristics that vary across the region such as demographic forecasts of persons by age group and average per capita income. Azones are the only level of geography that is required to represent actual geographic areas and may not be simulated.  
+Azones are large subdivisions of the region containing populations that are similar in size to those of counties or Census Public Use Microdata Areas (PUMA). The counties used in the GreenSTEP and EERPAT models and metropolitan divisions used in the RSPM are examples of Azones. Azones are used to represent population and economic characteristics that vary across the region such as demographic forecasts of persons by age group and average per capita income. The Azone level of geography must represent actual geographic areas and may not be simulated.  
 
 - **Bzones**  
 Bzones are subdivisions of Azones that are similar in size to Census Block Groups. The districts used in RSPM models are examples of Bzones. Bzones are used to represent neighborhood characteristics and policies that may be applied differently by neighborhood, for example in the RSPM:  
@@ -271,7 +273,7 @@ Bzones are subdivisions of Azones that are similar in size to Census Block Group
 
   In rural areas, Bzones can be used to distinguish small cities from unincorporated areas. 
   
-  Bzones may correspond to actual geographic areas or may be simulated. Bzone simulation greatly reduces model data requirements while still enabling the modeling of land-use-related policies and the effects of land use on various aspects of travel behavior. In VE-RPAT models, Bzones are simulated as *place types* which characterize the intensity and nature of development. In VE-State models, Bzones are synthesized to represent characteristics likely to be found in an actual set of Bzones within each Azone.
+  Bzones may correspond to actual geographic areas or may be simulated. Bzone simulation greatly reduces model input data requirements while still enabling the modeling of land-use-related policies and the effects of land use on various aspects of travel behavior. In VE-RPAT models, Bzones are simulated as *place types* which characterize the intensity and nature of development. In VE-State models, Bzones are synthesized to represent characteristics likely to be found in an actual set of Bzones within each Azone.
 
 - **Mareas**  
 Mareas are collections of Azones associated with an urbanized area either because a portion of the urbanized area is located in the Azone or because a substantial proportion of the workers residing in the Azone work at jobs located in the urbanized area. Metropolitan models typically only have one assigned Marea whereas state models may have several. The model system requires that each Azone may be associated with only one Marea. It is also required that all Azones be associated with an Marea. A special Marea named '**None**' is used to apply to Azones that are not associated with any urbanized area. Mareas are used to specify and model urbanized area transportation characteristics such as overall transportation supply (transit, highways) and congestion. They are also used to specify large scale land-use-related characteristics and policies in models that use Bzone synthesis.
@@ -282,7 +284,7 @@ Geographical relationships for a model are described in the "geography.csv" file
 
 A key feature of the VisionEval model system that enables modules to be bound together into models is a data specifications system. All datasets that a module requires as inputs and datasets that that a module produces must be specified according to requirements. Section 8 describes these specifications in more detail. This section provides an introduction to the TYPE and UNITS specification requirements to provide context for understanding the "units.csv" file in the "defs" directory.
 
-The TYPE attribute for a dataset identifies the data type. The UNITS specification identifies the units of measure. The TYPE and UNITS specifications are related. The TYPE attribute affects the values that may be specified for UNITS attribute and how the framework processes the units values. The model system recognizes 3 categories of data types: 'primitive', 'complex', 'compound'. The 'primitive' category includes the 4 data types recognized by the R language: double, integer, character, and logical. A dataset that is specified as one of these types has no limitations on how the units of measure are specified. The 'complex' category currently includes 13 data types such as currency, distance, and area as shown in the table below. A dataset that is one of these types is limited to specified unit values. For example, the allowed units for the 'distance' type are MI, FT, KM, and M (for mile, foot, kilometer, and meter). The 'compound' category is composed of the compound data type. For compound data, units are represented as an expression involving the units of complex data types. For example, a dataset of vehicle speeds can be specified as having a TYPE that 'compound' and UNITS that are 'MI/HR'. The type is compound because it is made up of two complex types; distance and time. The units are an expression containing distance and time units and the '/' operator. The '*' (multiplication) operator may also be used in the units expression for a compound data type. Appendix C documents all the types and units in more detail. 
+The TYPE attribute for a dataset identifies the data type. The UNITS specification identifies the units of measure. The TYPE and UNITS specifications are related. The TYPE attribute affects the values that may be specified for UNITS attribute and how the framework processes the units values. The model system recognizes 3 categories of data types: 'primitive', 'complex', 'compound'. The 'primitive' category includes the 4 data types recognized by the R language: double, integer, character, and logical. A dataset that is specified as one of these types has no limitations on how the units of measure are specified. The 'complex' category currently includes 13 data types such as currency, distance, and area as shown in the table below. A dataset that is one of these types is limited to specified unit values. For example, the allowed units for the 'distance' type are MI, FT, KM, and M (for mile, foot, kilometer, and meter). The 'compound' category is composed of the compound data type. For compound data, units are represented as an expression involving the units of complex data types. For example, a dataset of vehicle speeds can be specified as having a TYPE that is 'compound' and UNITS that are 'MI/HR'. The type is compound because it is made up of two complex types; distance and time. The units are an expression containing distance and time units and the '/' operator. The '*' (multiplication) operator may also be used in the units expression for a compound data type. Appendix C documents all the types and units in more detail. 
 
 Although the complex and compound data types limit what values the units attributes may have, specifying these types enables the framework software to take care of unit conversions between modules and the datastore. For example, say that a model datastore contains a dataset for Bzone population density having units of persons per square mile. In this case the TYPE attribute for the data would be 'compound' and the UNITS would be 'PRSN/SQMI'. If a module which calculates household vehicle travel needs population density measured in persons per acre, the module would specify the UNITS as 'PRSN/ACRE' and the framework would take care of converting the density values from the units used in the datastore to the units requested by the module. This simplifies matters for module developers and reduces the likelihood of errors due to data conversions. 
 
@@ -320,9 +322,9 @@ The *inputs* directory contains all of the model inputs for a scenario. A model 
 
 * **Inputs apply to parts of the region and to all model years**: In this case, the input file consists of one data row for each geographic area and the file must include a column labeled **Geo** that is used for identifying the geographic areas. For example, if the input file applies to Azones and the model has 10 Azones, the file must have 10 rows in addition to the header. The **Geo** column identifies each of the Azones. Note that only the geographic areas specified in the *geo.csv* may be included in this file. If unlisted geographic areas are included, the model run will stop during initialization and the log will contain messages identifying the error(s).
 
-* **Inputs apply to the entire region but vary by model year**: In this case, the input file consists of one data row for each model year and the file much include a column labeled **Year** that is used for identifying the model years. For example, if the model run parameters specify that the model is to be run for the years 2010 and 2040, the input file must contain 2 rows in addition to the header. The **Year** column identifies each of the model run years. Note that only the specified model run years may be included in this file. If unspecified model run years are included, the model run will stop during initialization and the log will contain messages identifying the error(s).
+* **Inputs apply to the entire region but vary by model year**: In this case, the input file consists of one data row for each model year and the file much include a column labeled **Year** that is used for identifying the model years. For example, if the model run parameters specify that the model is to be run for the years 2010 and 2040, the input file must contain 2 rows in addition to the header. The **Year** column identifies each of the model run years. Note that only the specified model run years may be included in this file. Note that the file may include data for other years in addition to the data for the module run years. When the inputs are processed, the non-model-run year data will be ignored.
 
-* **Inputs apply to parts of the region and vary by model year**: In this case the input file consists of one data row for each combination of geographic area and model year. The file must include a **Geo** column and a **Year** column. There must be as many rows as there are combinations of geography and years. For example if an input file applies to Azones and the model specifies 10 Azones and 2 model run years, the file must have 20 rows to accommodate all the combinations in addition to a header row. The **Geo** and **Year** columns may only contain values specified for the model. If they contain any unspecified values, the model run will stop during initialization and the log will contain messages identifying the error(s).
+* **Inputs apply to parts of the region and vary by model year**: In this case the input file consists of one data row for each combination of geographic area and model year. The file must include a **Geo** column and a **Year** column. There must be as many rows as there are combinations of geography and years. For example if an input file applies to Azones and the model specifies 10 Azones and 2 model run years, the file must have 20 rows to accommodate all the combinations in addition to a header row. As with the case described above, inputs may be included for non-model-run years as well as model-run years.
 
 By convention, input file names which include inputs that vary by level of geography, include the level of geography in the input file name. File names should be descriptive. Following are some examples:  
 - azone_hh_pop_by_age.csv  
@@ -426,16 +428,18 @@ The model state file, "ModelState.Rda", maintains a record of all of the model r
 - BaseYear: The model base year  
 - Years: A list of years the model is being run for  
 - DatastoreName: The file name for the datastore  
+- DatastoreType: The datastore storage type. Currently implemented types are "RD" (R data) or "H5" (HDF5).
 - Seed: The value to be used for the random seed  
+- RequiredVEPackages: The names of VisionEval module packages that are used in the model run
 - LastChanged: The date and time of the last change to the model state  
 - Deflators: A data frame of deflator values by year  
 - Units: A data frame of default units for complex data types  
 - RequireVEPackages: A list of all the VisionEval packages that must be installed in order for the model to run
 - LogFile: The file name of the log file  
-- Datastore: A data frame containing an inventory of the contents of the datastore  
 - Geo_df: A data frame containing the geographic definitions for the model  
 - BzoneSpecified: A logical value identifying whether Bzones are specified for the model  
 - CzoneSpecified: A logical value identifying whether Czones are specified for the model  
+- Datastore: A data frame containing an inventory of the contents of the datastore  
 - ModuleCalls_df: A data frame identifying the sequence of 'runModule' function calls and arguments
 - ModulesByPackage_df: A data frame identifying the modules located in each of the VisionEval packages required to run the model
 - DatasetsByPackage_df: A data frame identifying the datasets located in each of the VisionEval packages required to run the model 
@@ -443,12 +447,12 @@ The model state file, "ModelState.Rda", maintains a record of all of the model r
 The Datastore component is updated every time the data is written to the datastore. This enables framework functions to 'know' the contents of the datastore without having to access the datastore. The Datastore component keeps track of all groups and datasets in the datastore and their attributes such as the length of tables and the specifications of datasets.
 
 ### 7. Overview of Module and Software Framework Layer Interactions
-Modules are the heart of the VisionEval model system. Modules contain all of the code and parameters to implement submodels that are the building blocks of models. Modules are distributed in standard R packages. A module contains the following components:  
-- Data specifications for data that is to be loaded from input files, data that is to be loaded from the datastore, and data that is to be saved to the datastore;  
-- Data for all parameters estimated/calibrated for use in the submodel;  
-- One or more functions for implementing the submodel;  
-- Functions for estimating/calibrating parameters using regional data supplied by the user (if necessary); and,  
+Modules are the heart of the VisionEval model system. Modules contain all of the code and parameters to implement submodels that are the building blocks of models. Modules are distributed in standard R packages. A VisionEval module package contains one or modules that implement related functions. For example, the VESimHouseholds package contains a set of modules related to creating a set of synthetic households and giving those households attributes including persons by age, workers by age, life cycle, and income. A module contains the following components:  
 - Documentation of the module and of submodel parameter estimation/calibration.  
+- Data and code for estimating the submodel(s) implemented by the module;  
+- Functions for estimating/calibrating parameters using regional data supplied by the user (if necessary);  
+- Data specifications for data that is to be loaded from input files, data that is to be loaded from the datastore, and data that is to be saved to the datastore; and,  
+- One or more functions for implementing the module.
 
 The software framework provides all of the functionality for managing a model run. This includes: 
 - Checking module specifications for consistency with standards;
@@ -495,6 +499,11 @@ VESimHouseholds
 |         |   pums_persons.txt
 |         |   ...
 |         
+|
+|____data-raw
+|    |    some_processed_model_dataset.rda
+|    |    ...
+|    
 |
 |____tests
      |____scripts
@@ -1388,7 +1397,10 @@ When a model is intialized by the *initializeModel* function in the *run_model.R
 #### 8.2. The inst/extdata Directory
 By convention, the 'inst/extdata' directory is the standard place to put external (raw) data files as opposed to R datasets which are placed in the 'data' directory. This is where most model estimation data is kept. Section 8.1.1.1 provides a detailed explanation. The directory should include a subdirectory named 'sources' to hold reports or other external documentation if needed.
 
-#### 8.3. The tests Directory
+#### 8.3. The data-raw Directory
+In some instances it is impractical to include the model estimation data as files in the 'inst/extdata' directory, and not necessary for model users to provide regional model estimation data. If, for example, the source data has confidential elements, it may be necessary to preprocess the data to anonymize it before including in the package; or the source data may be too large to include as a text file in the package. In these cases, source data may be processed outside of the package and then the processed datasets included in the package as datasets in R binary files. If that is done, the binary data files should be placed in a directory named 'data-raw' in the package.
+
+#### 8.4. The tests Directory
 The 'tests' directory contains R scripts and the results of module tests. The *scripts* directory contains all the scripts used to carry out module tests. The directory also contains subdirectories for each of the model types the module is to be tested with (e.g VE-RSPM, VE-State, VE-RPAT). Two approaches are available for handing module data that includes input files the module uses, all the *defs* files, and a datastore which contains all the datasets used by the module aside from those in the input files. These data can be included in the package or they may be kept in a central repository. If they are included in the package, they must be placed in the directory for the corresponding model. This is necessary to avoid conflicts in the test data for different models. The scripts directory includes a testing script which runs the tests on all modules in a package for a particular module. For example, the script for testing modules in a VE-State application is named *vestate_test.R*. The scripts directory also includes a *test.R* script which calls the individual model test scripts for automated package testing. If the centralized data testing approach is used, a *test_functions.R* script needs to be included. This includes functions needed to support the centralized test data approach. The test process is still not finalized. In the future this functionality will be included in the framework software. Following is an example of a test script using the central data approach:
 
 ```
@@ -1439,7 +1451,7 @@ Three functions are part of the API for model users: 'initializeModel', 'runModu
 The 'initializeModel' function prepares the model for running modules. This includes:  
 1) Creating the "ModelState.Rda" file that contains global parameters for the model run and variables used to keep track of the state of the datastore and other aspects of the model run (Section 6.6);  
 2) Creating a log file that is used to record model status messages such as warning and error messages;  
-3) Creating and initializing the model datastore;  
+3) Creating and initializing the model datastore including loading a specified datastore;  
 4) Processing the model geography definition file and setting up the appropriate geographic tables in the datastore;  
 5) Checking whether all the specified module packages are installed and that all module specifications are correct;  
 6) Parsing the "run_model.R" script and simulating the model run to confirm that the datastore will contain the data that each module needs when it is called and that the data specifications are consistent with the module 'Get' specifications;  
@@ -1468,6 +1480,10 @@ The function arguments and their meanings are as follows:
 - **LoadDatastore** A logical identifying whether an existing datastore should be loaded.  
 - **DatastoreName** A string identifying the full path name of a datastore to load or NULL if an existing datastore in the working directory is to be loaded.  
 - **SaveDatastore** A string identifying whether if an existing datastore in the working directory should be saved rather than removed.  
+
+Some consistency checks are done if a datastore is specified to be loaded including:
+- The base year for the loaded datastore must be the same as defined for the model run.
+- The defined geography for the loaded datastore must be the same as defined for the model run. 
 
 As the name suggests, the 'runModule' function runs a module. Following is an example of how it is invoked:  
 ```
@@ -1548,7 +1564,36 @@ The 'getRegisteredGetSpecs' function helps the module developer to write 'Get' s
 
 At the present time, the function returns a data frame which contains the 'Get' specifications for each requested dataset. It is up to the module developer to put the information into the proper form in the module script. In the future, the function will be modified to return the 'Get' specifications in list form that may be copied into a module script.  
 
-##### 9.2.3. Utility Functions for Implementing Modules  
+##### 9.2.3. Processing Runtime Errors and Warnings
+Section 8.1.5 described how the *Initialize* module can be used to perform input data checks more than the basic data checking performed by the framework. Although the use of framework data checks and an *Initialize* module can and should ideally catch all data errors/warnings during model initialization, there are sometimes instances where errors/warnings can only be caught during runtime. Runtime errors/warnings should ideally be caught gracefully and the user should be presented with an understandable message that will direct them to a solution rather than cause the program to crash with a cryptic R language message. The framework provides functions to assist the module developer to identify errors and warnings to the framework during runtime and to include helpful messages. The *addErrorMsg* function is used to pass an error message to the framework. If the module code catches a specified error, it should handle the error so that the code doesn't crash and use the *addErrorMsg* function to record the error for processing by the framework. By default, if an error message is returned by a module, the *runModule* function will stop model execution, will print a message to the console that an error occurred in running the module, and will print details of the error that the module developer included in the message. The *addErrorMsg* function takes two arguments: *ResultsListName*, a string identifying the name of the results list returned by the module (e.g. 'Out_ls'); *ErrMsg* a string that is the error message that will be written to the log for the user to see. Likewise, the *addWarningMsg* function likewise is used to pass a warning message to the framework. In the case of warnings, the model run is not stopped but a warning is printed in the console and details are written to the log. Following is an example of the use of *addWarningMsg* message in checking for unlikely population density:
+```
+  #Calculate density measures
+  #--------------------------
+  #Population density
+  D1B_ <- with(D_df, Pop / Area)
+  #Check for high population density values and add warning
+  IsHighDensity_ <- D1B_ > 100
+  HighDensityBzones_ <- Bz[IsHighDensity_]
+  if (any(IsHighDensity_)) {
+    Msg <- paste0(
+      "The following Bzones in the year ", L$G$Year, " ",
+      "have population densities greater than ",
+      "100 persons per acre: ", paste(HighDensityBzones_, collapse = ", "), ". ",
+      "This density is a relatively high level. ",
+      "Check your Bzone area and housing inputs for these Bzones and make ",
+      "sure that they are correct."
+    )
+    addWarningMsg("Out_ls", Msg)
+    rm(Msg)
+  }
+  rm(IsHighDensity_, HighDensityBzones_)
+  #Employment density
+  D1C_ <- with(D_df, TotEmp / Area)
+  #Activity density
+  D1D_ <- with(D_df, (TotEmp + NumHh) / Area)
+```
+
+##### 9.2.4. Utility Functions for Implementing Modules  
 Many submodels of the GreenSTEP and RSPM models are linear or binomial logit models. Several of the binary logit model implementations adjust the constant to match specified input proportions. For example, the light truck model enables model users to specify a future light truck proportion and the model will adjust the constant to match that proportion. Likewise, several linear models adjust a dispersion parameter to match a specified population mean. This is done for example in the household income model to match future per capita income projections. The adjustments are made with the use of a binary search algorithm. The following three functions simplify the implementation of those models in the VisionEval model system.  
 
 The 'applyLinearModel' function applies a linear model and optionally adjusts the model to match a target mean value. It has the following arguments:  
@@ -1585,8 +1630,22 @@ The function returns a value within the 'SearchRange_' for the function paramete
 
 Developers can refer to the source code for the 'applyLinearModel' and 'applyBinomialModel' functions to help understand how to use this function.
 
-##### 9.2.4. Module Documentation Function
+##### 9.2.5. Module Documentation Function
 Section 8.1.4 describes how module documentation is to be included in the module script. The 'documentModule' prepares formatted documentation from the script documentation. Refer to that section for more details.
+
+##### 9.2.6. Debugging Runtime Errors
+Although the large majority of runtime errors are avoided by the framework's data specification system, *Initialize* modules, and internal module error checks, inevitably some errors are only caught during runtime. This can pose challenges for debugging because the R language error messages can be cryptic. Often the easiest way to find the error is to recreate the state of the model at the start of module execution and then step through the module code to find the error. This is made simpler by using the *fetchModuleData* function. This function retrieves from the datastore the data that was passed to the module so that the code can be checked. The function takes the following arguments:
+- *ModuleName*: a string identifying the name of the module.
+- *PackageName*: a string identifying the name of the package that the module is in.
+- *Year*: a string identifying the model run year to retrieve the data for.
+- *Geo*: a string identifying the geography to retrieve the data for if the module's 'RunBy' specification is not 'Region'. This argument is omitted if the 'RunBy' specification is 'Region'.
+
+Here is an example of the steps that were used in debugging the CalculateUrbanMixMeasure module which errored when running a model in the R console:  
+1. The model run stopped and a cryptic R error message was printed to the console.  
+2. The following code was entered at the console to get the dataset used by the module: `L <- fetchModuleData("CalculateUrbanMixMeasure", "VELandUse", "2040")`. Note that *L* is the standard name used by modules to refer to the data list provided by the framework to the module.  
+3. The module function code was retrieved with `edit(VELandUse::CalculateUrbanMixMeasure)` and pasted into a temporary file.  
+4. The module code in the temporary file was stepped through line by line until an error occurred. Then the values of data used in the computation could be checked to determine the cause. In this case, error was caused by very high population densities that were outside the range of values used to estimate the binomial logit model which determines the odds that a Bzone is urban-mixed-use. Calculating the odds involves exponentiation which in the case of very high densities produced infinite values which in turn caused probability values of NA. That in turn caused an error when used in the *sample* function.   
+5. Code to fix the module was developed and tested in the temporary file. Then fixed code was used to modify the CalculateUrbanMixMeasure code in the VELandUse package.
 
 ### Appendix A: Example Model Run Script  
 ```

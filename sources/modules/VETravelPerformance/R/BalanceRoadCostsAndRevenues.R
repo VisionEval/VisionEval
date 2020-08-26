@@ -260,7 +260,7 @@ BalanceRoadCostsAndRevenuesSpecifications <- list(
 #' }
 #' @source BalanceRoadCostsAndRevenues.R script.
 "BalanceRoadCostsAndRevenuesSpecifications"
-usethis::use_data(BalanceRoadCostsAndRevenuesSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(BalanceRoadCostsAndRevenuesSpecifications, overwrite = TRUE)
 
 
 #=======================================================

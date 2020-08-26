@@ -629,7 +629,7 @@ VehOwnModels_ls$VehicleMpgProp <- list(
 #' }
 #' @source AssignVehicleFeatures.R script.
 "VehOwnModels_ls"
-usethis::use_data(VehOwnModels_ls, overwrite = TRUE)
+visioneval::savePackageDataset(VehOwnModels_ls, overwrite = TRUE)
 
 # Model LtTrk Ownership
 #-------------------------
@@ -649,8 +649,7 @@ LtTruckModels_ls <- list(OwnModel = "-0.786596031795022 * Intercept + 5.00962836
 #' }
 #' @source AssignVehicleFeatures.R script.
 "LtTruckModels_ls"
-usethis::use_data(LtTruckModels_ls, overwrite = TRUE)
-
+visioneval::savePackageDataset(LtTruckModels_ls, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -975,8 +974,7 @@ AssignVehicleFeaturesSpecifications <- list(
 #' }
 #' @source AssignVehicleFeatures.R script.
 "AssignVehicleFeaturesSpecifications"
-usethis::use_data(AssignVehicleFeaturesSpecifications, overwrite = TRUE)
-
+visioneval::savePackageDataset(AssignVehicleFeaturesSpecifications, overwrite = TRUE)
 
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL

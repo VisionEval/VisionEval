@@ -199,8 +199,7 @@ rm(Hh_df, EstData_df)
 #' }
 #' @source AssignVehicleOwnership.R script.
 "AutoOwnModels_ls"
-usethis::use_data(AutoOwnModels_ls, overwrite = TRUE)
-
+visioneval::savePackageDataset(AutoOwnModels_ls, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -214,6 +213,24 @@ AssignVehicleOwnershipSpecifications <- list(
   #Specify new tables to be created by Inp if any
   #Specify new tables to be created by Set if any
   #Specify input data
+  Inp = items(
+    item(
+      NAME = "AveVehPerDriver",
+      FILE = "azone_hh_ave_veh_per_driver.csv",
+      TABLE = "Azone",
+      GROUP = "Year",
+      TYPE = "compound",
+      UNITS = "VEH/DRV",
+      NAVALUE = -1,
+      PROHIBIT = c("NA", "< 0"),
+      ISELEMENTOF = "",
+      UNLIKELY = "> 2",
+      TOTAL = "",
+      DESCRIPTION =
+        "Average number of household vehicles per licensed driver by Azone",
+      OPTIONAL = TRUE
+    )
+  ),
   #Specify data to be loaded from data store
   Get = items(
     item(
@@ -263,6 +280,15 @@ AssignVehicleOwnershipSpecifications <- list(
     ),
     item(
       NAME = "Bzone",
+      TABLE = "Household",
+      GROUP = "Year",
+      TYPE = "character",
+      UNITS = "ID",
+      PROHIBIT = "",
+      ISELEMENTOF = ""
+    ),
+    item(
+      NAME = "Azone",
       TABLE = "Household",
       GROUP = "Year",
       TYPE = "character",
@@ -341,7 +367,26 @@ AssignVehicleOwnershipSpecifications <- list(
       UNITS = "category",
       PROHIBIT = "NA",
       ISELEMENTOF = c("Urban", "Town", "Rural")
-    )
+    ),
+    item(
+      NAME = "Azone",
+      TABLE = "Azone",
+      GROUP = "Year",
+      TYPE = "character",
+      UNITS = "ID",
+      PROHIBIT = "",
+      ISELEMENTOF = ""
+    ),
+    item(
+      NAME = "AveVehPerDriver",
+      TABLE = "Azone",
+      GROUP = "Year",
+      TYPE = "compound",
+      UNITS = "VEH/DRV",
+      PROHIBIT = c("NA", "< 0"),
+      ISELEMENTOF = "",
+      OPTIONAL = TRUE
+      )
   ),
   #Specify data to saved in the data store
   Set = items(
@@ -374,7 +419,7 @@ AssignVehicleOwnershipSpecifications <- list(
 #' }
 #' @source AssignVehicleOwnership.R script.
 "AssignVehicleOwnershipSpecifications"
-usethis::use_data(AssignVehicleOwnershipSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignVehicleOwnershipSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -407,9 +452,10 @@ AssignVehicleOwnership <- function(L) {
   #Define vector of Mareas
   Ma <- L$Year$Marea$Marea
   Bz <- L$Year$Bzone$Bzone
+  Az <- L$Year$Azone$Azone
   #Calculate number of households
   NumHh <- length(L$Year$Household[[1]])
-  
+
   #Set up data frame of household data needed for model
   #----------------------------------------------------
   Hh_df <- data.frame(L$Year$Household)
@@ -421,37 +467,109 @@ AssignVehicleOwnership <- function(L) {
   Hh_df$LogDensity <- log(Density_)
   TranRevMiPC_Bz <- L$Year$Marea$TranRevMiPC[match(L$Year$Bzone$Marea, L$Year$Marea$Marea)]
   Hh_df$TranRevMiPC <- TranRevMiPC_Bz[match(L$Year$Household$Bzone, L$Year$Bzone$Bzone)]
-  
-  #Run the model
-  #-------------
-  #Probability no vehicles
+
+  #Make a vehicle probability matrix
+  #---------------------------------
+  AutoOwnModels_ls <- VEHouseholdVehicles::AutoOwnModels_ls
+
+  #Identify Urban households
+  IsUrban <- Hh_df$LocType == "Urban"
+  #No vehicle probability
   NoVehicleProb_ <- numeric(NumHh)
-  NoVehicleProb_[Hh_df$LocType == "Urban"] <-
-    predict(AutoOwnModels_ls$Metro$Zero,
-            newdata = Hh_df[Hh_df$LocType == "Urban",],
-            type = "response")
-  if (any(Hh_df$LocType!="Urban")) {
-    NoVehicleProb_[Hh_df$LocType %in% c("Town", "Rural")] <-
-      predict(AutoOwnModels_ls$NonMetro$Zero,
-              newdata = Hh_df[Hh_df$LocType %in% c("Town", "Rural"),],
+  if (any(IsUrban)) {
+    NoVehicleProb_[IsUrban] <-
+      predict(AutoOwnModels_ls$Metro$Zero,
+              newdata = Hh_df[IsUrban,],
               type = "response")
   }
-  #Vehicle counts
-  Vehicles_ <- integer(NumHh)
-  Vehicles_[Hh_df$LocType == "Urban"] <-
-    as.integer(predict(AutoOwnModels_ls$Metro$Count,
-                       newdata = Hh_df[Hh_df$LocType == "Urban",],
-                       type = "class")$fit)
-  if (any(Hh_df$LocType!="Urban")) {
-    Vehicles_[Hh_df$LocType %in% c("Town", "Rural")] <-
-      as.integer(predict(AutoOwnModels_ls$NonMetro$Count,
-                         newdata = Hh_df[Hh_df$LocType %in% c("Town", "Rural"),],
-                         type = "class")$fit)
-    #Set count to zero for households modeled as having no vehicles
-    Vehicles_[NoVehicleProb_ >= runif(NumHh)] <- 0
-    #Set count to zero for households having no drivers
-    Vehicles_[L$Year$Household$Drivers == 0] <- 0
+  if (any(!IsUrban)) {
+    NoVehicleProb_[!IsUrban] <-
+      predict(AutoOwnModels_ls$NonMetro$Zero,
+              newdata = Hh_df[!IsUrban,],
+              type = "response")
   }
+  #Vehicle count probability
+  VehicleProb_mx <- array(NA,dim = c(NumHh, 6))
+  if (any(IsUrban)) {
+    VehicleProb_mx[IsUrban,] <-
+      predict(AutoOwnModels_ls$Metro$Count,
+              newdata = Hh_df[IsUrban,],
+              type = "prob")$fit
+  }
+  if (any(!IsUrban)) {
+    VehicleProb_mx[!IsUrban,] <-
+      predict(AutoOwnModels_ls$NonMetro$Count,
+              newdata = Hh_df[!IsUrban,],
+              type = "prob")$fit
+  }
+  #Combine no-vehicle and vehicle count probabilities
+  VehicleProb_HhNv <- cbind(
+    NoVehicleProb_,
+    sweep(VehicleProb_mx, 1, (1 - NoVehicleProb_), "*")
+  )
+  rm(VehicleProb_mx, NoVehicleProb_)
+
+  #Predict number of vehicles using probabilities
+  #----------------------------------------------
+  #Predict number of vehicles for each household
+  Vehicles_ <- apply(VehicleProb_HhNv, 1, function(x) {
+    sample(0:6, 1, prob = x)
+  })
+
+  #Define function to adjust vehicle predictions to match a target number
+  #----------------------------------------------------------------------
+  adjVehicles <- function(NumChgVeh, Vehicles_, Hh_df, VehicleProb_mx) {
+    if (NumChgVeh > 0) {
+      ChgVehCat <- 0:5
+    }
+    if (NumChgVeh < 0) {
+      ChgVehCat <- 1:6
+    }
+    #Allocate the changes according to numbers of vehicles in each change category
+    NumHhByCategory_ <- sapply(ChgVehCat, function(x) sum(Vehicles_ == x))
+    PropHhByCategory_ <- NumHhByCategory_ / sum(NumHhByCategory_)
+    ChgVehByCategory_ <- round(NumChgVeh * PropHhByCategory_)
+    #Initialize a vector of changes
+    VehiclesChg_ <- integer(length(Vehicles_))
+    #Iterate through each category and identify changes
+    for (Cat in ChgVehCat) {
+      HhIdxToChg_ <- which(Vehicles_ == Cat)
+      if (NumChgVeh > 0) {
+        NumToChg <- ChgVehByCategory_[Cat + 1]
+        ChgProb_ <- VehicleProb_HhNv[HhIdxToChg_, Cat + 2]
+      }
+      if (NumChgVeh < 0) {
+        NumToChg <- ChgVehByCategory_[Cat]
+        ChgProb_ <- VehicleProb_HhNv[HhIdxToChg_, Cat]
+      }
+      IdxToChg_ <- tail(HhIdxToChg_[order(ChgProb_)], abs(NumToChg))
+      VehiclesChg_[IdxToChg_] <- sign(NumToChg)
+    }
+    #Calculate the adjusted number of vehicles
+    Vehicles_ <- Vehicles_ + VehiclesChg_
+  }
+
+  #Adjust number of vehicles if target vehicles/drivers provided
+  #-------------------------------------------------------------
+  if (!all(is.null(L$Year$Azone$AveVehPerDriver))) {
+    #Iterate by Azone to adjust vehicle predictions to match Azone target
+    for (az in Az) {
+      IsAzone <- Hh_df$Azone == az
+      TargetRatio <- with(L$Year$Azone, AveVehPerDriver[Azone == az])
+      NumDvr <- with(Hh_df, sum(Drivers[Azone == az]))
+      TargetNumVeh <- round(TargetRatio * NumDvr)
+      NumChgVeh <- TargetNumVeh - sum(Vehicles_[IsAzone])
+      #Calculate changes if the number of vehicles to change is not 0
+      if (NumChgVeh != 0) {
+        Vehicles_[IsAzone] <- adjVehicles(
+          NumChgVeh = NumChgVeh,
+          Vehicles_ = Vehicles_[IsAzone],
+          Hh_df = Hh_df[IsAzone,],
+          VehicleProb_mx = VehicleProb_mx[IsAzone,])
+      }
+    }
+  }
+
   #Return the results
   #------------------
   #Initialize output list

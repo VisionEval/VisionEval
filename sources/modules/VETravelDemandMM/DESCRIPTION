@@ -1,0 +1,36 @@
+Package: VETravelDemandMM
+Type: Package
+Title: Simulate Multi-Modal Travel Demand for Households
+Version: 2.0.0
+Date: 2020-08-14
+Authors@R: person("Liming", "Wang", role=c("aut", "cre"), email="lmwang@pdx.edu")
+Maintainer: Liming Wang <lmwang@gmail.com>
+Copyright: Portland State University
+URL: https://github.com/cities-lab/VETravelDemandMM
+Description: This package contains a module for the VisionEval framework that simulates 
+     multi-modal travel demand for individual households.
+License: file LICENSE
+LazyData: TRUE
+Encoding: UTF-8
+Depends:  R (>= 3.6.0)
+Imports:
+    dplyr,
+    purrr,
+    MASS,
+    splines,
+    tidyr,
+    pscl,
+    rmarkdown,
+    data.table,
+    visioneval,
+    VE2001NHTS
+Suggests:
+    knitr,
+    NHTS2009,
+    SLD
+VignetteBuilder: knitr
+Roxygen: list(load="pkgload")
+RoxygenNote: 7.1.0
+Remotes:
+    cities-lab/NHTS2009,
+    cities-lab/SLD

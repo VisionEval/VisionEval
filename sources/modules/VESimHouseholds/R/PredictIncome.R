@@ -1,3 +1,6 @@
+#' @include CreateEstimationDatasets.R
+NULL
+
 #===============
 #PredictIncome.R
 #===============
@@ -226,7 +229,7 @@ lines(density(IncEst_), lty = 2)
 legend("topright", legend = c("Observed", "Predicted"), lty = c(1,2))
 dev.off()
 #Clean up
-rm(Hh_df, IncObs_, HHIncomeTarget, MeanCompare_df)
+rm(IncObs_, HHIncomeTarget, MeanCompare_df)
 
 #Save the household income model
 #-------------------------------
@@ -246,7 +249,7 @@ rm(Hh_df, IncObs_, HHIncomeTarget, MeanCompare_df)
 #' }
 #' @source PredictIncome.R script.
 "HHIncModel_ls"
-usethis::use_data(HHIncModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(HHIncModel_ls, overwrite = TRUE)
 
 #Estimate the group quarters linear income model
 #-----------------------------------------------
@@ -317,8 +320,6 @@ plot(
 lines(density(IncEst_), lty = 2)
 legend("topright", legend = c("Observed", "Predicted"), lty = c(1,2))
 dev.off()
-#Clean up
-rm(Hh_df, IncObs_, HHIncomeTarget, MeanCompare_df)
 
 #Save the group quarters income model
 #------------------------------------
@@ -338,7 +339,7 @@ rm(Hh_df, IncObs_, HHIncomeTarget, MeanCompare_df)
 #' }
 #' @source PredictIncome.R script.
 "GQIncModel_ls"
-usethis::use_data(GQIncModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(GQIncModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -476,7 +477,7 @@ PredictIncomeSpecifications <- list(
 #' }
 #' @source PredictIncome.R script.
 "PredictIncomeSpecifications"
-usethis::use_data(PredictIncomeSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(PredictIncomeSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -536,6 +537,7 @@ PredictIncome <- function(L) {
   Data_df$AvePerCapInc <- L$Year$Azone$HHIncomePC[HhToAzIdx_Hh]
   #Predict income for households by Azone using Azone household income target
   HhIncome_Hh <- numeric(NumHH)
+  HHIncModel_ls <- VESimHouseholds::HHIncModel_ls
   for (az in Az) {
     IsAz <- Data_df$Azone == az
     #Calculate average household income target to match
@@ -564,6 +566,7 @@ PredictIncome <- function(L) {
     Data_df$AvePerCapInc <- L$Year$Azone$GQIncomePC[GqToAzIdx_Gq]
     #Predict income for group quarters by Azone using Azone household income target
     GqIncome_Gq <- numeric(NumGQ)
+    GQIncModel_ls <- VESimHouseholds::GQIncModel_ls
     for (az in Az) {
       IsAz <- Data_df$Azone == az
       if (sum(IsAz) > 0) {

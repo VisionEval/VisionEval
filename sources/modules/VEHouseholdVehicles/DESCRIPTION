@@ -1,8 +1,8 @@
 Package: VEHouseholdVehicles
 Type: Package
-Title: Model household vehicles
-Version: 0.9.5
-Date: 11/6/18
+Title: Model household vehicles with driver and vehicle adjustments
+Version: 2.0.0
+Date: 2020-08-14
 Author: Brian Gregor [aut, cre], Aditya Gore <aditya.gore@rsginc.com> [cre]
 Maintainer: Brian Gregor <gregorb@or-analytics.com>, Aditya Gore <aditya.gore@rsginc.com>
 Copyright: AASHTO
@@ -16,17 +16,17 @@ Description: This package contains modules which predict household vehicle
     higher than the cost per mile of using a car service. The cost of owning
     vehicles is calculated as a function of the vehicle age, type, and vehicle
     miles traveled.
-License: Apache License 2.0
+License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
     ordinal,
     reshape2,
-    usethis,
     VE2001NHTS
 Suggests:
     knitr
 Encoding: UTF-8
 VignetteBuilder: knitr
-RoxygenNote: 6.1.1
+Roxygen: list(load='source')
+RoxygenNote: 7.1.1

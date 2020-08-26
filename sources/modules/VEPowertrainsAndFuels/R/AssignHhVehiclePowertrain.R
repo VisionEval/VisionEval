@@ -1,3 +1,6 @@
+#' @include LoadDefaultValues.R
+NULL
+
 #===========================
 #AssignHhVehiclePowertrain.R
 #===========================
@@ -87,9 +90,6 @@
 #and the proportion of travel powered by each will differ depending on
 #day-to-day household travel patterns. A model is estimated to calculate those
 #proportions.
-
-#Load PowertrainFuelDefaults_ls to make it available as a global variable
-load("./data/PowertrainFuelDefaults_ls.rda")
 
 #-------------------------------------------------------
 #Model proportions of PHEV travel powered by electricity
@@ -242,7 +242,7 @@ rm(Vm, Rg, smoothLookup, calcElectricProp)
 #' }
 #' @source CalculateHhEnergyAndEmissions.R script.
 "PhevElecProp_ls"
-usethis::use_data(PhevElecProp_ls, overwrite = TRUE)
+visioneval::savePackageDataset(PhevElecProp_ls, overwrite = TRUE)
 
 
 #================================================
@@ -253,7 +253,7 @@ usethis::use_data(PhevElecProp_ls, overwrite = TRUE)
 #------------------------------
 AssignHhVehiclePowertrainSpecifications <- list(
   #Level of geography module is applied at
-  RunBy = "Azone",
+  RunBy = "Region",
   #Specify new tables to be created by Inp if any
   #Specify new tables to be created by Set if any
   #Specify input data
@@ -363,12 +363,21 @@ AssignHhVehiclePowertrainSpecifications <- list(
       ISELEMENTOF = ""
     ),
     item(
+      NAME = "Azone",
+      TABLE = "Household",
+      GROUP = "Year",
+      TYPE = "character",
+      UNITS = "ID",
+      PROHIBIT = "",
+      ISELEMENTOF = ""
+    ),
+    item(
       NAME = "HhId",
       TABLE = "Household",
       GROUP = "Year",
       TYPE = "character",
       UNITS = "ID",
-      PROHIBIT = "NA",
+      PROHIBIT = "",
       ISELEMENTOF = ""
     ),
     item(
@@ -612,7 +621,7 @@ AssignHhVehiclePowertrainSpecifications <- list(
 #' }
 #' @source AssignHhVehiclePowertrain.R script.
 "AssignHhVehiclePowertrainSpecifications"
-usethis::use_data(AssignHhVehiclePowertrainSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignHhVehiclePowertrainSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -727,12 +736,16 @@ AssignHhVehiclePowertrain <- function(L, M) {
   ModelYear_Ve <- as.character(ModelYear_Ve)
   #Identify availability of charging at home
   ChargeAvail_Ve <- local({
-    ChargeAvailProb_ <- c(
+    ChargeAvailProb_AzHt <- cbind(
       SF = L$Year$Azone$PropSFChargingAvail,
       MF = L$Year$Azone$PropMFChargingAvail,
       GQ = L$Year$Azone$PropGQChargingAvail
     )
-    ChargeAvailProb_Hh <- ChargeAvailProb_[L$Year$Household$HouseType]
+    ChargeAvailProbIdx_mx <- cbind(
+      match(L$Year$Household$Azone, L$Year$Azone$Azone),
+      match(L$Year$Household$HouseType, colnames(ChargeAvailProb_AzHt))
+    )
+    ChargeAvailProb_Hh <- ChargeAvailProb_AzHt[ChargeAvailProbIdx_mx]
     ChargeAvail_Hh <- runif(length(ChargeAvailProb_Hh)) < ChargeAvailProb_Hh
     ChargeAvail_Hh[HhToVehIdx_Ve]
   })
@@ -825,6 +838,7 @@ AssignHhVehiclePowertrain <- function(L, M) {
 
   #Calculate the proportion of DVMT that is electric
   #-------------------------------------------------
+  PhevElecProp_ls <- VEPowertrainsAndFuels::PhevElecProp_ls
   ElecDvmtProp_Ve <- local({
     IsPhev_Ve <- Powertrain_Ve == "PHEV"
     IsMetro_Ve <- L$Year$Household$LocType[HhToVehIdx_Ve] == "Urban"
@@ -890,6 +904,7 @@ AssignHhVehiclePowertrain <- function(L, M) {
     PtProp_ <- PtProp_ / sum(PtProp_)
     MpgNames_ <- paste0(Type, c("IcevMpg", "HevMpg"))
     Mpg_ <- CarSvcChar_[MpgNames_]
+    Mpg_[PtProp_ == 0] <- 0
     sum(PtProp_ * Mpg_)
   }
   MPG_Ve[IsCarSvc_Ve & L$Year$Vehicle$Type == "Auto"] <- calcAveCarSvcMpg("Auto")
@@ -943,7 +958,10 @@ AssignHhVehiclePowertrain <- function(L, M) {
   KWHPM_Ve[MPKWH_Ve == 0] <- 0
   MJPM_Ve <- convertUnits(KWHPM_Ve, "compound", "KWH/MI", "MJ/MI")$Values
   #Calculate carbon intensity for electricity consumption
-  ElecCO2ePM_Ve <- MJPM_Ve * L$Year$Azone$ElectricityCI
+  ElectricityCI_Ve <- L$Year$Azone$ElectricityCI[
+    match(L$Year$Vehicle$Azone, L$Year$Azone$Azone)
+  ]
+  ElecCO2ePM_Ve <- MJPM_Ve * ElectricityCI_Ve
 
   #Calculate MPGe
   #--------------

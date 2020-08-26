@@ -1,3 +1,6 @@
+#' @include CalculateHouseholdDvmt.R
+NULL
+
 #=======================
 #CalculateVehicleTrips.R
 #=======================
@@ -134,7 +137,7 @@ Hh_df$AveDvmt[!Hh_df$IsMetro] <-
 #Cap at 99th percentile
 MaxAveDvmt <- quantile(Hh_df$AveDvmt, probs = 0.99, na.rm = TRUE)
 Hh_df$AveDvmt[Hh_df$AveDvmt > MaxAveDvmt] <- MaxAveDvmt
-rm(DvmtModel_ls, MaxAveDvmt)
+rm(MaxAveDvmt)
 
 #Define function to simulate average trip length
 #-----------------------------------------------
@@ -392,7 +395,7 @@ rm(capMaxVals, MetroHh_df, NonMetroHh_df, Hh_df, findPower, MetroAveTrpLen_ls,
 #' contains a string representing a hurdle model for computing household trips.
 #' @source CalculateVehicleTrips.R script.
 "VehTrpLenModel_ls"
-usethis::use_data(VehTrpLenModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(VehTrpLenModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -514,7 +517,7 @@ CalculateVehicleTripsSpecifications <- list(
       GROUP = "Year",
       TYPE = "people",
       UNITS = "PRSN",
-      PROHIBIT = c("NA", "< 0"),
+      PROHIBIT = c("NA", "<= 0"),
       ISELEMENTOF = ""
     ),
     item(
@@ -583,7 +586,7 @@ CalculateVehicleTripsSpecifications <- list(
 #' }
 #' @source CalculateVehicleTrips.R script.
 "CalculateVehicleTripsSpecifications"
-usethis::use_data(CalculateVehicleTripsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateVehicleTripsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

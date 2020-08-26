@@ -1,8 +1,8 @@
 Package: VESimTransportSupply
 Type: Package
 Title: Create Transportation System Attributes for VE
-Version: 0.75
-Date: 02/11/2019
+Version: 2.0.0
+Date: 2020-08-14
 Author: Brian Gregor [aut, cre]
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: AASHTO
@@ -13,16 +13,16 @@ Description: This package contains several modules which attribute the
     neighborhood transit accessibility, and calculation of transit vehicle miles
     by vehicle type from transit revenue miles. This package is intended for use
     in conjunction with the VESimLandUse package.
-License: Apache License 2.0
+License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    usethis,
     VESimLandUse,
     VETransportSupply
 Suggests:
     knitr
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+Roxygen: list(load='source')
+RoxygenNote: 7.1.1

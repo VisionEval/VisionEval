@@ -195,7 +195,7 @@ CreateFutureSyntheticFirmsSpecifications <- list(
 #' }
 #' @source CreateFutureSyntheticFirms.R script.
 "CreateFutureSyntheticFirmsSpecifications"
-usethis::use_data(CreateFutureSyntheticFirmsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CreateFutureSyntheticFirmsSpecifications, overwrite = TRUE)
 
 
 #=======================================================

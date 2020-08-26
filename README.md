@@ -1,4 +1,3 @@
-
 # VisionEval
 
 VisionEval is a model system and supporting software framework for building collaborative disaggregate strategic planning models.  
@@ -8,7 +7,11 @@ master branch: [![Travis-CI Build Status](https://travis-ci.org/VisionEval/Visio
 
 ## Documentation
 
-https://github.com/VisionEval/VisionEval/wiki
+Documentation for VisionEval is online at [https://github.com/VisionEval/VisionEval/wiki](https://github.com/VisionEval/VisionEval/wiki)
+
+## Release
+
+You can retrieve the current binary release of VisionEval from [https://visioneval.org/category/download.html](https://visioneval.org/category/download.html)
 
 ## Issues
 

@@ -1,8 +1,8 @@
 Package: VETransportSupply
 Type: Package
 Title: Create Transportation System Attributes for VE
-Version: 0.75
-Date: 11/05/2018
+Version: 2.0.0
+Date: 2020-08-14
 Author: Brian Gregor [aut, cre], Aditya Gore <aditya.gore@rsginc.com> [cre]
 Maintainer: Brian Gregor <gregorb@or-analytics.com>, Aditya Gore <aditya.gore@rsginc.com>
 Copyright: AASHTO
@@ -12,14 +12,14 @@ Description: This package contains several modules which attribute the
     including freeway lane miles, public transportation revenue miles,
     neighborhood transit accessibility, and calculation of transit vehicle miles
     by vehicle type from transit revenue miles.
-License: Apache License 2.0
+License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
-    visioneval,
-    usethis
+    visioneval
 Suggests:
     knitr
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+Roxygen: list(load='source')
+RoxygenNote: 7.1.1

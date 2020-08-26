@@ -1,0 +1,252 @@
+# Identify VisionEval Components and Dependencies
+
+Components:
+
+# "Type: module" components are built and installed as R packages
+# "Type: framework" works like a module, but is built first; also it has a different implied
+#        documentation location
+# The test script relative path is copied to the "test" environment under the module name
+# The group captures the VE internal dependencies (see .travis.yml) but is unused
+# Docs target is one (or a vector) of locations from which markdown files will be processed into PDFs
+#   Build target PDFs will be placed in a name derived (for the framework) from the first element in the  Docs path,
+#   and (for the modules) in a folder named after the module:
+#       framework [Type]:
+#       +api # contains any .md files found at the top level as PDFs
+#       +function_docs # contains any .md files found in the indicated folder as PDFs
+#       modules
+#       + [ModuleName] # contains inst/module_docs as PDFs
+  visioneval:
+    Type: framework
+    Path: sources/framework
+    Test: { Script: tests/scripts/test.R, Group: 0 }
+    CRAN: 
+      - knitr
+      - jsonlite
+      - stringr
+      - filesstrings
+    BioC:
+      - rhdf5
+  VE2001NHTS:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+  VEScenario:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - data.table
+      - future
+      - future.callr
+      - jsonlite
+  VESimHouseholds:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+  VESimLandUseData:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - stringr
+      - tidycensus
+  VESyntheticFirms:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - reshape
+  VETransportSupply:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+  VETransportSupplyUse:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+  VEHouseholdTravel:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    CRAN:
+      - data.table
+      - pscl
+    VE:
+      - VE2001NHTS
+  VETravelDemandMM:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    CRAN:
+      - dplyr
+      - purrr
+      - tidyr
+      - splines
+      - MASS 
+      - pscl
+  VEHouseholdVehicles:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    CRAN:
+      - ordinal
+      - reshape2
+    VE:
+      - VE2001NHTS
+#   VEHouseholdVehiclesWithAdj:
+#     Type: module
+#     Path: sources/modules
+#     Test: { Script: tests/scripts/test.R, Group: 2 }
+#     CRAN:
+#       - ordinal
+#       - reshape2
+#     VE:
+#       - VE2001NHTS
+  VELandUse:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    CRAN:
+      - fields
+      - geosphere
+    VE:
+      - VE2001NHTS
+      - VESimHouseholds
+  VEPowertrainsAndFuels:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 3 }
+    CRAN:
+      - data.table
+    VE:
+      - VE2001NHTS
+      - VEHouseholdTravel
+      - VETravelDemandMM      
+  VEReports:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 3 }
+    CRAN:
+      - filesstrings
+      - jsonlite
+    VE:
+      - VEHouseholdTravel
+      - VETravelDemandMM
+
+  VESimLandUse:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 3 }
+    CRAN:
+      - plot3D
+    VE:
+      - VELandUse
+      - VESimLandUseData
+  VETravelPerformance:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 4 }
+    CRAN:
+      - filesstrings
+      - stringr
+      - dplyr
+    VE:
+      - VEHouseholdTravel
+      - VEPowertrainsAndFuels
+  VESimTransportSupply:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 4 }
+    VE:
+      - VESimLandUse
+      - VETransportSupply
+
+# "Type: test" components are copied verbatim to "src" environment under its name
+# May need to rethink this...
+  Test_Data:
+    Type: test
+    Path: sources/modules
+
+# "Type: model" components may have tests, and are copied to "models" folder of runtime under their name
+# The "group" is unused for testing - it is always the "last" group for the models
+# The test script relative path is copied to the "test" environment
+  VERPAT:
+    Type: model
+    Path: sources/models
+    Test: { Script: run_model.R, Group: 5 }
+  VERPAT_Scenarios:
+    Type: model
+    Path: sources/models
+  VERSPM:
+    Type: model
+    Path: sources/models
+    Test: { Script: Test1/run_model.R, Group: 5 }
+  VERSPM_MM:
+    Type: model
+    Path: sources/models
+    Test: { Script: Test1/run_model.R, Group: 5 }    
+#   VERSPM-VehAdj:
+#     Type: model
+#     Path: sources/models
+#     Test: { Script: Test1/run_model.R, Group: 5 }    
+  VERSPM_Scenarios:
+    Type: model
+    Path: sources/models
+  VE-State:
+    Type: model
+    Path: sources/models
+  VE-State-Staged:
+    Type: model
+    Path: sources/models
+
+# "Type: runtime" components are copied recursively to the runtime root
+# Their name is used to find them under the Path but unlike "script" components
+#   no subdirectory is created
+
+  runtime:
+    Type: runtime
+    Path: sources # copies sources/runtime/* to ve.runtime
+
+# "Type: script" components are copied to the runtime root under their name
+  LICENSE:
+    Type: script
+    Path: "."
+  VEScenarioViewer:
+    Type: script
+    Path: sources
+  VEGUI:
+    Type: script
+    Path: sources
+    Test: { Script: run_vegui_test.R, Group: 5 }
+    CRAN:
+      - DT
+      - envDocument
+      - rhandsontable
+      - shiny
+      - shinyBS
+      - shinyFiles
+      - shinyjs
+      - shinytest
+      - testit
+      - testthat
+    BioC:
+      - rhdf5
+    Github:
+      - tdhock/namedCapture
+  tools:
+    Type: script
+    Path: sources
+    CRAN:
+      - futile.logger
+      - tryCatchLog
+      - import
+      - R6
+      - jsonlite
+  api:                               # "package" for 'docs' type is the last element (can be file name)
+    Type: docs
+    Path: "."                        # base directory below root to gather docs
+    Target: visioneval/api           # output path relative to "ve.docs"
+  RStudio.md:
+    Type: docs
+    Path: build
+    Target: visioneval

@@ -54,10 +54,16 @@
 #' @import visioneval
 #' @import VELandUse
 
+# TODO: it's bad practice to make a second dataset with the same name
+# as in another package. Is VELandUse ever not loaded when we do
+# VESimLandUse - the implication here is that it is, but there's no
+# way to enforce that. There's not evidence that is ever used except
+# locally.
+
 #Load the urban mixed-use model estimated by the CalculateUrbanMixMeasure
 #module in the VELandUse package
 #------------------------------------------------------------------------
-UrbanMixModel_ls <- VELandUse::UrbanMixModel_ls
+UrbanMixModelSim_ls <- VELandUse::UrbanMixModel_ls
 
 #Save the urban mixed-use model
 #------------------------------
@@ -75,9 +81,8 @@ UrbanMixModel_ls <- VELandUse::UrbanMixModel_ls
 #'   \item{SearchRange}{a two-element vector specifying the range of search values}
 #' }
 #' @source CalculateUrbanMixMeasure.R script.
-"UrbanMixModel_ls"
-usethis::use_data(UrbanMixModel_ls, overwrite = TRUE)
-
+"UrbanMixModelSim_ls"
+visioneval::savePackageDataset(UrbanMixModelSim_ls, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -158,7 +163,7 @@ SimulateUrbanMixMeasureSpecifications <- list(
       GROUP = "Year",
       TYPE = "people",
       UNITS = "PRSN",
-      PROHIBIT = c("NA", "<= 0"),
+      PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     ),
     item(
@@ -252,7 +257,7 @@ SimulateUrbanMixMeasureSpecifications <- list(
 #' }
 #' @source SimulateUrbanMixMeasure.R script.
 "SimulateUrbanMixMeasureSpecifications"
-usethis::use_data(SimulateUrbanMixMeasureSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(SimulateUrbanMixMeasureSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -298,6 +303,7 @@ idUrbanMixBzones <- function(Hh_BzHt, Den_Bz, Target) {
   Bz <- names(Den_Bz)
   Hh_BzHt <- Hh_BzHt[Bz,]
   Hh_Bz <- rowSums(Hh_BzHt)
+  UrbanMixModel_ls <- VESimLandUse::UrbanMixModelSim_ls # Avoid name conflict
   #Calculate probabilities by Bzone for SF and Mf
   Prob_BzHt <- 0 * Hh_BzHt
   Prob_BzHt[,"SFDU"] <-

@@ -22,7 +22,7 @@ TestSetup_ls <- list(
 #Define the module tests
 Tests_ls <- list(
   list(ModuleName = "Initialize",
-       LoadDatastore = TRUE, SaveDatastore = TRUE, DoRun = TRUE),
+       LoadDatastore = TRUE, SaveDatastore = TRUE, DoRun = TRUE, RequiredPackages = "VESimHouseholds"),
   list(ModuleName = "CreateSimBzones",
        LoadDatastore = TRUE, SaveDatastore = TRUE, DoRun = TRUE),
   list(ModuleName = "SimulateHousing",
@@ -45,5 +45,3 @@ Tests_ls <- list(
 setUpTests(TestSetup_ls)
 doTests(Tests_ls, TestSetup_ls)
 saveTestResults(TestSetup_ls)
-
-

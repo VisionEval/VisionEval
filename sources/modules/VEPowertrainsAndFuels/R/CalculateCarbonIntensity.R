@@ -1,3 +1,6 @@
+#' @include LoadDefaultValues.R
+NULL
+
 #==========================
 #CalculateCarbonIntensity.R
 #==========================
@@ -34,9 +37,6 @@
 #SECTION 1: ESTIMATE AND SAVE MODEL PARAMETERS
 #=============================================
 #No module parameters are estimated in this module.
-#Load PowertrainFuelDefaults_ls to make it available as a global variable
-load("./data/PowertrainFuelDefaults_ls.rda")
-
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -233,7 +233,7 @@ CalculateCarbonIntensitySpecifications <- list(
 #' }
 #' @source CalculateCarbonIntensity.R script.
 "CalculateCarbonIntensitySpecifications"
-usethis::use_data(CalculateCarbonIntensitySpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateCarbonIntensitySpecifications, overwrite = TRUE)
 
 
 #=======================================================

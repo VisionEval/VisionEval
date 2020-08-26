@@ -196,7 +196,7 @@ CreateFutureAccessibilitySpecifications <- list(
 #' }
 #' @source CreateFutureAccessibility.R script.
 "CreateFutureAccessibilitySpecifications"
-usethis::use_data(CreateFutureAccessibilitySpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CreateFutureAccessibilitySpecifications, overwrite = TRUE)
 
 
 #=======================================================

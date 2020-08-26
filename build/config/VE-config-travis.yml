@@ -1,0 +1,7 @@
+Title: VisionEval Travis Configuration
+Date: 2020-08-19
+Description: For Travis ONLY - only looks at the "Exclude" section of Components.
+Components:
+    Exclude:
+      - VEGUI
+

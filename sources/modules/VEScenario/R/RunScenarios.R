@@ -99,7 +99,7 @@ RunScenariosSpecifications <- list(
 #' }
 #' @source RunScenarios.R script.
 "RunScenariosSpecifications"
-usethis::use_data(RunScenariosSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(RunScenariosSpecifications, overwrite = TRUE)
 
 
 

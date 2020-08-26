@@ -232,7 +232,7 @@ CreateVehicleTableSpecifications <- list(
 #' }
 #' @source CreateVehicleTable.R script.
 "CreateVehicleTableSpecifications"
-usethis::use_data(CreateVehicleTableSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CreateVehicleTableSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -286,7 +286,7 @@ CreateVehicleTable <- function(L) {
   attributes(Out_ls$Year$Vehicle$HhId)$SIZE <- max(nchar(HhId_Ve))
   #Add vehicle ID to table
   Out_ls$Year$Vehicle$VehId <-
-    paste(HhId_Ve, unlist(sapply(NumVeh_Hh, function(x) 1:x)), sep = "-")
+    paste(HhId_Ve, unlist(sapply(NumVeh_Hh[ NumVeh_Hh > 0], function(x) 1:x)), sep = "-")
   attributes(Out_ls$Year$Vehicle$VehId)$SIZE <- max(nchar(Out_ls$Year$Vehicle$VehId))
   #Add Azone ID to table
   Out_ls$Year$Vehicle$Azone <- rep(L$Year$Household$Azone, NumVeh_Hh)

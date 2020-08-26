@@ -1,0 +1,10 @@
+# Get Epsilon editor to start with the right mode If you don't have any idea what the Epsilon editor
+# is, you can ignore this file.
+Extensions: .r|.R
+mode: R
+
+Modes: R
+fill-column: 100
+tab-size: 2
+indent-tabs-mode: 0
+delete-hacking-tabs: 7

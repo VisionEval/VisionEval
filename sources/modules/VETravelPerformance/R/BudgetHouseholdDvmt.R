@@ -5,7 +5,7 @@
 #<doc>
 #
 ## BudgetHouseholdDvmt Module
-#### January 23, 2019
+#### June 5, 2020
 #
 #This module adjusts average household DVMT to keep the quantity within the limit of the household vehicle operating cost budget. A linear regression model is applied to calculate the maximum proportion of income that the household is willing to pay for vehicle operations. This proportion is multiplied by household income (with adjustments explained below) to calculate the maximum amount the household is willing to spend. This is compared to the vehicle operating cost calculated for the household. If the household vehicle operating cost is greater than the maximum amount the household is willing to pay, the household DVMT is reduced to fit within the budget.
 #
@@ -272,7 +272,7 @@ rm(MaxOpProp_LM, MaxVals_df)
 #' }
 #' @source BudgetHouseholdDvmt.R script.
 "OpPropModel_ls"
-usethis::use_data(OpPropModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(OpPropModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -312,7 +312,7 @@ BudgetHouseholdDvmtSpecifications <- list(
       GROUP = "Year",
       TYPE = "character",
       UNITS = "ID",
-      PROHIBIT = "NA",
+      PROHIBIT = "",
       ISELEMENTOF = ""
     ),
     item(
@@ -348,7 +348,7 @@ BudgetHouseholdDvmtSpecifications <- list(
       GROUP = "Year",
       TYPE = "currency",
       UNITS = "USD.2001",
-      PROHIBIT = c("NA", "< 0"),
+      PROHIBIT = c("< 0"),
       ISELEMENTOF = ""
     ),
     item(
@@ -375,7 +375,7 @@ BudgetHouseholdDvmtSpecifications <- list(
       GROUP = "Year",
       TYPE = "compound",
       UNITS = "GGE/MI",
-      PROHIBIT = c("NA", "< 0"),
+      PROHIBIT = c("< 0"),
       ISELEMENTOF = ""
     ),
     item(
@@ -384,7 +384,7 @@ BudgetHouseholdDvmtSpecifications <- list(
       GROUP = "Year",
       TYPE = "compound",
       UNITS = "KWH/MI",
-      PROHIBIT = c("NA", "< 0"),
+      PROHIBIT = c("< 0"),
       ISELEMENTOF = ""
     ),
     item(
@@ -393,7 +393,7 @@ BudgetHouseholdDvmtSpecifications <- list(
       GROUP = "Year",
       TYPE = "compound",
       UNITS = "GM/MI",
-      PROHIBIT = c("NA", "< 0"),
+      PROHIBIT = c("< 0"),
       ISELEMENTOF = ""
     ),
     item(
@@ -402,7 +402,7 @@ BudgetHouseholdDvmtSpecifications <- list(
       GROUP = "Year",
       TYPE = "character",
       UNITS = "ID",
-      PROHIBIT = "NA",
+      PROHIBIT = "",
       ISELEMENTOF = ""
     ),
     item(
@@ -575,7 +575,7 @@ BudgetHouseholdDvmtSpecifications <- list(
 #' }
 #' @source BudgetHouseholdDvmt.R script.
 "BudgetHouseholdDvmtSpecifications"
-usethis::use_data(BudgetHouseholdDvmtSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(BudgetHouseholdDvmtSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -628,6 +628,7 @@ BudgetHouseholdDvmt <- function(L, M) {
 
   #Calculate household budget proportion of income
   #-----------------------------------------------
+  OpPropModel_ls <- VETravelPerformance::OpPropModel_ls
   BudgetProp_Hh <- applyLinearModel(OpPropModel_ls, L$Year$Household$Income)
 
   #Calculate adjusted household income for calculating vehicle operations budget
@@ -661,6 +662,10 @@ BudgetHouseholdDvmt <- function(L, M) {
     BudgetDvmt_Hh <- VehOpBudget_Hh / L$Year$Household$AveVehCostPM / 365
     #Adjusted DVMT is the minimum of the 'budget' DVMT and 'modeled' DVMT
     AdjDvmt_Hh <- pmin(BudgetDvmt_Hh, Dvmt_Hh)
+    #Remove NA from AdjDvmt_Hh. These are group quarters population less than
+    #15 years old that don't have vehicle access. As a result, they have NA
+    #values for AveVehCostPM. So set their values for AdjDvmt_Hh equal to 0
+    AdjDvmt_Hh[is.na(AdjDvmt_Hh)] <- 0
     #Establish a lower minimum to avoid zero values
     MinDvmt <- quantile(AdjDvmt_Hh, 0.01)
     AdjDvmt_Hh[AdjDvmt_Hh < MinDvmt] <- MinDvmt
@@ -693,15 +698,24 @@ BudgetHouseholdDvmt <- function(L, M) {
   L$CalcAltTrips$Year$Household$Dvmt <- Adj_ls$Dvmt_Hh
   AltTrips_ls <- M$CalcAltTrips(L$CalcAltTrips)$Year$Household
 
+  #Calculate DailyGGE, DailyKWH, DailyCO2e
+  #---------------------------------------
+  DailyGGE_Hh <- Adj_ls$Dvmt_Hh * L$Year$Household$AveGPM
+  DailyGGE_Hh[is.na(L$Year$Household$AveGPM)] <- 0
+  DailyKWH_Hh <- Adj_ls$Dvmt_Hh * L$Year$Household$AveKWHPM
+  DailyKWH_Hh[is.na(L$Year$Household$AveKWHPM)] <- 0
+  DailyCO2e_Hh <- Adj_ls$Dvmt_Hh * L$Year$Household$AveCO2ePM
+  DailyCO2e_Hh[is.na(L$Year$Household$AveCO2ePM)] <- 0
+
   #Return the results
   #------------------
   #Initialize output list
   Out_ls <- initDataList()
   Out_ls$Year$Household <- list(
     Dvmt = Adj_ls$Dvmt_Hh,
-    DailyGGE = Adj_ls$Dvmt_Hh * L$Year$Household$AveGPM,
-    DailyKWH = Adj_ls$Dvmt_Hh * L$Year$Household$AveKWHPM,
-    DailyCO2e = Adj_ls$Dvmt_Hh * L$Year$Household$AveCO2ePM,
+    DailyGGE = DailyGGE_Hh,
+    DailyKWH = DailyKWH_Hh,
+    DailyCO2e = DailyCO2e_Hh,
     VehicleTrips = VehicleTrips_Hh,
     WalkTrips = AltTrips_ls$WalkTrips,
     BikeTrips = AltTrips_ls$BikeTrips,

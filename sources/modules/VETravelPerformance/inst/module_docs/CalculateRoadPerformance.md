@@ -1,6 +1,6 @@
 
 # CalculateRoadPerformance Module
-### January 23, 2019
+### September 5, 2019
 
 This module calculates freeway and arterial congestion level and the amounts of DVMT by congestion level. It also calculates the average speed and delay at each congestion level. In addition, it splits light-duty vehicle (LDV) DVMT between freeways and arterials as a function of relative speeds and congestion prices. The following performance measures are saved to the datastore:
 
@@ -316,49 +316,49 @@ PROHIBIT - Values that are prohibited. Values in the datastore do not meet any o
 
 ISELEMENTOF - Categorical values that are permitted. Values in the datastore are one or more of the listed values.
 
-|NAME                    |TABLE                 |GROUP  |TYPE      |UNITS      |PROHIBIT     |ISELEMENTOF                                                                                                                                                                                                        |
-|:-----------------------|:---------------------|:------|:---------|:----------|:------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|StateAbbrLookup         |Region                |Global |character |ID         |             |AL, AK, AZ, AR, CA, CO, CT, DE, FL, GA, HI, ID, IL, IN, IA, KS, KY, LA, ME, MD, MA, MI, MN, MS, MO, MT, NE, NV, NH, NJ, NM, NY, NC, ND, OH, OK, OR, PA, RI, SC, SD, TN, TX, UT, VT, VA, WA, WV, WI, WY, DC, PR, NA |
-|Marea                   |Marea                 |Year   |character |ID         |             |                                                                                                                                                                                                                   |
-|UrbanPop                |Marea                 |Year   |people    |PRSN       |NA, < 0      |                                                                                                                                                                                                                   |
-|FwyLaneMi               |Marea                 |Year   |distance  |MI         |NA, < 0      |                                                                                                                                                                                                                   |
-|ArtLaneMi               |Marea                 |Year   |distance  |MI         |NA, < 0      |                                                                                                                                                                                                                   |
-|RampMeterDeployProp     |Marea                 |Year   |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|IncidentMgtDeployProp   |Marea                 |Year   |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|SignalCoordDeployProp   |Marea                 |Year   |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|AccessMgtDeployProp     |Marea                 |Year   |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|OtherFwyOpsDeployProp   |Marea                 |Year   |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|OtherArtOpsDeployProp   |Marea                 |Year   |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|Level                   |OtherOpsEffectiveness |Global |character |category   |             |None, Mod, Hvy, Sev, Ext                                                                                                                                                                                           |
-|Art_Rcr                 |OtherOpsEffectiveness |Global |double    |proportion |< 0, > 100   |                                                                                                                                                                                                                   |
-|Art_NonRcr              |OtherOpsEffectiveness |Global |double    |proportion |< 0, > 100   |                                                                                                                                                                                                                   |
-|Fwy_Rcr                 |OtherOpsEffectiveness |Global |double    |proportion |< 0, > 100   |                                                                                                                                                                                                                   |
-|Fwy_NonRcr              |OtherOpsEffectiveness |Global |double    |proportion |< 0, > 100   |                                                                                                                                                                                                                   |
-|LdvFwyArtDvmt           |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|LdvOthDvmt              |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|HvyTrkFwyDvmt           |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|HvyTrkArtDvmt           |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|HvyTrkOthDvmt           |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|BusFwyDvmt              |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|BusArtDvmt              |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|BusOthDvmt              |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                                                                                                                                                                                                                   |
-|FwyNoneCongChg          |Marea                 |Year   |currency  |USD        |< 0          |                                                                                                                                                                                                                   |
-|FwyModCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                                                                                                                                                                                                                   |
-|FwyHvyCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                                                                                                                                                                                                                   |
-|FwySevCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                                                                                                                                                                                                                   |
-|FwyExtCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                                                                                                                                                                                                                   |
-|ArtNoneCongChg          |Marea                 |Year   |currency  |USD        |< 0          |                                                                                                                                                                                                                   |
-|ArtModCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                                                                                                                                                                                                                   |
-|ArtHvyCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                                                                                                                                                                                                                   |
-|ArtSevCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                                                                                                                                                                                                                   |
-|ArtExtCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                                                                                                                                                                                                                   |
-|ValueOfTime             |Model                 |Global |currency  |USD        |<= 0         |                                                                                                                                                                                                                   |
-|UrbanArea               |Bzone                 |Year   |area      |SQMI       |NA, < 0      |                                                                                                                                                                                                                   |
-|LdvFwyDvmtProp          |Marea                 |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|LdvArtDvmtProp          |Marea                 |Global |double    |proportion |< 0, > 1     |                                                                                                                                                                                                                   |
-|LambdaAdj               |Marea                 |Global |double    |constant   |             |                                                                                                                                                                                                                   |
-|UrbanHhPropUrbanDvmt    |Marea                 |Year   |double    |proportion |NA, < 0, > 1 |                                                                                                                                                                                                                   |
-|NonUrbanHhPropUrbanDvmt |Marea                 |Year   |double    |proportion |NA, < 0, > 1 |                                                                                                                                                                                                                   |
+|NAME                    |TABLE                 |GROUP  |TYPE      |UNITS      |PROHIBIT     |ISELEMENTOF              |
+|:-----------------------|:---------------------|:------|:---------|:----------|:------------|:------------------------|
+|StateAbbrLookup         |Region                |Global |character |ID         |             |                         |
+|Marea                   |Marea                 |Year   |character |ID         |             |                         |
+|UrbanPop                |Marea                 |Year   |people    |PRSN       |NA, < 0      |                         |
+|FwyLaneMi               |Marea                 |Year   |distance  |MI         |NA, < 0      |                         |
+|ArtLaneMi               |Marea                 |Year   |distance  |MI         |NA, < 0      |                         |
+|RampMeterDeployProp     |Marea                 |Year   |double    |proportion |< 0, > 1     |                         |
+|IncidentMgtDeployProp   |Marea                 |Year   |double    |proportion |< 0, > 1     |                         |
+|SignalCoordDeployProp   |Marea                 |Year   |double    |proportion |< 0, > 1     |                         |
+|AccessMgtDeployProp     |Marea                 |Year   |double    |proportion |< 0, > 1     |                         |
+|OtherFwyOpsDeployProp   |Marea                 |Year   |double    |proportion |< 0, > 1     |                         |
+|OtherArtOpsDeployProp   |Marea                 |Year   |double    |proportion |< 0, > 1     |                         |
+|Level                   |OtherOpsEffectiveness |Global |character |category   |             |None, Mod, Hvy, Sev, Ext |
+|Art_Rcr                 |OtherOpsEffectiveness |Global |double    |proportion |< 0, > 100   |                         |
+|Art_NonRcr              |OtherOpsEffectiveness |Global |double    |proportion |< 0, > 100   |                         |
+|Fwy_Rcr                 |OtherOpsEffectiveness |Global |double    |proportion |< 0, > 100   |                         |
+|Fwy_NonRcr              |OtherOpsEffectiveness |Global |double    |proportion |< 0, > 100   |                         |
+|LdvFwyArtDvmt           |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                         |
+|LdvOthDvmt              |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                         |
+|HvyTrkFwyDvmt           |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                         |
+|HvyTrkArtDvmt           |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                         |
+|HvyTrkOthDvmt           |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                         |
+|BusFwyDvmt              |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                         |
+|BusArtDvmt              |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                         |
+|BusOthDvmt              |Marea                 |Year   |compound  |MI/DAY     |NA, < 0      |                         |
+|FwyNoneCongChg          |Marea                 |Year   |currency  |USD        |< 0          |                         |
+|FwyModCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                         |
+|FwyHvyCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                         |
+|FwySevCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                         |
+|FwyExtCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                         |
+|ArtNoneCongChg          |Marea                 |Year   |currency  |USD        |< 0          |                         |
+|ArtModCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                         |
+|ArtHvyCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                         |
+|ArtSevCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                         |
+|ArtExtCongChg           |Marea                 |Year   |currency  |USD        |< 0          |                         |
+|ValueOfTime             |Model                 |Global |currency  |USD        |<= 0         |                         |
+|UrbanArea               |Bzone                 |Year   |area      |SQMI       |NA, < 0      |                         |
+|LdvFwyDvmtProp          |Marea                 |Global |double    |proportion |< 0, > 1     |                         |
+|LdvArtDvmtProp          |Marea                 |Global |double    |proportion |< 0, > 1     |                         |
+|LambdaAdj               |Marea                 |Global |double    |constant   |             |                         |
+|UrbanHhPropUrbanDvmt    |Marea                 |Year   |double    |proportion |NA, < 0, > 1 |                         |
+|NonUrbanHhPropUrbanDvmt |Marea                 |Year   |double    |proportion |NA, < 0, > 1 |                         |
 
 ## Datasets Produced by the Module
 The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:
@@ -387,9 +387,9 @@ DESCRIPTION - A description of the data.
 |HvyTrkAveSpeed      |Marea |Year   |compound |MI/HR      |< 0      |            |Average speed (miles per hour) of heavy truck travel on urban area roads                                      |
 |BusAveSpeed         |Marea |Year   |compound |MI/HR      |< 0      |            |Average speed (miles per hour) of bus travel on urban area roads                                              |
 |NonUrbanAveSpeed    |Marea |Year   |compound |MI/HR      |< 0      |            |Average speed (miles per hour) of vehicle travel on non-urban area roads                                      |
-|LdvTotDelay         |Marea |Year   |compound |HR/MI      |< 0      |            |Total light-duty vehicle delay (hours per mile) on urban area roads                                           |
-|HvyTrkTotDelay      |Marea |Year   |compound |HR/MI      |< 0      |            |Total urban light-duty vehicle delay (hours per mile) on urban area roads                                     |
-|BusTotDelay         |Marea |Year   |compound |HR/MI      |< 0      |            |Total urban light-duty vehicle delay (hours per mile) on urban area roads                                     |
+|LdvTotDelay         |Marea |Year   |time     |HR         |< 0      |            |Total light-duty vehicle delay (hours per day) on urban area roads                                            |
+|HvyTrkTotDelay      |Marea |Year   |time     |HR         |< 0      |            |Total heavy truck vehicle delay (hours per day) on urban area roads                                           |
+|BusTotDelay         |Marea |Year   |time     |HR         |< 0      |            |Total bus vehicle delay (hours per day) on urban area roads                                                   |
 |AveCongPrice        |Marea |Year   |currency |USD        |< 0      |            |Average price paid (dollars per mile) in congestion fees                                                      |
 |FwyDvmtPropNoneCong |Marea |Year   |double   |proportion |< 0, > 1 |            |Proportion of freeway DVMT occurring when there is no congestion                                              |
 |FwyDvmtPropModCong  |Marea |Year   |double   |proportion |< 0, > 1 |            |Proportion of freeway DVMT occurring when congestion is moderate                                              |

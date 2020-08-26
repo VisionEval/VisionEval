@@ -1,0 +1,56 @@
+Title: VisionEval
+Date: 2019-04-26
+Description: A minimal VE-config.yml
+RunTests: FALSE
+Roots:                          # Require ve.root and ve.output at a minimum
+    ve.root: ..                 # relative to "build" folder (should be git root for VisionEval-dev)
+    ve.output: ../built         # default ("built" adjacent to "build")
+    ve.wiki: ../../VE-wiki      # path to clone of wiki repository
+Components:                     # Where to find wiki components (right here)
+    ve.wiki:
+        Root: ve.installer
+        Config: config/VE-wiki-components.yml
+
+Locations: # "Root" elements are variables defined in "Roots" section
+    # path is relative to "augmented" root (depending on "augment" element)
+    ve.dependencies:  # Required
+        root: ve.output
+        augment: version  # "root" uses "root + path" (clone point for external repos)
+                          # "branch" uses "root + branch + path" (e.g. non-packages)
+                          # "version" uses "root + branch + version + path"
+        path: pkg-dependencies
+        description: repo for downloaded and built external dependencies
+    ve.repository:    # Required
+        root: ve.output
+        augment: version
+        path: pkg-ve-repo
+        description: src/binary repo built from VE packages
+    ve.runtime:       # Required
+        root: ve.output
+        augment: version
+        path: runtime
+        description: local runtime environment + base for installers
+    ve.pkgs:          # Required
+        root: ve.output
+        augment: version
+        path: ve-pkg
+        description: copy src tree here from ve.dependencies + ve.repository for full installer
+    ve.lib:           # Required
+        root: ve.output
+        augment: version
+        path: ve-lib
+        description: install bin tree here from ve.repository
+    ve.src:           # Required
+        root: ve.output
+        augment: version
+        path: src
+        description: build source packages here (plus tests, if requested)
+    ve.docs:          # Required
+        root: ve.output
+        augment: version
+        path: docs
+        description: install framework and module docs here
+    ve.external:      # Where to clone Github repository (default ve.root+external+RepoName)
+        root: ve.root
+        augment: root
+        path: external

@@ -145,7 +145,7 @@ rm(Data_df)
 #' }
 #' @source CalculateUrbanMixMeasure.R script.
 "UrbanMixModel_ls"
-usethis::use_data(UrbanMixModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(UrbanMixModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -295,7 +295,7 @@ CalculateUrbanMixMeasureSpecifications <- list(
 #' }
 #' @source CalculateUrbanMixMeasure.R script.
 "CalculateUrbanMixMeasureSpecifications"
-usethis::use_data(CalculateUrbanMixMeasureSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateUrbanMixMeasureSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -354,9 +354,11 @@ CalculateUrbanMixMeasure <- function(L) {
 
   #Define a function to apply the model to match mix target if there is one
   #------------------------------------------------------------------------
+  UrbanMixModel_ls <- VELandUse::UrbanMixModel_ls
   matchMixTarget <- function(D_df, MixTarget) {
     D_df$Intercept <- 1
     Odds_ <- exp(eval(parse(text = UrbanMixModel_ls$Formula), envir = D_df))
+    Odds_[is.infinite(Odds_)] <- 1e6
     Prob_ <- Odds_ / (1 + Odds_)
     Rand_ <- runif(nrow(D_df))
     #Find out whether prediction is matching, under, or over

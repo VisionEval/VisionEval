@@ -1,3 +1,6 @@
+#' @include CreateEstimationDatasets.R
+NULL
+
 #==================
 #CreateHouseholds.R
 #==================
@@ -99,8 +102,7 @@ HtProb_HtAp <- calcHhAgeTypes(Hh_df)
 #' @format A matrix having 950 rows (for Oregon data) and 6 colums:
 #' @source CreateHouseholds.R script.
 "HtProb_HtAp"
-usethis::use_data(HtProb_HtAp, overwrite = TRUE)
-rm(calcHhAgeTypes, Hh_df)
+visioneval::savePackageDataset(HtProb_HtAp, overwrite = TRUE)
 
 
 #================================================
@@ -388,8 +390,7 @@ CreateHouseholdsSpecifications <- list(
 #' }
 #' @source CreateHouseholds.R script.
 "CreateHouseholdsSpecifications"
-usethis::use_data(CreateHouseholdsSpecifications, overwrite = TRUE)
-rm(CreateHouseholdsSpecifications)
+visioneval::savePackageDataset(CreateHouseholdsSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -451,6 +452,7 @@ createHhByAge <-
            TargetHhSize = NA,
            TargetProp1PerHh = NA) {
     #Dimension names
+    HtProb_HtAp <- VESimHouseholds::HtProb_HtAp
     Ap <- colnames(HtProb_HtAp)
     Ht <- rownames(HtProb_HtAp)
     #Place persons by age into household types by multiplying person vector
@@ -690,6 +692,19 @@ CreateHouseholds <- function(L) {
   Prsn_AzAp <-
     as.matrix(data.frame(L$Year$Azone, stringsAsFactors = FALSE)[,Ap])
   rownames(Prsn_AzAp) <- Az
+  #If values in Prsn_AzAp are not integers, round them and issue warning
+  AllInt <- all(Prsn_AzAp == round(Prsn_AzAp))
+  if (!AllInt) {
+    Prsn_AzAp <- round(Prsn_AzAp)
+    Msg <- paste(
+      "Inputs for number of persons by age group in 'azone_hh_pop_by_age.csv'",
+      "file include some non-integer values for the year", L$G$Year, ".",
+      "These have been rounded to the nearest whole number."
+    )
+    addWarningMsg("Out_ls", Msg)
+    rm(Msg)
+  }
+  rm(AllInt)
   #Make vector of average household size target by Azone
   TargetHhSize_Az <- L$Year$Azone$AveHhSize
   names(TargetHhSize_Az) <- Az
@@ -700,6 +715,19 @@ CreateHouseholds <- function(L) {
   Prsn_AzAg <-
     as.matrix(data.frame(L$Year$Azone, stringsAsFactors = FALSE)[,Ag])
   rownames(Prsn_AzAg) <- Az
+  #If values in Prsn_AzAg are not integers, round them and issue warning
+  AllInt <- all(Prsn_AzAg == round(Prsn_AzAg))
+  if (!AllInt) {
+    Prsn_AzAg <- round(Prsn_AzAg)
+    Msg <- paste(
+      "Inputs for number of persons by age group in 'azone_gq_pop_by_age.csv'",
+      "file include some non-integer values for the year", L$G$Year, ".",
+      "These have been rounded to the nearest whole number."
+    )
+    addWarningMsg("Out_ls", Msg)
+    rm(Msg)
+  }
+  rm(AllInt)
   #Simulate households for each Azone and add to output list
   for (az in Az) {
     RegHh_ls <-

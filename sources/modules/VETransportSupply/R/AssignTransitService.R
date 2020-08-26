@@ -287,7 +287,7 @@ rm(ServiceInp_ls)
 #' }
 #' @source AssignTransitService.R script.
 "BusEquivalents_df"
-usethis::use_data(BusEquivalents_df, overwrite = TRUE)
+visioneval::savePackageDataset(BusEquivalents_df, overwrite = TRUE)
 
 #Save the vehicle mile factors
 #-----------------------------
@@ -318,7 +318,7 @@ usethis::use_data(BusEquivalents_df, overwrite = TRUE)
 #' }
 #' @source AssignTransitService.R script.
 "VehMiFactors_df"
-usethis::use_data(VehMiFactors_df, overwrite = TRUE)
+visioneval::savePackageDataset(VehMiFactors_df, overwrite = TRUE)
 
 #Save the urbanized area bus equivalency data
 #--------------------------------------------
@@ -339,7 +339,7 @@ usethis::use_data(VehMiFactors_df, overwrite = TRUE)
 #' }
 #' @source AssignTransitService.R script.
 "UZABusEqRevMile_df"
-usethis::use_data(UZABusEqRevMile_df, overwrite = TRUE)
+visioneval::savePackageDataset(UZABusEqRevMile_df, overwrite = TRUE)
 
 #Clean up
 rm(TransitParam_ls)
@@ -510,7 +510,7 @@ AssignTransitServiceSpecifications <- list(
 #' }
 #' @source AssignTransitService.R script.
 "AssignTransitServiceSpecifications"
-usethis::use_data(AssignTransitServiceSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignTransitServiceSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -542,6 +542,7 @@ AssignTransitService <- function(L) {
   #Fix seed as synthesis involves sampling
   set.seed(L$G$Seed)
   #Define vector of modes
+  BusEquivalents_df <- VETransportSupply::BusEquivalents_df
   Md <- as.character(BusEquivalents_df$Mode)
   #Define vector of Mareas
   Ma <- L$Year$Marea$Marea
@@ -570,6 +571,7 @@ AssignTransitService <- function(L) {
   #Calculate vehicle miles by vehicle type
   #---------------------------------------
   #Make vector of vehicle miles factors conforming with RevMi_df
+  VehMiFactors_df <- VETransportSupply::VehMiFactors_df
   VehMiFactors_Md <- VehMiFactors_df$VehMiFactors
   names(VehMiFactors_Md) <- VehMiFactors_df$Mode
   VehMiFactors_Md <- VehMiFactors_Md[names(RevMi_df)]

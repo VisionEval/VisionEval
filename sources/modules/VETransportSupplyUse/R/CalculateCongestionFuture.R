@@ -13,8 +13,14 @@
 #SECTION 1: ESTIMATE AND SAVE MODEL PARAMETERS
 #=============================================
 #Load the alternative mode trip models from GreenSTEP
-load("inst/extdata/CongModel_ls.RData")
-#Save the model
+CongModel_name <- 
+  if ( dir.exists("inst/extdata") ) {
+    "inst/extdata/CongModel_ls.RData"
+  } else {
+    system.file("extdata", "CongModel_ls.Rdata", package = "VETransportSupplyUse")
+  }
+load(CongModel_name)
+
 #' Congestion models and required parameters.
 #'
 #' A list of components describing congestion models and various parameters
@@ -26,8 +32,6 @@ load("inst/extdata/CongModel_ls.RData")
 #' parameters that are used in the evaluation of aforementioned models.
 #' @source GreenSTEP version ?.? model.
 "CongModel_ls"
-usethis::use_data(CongModel_ls, overwrite = TRUE)
-
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -416,7 +420,7 @@ CalculateCongestionFutureSpecifications <- list(
 #' }
 #' @source CalculateCongestionFuture.R script.
 "CalculateCongestionFutureSpecifications"
-usethis::use_data(CalculateCongestionFutureSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateCongestionFutureSpecifications, overwrite = TRUE)
 
 
 #=======================================================

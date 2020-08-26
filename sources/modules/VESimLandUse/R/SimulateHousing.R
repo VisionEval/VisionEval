@@ -5,7 +5,7 @@
 #<doc>
 #
 ## SimulateHousing Module
-#### February 3, 2019
+#### June 1, 2020
 #
 #This module assigns a housing type, either single-family (SF) or multifamily (MF) to *regular* households based on the respective supplies of SF and MF dwelling units in the housing market to which the household is assigned (i.e. the Azone the household is assigned to) and on household characteristics. It then assigns each household to a SimBzone based on the household's housing type as well as the supply of housing by type and SimBzone. The module assigns non-institutional group quarters *households* to SimBzones randomly.
 #
@@ -37,6 +37,7 @@
 
 #Load the housing choice model from the VELandUse package.
 #' @import VELandUse
+#' @import graphics
 
 HouseTypeModel_ls <- VELandUse::HouseTypeModel_ls
 
@@ -57,7 +58,7 @@ HouseTypeModel_ls <- VELandUse::HouseTypeModel_ls
 #' }
 #' @source PredictHousing.R script.
 "HouseTypeModel_ls"
-usethis::use_data(HouseTypeModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(HouseTypeModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -350,7 +351,7 @@ SimulateHousingSpecifications <- list(
 #' }
 #' @source SimulateHousing.R script.
 "SimulateHousingSpecifications"
-usethis::use_data(SimulateHousingSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(SimulateHousingSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -360,51 +361,6 @@ usethis::use_data(SimulateHousingSpecifications, overwrite = TRUE)
 #binomial choice model for determining the probability that the housing choice
 #for each household is single family (SF) vs. multifamily (MF). The group
 #quarters population is assigned to group quarters (GQ).
-
-#Define function to allocate integer quantities among categories
-#---------------------------------------------------------------
-#' Allocate integer quantities among categories
-#'
-#' \code{splitIntegers} splits a total value into a vector of whole numbers to
-#' reflect input vector of proportions
-#'
-#' This function splits an input total into a vector of whole numbers to reflect
-#' an input vector of proportions. If the input total is not an integer, the
-#' value is rounded and converted to an integer.
-#'
-#' @param Tot a number that is the total value to be split into a vector of
-#' whole numbers corresponding to the input proportions. If Tot is not an
-#' integer, its value is rounded and converted to an integer.
-#' @param Props_ a numeric vector of proportions used to split the total value.
-#' The values should add up to approximately 1. The function will adjust so that
-#' the proportions do add to 1.
-#' @return a numeric vector of whole numbers corresponding to the Props_
-#' argument which sums to the Tot.
-splitIntegers <- function(Tot, Props_) {
-  #Convert Tot into an integer
-  if (!is.integer(Tot)) {
-    Tot <- as.integer(round(Tot))
-  }
-  #If Tot is 0, return vector of zeros
-  if (Tot == 0) {
-    integer(length(Props_))
-  } else {
-    #Make sure that Props_ sums exactly to 1
-    Props_ <- Props_ / sum(Props_)
-    #Make initial whole number split
-    Ints_ <- round(Tot * Props_)
-    #Determine the difference between the initial split and the total
-    Diff <- Tot - sum(Ints_)
-    #Allocate the difference
-    if (Diff != 0) {
-      for (i in 1:abs(Diff)) {
-        IdxToChg <- sample(1:length(Props_), 1, prob = Props_)
-        Ints_[IdxToChg] <- Ints_[IdxToChg] + sign(Diff)
-      }
-    }
-    unname(Ints_)
-  }
-}
 
 #Main module function that assigns housing type and Bzone for each household
 #---------------------------------------------------------------------------
@@ -444,6 +400,35 @@ SimulateHousing <- function(L) {
   #Add household Bzone assignment list
   Out_ls$Year$Household$Bzone <- character(length(L$Year$Household$HhId))
   Out_ls$Year$Household$HouseType <- character(length(L$Year$Household$HhId))
+
+  #-------------------------------------------------------------------
+  #Define function to proportionally split integer total into integers
+  #-------------------------------------------------------------------
+  splitIntegers <- function(Tot, Props_) {
+    #Convert Tot into an integer
+    if (!is.integer(Tot)) {
+      Tot <- as.integer(round(Tot))
+    }
+    #If Tot is 0, return vector of zeros
+    if (Tot == 0) {
+      integer(length(Props_))
+    } else {
+      #Make sure that Props_ sums exactly to 1
+      Props_ <- Props_ / sum(Props_)
+      #Make initial whole number split
+      Ints_ <- round(Tot * Props_)
+      #Determine the difference between the initial split and the total
+      Diff <- Tot - sum(Ints_)
+      #Allocate the difference
+      if (Diff != 0) {
+        for (i in 1:abs(Diff)) {
+          IdxToChg <- sample(1:length(Props_), 1, prob = Props_)
+          Ints_[IdxToChg] <- Ints_[IdxToChg] + sign(Diff)
+        }
+      }
+      unname(Ints_)
+    }
+  }
 
   #---------------------------------------------------------------
   #Iterate through Azones and Make Household Assignments to Bzones
@@ -545,6 +530,15 @@ SimulateHousing <- function(L) {
         GQPop_At <- splitIntegers(GQPop, GQProps_)
         At <- c("center", "inner", "outer", "fringe")
         names(GQPop_At) <- At
+        for (i in 1:length(At)) {
+          if (GQPop_At[At[i]] != 0) {
+            if (!(At[i] %in% AreaType_)) {
+              PopToShift <- GQPop_At[At[i]]
+              GQPop_At[At[i]] <- 0
+              GQPop_At[At[i + 1]] <- GQPop_At[At[i + 1]] + PopToShift
+            }
+          }
+        }
         GQBzones_ <- sample(unlist(sapply(At, function(x) {
           sample(Bzones_[AreaType_ == x],
                  GQPop_At[x],
@@ -555,7 +549,7 @@ SimulateHousing <- function(L) {
       } else {
         GQBzones_ <- unname(sample(Bzones_, GQPop, replace = TRUE))
         Bzone_Hh[IsGQ_Hh] <- unname(GQBzones_)
-        rm(GQProps_, UseATProps, GQBzones_)
+        rm(GQProps_, GQBzones_)
       }
     }
 

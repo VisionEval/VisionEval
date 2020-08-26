@@ -354,7 +354,7 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |FuelCO2ePM           |Vehicle   |Year   |compound  |GM/MI      |NA, < 0      |                           |
 |ElecCO2ePM           |Vehicle   |Year   |compound  |GM/MI      |NA, < 0      |                           |
 |InsCost              |Vehicle   |Year   |currency  |USD.2010   |NA, < 0      |                           |
-|HhId                 |Worker    |Year   |character |ID         |NA           |                           |
+|HhId                 |Worker    |Year   |character |ID         |             |                           |
 |ParkingCost          |Worker    |Year   |currency  |USD.2010   |NA, < 0      |                           |
 |IsCashOut            |Worker    |Year   |integer   |binary     |             |0, 1                       |
 |PaysForParking       |Worker    |Year   |integer   |binary     |             |0, 1                       |

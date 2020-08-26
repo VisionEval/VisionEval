@@ -1,0 +1,11 @@
+{
+  "Model": "VE-State Test Stage 1",
+  "Scenario": "Test",
+  "Description": "Test of VE-State model Stage 1",
+  "Region": "Oregon",
+  "BaseYear": "2010",
+  "Years": ["2010", "2040"],
+  "DatastoreName": "Datastore",
+  "DatastoreType": "RD",
+  "Seed": 1
+}

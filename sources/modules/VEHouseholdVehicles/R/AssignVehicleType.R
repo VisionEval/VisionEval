@@ -243,7 +243,7 @@ rm(Hh_df)
 #' }
 #' @source AssignVehicleType.R script.
 "VehicleTypeModel_ls"
-usethis::use_data(VehicleTypeModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(VehicleTypeModel_ls, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -438,7 +438,7 @@ AssignVehicleTypeSpecifications <- list(
 #' }
 #' @source AssignVehicleType.R script.
 "AssignVehicleTypeSpecifications"
-usethis::use_data(AssignVehicleTypeSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignVehicleTypeSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -491,6 +491,7 @@ AssignVehicleType <- function(L) {
     Data_df$Density[Data_df$Density == 0] <- 1e-6
     Data_df$LogDensity <- log(Data_df$Density)
     #Run the model
+    VehicleTypeModel_ls <- VEHouseholdVehicles::VehicleTypeModel_ls
     VehType_Hx <-
       applyBinomialModel(
         VehicleTypeModel_ls,

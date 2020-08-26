@@ -1,6 +1,6 @@
 
 # AssignParkingRestrictions Module
-### November 6, 2018
+### February 13, 2020
 
 This module identifies parking restrictions and prices affecting households at their residences, workplaces, and other places they are likely to visit in the urban area. The module takes user inputs on parking restrictions and prices by Bzone and calculates for each household the number of free parking spaces available at the household's residence, which workers pay for parking and whether their payment is part of a *cash-out-buy-back* program, the cost of residential parking for household vehicles that can't be parked in a free space, the cost for workplace parking, and the cost of parking for other activities such as shopping. The parking restriction/cost information is used by other modules in calculating the cost of vehicle ownership and the cost of vehicle use.
 
@@ -19,6 +19,8 @@ parking restrictions/costs. These include:
 
 - Average number of free parking spaces per group quarters resident
 
+- Proportion of non-work trips to the Bzone which pay for parking
+
 - Proportion of workers working at jobs in the Bzone who pay for parking
 
 - Proportion of worker paid parking in *cash-out_buy-back* program
@@ -29,7 +31,7 @@ Residential Bzone parking restrictions are applied to each household based on th
 
 A worker is assigned as paying or not paying for parking through a random draw with the probability of paying equal to the proportion of paying workers that is input for the Bzone of the worker's job location. A worker identified as paying for parking is identified as being in a *cash-out-buy-back* program through a random draw with the participation probability being the input value for the Bzone of the worker's job location. The daily parking cost assigned to the worker's job site Bzone is assigned to the work to use in vehicle use calculations.
 
-Other household parking costs (e.g. shopping) are assigned to households based on the daily parking cost assigned to each Bzone and the assumption that the likelihood that a household would visit the Bzone is directly proportional to the relative number of activities in the Bzone and the inverse of the distance to the Bzone from the household residence Bzone. The activity in the Bzone is measured with the total number of retail and service jobs in the Bzone. As with the LocateEmployment and Calculate4DMeasures modules, a centroid-to-centroid distance matrix is calculated from user supplied data on the latitude and longitude of each Bzone centroid. Next, the number of Bzone attractions is scaled to equal the number of households. Then an iterative proportional fitting process (IPF) is used to allocate households to attractions where the margins are the numbers of households by Bzone and the scaled attractions by Bzone, and the seed matrix is the inverse of the values of the distance matrix. After a balanced matrix has been computed, the proportions of attractions from each residence Bzone to each attraction Bzone is calculated such that the total for each residence Bzone adds to 1. Finally, the average daily parking cost for residents of a Bzone is the sum of the product of the attraction proportion to each Bzone and the daily parking cost in each Bzone. Households are assigned the cost calculated for their Bzone of residence. This cost is adjusted to account for the number of household vehicle trips when the household's vehicle use costs are calculated.
+Other household parking costs (e.g. shopping) are assigned to households based on the daily parking cost assigned to each Bzone and the assumption that the likelihood that a household would visit the Bzone is directly proportional to the relative number of activities in the Bzone and the inverse of the distance to the Bzone from the household residence Bzone. The activity in the Bzone is measured with the total number of retail and service jobs in the Bzone. As with the LocateEmployment and Calculate4DMeasures modules, a centroid-to-centroid distance matrix is calculated from user supplied data on the latitude and longitude of each Bzone centroid. Next, the number of Bzone attractions is scaled to equal the number of households. Then an iterative proportional fitting process (IPF) is used to allocate households to attractions where the margins are the numbers of households by Bzone and the scaled attractions by Bzone, and the seed matrix is the inverse of the values of the distance matrix. After a balanced matrix has been computed, the proportions of attractions from each residence Bzone to each attraction Bzone is calculated such that the total for each residence Bzone adds to 1. Finally, the average daily parking cost for residents of a Bzone is the sum of the product of the attraction proportion to each Bzone, the daily parking cost in each Bzone, and the proportion of non-work trips to the Bzone that pay for parking. Households are assigned the cost calculated for their Bzone of residence. This cost is adjusted to account for the number of household vehicle trips when the household's vehicle use costs are calculated.
 
 
 ## User Inputs
@@ -50,16 +52,17 @@ UNLIKELY - Values that are unlikely. Values that meet any of the listed conditio
 DESCRIPTION - A description of the data.
 
 ### bzone_parking.csv
-|NAME             |TYPE     |UNITS          |PROHIBIT     |ISELEMENTOF |UNLIKELY |DESCRIPTION                                                                                  |
-|:----------------|:--------|:--------------|:------------|:-----------|:--------|:--------------------------------------------------------------------------------------------|
-|Geo              |         |               |             |Bzones      |         |Must contain a record for each Bzone and model run year.                                     |
-|Year             |         |               |             |            |         |Must contain a record for each Bzone and model run year.                                     |
-|PkgSpacesPerSFDU |double   |parking spaces |NA, < 0      |            |         |Average number of free parking spaces available to residents of single-family dwelling units |
-|PkgSpacesPerMFDU |double   |parking spaces |NA, < 0      |            |         |Average number of free parking spaces available to residents of multifamily dwelling units   |
-|PkgSpacesPerGQ   |double   |parking spaces |NA, < 0      |            |         |Average number of free parking spaces available to group quarters residents                  |
-|PropWkrPay       |double   |proportion     |NA, < 0, > 1 |            |         |Proportion of workers who pay for parking                                                    |
-|PropCashOut      |double   |proportion     |NA, < 0, > 1 |            |         |Proportions of workers paying for parking in a cash-out-buy-back program                     |
-|PkgCost          |currency |USD            |NA, < 0      |            |         |Average daily cost for long-term parking (e.g. paid on monthly basis)                        |
+|NAME              |TYPE     |UNITS          |PROHIBIT     |ISELEMENTOF |UNLIKELY |DESCRIPTION                                                                                  |
+|:-----------------|:--------|:--------------|:------------|:-----------|:--------|:--------------------------------------------------------------------------------------------|
+|Geo               |         |               |             |Bzones      |         |Must contain a record for each Bzone and model run year.                                     |
+|Year              |         |               |             |            |         |Must contain a record for each Bzone and model run year.                                     |
+|PkgSpacesPerSFDU  |double   |parking spaces |NA, < 0      |            |         |Average number of free parking spaces available to residents of single-family dwelling units |
+|PkgSpacesPerMFDU  |double   |parking spaces |NA, < 0      |            |         |Average number of free parking spaces available to residents of multifamily dwelling units   |
+|PkgSpacesPerGQ    |double   |parking spaces |NA, < 0      |            |         |Average number of free parking spaces available to group quarters residents                  |
+|PropWkrPay        |double   |proportion     |NA, < 0, > 1 |            |         |Proportion of workers who pay for parking                                                    |
+|PropCashOut       |double   |proportion     |NA, < 0, > 1 |            |         |Proportions of workers paying for parking in a cash-out-buy-back program                     |
+|PropNonWrkTripPay |double   |proportion     |NA, < 0, > 1 |            |         |Proportion of non-work trips who pay for parking                                             |
+|PkgCost           |currency |USD            |NA, < 0      |            |         |Average daily cost for long-term parking (e.g. paid on monthly basis)                        |
 
 ## Datasets Used by the Module
 The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:
@@ -78,23 +81,24 @@ PROHIBIT - Values that are prohibited. Values in the datastore do not meet any o
 
 ISELEMENTOF - Categorical values that are permitted. Values in the datastore are one or more of the listed values.
 
-|NAME             |TABLE     |GROUP |TYPE       |UNITS          |PROHIBIT     |ISELEMENTOF |
-|:----------------|:---------|:-----|:----------|:--------------|:------------|:-----------|
-|Bzone            |Bzone     |Year  |character  |ID             |             |            |
-|PkgSpacesPerSFDU |Bzone     |Year  |double     |parking spaces |NA, < 0      |            |
-|PkgSpacesPerMFDU |Bzone     |Year  |double     |parking spaces |NA, < 0      |            |
-|PkgSpacesPerGQ   |Bzone     |Year  |double     |parking spaces |NA, < 0      |            |
-|PropWkrPay       |Bzone     |Year  |double     |proportion     |NA, < 0, > 1 |            |
-|PropCashOut      |Bzone     |Year  |double     |proportion     |NA, < 0, > 1 |            |
-|PkgCost          |Bzone     |Year  |currency   |USD            |NA, < 0      |            |
-|NumHh            |Bzone     |Year  |households |HH             |NA, < 0      |            |
-|RetEmp           |Bzone     |Year  |people     |PRSN           |NA, < 0      |            |
-|SvcEmp           |Bzone     |Year  |people     |PRSN           |NA, < 0      |            |
-|Latitude         |Bzone     |Year  |double     |NA             |NA           |            |
-|Longitude        |Bzone     |Year  |double     |NA             |NA           |            |
-|HouseType        |Household |Year  |character  |category       |             |SF, MF, GQ  |
-|Bzone            |Household |Year  |character  |ID             |             |            |
-|Bzone            |Worker    |Year  |character  |ID             |             |            |
+|NAME              |TABLE     |GROUP |TYPE       |UNITS          |PROHIBIT     |ISELEMENTOF |
+|:-----------------|:---------|:-----|:----------|:--------------|:------------|:-----------|
+|Bzone             |Bzone     |Year  |character  |ID             |             |            |
+|PkgSpacesPerSFDU  |Bzone     |Year  |double     |parking spaces |NA, < 0      |            |
+|PkgSpacesPerMFDU  |Bzone     |Year  |double     |parking spaces |NA, < 0      |            |
+|PkgSpacesPerGQ    |Bzone     |Year  |double     |parking spaces |NA, < 0      |            |
+|PropWkrPay        |Bzone     |Year  |double     |proportion     |NA, < 0, > 1 |            |
+|PropCashOut       |Bzone     |Year  |double     |proportion     |NA, < 0, > 1 |            |
+|PropNonWrkTripPay |Bzone     |Year  |double     |proportion     |NA, < 0, > 1 |            |
+|PkgCost           |Bzone     |Year  |currency   |USD            |NA, < 0      |            |
+|NumHh             |Bzone     |Year  |households |HH             |NA, < 0      |            |
+|RetEmp            |Bzone     |Year  |people     |PRSN           |NA, < 0      |            |
+|SvcEmp            |Bzone     |Year  |people     |PRSN           |NA, < 0      |            |
+|Latitude          |Bzone     |Year  |double     |NA             |NA           |            |
+|Longitude         |Bzone     |Year  |double     |NA             |NA           |            |
+|HouseType         |Household |Year  |character  |category       |             |SF, MF, GQ  |
+|Bzone             |Household |Year  |character  |ID             |             |            |
+|Bzone             |Worker    |Year  |character  |ID             |             |            |
 
 ## Datasets Produced by the Module
 The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:
