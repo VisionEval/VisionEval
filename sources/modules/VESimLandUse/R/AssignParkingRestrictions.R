@@ -105,7 +105,10 @@ AssignParkingRestrictionsSpecifications <- list(
           "OuterPropWkrPay",
           "CenterPropCashOut",
           "InnerPropCashOut",
-          "OuterPropCashOut"),
+          "OuterPropCashOut",
+          "CenterPropNonWrkTripPay",
+          "InnerPropNonWrkTripPay",
+          "OuterPropNonWrkTripPay"),
       FILE = "marea_parking-cost_by_area-type.csv",
       TABLE = "Marea",
       GROUP = "Year",
@@ -124,7 +127,10 @@ AssignParkingRestrictionsSpecifications <- list(
           "Proportion of workers who pay for parking in outer area type",
           "Proportions of workers paying for parking in a cash-out-buy-back program in center area type",
           "Proportions of workers paying for parking in a cash-out-buy-back program in inner area type",
-          "Proportions of workers paying for parking in a cash-out-buy-back program in outer area type"
+          "Proportions of workers paying for parking in a cash-out-buy-back program in outer area type",
+          "Proportions of shopping and other non-work trips to center area type that pay for parking",
+          "Proportions of shopping and other non-work trips to inner area type that pay for parking",
+          "Proportions of shopping and other non-work trips to outer area type that pay for parking"
         )
     ),
     item(
@@ -188,7 +194,10 @@ AssignParkingRestrictionsSpecifications <- list(
           "OuterPropWkrPay",
           "CenterPropCashOut",
           "InnerPropCashOut",
-          "OuterPropCashOut"),
+          "OuterPropCashOut",
+          "CenterPropNonWrkTripPay",
+          "InnerPropNonWrkTripPay",
+          "OuterPropNonWrkTripPay"),
       TABLE = "Marea",
       GROUP = "Year",
       TYPE = "double",
@@ -279,19 +288,27 @@ AssignParkingRestrictionsSpecifications <- list(
       ISELEMENTOF = ""
     ),
     item(
-      NAME = items(
-        "WkrId",
-        "Bzone",
-        "Marea"),
+      NAME = "WkrId",
       TABLE = "Worker",
       GROUP = "Year",
       TYPE = "character",
       UNITS = "ID",
       PROHIBIT = "",
       ISELEMENTOF = ""
-    )
-  ),
-  #Specify data to saved in the data store
+    ),
+  item(
+    NAME = items(
+      "Bzone",
+      "Marea"),
+    TABLE = "Worker",
+    GROUP = "Year",
+    TYPE = "character",
+    UNITS = "ID",
+    PROHIBIT = "",
+    ISELEMENTOF = ""
+  )
+),
+#Specify data to saved in the data store
   Set = items(
     item(
       NAME = "FreeParkingSpaces",
@@ -384,7 +401,7 @@ AssignParkingRestrictionsSpecifications <- list(
 #' }
 #' @source AssignParkingRestrictions.R script.
 "AssignParkingRestrictionsSpecifications"
-usethis::use_data(AssignParkingRestrictionsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignParkingRestrictionsSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -495,6 +512,11 @@ AssignParkingRestrictions <- function(L) {
   PkgCost_Bz <-
     setNames(mapply(getMaAtVal, L$Year$Bzone$Marea, L$Year$Bzone$AreaType), Bz)
   rm(Vals_MaAt)
+  #Bzone proportion of non-work trip that pays parking
+  Vals_MaAt <- makeValsMaAt("PropNonWrkTripPay", 0)
+  NonWorkPkgCostProp_Bz <-
+    setNames(mapply(getMaAtVal, L$Year$Bzone$Marea, L$Year$Bzone$AreaType), Bz)
+  rm(Vals_MaAt)
 
   #-------------------------------------------------------------------
   #Iterate by Marea to assign parking values to households and workers
@@ -559,9 +581,9 @@ AssignParkingRestrictions <- function(L) {
       #Calculate an other parking cost for urban dwellers
       IsUrban <- LocType_Bx == "Urban"
       RetSvcEmp_Bx <- with(L$Year$Bzone, RetEmp + SvcEmp)[BzInMa]
-      PkgCost_Bx <- PkgCost_Bz[BzInMa]
+      PkgCost_Bx <- PkgCost_Bz[BzInMa] * NonWorkPkgCostProp_Bz[BzInMa]
       OtherPkgCost_Bx[IsUrban] <-
-        sum(RetSvcEmp_Bx[IsUrban] * PkgCost_Bx[IsUrban]) / sum(RetSvcEmp_Bx[IsUrban])
+        sum(RetSvcEmp_Bx[IsUrban] * PkgCost_Bx[IsUrban]) / max(1,sum(RetSvcEmp_Bx[IsUrban]))
       setNames(OtherPkgCost_Bx, Bx)
     })
     #Assign other parking cost to households

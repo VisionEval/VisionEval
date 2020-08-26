@@ -103,11 +103,7 @@ VERPATOutputConfig <- list(
 #' }
 #' @source VERPATResults.R script.
 "VERPATOutputConfig"
-usethis::use_data(VERPATOutputConfig, overwrite = TRUE)
-
-
-
-
+visioneval::savePackageDataset(VERPATOutputConfig, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -222,7 +218,7 @@ VERPATResultsSpecifications <- list(
 #' }
 #' @source VERPATResults.R script.
 "VERPATResultsSpecifications"
-usethis::use_data(VERPATResultsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(VERPATResultsSpecifications, overwrite = TRUE)
 
 
 # TableNames <- c("Azone", "Bzone", "Marea", "IncomeGroup", "FuelType")
@@ -373,6 +369,10 @@ VERPATResults <- function(L){
   },
   by=c("Scenario", InputLabels_ar)]
 
+  write.csv(ScenTab_dt,
+            file.path(ModelPath, L$Global$Model$ScenarioOutputFolder, "VERPAT_scenario_results.csv"),
+            row.names = F)
+  
   # Write the output to JSON file
   JSON <- toJSON(ScenTab_dt)
   JSON <- paste("var data = ", JSON, ";", sep="")

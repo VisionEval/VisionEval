@@ -66,19 +66,22 @@ DESCRIPTION - A description of the data.
 |InnerPkgSpacesPerGQ    |double |parking spaces |NA, < 0  |            |         |Average number of free parking spaces available to group quarters residents in inner area type                   |
 |OuterPkgSpacesPerGQ    |double |parking spaces |NA, < 0  |            |         |Average number of free parking spaces available to group quarters residents in outer area type                   |
 ### marea_parking-cost_by_area-type.csv
-|   |NAME              |TYPE     |UNITS      |PROHIBIT     |ISELEMENTOF |UNLIKELY |DESCRIPTION                                                                                  |
-|:--|:-----------------|:--------|:----------|:------------|:-----------|:--------|:--------------------------------------------------------------------------------------------|
-|1  |Geo               |         |           |             |Mareas      |         |Must contain a record for each Marea and model run year.                                     |
-|19 |Year              |         |           |             |            |         |Must contain a record for each Marea and model run year.                                     |
-|10 |CenterPropWkrPay  |double   |proportion |NA, < 0, > 1 |            |         |Proportion of workers who pay for parking in center area type                                |
-|11 |InnerPropWkrPay   |double   |proportion |NA, < 0, > 1 |            |         |Proportion of workers who pay for parking in inner area type                                 |
-|12 |OuterPropWkrPay   |double   |proportion |NA, < 0, > 1 |            |         |Proportion of workers who pay for parking in outer area type                                 |
-|13 |CenterPropCashOut |double   |proportion |NA, < 0, > 1 |            |         |Proportions of workers paying for parking in a cash-out-buy-back program in center area type |
-|14 |InnerPropCashOut  |double   |proportion |NA, < 0, > 1 |            |         |Proportions of workers paying for parking in a cash-out-buy-back program in inner area type  |
-|15 |OuterPropCashOut  |double   |proportion |NA, < 0, > 1 |            |         |Proportions of workers paying for parking in a cash-out-buy-back program in outer area type  |
-|16 |CenterPkgCost     |currency |USD        |NA, < 0      |            |         |Average daily cost for long-term parking (e.g. paid on monthly basis) in center area type    |
-|17 |InnerPkgCost      |currency |USD        |NA, < 0      |            |         |Average daily cost for long-term parking (e.g. paid on monthly basis) in inner area type     |
-|18 |OuterPkgCost      |currency |USD        |NA, < 0      |            |         |Average daily cost for long-term parking (e.g. paid on monthly basis) in outer area type     |
+|    |NAME                    |TYPE     |UNITS      |PROHIBIT     |ISELEMENTOF |UNLIKELY |DESCRIPTION                                                                                  |
+|:---|:-----------------------|:--------|:----------|:------------|:-----------|:--------|:--------------------------------------------------------------------------------------------|
+|1   |Geo                     |         |           |             |Mareas      |         |Must contain a record for each Marea and model run year.                                     |
+|110 |Year                    |         |           |             |            |         |Must contain a record for each Marea and model run year.                                     |
+|10  |CenterPropWkrPay        |double   |proportion |NA, < 0, > 1 |            |         |Proportion of workers who pay for parking in center area type                                |
+|11  |InnerPropWkrPay         |double   |proportion |NA, < 0, > 1 |            |         |Proportion of workers who pay for parking in inner area type                                 |
+|12  |OuterPropWkrPay         |double   |proportion |NA, < 0, > 1 |            |         |Proportion of workers who pay for parking in outer area type                                 |
+|13  |CenterPropCashOut       |double   |proportion |NA, < 0, > 1 |            |         |Proportions of workers paying for parking in a cash-out-buy-back program in center area type |
+|14  |InnerPropCashOut        |double   |proportion |NA, < 0, > 1 |            |         |Proportions of workers paying for parking in a cash-out-buy-back program in inner area type  |
+|15  |OuterPropCashOut        |double   |proportion |NA, < 0, > 1 |            |         |Proportions of workers paying for parking in a cash-out-buy-back program in outer area type  |
+|16  |CenterPropNonWrkTripPay |double   |proportion |NA, < 0, > 1 |            |         |Proportions of shopping and other non-work trips to center area type that pay for parking    |
+|17  |InnerPropNonWrkTripPay  |double   |proportion |NA, < 0, > 1 |            |         |Proportions of shopping and other non-work trips to inner area type that pay for parking     |
+|18  |OuterPropNonWrkTripPay  |double   |proportion |NA, < 0, > 1 |            |         |Proportions of shopping and other non-work trips to outer area type that pay for parking     |
+|19  |CenterPkgCost           |currency |USD        |NA, < 0      |            |         |Average daily cost for long-term parking (e.g. paid on monthly basis) in center area type    |
+|20  |InnerPkgCost            |currency |USD        |NA, < 0      |            |         |Average daily cost for long-term parking (e.g. paid on monthly basis) in inner area type     |
+|21  |OuterPkgCost            |currency |USD        |NA, < 0      |            |         |Average daily cost for long-term parking (e.g. paid on monthly basis) in outer area type     |
 
 ## Datasets Used by the Module
 The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:
@@ -97,41 +100,44 @@ PROHIBIT - Values that are prohibited. Values in the datastore do not meet any o
 
 ISELEMENTOF - Categorical values that are permitted. Values in the datastore are one or more of the listed values.
 
-|NAME                   |TABLE     |GROUP |TYPE       |UNITS          |PROHIBIT     |ISELEMENTOF                  |
-|:----------------------|:---------|:-----|:----------|:--------------|:------------|:----------------------------|
-|Marea                  |Marea     |Year  |character  |ID             |             |                             |
-|CenterPkgSpacesPerSFDU |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
-|InnerPkgSpacesPerSFDU  |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
-|OuterPkgSpacesPerSFDU  |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
-|CenterPkgSpacesPerMFDU |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
-|InnerPkgSpacesPerMFDU  |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
-|OuterPkgSpacesPerMFDU  |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
-|CenterPkgSpacesPerGQ   |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
-|InnerPkgSpacesPerGQ    |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
-|OuterPkgSpacesPerGQ    |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
-|CenterPropWkrPay       |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
-|InnerPropWkrPay        |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
-|OuterPropWkrPay        |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
-|CenterPropCashOut      |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
-|InnerPropCashOut       |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
-|OuterPropCashOut       |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
-|CenterPkgCost          |Marea     |Year  |currency   |USD            |NA, < 0      |                             |
-|InnerPkgCost           |Marea     |Year  |currency   |USD            |NA, < 0      |                             |
-|OuterPkgCost           |Marea     |Year  |currency   |USD            |NA, < 0      |                             |
-|Bzone                  |Bzone     |Year  |character  |ID             |             |                             |
-|Marea                  |Bzone     |Year  |character  |ID             |             |                             |
-|LocType                |Bzone     |Year  |character  |category       |NA           |Urban, Town, Rural           |
-|AreaType               |Bzone     |Year  |character  |category       |NA           |center, inner, outer, fringe |
-|NumHh                  |Bzone     |Year  |households |HH             |NA, < 0      |                             |
-|RetEmp                 |Bzone     |Year  |people     |PRSN           |NA, < 0      |                             |
-|SvcEmp                 |Bzone     |Year  |people     |PRSN           |NA, < 0      |                             |
-|HouseType              |Household |Year  |character  |category       |             |SF, MF, GQ                   |
-|HhId                   |Household |Year  |character  |ID             |             |                             |
-|Bzone                  |Household |Year  |character  |ID             |             |                             |
-|Marea                  |Household |Year  |character  |ID             |             |                             |
-|WkrId                  |Worker    |Year  |character  |ID             |             |                             |
-|Bzone                  |Worker    |Year  |character  |ID             |             |                             |
-|Marea                  |Worker    |Year  |character  |ID             |             |                             |
+|NAME                    |TABLE     |GROUP |TYPE       |UNITS          |PROHIBIT     |ISELEMENTOF                  |
+|:-----------------------|:---------|:-----|:----------|:--------------|:------------|:----------------------------|
+|Marea                   |Marea     |Year  |character  |ID             |             |                             |
+|CenterPkgSpacesPerSFDU  |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
+|InnerPkgSpacesPerSFDU   |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
+|OuterPkgSpacesPerSFDU   |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
+|CenterPkgSpacesPerMFDU  |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
+|InnerPkgSpacesPerMFDU   |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
+|OuterPkgSpacesPerMFDU   |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
+|CenterPkgSpacesPerGQ    |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
+|InnerPkgSpacesPerGQ     |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
+|OuterPkgSpacesPerGQ     |Marea     |Year  |double     |parking spaces |NA, < 0      |                             |
+|CenterPropWkrPay        |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
+|InnerPropWkrPay         |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
+|OuterPropWkrPay         |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
+|CenterPropCashOut       |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
+|InnerPropCashOut        |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
+|OuterPropCashOut        |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
+|CenterPropNonWrkTripPay |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
+|InnerPropNonWrkTripPay  |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
+|OuterPropNonWrkTripPay  |Marea     |Year  |double     |proportion     |NA, < 0, > 1 |                             |
+|CenterPkgCost           |Marea     |Year  |currency   |USD            |NA, < 0      |                             |
+|InnerPkgCost            |Marea     |Year  |currency   |USD            |NA, < 0      |                             |
+|OuterPkgCost            |Marea     |Year  |currency   |USD            |NA, < 0      |                             |
+|Bzone                   |Bzone     |Year  |character  |ID             |             |                             |
+|Marea                   |Bzone     |Year  |character  |ID             |             |                             |
+|LocType                 |Bzone     |Year  |character  |category       |NA           |Urban, Town, Rural           |
+|AreaType                |Bzone     |Year  |character  |category       |NA           |center, inner, outer, fringe |
+|NumHh                   |Bzone     |Year  |households |HH             |NA, < 0      |                             |
+|RetEmp                  |Bzone     |Year  |people     |PRSN           |NA, < 0      |                             |
+|SvcEmp                  |Bzone     |Year  |people     |PRSN           |NA, < 0      |                             |
+|HouseType               |Household |Year  |character  |category       |             |SF, MF, GQ                   |
+|HhId                    |Household |Year  |character  |ID             |             |                             |
+|Bzone                   |Household |Year  |character  |ID             |             |                             |
+|Marea                   |Household |Year  |character  |ID             |             |                             |
+|WkrId                   |Worker    |Year  |character  |ID             |             |                             |
+|Bzone                   |Worker    |Year  |character  |ID             |             |                             |
+|Marea                   |Worker    |Year  |character  |ID             |             |                             |
 
 ## Datasets Produced by the Module
 The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:

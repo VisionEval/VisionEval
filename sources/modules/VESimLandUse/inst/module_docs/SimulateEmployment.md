@@ -1,6 +1,6 @@
 
 # SimulateEmployment Module
-### February 5, 2019
+### December 3, 2019
 
 This module assign workers SimBzone work locations. A worker table is created which identifies a unique worker ID, the household ID the worker is a part of, and the SimBzone, Azone, and Marea of the worker job location.
 
@@ -39,19 +39,22 @@ PROHIBIT - Values that are prohibited. Values in the datastore do not meet any o
 
 ISELEMENTOF - Categorical values that are permitted. Values in the datastore are one or more of the listed values.
 
-|NAME    |TABLE     |GROUP |TYPE      |UNITS    |PROHIBIT |ISELEMENTOF        |
-|:-------|:---------|:-----|:---------|:--------|:--------|:------------------|
-|Azone   |Azone     |Year  |character |ID       |         |                   |
-|Marea   |Azone     |Year  |character |ID       |         |                   |
-|Bzone   |Bzone     |Year  |character |ID       |         |                   |
-|Azone   |Bzone     |Year  |character |ID       |         |                   |
-|Marea   |Bzone     |Year  |character |ID       |         |                   |
-|TotEmp  |Bzone     |Year  |people    |PRSN     |NA, < 0  |                   |
-|LocType |Bzone     |Year  |character |category |NA       |Urban, Town, Rural |
-|Workers |Household |Year  |people    |PRSN     |NA, < 0  |                   |
-|HhId    |Household |Year  |character |ID       |         |                   |
-|Bzone   |Household |Year  |character |ID       |         |                   |
-|Azone   |Household |Year  |character |ID       |         |                   |
+|NAME         |TABLE     |GROUP |TYPE      |UNITS    |PROHIBIT |ISELEMENTOF        |
+|:------------|:---------|:-----|:---------|:--------|:--------|:------------------|
+|Azone        |Azone     |Year  |character |ID       |         |                   |
+|Marea        |Azone     |Year  |character |ID       |         |                   |
+|Bzone        |Bzone     |Year  |character |ID       |         |                   |
+|Azone        |Bzone     |Year  |character |ID       |         |                   |
+|Marea        |Bzone     |Year  |character |ID       |         |                   |
+|TotEmp       |Bzone     |Year  |people    |PRSN     |NA, < 0  |                   |
+|LocType      |Bzone     |Year  |character |category |NA       |Urban, Town, Rural |
+|Workers      |Household |Year  |people    |PRSN     |NA, < 0  |                   |
+|HhId         |Household |Year  |character |ID       |         |                   |
+|Bzone        |Household |Year  |character |ID       |         |                   |
+|Azone        |Household |Year  |character |ID       |         |                   |
+|RuralWorkers |Azone     |Year  |people    |PRSN     |NA, < 0  |                   |
+|TownWorkers  |Azone     |Year  |people    |PRSN     |NA, < 0  |                   |
+|UrbanWorkers |Azone     |Year  |people    |PRSN     |NA, < 0  |                   |
 
 ## Datasets Produced by the Module
 The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:
@@ -74,8 +77,8 @@ DESCRIPTION - A description of the data.
 
 |NAME  |TABLE  |GROUP |TYPE      |UNITS |PROHIBIT |ISELEMENTOF |DESCRIPTION                     |
 |:-----|:------|:-----|:---------|:-----|:--------|:-----------|:-------------------------------|
-|HhId  |Worker |Year  |character |ID    |NA       |            |Unique household ID             |
-|WkrId |Worker |Year  |character |ID    |NA       |            |Unique worker ID                |
+|HhId  |Worker |Year  |character |ID    |         |            |Unique household ID             |
+|WkrId |Worker |Year  |character |ID    |         |            |Unique worker ID                |
 |Bzone |Worker |Year  |character |ID    |         |            |Bzone ID of worker job location |
 |Azone |Worker |Year  |character |ID    |         |            |Azone ID of worker job location |
 |Marea |Worker |Year  |character |ID    |         |            |Marea ID of worker job location |

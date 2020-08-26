@@ -4,6 +4,7 @@
 
 #This script defines functions related to the development and use of modules.
 
+utils::globalVariables(c("readFromTable","initDatastore"))
 
 #DEFINE LIST ALIAS
 #=================
@@ -23,7 +24,7 @@ item <- list
 
 #' Alias for list function.
 #'
-#' \code{items} a visioneval framework \strong{module developer} function that is
+#' \code{items} a visioneval framework module developer function that is
 #' an alias for the list function whose purpose is to make module specifications
 #' easier to read.
 #'
@@ -102,7 +103,7 @@ addErrorMsg <- function(ResultsListName, ErrMsg) {
 #' warning messages back to the framework. The preferred method for handling
 #' warnings in module execution is for the module to handle the warning by
 #' passing one or more warning messages back to the framework. The framework
-#' will then write warning messages to the log and stop execution. Warning
+#' will then write warning messages to the log. Warning
 #' messages are stored in a component of the returned list called Warnings. This
 #' component is a string vector where each element is an warning message. The
 #' addWarningMsg will create the Warning component if it does not already exist
@@ -269,30 +270,108 @@ processEstimationInputs <- function(Inp_ls, FileName, ModuleName) {
 #'
 #' This function is used to load a dataset identified by name from the
 #' VisionEval package which contains the dataset. Using this function is the
-#' preferred alternative to hard-wiring the loading using package::dataset
-#' notation because it enables users to switch between module versions contained
-#' in different packages. For example, there may be different versions of the
-#' VEPowertrainsAndFuels package which have different default assumptions about
-#' light-duty vehicle powertrain mix and characteristics by model year. Using
-#' this function, the module developer only needs to identify the dataset name.
-#' The function uses DatasetsByPackage_df data frame in the model state list
-#' to identify the package which contains the dataset. It then retrieves and
-#' returns the dataset
+#' preferred alternative to hard-wiring the loading a dataset using the
+#' 'package::dataset' notation because it enables users to switch between module
+#' versions contained in different packages. For example, there may be different
+#' versions of the VEPowertrainsAndFuels package which have different default
+#' assumptions about light-duty vehicle powertrain mix and characteristics by
+#' model year. Using this function, the module developer only needs to identify
+#' the dataset name. The module developer should also specify a 'DefaultPackage'
+#' name to simplify module development and testing. For example, the default
+#' 'VEPowertrainsAndFuels' package can be specified. During module development
+#' and testing the dataset will be loaded from that package, but during a model
+#' run the dataset will be loaded from the package that is specified to be used
+#' in the model run. The function uses 'DatasetsByPackage_df' data frame in the
+#' model state list to identify the package which contains the dataset. If
+#' 'DatasetsByPackage_df' is not present in the model state list, as is the case
+#' during module development and testing, the the dataset is retrieved from the
+#' 'DefaultPackage'.
 #'
 #' @param DatasetName A string identifying the name of the dataset.
+#' @param DefaultPackage A string identifying the name of the package to
+#'   retrieve the dataset from during module development and testing.
 #' @return The identified dataset.
 #' @export
-loadPackageDataset <- function(DatasetName) {
+loadPackageDataset <- function(DatasetName, DefaultPackage = NULL) {
   if (exists(DatasetName)) {
     return(eval(parse(text = DatasetName)))
   } else {
-    Dat_df <- getModelState()$DatasetsByPackage_df
-    PkgName <- with(Dat_df, Package[Dataset == DatasetName])
+    if (!is.null(getModelState()$DatasetsByPackage_df)) {
+      Dat_df <- getModelState()$DatasetsByPackage_df
+      PkgName <- with(Dat_df, Package[Dataset == DatasetName])
+    } else {
+      PkgName <- DefaultPackage
+    }
     FullName <- paste(PkgName, DatasetName, sep = "::")
     return(eval(parse(text = FullName)))
   }
 }
 
+#SAVE A VE PACKAGE DATASET
+#=========================
+#' Save a VisionEval package dataset to the data/ folder during package build
+#'
+#' \code{savePackageDataset} a visioneval framework module developer function
+#' which saves a dataset to the data/ directory during package build.
+#'
+#' This function is used to save a dataset during module estimation and when
+#' building module specifications. Using this function is the
+#' preferred alternative to hard-wiring saving a dataset using usthis::use_data
+#' or other means as it does suitable error-checking.
+#'
+#' @param dataset A string identifying the name of the object containing
+#' the dataset.
+#' @param overwrite During the SAVE phase and if FALSE, do not overwrite an existing file in data/ space
+#' @param keep  During the BUILD phase and if TRUE, do not reomve the object from the R/ space
+#' @param compress Optionally specify a different compression mode
+#' @return The dataset name if it was saved successfully, otherwise an empty character vector
+#' @export
+savePackageDataset <- function(dataset,overwrite=TRUE,keep=FALSE,compress="xz") {
+  dsname <- deparse(substitute(dataset))
+  if ( length(dsname)!=1 ) stop("Unable to deparse dataset name.")
+  if ( ! dir.exists("data") ) stop("Data directory not found in ",getwd())
+  file <- file.path("data",paste0(dsname,".rda"))
+  build.phase <- toupper(Sys.getenv("VE_BUILD_PHASE","SAVE"))
+  if ( build.phase == "SAVE" ) {
+    if ( file.exists(file) ) {
+      if ( ! overwrite ) {
+        message("Existing '",dsname,"' not overwritten due to overwrite=FALSE.")
+      } else if ( Sys.getenv("VE_EXPRESS","NO")!="NO" ) {
+        message("Existing '",dsname,"' skipped for VE_EXPRESS.")
+        overwrite = FALSE
+      }
+    }
+    if ( overwrite ) {
+      cat("Saving '",dsname,"' to '",file,"' ... ",sep="")
+      save(list=dsname,file=file,compress=compress,envir=parent.frame())
+      if ( ! file.exists(file) ) { traceback(); stop("File NOT saved!\n") } else cat("Saved\n")
+    }
+  } else if (build.phase == "BUILD" ) {
+    # During the BUILD phase, we won't keep the dataset unless explicitly requested.
+    # Some modules will break (e.g. using variable as an exported function default
+    # parameter) if the object is removed. The "Undefined Global Variable" message
+    # from R CMD check will identify variables that are used in that wrong way.
+    # Currently, they won't get deleted if they hadn't already been saved to a data/ set.
+    # The right way is to save the variable to data/ and then reload it inside the
+    # function if the variable default is not a usable value (e.g. NULL)
+    Msg_ <- paste(dsname,"in R/ space")
+    if ( ! keep ) {
+      rm(list=dsname,envir=parent.frame())
+      if ( dsname %in% ls(parent.frame()) ) {
+        stop("Failed to remove ",Msg_)
+      } else {
+        message("Removed ",Msg_)
+      }
+    } else {
+      message("Keeping",Msg_)
+    }
+  } else {
+    message("Unknown VE_BUILD_PHASE for savePackageDataset: ",build.phase)
+    stop('VE_BUILD_PHASE = one.of("SAVE","BUILD")')
+  }
+  
+  return(dsname)
+}
 
 #CHECK MODULE OUTPUTS FOR CONSISTENCY WITH MODULE SPECIFICATIONS
 #===============================================================
@@ -1434,33 +1513,44 @@ applyLinearModel <-
 #'
 #' @param ModuleName a string identifying the module name.
 #' @param PackageName a string identifying the package name.
+#' @param NameRegistryList, if FALSE read and write the NameRegistryFile, if TRUE just compose a list for this module
 #' @param NameRegistryDir a string identifying the path to the directory
 #' where the name registry file is located.
 #' @return TRUE if successful. Has a side effect of updating the VisionEval
 #' name registry.
 #' @export
 writeVENameRegistry <-
-  function(ModuleName, PackageName, NameRegistryDir = NULL) {
-    #Check whether the name registry file exists
-    if (is.null(NameRegistryDir)) {
-      NameRegistryFile <- "VENameRegistry.json"
-    } else {
-      NameRegistryFile <- file.path(NameRegistryDir, "VENameRegistry.json")
+  function(ModuleName, PackageName, NameRegistryList = FALSE, NameRegistryDir = NULL) {
+    if ( ! NameRegistryList ) {
+      #Check whether the name registry file exists
+      if (is.null(NameRegistryDir)) {
+        NameRegistryFile <- "VENameRegistry.json"
+      } else {
+        NameRegistryFile <- file.path(NameRegistryDir, "VENameRegistry.json")
+      }
+      if (!file.exists(NameRegistryFile)) {
+        cat("NameRegistryDir: ")
+        if ( ! is.null(NameRegistryDir) ) {
+          cat(NameRegistryDir)
+        } else {
+          cat(getwd())
+        }
+        cat("\n")
+        stop("VENameRegistry.json file is missing: cannot update.")
+      }
+      #Read in the name registry file as a list
+      NameRegistry_ls <-
+        fromJSON(readLines(NameRegistryFile), simplifyDataFrame = FALSE)
+      #Remove any existing registry entries for the module
+      for (x in c("Inp", "Set")) {
+        NameRegistry_df <- readVENameRegistry(NameRegistryDir)
+        ExistingModuleEntries_ <-
+          NameRegistry_df[[x]]$MODULE == ModuleName &
+          NameRegistry_df[[x]]$PACKAGE == PackageName
+        NameRegistry_ls[[x]] <- NameRegistry_ls[[x]][ -ExistingModuleEntries_ ]
+      }
     }
-    if (!file.exists(NameRegistryFile)) {
-      stop("VENameRegistry.json file is not present in the identified directory.")
-    }
-    #Read in the name registry file as a list
-    NameRegistry_ls <-
-      fromJSON(readLines(NameRegistryFile), simplifyDataFrame = FALSE)
-    #Remove any existing registry entries for the module
-    for (x in c("Inp", "Set")) {
-      NameRegistry_df <- readVENameRegistry()
-      ExistingModuleEntries_ <-
-        NameRegistry_df[[x]]$MODULE == ModuleName &
-        NameRegistry_df[[x]]$PACKAGE == PackageName
-      NameRegistry_ls[[x]] <- NameRegistry_ls[[x]][!ExistingModuleEntries_]
-    }
+
     #Define function to process module specifications
     processModuleSpecs <- function(Spec_ls) {
       #Define a function to expand a specification having multiple NAMEs
@@ -1523,12 +1613,14 @@ writeVENameRegistry <-
         x$MODULE <- ModuleName
         x
       })
-    #Add the the module specifications to the registry
-    NameRegistry_ls$Inp <- c(NameRegistry_ls$Inp, Inp_ls)
-    NameRegistry_ls$Set <- c(NameRegistry_ls$Set, Set_ls)
     #Save the revised name registry
-    writeLines(toJSON(NameRegistry_ls), NameRegistryFile)
-    TRUE
+    if ( ! NameRegistryList ) {
+      #Add the the module specifications to the registry
+      NameRegistry_ls$Inp <- c(NameRegistry_ls$Inp, Inp_ls)
+      NameRegistry_ls$Set <- c(NameRegistry_ls$Set, Set_ls)
+      writeLines(toJSON(NameRegistry_ls,pretty=TRUE), NameRegistryFile)
+    }
+    return(list(Inp=Inp_ls,Set=Set_ls))
   }
 
 
@@ -1679,6 +1771,10 @@ getRegisteredGetSpecs <-
 #' @export
 #' @import knitr
 documentModule <- function(ModuleName){
+
+  # Do not bother to re-run if in BUILD phase (only processed during
+  # documentation/check step).
+  if ( toupper(Sys.getenv("VE_BUILD_PHASE","SAVE")) != "SAVE" ) return()
 
   #Make vignettes directory if doesn't exist
   #-----------------------------------------
@@ -2134,17 +2230,17 @@ documentModule <- function(ModuleName){
     SetMarkdown_ <- c(
       "",
       "## Datasets Produced by the Module",
-      "The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:",
+      "The following table documents each dataset that is placed in the datastore by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:",
       "",
       "NAME - The dataset name.",
       "",
-      "TABLE - The table in the datastore that the data is retrieved from.",
+      "TABLE - The table in the datastore that the data is placed in.",
       "",
       "GROUP - The group in the datastore where the table is located. Note that the datastore has a group named 'Global' and groups for every model run year. For example, if the model run years are 2010 and 2050, then the datastore will have a group named '2010' and a group named '2050'. If the value for 'GROUP' is 'Year', then the dataset will exist in each model run year. If the value for 'GROUP' is 'BaseYear' then the dataset will only exist in the base year group (e.g. '2010'). If the value for 'GROUP' is 'Global' then the dataset will only exist in the 'Global' group.",
       "",
       "TYPE - The data type. The framework uses the type to check units and inputs. Refer to the model system design and users guide for information on allowed types.",
       "",
-      "UNITS - The units that input values need to represent. Some data types have defined units that are represented as abbreviations or combinations of abbreviations. For example 'MI/HR' means miles per hour. Many of these abbreviations are self evident, but the VisionEval model system design and users guide should be consulted.",
+      "UNITS - The native units that are created in the datastore. Some data types have defined units that are represented as abbreviations or combinations of abbreviations. For example 'MI/HR' means miles per hour. Many of these abbreviations are self evident, but the VisionEval model system design and users guide should be consulted.",
       "",
       "PROHIBIT - Values that are prohibited. Values in the datastore do not meet any of the listed conditions.",
       "",
@@ -2178,3 +2274,120 @@ documentModule <- function(ModuleName){
   #-----------------------------------
   writeLines(unlist(RevDocs_ls), paste0("inst/module_docs/", ModuleName, ".md"))
 }
+
+
+#FETCH MODULE DATASETS FROM DATASTORE
+#====================================
+#' Returns the datasets that a module requires.
+#'
+#' \code{fetchModuleData} a visioneval framework module developer function
+#' that fetches from the datastore a complete list of all the data required
+#' by a module to run.
+#'
+#' The purpose of this function is to help module developers with debugging
+#' modules during a model run. It is not uncommon for a new module to fail
+#' during a module run due to an edge case that was not thought of during
+#' module development. In such circumstances, it can be difficult to determine
+#' the cause of the error without stepping though the module code; and to do
+#' that requires creating from the datastore the datasets which cause the error
+#' to occur. This function fetches the datasets from the datastore and returns
+#' them in the form they are required to be in to run the module.
+#'
+#' @param ModuleName a string identifying the name of the module.
+#' @param PackageName a string identifying the name of the package that the
+#' module is in.
+#' @param Year a string identifying the model run year to retrieve the data
+#' for.
+#' @param Geo a string identifying the geography to retrieve the data for if
+#' the module's 'RunBy' specification is not 'Region'. This argument is
+#' omitted if the 'RunBy' specification is 'Region'.
+#' @return A list in standardized form containing all the datasets required by
+#' a module to run.
+#' @export
+fetchModuleData <- function(ModuleName, PackageName, Year, Geo = NULL) {
+
+  #Load the package and module
+  #---------------------------
+  Function <- paste0(PackageName, "::", ModuleName)
+  Specs <- paste0(PackageName, "::", ModuleName, "Specifications")
+  M <- list()
+  M$Func <- eval(parse(text = Function))
+  M$Specs <- processModuleSpecs(eval(parse(text = Specs)))
+  #Load any modules identified by 'Call' spec if any
+  if (is.list(M$Specs$Call)) {
+    Call <- list(
+      Func = list(),
+      Specs = list()
+    )
+    for (Alias in names(M$Specs$Call)) {
+      #Called module function when specified as package::module
+      Function <- M$Specs$Call[[Alias]]
+      #Called module function when only module is specified
+      if (length(unlist(strsplit(Function, "::"))) == 1) {
+        Pkg_df <- getModelState()$ModulesByPackage_df
+        Function <-
+          paste(Pkg_df$Package[Pkg_df$Module == Function], Function, sep = "::")
+        rm(Pkg_df)
+      }
+      #Called module specifications
+      Specs <- paste0(Function, "Specifications")
+      #Assign the function and specifications of called module to alias
+      Call$Func[[Alias]] <- eval(parse(text = Function))
+      Call$Specs[[Alias]] <- processModuleSpecs(eval(parse(text = Specs)))
+      Call$Specs[[Alias]]$RunBy <- M$Specs$RunBy
+    }
+  }
+
+  #Get data from datastore
+  #-----------------------
+  #If RunBy is 'Region' get all data
+  if (M$Specs$RunBy == "Region") {
+    #Get data from datastore
+    L <- getFromDatastore(M$Specs, RunYear = Year)
+    if (exists("Call")) {
+      for (Alias in names(Call$Specs)) {
+        L[[Alias]] <-
+          getFromDatastore(Call$Specs[[Alias]], RunYear = Year)
+      }
+    }
+  #If RunBy is not 'Region' get data for Geo
+  } else {
+    #Check that Geo has been specified
+    if (is.null(Geo)) {
+      Msg <- paste0(
+        "The RunBy specification for module ", ModuleName, " is ",
+        M$Specs$RunBy, ".", "You must specify the name of the ", M$Specs$RunBy,
+        " you want to retrieve the datasets for using the 'Geo' argument."
+      )
+    }
+    #Identify the units of geography to iterate over
+    GeoCategory <- M$Specs$RunBy
+    #Create the geographic index list
+    GeoIndex_ls <- createGeoIndexList(c(M$Specs$Get, M$Specs$Set), GeoCategory, Year)
+    if (exists("Call")) {
+      for (Alias in names(Call$Specs)) {
+        GeoIndex_ls[[Alias]] <-
+          createGeoIndexList(Call$Specs[[Alias]]$Get, GeoCategory, Year)
+      }
+    }
+    #Get data from datastore for Geo
+    L <-
+      getFromDatastore(M$Specs, RunYear = Year, Geo, GeoIndex_ls)
+    if (exists("Call")) {
+      for (Alias in names(Call$Specs)) {
+        L[[Alias]] <-
+          getFromDatastore(Call$Specs[[Alias]], RunYear = Year, Geo, GeoIndex_ls = GeoIndex_ls[[Alias]])
+      }
+    }
+  }
+
+  #Return the Results
+  #------------------
+  if (exists("Call")) {
+    return(list(L = L, M = Call$Func))
+  } else {
+    return(list(L = L))
+  }
+
+}
+

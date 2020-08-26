@@ -261,6 +261,7 @@ calcVehDepr <- function(Type_, Age_, Vmt_) {
     TypeToIndex[Type_]
   )
   #Apply the index to calculate base vehicle depreciation
+  if ( ! exists("VehOwnCost_ls") ) VehOwnCost_ls <- VEHouseholdVehicles::VehOwnCost_ls
   BaseDepr_Ve <- with(VehOwnCost_ls, Depr_AgVt[DeprIdx_mx])
   #Put depreciation adjustment model coefficients into matrix
   Coeff_mx <- rbind(
@@ -347,7 +348,7 @@ rm(Depr_AgVt, Depr_MiBt, Depr_MiVt, DeprProp_MiVt, OwnCost_df, Value_AgVt,
 #' }
 #' @source AdjustVehicleOwnership.R script.
 "VehOwnCost_ls"
-usethis::use_data(VehOwnCost_ls, overwrite = TRUE)
+visioneval::savePackageDataset(VehOwnCost_ls, overwrite = TRUE)
 
 #---------------------------------
 #Pay-as-you-drive insurance choice
@@ -396,8 +397,7 @@ PaydWts_ <- c(
 #' }
 #' @source CalculateVehicleOwnCost.R script.
 "PaydWts_"
-usethis::use_data(PaydWts_, overwrite = TRUE)
-
+visioneval::savePackageDataset(PaydWts_, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -717,7 +717,7 @@ CalculateVehicleOwnCostSpecifications <- list(
 #' }
 #' @source CalculateVehicleOwnCost.R script.
 "CalculateVehicleOwnCostSpecifications"
-usethis::use_data(CalculateVehicleOwnCostSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateVehicleOwnCostSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -757,6 +757,7 @@ calcVehFin <- function(Type_, Age_) {
     TypeToIndex[Type_]
   )
   #Apply the index to calculate vehicle finance cost
+  VehOwnCost_ls <- VEHouseholdVehicles::VehOwnCost_ls
   with(VehOwnCost_ls, FinCost_AgVt[FinIdx_mx])
 }
 
@@ -788,7 +789,7 @@ calcAdValoremTax <- function(Type_, Age_, TaxRate) {
     TypeToIndex[Type_]
   )
   #Apply the index to calculate vehicle finance cost
-  with(VehOwnCost_ls, Value_AgVt[ValueIdx_mx]) * TaxRate
+  with(VEHouseholdVehicles::VehOwnCost_ls, Value_AgVt[ValueIdx_mx]) * TaxRate
 }
 
 #Define function to assign PAYD propensity weights to households
@@ -826,7 +827,9 @@ idPaydHh <- function(Household, PaydHhProp) {
   #Return all qualifying households if less than or equal to NumPayd
     HasPaydIns_Hh <- setNames(as.integer(Qualifies_Hh), Household$HhId)
   } else {
-  #Otherwise calculate PAYD weights and choose based on weights
+    #Otherwise calculate PAYD weights and choose based on weights
+    PaydWts_ <- VEHouseholdVehicles::PaydWts_
+
     Weight_Hh <- rep(1, length(Household$HhId))
     #Add weight for teenage drivers
     Weight_Hh <- local({
@@ -925,6 +928,8 @@ CalculateVehicleOwnCost <- function(L,M) {
   AveAnnVmtPV_Hh[L$Year$Household$Vehicles == 0] <- 0
   AnnVmt_Ve <- AveAnnVmtPV_Hh[HhToVehIdx_Ve]
   AnnVmt_Ve[IsCarSvc] <- 0
+
+  VehOwnCost_ls <- VEHouseholdVehicles::VehOwnCost_ls
 
   #Calculate annual depreciation cost
   DeprCost_Ve <-

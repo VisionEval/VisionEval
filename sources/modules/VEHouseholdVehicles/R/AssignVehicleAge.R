@@ -156,7 +156,7 @@ rm(MaxAge, TotWt_AgIgTy, AgeIncJointProp_AgIgTy, AutoAgeIncDF_AgIg,
 #' }
 #' @source AssignVehicleAge.R script.
 "VehicleAgeModel_ls"
-usethis::use_data(VehicleAgeModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(VehicleAgeModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -340,7 +340,7 @@ AssignVehicleAgeSpecifications <- list(
 #' }
 #' @source AssignVehicleAge.R script.
 "AssignVehicleAgeSpecifications"
-usethis::use_data(AssignVehicleAgeSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignVehicleAgeSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -557,6 +557,7 @@ AssignVehicleAge <- function(L) {
     NumVeh_IgTy <- with(Own_df, table(IncGrp, Type))
     IncProp_IgTy <- sweep(NumVeh_IgTy, 2, colSums(NumVeh_IgTy), "/")
     #Calculate cumulative age distributions by type
+    VehicleAgeModel_ls <- VEHouseholdVehicles::VehicleAgeModel_ls
     AutoAgeProp_Ag <-
       adjustAgeDistribution(
         VehicleAgeModel_ls$Auto$AgeCDF_Ag,

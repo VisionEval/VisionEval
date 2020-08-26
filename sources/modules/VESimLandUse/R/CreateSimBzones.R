@@ -4,7 +4,7 @@
 
 #<doc>
 ## CreateSimBzones Module
-#### February 1, 2019
+#### December 3, 2019
 #
 #This module synthesizes Bzones and their land use attributes as a function of Azone characteristics as well as data derived from the US Environmental Protection Agency's Smart Location Database (SLD) augmented with US Census housing and household income data, and data from the National Transit Database. Details on these data are included in the VESimLandUseData package. The combined dataset contains a number of land use attributes at the US Census block group level. The goal of Bzone synthesis to generate a set of SimBzones in each Azone that reasonably represent block group land use characteristics given the characteristics of the Azone, the Marea that the Azone is a part of, and scenario inputs provided by the user.
 #
@@ -38,11 +38,11 @@
 #
 #1) **Calculate the Number of Households by Azone and Location Type**: The number of households by Azone is loaded from the datastore. User-specified proportions of households by location type (urban, town, rural) for each Azone are used to divide the households among location types in each azone in whole numbers.
 #
-#2) **Calculate the Number of Jobs by Azone and Location Type**: The number of workers by Azone is loaded from the datastore: User-specified proportions of worker work location by location type (urban, town, rural) for each Azone are used to allocate workers by work location among location types. Work locations within the urban portion of an Marea are allocated among the urban portions of Azones associated with the Marea based on user-specified proportions of the urbanized area jobs located in the urban location type of each of the associated Azones.
+#2) **Calculate the Number of Workers and Jobs by Azone and Location Type**: The number of workers by Azone is loaded from the datastore: User-specified proportions of worker work location by location type (urban, town, rural) for each Azone are used to allocate workers by work location among location types. Job locations within the urban portion of an Marea are allocated among the urban portions of Azones associated with the Marea based on user-specified proportions of the urbanized area jobs located in the urban location type of each of the associated Azones. The number of jobs in towns by Azone are calculated from the number of town workers by Azone by applying town job to worker ratios by Azone. This job/worker ratio recognizes that there may be a net outflow or net inflow of town workers to the Azone. Numbers of jobs by location type and azone and numbers of workers by location type and azone are saved. The number of jobs by location type and azone are used to allocate jobs to SimBzones and calculate activity density. Workers by location type and azone are used by the SimulateEmployment module to scale Bzone jobs so that every town worker has an assigned Bzone. This approach is necessary to assure that Bzone densities and other land use measures are sensible and that workers have sensible travel demand management and parking pricing policies assigned to them.
 #
 #3) **Create SimBzones by Azone and Location Type**: SimBzones are created to have roughly equal activity totals (households and jobs). The total activity (sum of households and jobs) in each Azone and location type (calculated in the previous step) is divided by median value calculated for block groups of that location type from the SLD data. The *Create SimBzones by Azone and Location Type* section of *CreateSimBzoneModel* module documentation describes this in more detail.
 #
-#4) **Assign an Activity Density to Each SimBzone**: A model is applied to calculate a likely distribution of SimBzone activity densities for each location type in each Azone. The density distribution is a function of the overall density calculated from user land area inputs for urban and town location types and average density for rural types, and the amount of activity by location type in the Azone. Model parameters vary by location type and urbanized area. The *Assign an Activity Density to Each SimBzone* section of the *CreateSimBzonesModel* module documentation describes these models in more detail. These distributions are used as sampling distributions to assign a preliminary activity density to each SimBzone in the Azone. The SimBzone densities are then adjusted to be consistent with the land area (urban and town) and density (rural) input assumptions.
+#4) **Assign an Activity Density to Each SimBzone**: A function is applied to calculate a likely distribution of SimBzone activity densities for each location type in each Azone. The density distribution is a function of the overall density calculated from user land area inputs for urban and town location types and average density for rural types, and the amount of activity by location type in the Azone. Model parameters vary by location type and urbanized area. The *Assign an Activity Density to Each SimBzone* section of the *CreateSimBzonesModel* module documentation describes these models in more detail.
 #
 #5) **Assign a Jobs and Housing Mix Level to Each SimBzone**: A household and jobs mixing category (primarily-hh, largely-hh, mixed, largely-jobs, primarily-jobs) is assigned to each SimBzone using the appropriate model described in the *Assign a Jobs and Housing Mix Level to Each SimBzone* section of the *CreateSimBzonesModel* module documentation.
 #
@@ -177,6 +177,15 @@ CreateSimBzonesSpecifications <- list(
       TYPE = "double",
       UNITS = "proportion",
       PROHIBIT = c("NA", "< 0", "> 1"),
+      ISELEMENTOF = ""
+    ),
+    item(
+      NAME = "TownJobWkrRatio",
+      TABLE = "Azone",
+      GROUP = "Year",
+      TYPE = "double",
+      UNITS = "proportion",
+      PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     ),
     item(
@@ -369,6 +378,27 @@ CreateSimBzonesSpecifications <- list(
           "Number of single family dwelling units (PUMS codes 01 - 03) in zone",
           "Number of multi-family dwelling units (PUMS codes 04 - 09) in zone"
         )
+    ),
+    item(
+      NAME =
+        items(
+          "RuralWorkers",
+          "TownWorkers",
+          "UrbanWorkers"),
+      TABLE = "Azone",
+      GROUP = "Year",
+      TYPE = "people",
+      UNITS = "PRSN",
+      NAVALUE = -1,
+      PROHIBIT = c("NA", "< 0"),
+      ISELEMENTOF = "",
+      SIZE = 0,
+      DESCRIPTION =
+        items(
+          "Number of workers residing in Azone who work at jobs in Rural location type",
+          "Number of workers residing in Azone who work at jobs in Town location type",
+          "Number of workers residing in Azone who work at jobs in Urban location type"
+        )
     )
   )
 )
@@ -391,8 +421,7 @@ CreateSimBzonesSpecifications <- list(
 #' }
 #' @source CreateSimBzones.R script.
 "CreateSimBzonesSpecifications"
-usethis::use_data(CreateSimBzonesSpecifications, overwrite = TRUE)
-rm(CreateSimBzonesSpecifications)
+visioneval::savePackageDataset(CreateSimBzonesSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -415,175 +444,6 @@ rm(CreateSimBzonesSpecifications)
 #total amount of activity by Azone and location type. SimBzones are created for
 #each location type in each Azone.
 
-#Define function to allocate integer quantities among categories
-#---------------------------------------------------------------
-#' Allocate integer quantities among categories
-#'
-#' \code{splitIntegers} splits a total value into a vector of whole numbers to
-#' reflect input vector of proportions
-#'
-#' This function splits an input total into a vector of whole numbers to reflect
-#' an input vector of proportions. If the input total is not an integer, the
-#' value is rounded and converted to an integer.
-#'
-#' @param Tot a number that is the total value to be split into a vector of
-#' whole numbers corresponding to the input proportions. If Tot is not an
-#' integer, its value is rounded and converted to an integer.
-#' @param Props_ a numeric vector of proportions used to split the total value.
-#' The values should add up to approximately 1. The function will adjust so that
-#' the proportions do add to 1.
-#' @return a numeric vector of whole numbers corresponding to the Props_
-#' argument which sums to the Tot.
-#' @export
-splitIntegers <- function(Tot, Props_) {
-  #Convert Tot into an integer
-  if (!is.integer(Tot)) {
-    Tot <- as.integer(round(Tot))
-  }
-  #If Tot is 0, return vector of zeros
-  if (Tot == 0) {
-    integer(length(Props_))
-  } else {
-    #Make sure that Props_ sums exactly to 1
-    Props_ <- Props_ / sum(Props_)
-    #Make initial whole number split
-    Ints_ <- round(Tot * Props_)
-    #Determine the difference between the initial split and the total
-    Diff <- Tot - sum(Ints_)
-    #Allocate the difference
-    if (Diff != 0) {
-      for (i in 1:abs(Diff)) {
-        IdxToChg <- sample(1:length(Props_), 1, prob = Props_)
-        Ints_[IdxToChg] <- Ints_[IdxToChg] + sign(Diff)
-      }
-    }
-    unname(Ints_)
-  }
-}
-
-#Define function to calculate number of households by location type
-#------------------------------------------------------------------
-#' Calculate number of households by location type
-#'
-#' \code{calcNumHhByLocType} calculates the number of households by location
-#' type for a set of Azones.
-#'
-#' This function calculates the number of households by location type for a
-#' set of Azones as a function of the total number of households by Azone and
-#' user inputs on the proportions of households by location type and Azone.
-#' Location types are metropolitan (i.e. urbanized area), town (i.e. urban areas
-#' that are not urbanized), and rural.
-#'
-#' @param NumHh_Az A numeric vector of the total number of households in each
-#' Azone.
-#' @param PropRuralHh_Az A numeric vector identifying the proportion of
-#'   households in each Azone that are located in rural locations.
-#' @param PropTownHh_Az A numeric vector identifying the proportion of
-#'   households in each Azone that are located in town locations.
-#' @param PropMetroHh_Az A numeric vector identifying the proportion of
-#'   households in each Azone that are located in metropolitan locations.
-#' @param Az A character vector of Azone names.
-#' @return A list having 3 named components (Rural, Town, Metropolitan) where
-#' each component is a numeric vector identifying the number of households in
-#' the respective location type in each Azone.
-#' @export
-calcNumHhByLocType <-
-  function(NumHh_Az, PropRuralHh_Az, PropTownHh_Az, PropMetroHh_Az, Az) {
-    HhProp_AzLt <- cbind(
-      Rural = PropRuralHh_Az,
-      Town = PropTownHh_Az,
-      Urban = PropMetroHh_Az)
-    Hh_AzLt <- t(apply(cbind(NumHh_Az, HhProp_AzLt), 1, function(x) {
-      splitIntegers(x[1], x[2:4])}))
-    colnames(Hh_AzLt) <- colnames(HhProp_AzLt)
-    rownames(Hh_AzLt) <- Az
-    #Return as list
-    #--------------
-    list(
-      Rural = Hh_AzLt[,"Rural"],
-      Town = Hh_AzLt[,"Town"],
-      Urban = Hh_AzLt[,"Urban"]
-    )
-  }
-
-#Define function to calculate the number of jobs by Azone location type
-#----------------------------------------------------------------------
-#' Calculate number of jobs by location type
-#'
-#' \code{calcNumJobsByLocType} calculates the number of jobs by location type
-#' for a set of Azones
-#'
-#' This function calculates the number of jobs by location type for a set of
-#' Azones as a function of the total number of workers by Azone and user inputs
-#' on the proportions of jobs by location type (metropolitan, town, rural) and
-#' Azone. In addition, the user specifies the proportional allocation of jobs
-#' among the metropolitan portions of Azones that make up an Marea. The function
-#' logic is based on the assumption that Azone workers having jobs in town and
-#' rural locations, will work within the Azone where they reside but that
-#' workers having metropolitan jobs may work in a different Azone portion of the
-#' metropolitan area which includes their Azone.
-#'
-#' @param NumWkr_Az A numeric vector of the total number of workers residing in
-#' each Azone.
-#' @param PropWkrInRuralJobs_Az A numeric vector of the proportions of workers
-#'   in each Azone that have jobs located in rural locations.
-#' @param PropWkrInTownJobs_Az A numeric vector of the proportions of workers in
-#'   each Azone that have jobs located in town locations.
-#' @param PropWkrInMetroJobs_Az A numeric vector of the proportions of workers
-#'   in each Azone that have jobs located in metropolitan locations.
-#' @param PropMetroJobs_Az A numeric vector identifying the proportion of
-#' metropolitan jobs for the Marea that the Azone is a part of that are located
-#' in the metropolitan portion of the Azone.
-#' @param Marea_Az A character vector identifying the Marea associated with each
-#' Azone.
-#' @param Az A character vector of Azone names.
-#' @return A list having 3 named components (Rural, Town, Metropolitan) where
-#'   each component is a numeric vector identifying the number of jobs in the
-#'   respective location type in each Azone.
-#' @export
-calcNumJobsByLocType <-
-  function(NumWkr_Az, PropWkrInRuralJobs_Az, PropWkrInTownJobs_Az,
-           PropWkrInMetroJobs_Az, PropMetroJobs_Az, Marea_Az, Az) {
-
-    #Initial allocation of jobs within Azones
-    #----------------------------------------
-    JobProp_AzLt <- cbind(
-      Rural = PropWkrInRuralJobs_Az,
-      Town = PropWkrInTownJobs_Az,
-      Metropolitan = PropWkrInMetroJobs_Az)
-    Jobs_AzLt <- t(apply(cbind(NumWkr_Az, JobProp_AzLt), 1, function(x) {
-      splitIntegers(x[1], x[2:4])
-    }))
-    colnames(Jobs_AzLt) <- colnames(JobProp_AzLt)
-    rownames(Jobs_AzLt) <- Az
-
-    #Reallocate metropolitan jobs among Azones in the Marea
-    #------------------------------------------------------
-    #Create data frame of metropolitan data
-    Metro_df <- data.frame(
-      Jobs = Jobs_AzLt[,"Metropolitan"],
-      PropMetroJobs = PropMetroJobs_Az,
-      Marea = Marea_Az,
-      Azone = Az
-    )
-    #Split by metropolitan area
-    Metro_Ma_df <- split(Metro_df, Metro_df$Marea)
-    #Allocate metropolitan jobs among Azones in Marea
-    MetroJobs_Az <- unlist(lapply(Metro_Ma_df, function(x) {
-      splitIntegers(sum(x$Jobs), x$PropMetroJobs)
-    }), use.names = FALSE)
-    names(MetroJobs_Az) <- unlist(lapply(Metro_Ma_df, function(x) x$Azone))
-    MetroJobs_Az <- MetroJobs_Az[Az]
-
-    #Return as list
-    #--------------
-    list(
-      Rural = Jobs_AzLt[,"Rural"],
-      Town = Jobs_AzLt[,"Town"],
-      Urban = MetroJobs_Az
-    )
-  }
-
 #Define function to allocate activity to SimBzones
 #-------------------------------------------------
 #' Create SimBzones and allocate total activity among them
@@ -605,6 +465,7 @@ calcNumJobsByLocType <-
 #' amount of activity (households and jobs) in each SimBzone.
 #' @export
 allocateActivityToSimBzones <- function(Activity, LocType) {
+  SimBzone_ls <- VESimLandUse::SimBzone_ls
   Size <- switch(LocType,
                  Rural = SimBzone_ls$RuProfiles$MedianSimBzoneSize,
                  Town = SimBzone_ls$TnProfiles$MedianSimBzoneSize,
@@ -702,10 +563,10 @@ initSimBzones <-
 #' the location type. SimBzones are also assign activity density levels which
 #' are used in models to assign destination accessibility and activity diversity.
 #'
-#' @param Activity_Bz A numeric vector of the amount of activity assigned to
-#' each SimBzone for SimBzones assigned to a location type in an Azone.
-#' @param LocType A string identifying the location type (Urban, Town, Rural)
-#' that the SimBzones are assigned to.
+#' @param Bz_df A data frame containing synthetic Bzone data for Bzones for
+#' an Azone and location type (LocType).
+#' @param LocType A string identifying the location type: Urban, Town, or
+#' Rural.
 #' @param TargetArea A number identifying the area in acres that is assigned
 #' to accommodate the activity in the location type in the Azone. A value must
 #' be supplied if the LocType is Urban or Town and not supplied if the LocType
@@ -721,107 +582,215 @@ initSimBzones <-
 #' density level, and area of each SimBzone.
 #' @export
 calcDensityDistribution <-
-  function(Activity_Bz,
+  function(Bz_df,
            LocType,
            TargetArea = NULL,
            TargetDensity = NULL,
            UzaProfileName = NULL) {
+
     #Get initial values for density distribution, and average density by level
     #-------------------------------------------------------------------------
+    SimBzone_ls <- VESimLandUse::SimBzone_ls
+    Bz <- Bz_df$Bzone
+    Activity_Bz <- setNames(Bz_df$Activity, Bz_df$Bzone)
     #If LocType is Rural
     if (LocType == "Rural") {
+      #Check that TargetDensity has been supplied
       if(is.null(TargetDensity)) {
         stop("TargetDensity must be supplied if LocType is Rural")
       }
-      DenDist_D1 <- SimBzone_ls$RuProfiles$D1DGrp_ls$PropActivity
-      AveDensity_D1 <- SimBzone_ls$RuProfiles$D1DGrp_ls$AveDensity
-      D1LvlBrk_ <- SimBzone_ls$RuProfiles$D1DGrpBrk_
       #Set target density to 0.01 if is less than 0.01
       if (TargetDensity < 0.01) TargetDensity <- 0.01
+      #Retrieve density level breaks
+      D1LvlBrk_ <- SimBzone_ls$RuProfiles$D1DGrpBrk_
+      #Retrieve density distribution
+      DenDist_D1 <- SimBzone_ls$RuProfiles$D1DGrp_ls$PropActivity
+      #Retrieve average density by level
+      AveDensity_D1 <- SimBzone_ls$RuProfiles$D1DGrp_ls$AveDensity
+      #Initial value of overall average density
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
     }
     #If LocType is Town
     if (LocType == "Town") {
+      #Check that TargetArea has been supplied
       if (is.null(TargetArea)) {
         stop("TargetArea must be supplied if LocType is Town")
       }
+      #Calculate TargetDensity
       TargetDensity <- sum(Activity_Bz) / TargetArea
-      DenDist_D1 <- SimBzone_ls$TnProfiles$D1DGrp_ls$PropActivity
-      AveDensity_D1 <- SimBzone_ls$TnProfiles$D1DGrp_ls$AveDensity
+      #Retrieve density level breaks
       D1LvlBrk_ <- SimBzone_ls$TnProfiles$D1DGrpBrk_
+      #Retrieve density distribution
+      DenDist_D1 <- SimBzone_ls$TnProfiles$D1DGrp_ls$PropActivity
+      #Retrieve average density by level
+      AveDensity_D1 <- SimBzone_ls$TnProfiles$D1DGrp_ls$AveDensity
+      #Initial value of overall average density
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
     }
     #If LocType is Urban
     if (LocType == "Urban") {
+      #Check that TargetArea has been supplied
       if (is.null(TargetArea)) {
         stop("TargetArea must be supplied if LocType is Urban")
       }
+      #Calculate TargetDensity
       TargetDensity <- sum(Activity_Bz) / TargetArea
+      #Retrieve density level breaks
+      D1LvlBrk_ <- SimBzone_ls$UaProfiles$D1DGrpBrk_
+      #Retrieve density distribution for the subject urbanized area
       DenDist_D1 <-
         SimBzone_ls$UaProfiles$D1DGrp_Ua_ls[[UzaProfileName]]$PropActivity
       DenDist_D1[is.na(DenDist_D1)] <- 0
+      InitDenDist_D1 <- DenDist_D1
+      #Average density by level
       AveDensity_D1 <-
         SimBzone_ls$UaProfiles$D1DGrp_Ua_ls[[UzaProfileName]]$AveDensity
       AveDensity_D1[is.na(AveDensity_D1)] <-
         SimBzone_ls$UaProfiles$D1DGrp_ls$AveDensity[is.na(AveDensity_D1)]
-      D1LvlBrk_ <- SimBzone_ls$UaProfiles$D1DGrpBrk_
+      #Initial value of overall average density
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
     }
-    #Initial calculation of average density
-    AveDensity <- sum(1 / sum(DenDist_D1 / AveDensity_D1))
 
-    #Adjust distribution and density to match target
-    #-----------------------------------------------
-    #Define a function to make an incremental adjustment in density distribution
-    makeAdj <- function(DenDist_D1, TargetDensity, AveDensity, AdjProp){
-      if (TargetDensity > AveDensity) {
-        ShiftDist_D1 <- c(0, DenDist_D1[-length(DenDist_D1)])
-      } else {
-        ShiftDist_D1 <- c(DenDist_D1[-1], 0)
+    #Define a function to shift density distribution to match target density
+    #-----------------------------------------------------------------------
+    shiftDenDist <- function(DenDist_D1, TargetDensity, AveDensity) {
+      #Define a function to make an incremental adjustment in density distribution
+      makeAdj <- function(AdjProp){
+        if (TargetDensity > AveDensity) {
+          ShiftDist_D1 <- c(0, DenDist_D1[-length(DenDist_D1)])
+        } else {
+          ShiftDist_D1 <- c(DenDist_D1[-1], 0)
+        }
+        AdjDenDist_D1 <- (1 - AdjProp) * DenDist_D1 + AdjProp * ShiftDist_D1
+        AdjDenDist_D1 / sum(AdjDenDist_D1)
       }
-      AdjDenDist_D1 <- (1 - AdjProp) * DenDist_D1 + AdjProp * ShiftDist_D1
-      AdjDenDist_D1 / sum(AdjDenDist_D1)
-    }
-    #Make incremental adjustments until target is approximately achieved
-    while (abs(1 - (TargetDensity / AveDensity)) > 0.01) {
-      TargetDiff <- abs(TargetDensity - AveDensity)
-      if (TargetDiff > 0.1) {
-        DenDist_D1 <- makeAdj(DenDist_D1, TargetDensity, AveDensity, 0.01)
-      } else {
-        DenDist_D1 <- makeAdj(DenDist_D1, TargetDensity, AveDensity, 0.001)
+      #Make incremental adjustments until target is approximately achieved
+      iter <- 0
+      while (abs(1 - (TargetDensity / AveDensity)) > 0.01) {
+        TargetDiff <- abs(TargetDensity - AveDensity)
+        if (TargetDiff > 0.1) {
+          DenDist_D1 <- makeAdj(0.01)
+        } else {
+          DenDist_D1 <- makeAdj(0.001)
+        }
+        AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
+        iter <- iter + 1
+        if (iter > 100000) break()
       }
-      AveDensity <- sum(1 / sum(DenDist_D1 / AveDensity_D1))
+      #Make final adjustments to density bin averages
+      AveDensity_D1 <- AveDensity_D1 * TargetDensity / AveDensity
+      AveDensity <- 1 / sum(DenDist_D1 / AveDensity_D1)
+      #Return the adjusted distribution
+      list(
+        AveDensity = AveDensity,
+        DenDist_D1 = DenDist_D1,
+        AveDensity_D1 = AveDensity_D1
+      )
     }
-    #Make final adjustments to density bin averages
-    AveDensity_D1 <- AveDensity_D1 * TargetDensity / AveDensity
+
+    #Adjust Rural and Town density distribution and averages to match TargetDensity
+    #------------------------------------------------------------------------------
+    if (LocType %in% c("Rural", "Town")) {
+      DenDist_ls <- shiftDenDist(DenDist_D1, TargetDensity, AveDensity)
+      AveDensity <- DenDist_ls$AveDensity
+      DenDist_D1 <- DenDist_ls$DenDist_D1
+      AveDensity_D1 <- DenDist_ls$AveDensity_D1
+    }
+
+    #Adjust Urban density distribution and averages to match TargetDensity
+    #---------------------------------------------------------------------
+    if (LocType == "Urban") {
+      #Identify a starting density distribution that produces an average density
+      #near the target density and has density distribution that is most similar
+      #to the density distribution of the urban area
+      DenDist_D1 <- local({
+        #Retrieve average density of all urbanized areas
+        AveDensity_Ua <- sort(SimBzone_ls$UaProfiles$ActDen_Ua)
+        #Identify set of urbanized areas having average nearest the target density
+        MaxIdx <- length(AveDensity_Ua)
+        if (TargetDensity > max(AveDensity_Ua)) {
+          NearestIdx <- MaxIdx
+        }
+        if (TargetDensity < min(AveDensity_Ua)) {
+          NearestIdx <- 1
+        }
+        if (TargetDensity > min(AveDensity_Ua) & TargetDensity < max(AveDensity_Ua)) {
+          NearestIdx <- min(which(AveDensity_Ua >= TargetDensity))
+        }
+        NearestIdx_ <- (NearestIdx - 10):(NearestIdx + 10)
+        NearestIdx_ <- NearestIdx_[NearestIdx_ > 0 & NearestIdx_ <= MaxIdx]
+        SampleUa_ <- names(AveDensity_Ua[NearestIdx_])
+        #Make a matrix of the density distributions of the sample urbanized areas
+        D1DProp_D1Ma <- sapply(SampleUa_, function(x) {
+          SimBzone_ls$UaProfiles$D1DGrp_Ua_ls[[x]]$PropActivity
+        })
+        D1DProp_D1Ma[is.na(D1DProp_D1Ma)] <- 0
+        #Calculate weights for averaging distributions
+        Dist_Ma <- apply(D1DProp_D1Ma, 2, function(x) {
+          dist(rbind(InitDenDist_D1, x))})
+        if (any(Dist_Ma == 0)) {
+          #Dist_Ma[Dist_Ma == 0] <- min(Dist_Ma[Dist_Ma != 0])
+          D1DProp_D1Ma <- D1DProp_D1Ma[, Dist_Ma != 0]
+          Dist_Ma <- Dist_Ma[Dist_Ma != 0]
+        }
+        #Weight the distributions
+        Wts_Ma <- min(Dist_Ma) / Dist_Ma
+        WtD1DProp_D1Ma <- sweep(D1DProp_D1Ma, 2, Wts_Ma, "*")
+        #Calculate the density distribution
+        DenDist_D1 <- rowSums(WtD1DProp_D1Ma) / sum(WtD1DProp_D1Ma)
+        #Return the density distribution
+        DenDist_D1
+      })
+      #Adjust the distribution to match the target density
+      DenDist_ls <- shiftDenDist(DenDist_D1, TargetDensity, AveDensity)
+      AveDensity <- DenDist_ls$AveDensity
+      DenDist_D1 <- DenDist_ls$DenDist_D1
+      AveDensity_D1 <- DenDist_ls$AveDensity_D1
+    }
 
     #Apply the average density to SimBzones
     #--------------------------------------
-    ActProp_Bz <-Activity_Bz / sum(Activity_Bz)
-    InitD1Lvl_Bz <-
-      sample(names(DenDist_D1), length(Activity_Bz), replace = TRUE, prob = DenDist_D1)
-    AveDensity_Bz <- AveDensity_D1[InitD1Lvl_Bz]
+    #Iterate through Bzones and assign density
+    Activity_D1 <- sum(Activity_Bz) * DenDist_D1
+    D1 <- names(Activity_D1)
+    ActDen_Bz <- setNames(numeric(length(Bz)), Bz)
+    AllocatedAct_ls <- list()
+    for (bz in Bz) {
+      AllocatedAct_D1 <- setNames(numeric(length(D1)), D1)
+      ActAmt <- Activity_Bz[bz]
+      for (d1 in rev(D1)) {
+        if (Activity_D1[d1] == 0) next()
+        if (Activity_D1[d1] >= ActAmt) {
+          AllocatedAct_D1[d1] <- ActAmt
+          Activity_D1[d1] <- Activity_D1[d1] - ActAmt
+          ActAmt <- 0
+          break()
+        }
+        if (Activity_D1[d1] < ActAmt) {
+          AllocatedAct_D1[d1] <- Activity_D1[d1]
+          ActAmt <- ActAmt - Activity_D1[d1]
+          Activity_D1[d1] <- 0
+          next()
+        }
+      }
+      AllocatedAct_ls[[bz]] <- AllocatedAct_D1
+    }
+    AllocatedAct_BzD1 <- do.call(rbind, AllocatedAct_ls)
+    ActDen_Bz <- apply(AllocatedAct_BzD1, 1, function(x) {
+      ActProp_D1 <- x / sum(x)
+      sum(AveDensity_D1 * ActProp_D1)
+    })
 
-    #Adjust SimBzone density to be consistent with target area
-    #---------------------------------------------------------
-    #Calculate target area for rural
+    #Adjust SimBzone density to be consistent with TargetDensity or TargetArea
+    #-------------------------------------------------------------------------
+    #Adjust for Rural LocType
     if (LocType == "Rural") {
       TargetArea <- sum(Activity_Bz) / TargetDensity
     }
     #Reconcile with target area
-    Area_Bz <- Activity_Bz / AveDensity_Bz
-    AreaDiff <- TargetArea - sum(Area_Bz)
-    if (AreaDiff >= 0) {
-      Area_Bz <- Area_Bz + AreaDiff * Area_Bz / sum(Area_Bz)
-    } else {
-      MinArea_Bz <- Activity_Bz / max(D1LvlBrk_)
-      Area_Bz <- Area_Bz + AreaDiff * Area_Bz / sum(Area_Bz)
-      TooMuch_Bz <- Area_Bz < MinArea_Bz
-      while (any(TooMuch_Bz)) {
-        AreaDiff <- TargetArea - sum(Area_Bz)
-        Area_Bz[!TooMuch_Bz] <-
-          Area_Bz[!TooMuch_Bz] + AreaDiff * Area_Bz[!TooMuch_Bz] / sum(Area_Bz[!TooMuch_Bz] )
-        TooMuch_Bz <- Area_Bz < MinArea_Bz
-        Area_Bz[TooMuch_Bz] <- MinArea_Bz[TooMuch_Bz]
-      }
-    }
+    Area_Bz <- Activity_Bz / ActDen_Bz
+    AreaRatio <- TargetArea / sum(Area_Bz)
+    Area_Bz <- Area_Bz * AreaRatio
     AveDensity_Bz <- Activity_Bz / Area_Bz
     D1Lvl_Bz <- cut(AveDensity_Bz, D1LvlBrk_, include.lowest = TRUE)
 
@@ -1176,7 +1145,7 @@ CreateSimBzones <- function(L) {
   #Set random seed
   set.seed(L$G$Seed)
   #Load model data
-  SimBzone_ls <- loadPackageDataset("SimBzone_ls")
+  SimBzone_ls <- VESimLandUse::SimBzone_ls
 
   #Allocate households to location types
   #-------------------------------------
@@ -1196,6 +1165,7 @@ CreateSimBzones <- function(L) {
     PropWkrInTownJobs_Az = L$Year$Azone$PropWkrInTownJobs,
     PropWkrInMetroJobs_Az = L$Year$Azone$PropWkrInMetroJobs,
     PropMetroJobs_Az = L$Year$Azone$PropMetroJobs,
+    TownJobWkrRatio_Az = L$Year$Azone$TownJobWkrRatio,
     Marea_Az = L$Year$Azone$Marea,
     Az = Az
     )
@@ -1238,7 +1208,7 @@ CreateSimBzones <- function(L) {
       if (any(Select_)) {
         Bz_df <- Bzones_df[Bzones_df$Azone == az & Bzones_df$LocType == lt,]
         D1D_ls <- calcDensityDistribution(
-          Activity_Bz = Bz_df$Activity,
+          Bz_df = Bz_df,
           LocType = lt,
           TargetArea = TargetArea,
           TargetDensity = TargetDensity,
@@ -1405,6 +1375,11 @@ CreateSimBzones <- function(L) {
   #--------------
   #Build the list of outputs
   Out_ls <- initDataList()
+  Out_ls$Year$Azone <- list(
+    RuralWorkers = Jobs_Lt_Az$Rural,
+    TownWorkers = Jobs_Lt_Az$TownWkr,
+    UrbanWorkers = Jobs_Lt_Az$UrbanWkr
+  )
   Out_ls$Year$Bzone <- list()
   attributes(Out_ls$Year$Bzone)$LENGTH <- nrow(Bzones_df)
   Out_ls$Year$Bzone$Bzone <- Bzones_df$Bzone

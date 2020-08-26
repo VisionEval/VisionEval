@@ -1,0 +1,6 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^data-raw$
+^tests$
+^inst\extdata$
+^vignettes.hide$

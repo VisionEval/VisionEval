@@ -5,7 +5,7 @@
 #<doc>
 #
 ## CalculateRoadPerformance Module
-#### September 5, 2019
+#### June 5, 2020
 #
 #This module calculates freeway and arterial congestion level and the amounts of DVMT by congestion level. It also calculates the average speed and delay at each congestion level. In addition, it splits light-duty vehicle (LDV) DVMT between freeways and arterials as a function of relative speeds and congestion prices. The following performance measures are saved to the datastore:
 #
@@ -482,7 +482,7 @@ rm(estimateCongestionModel)
 #'
 #' @source CalculateCongestion.R script.
 "CongestedProportions_ls"
-usethis::use_data(CongestedProportions_ls, overwrite = TRUE)
+visioneval::savePackageDataset(CongestedProportions_ls, overwrite = TRUE)
 
 
 #---------------------------------------------------------
@@ -513,6 +513,7 @@ usethis::use_data(CongestedProportions_ls, overwrite = TRUE)
 calculateCongestion <-
   function(RoadType, LaneMi, DVMT) {
     #Extract the lookup table
+    CongestedProportions_ls <- VETravelPerformance::CongestedProportions_ls
     Lookup_LvCl <-
       CongestedProportions_ls[[RoadType]]
     #Calculate roadway demand
@@ -579,6 +580,19 @@ row.names(BaseSpeeds_df) <- BaseSpeeds_df$Level
 BaseSpeeds_df <- BaseSpeeds_df[,-1]
 rm(BaseSpeedInp_ls)
 
+#----------------------------------------------------
+#Calculate and save recurring and non-recurring delay
+#----------------------------------------------------
+BaseTravelRate_mx <- 1 / as.matrix(BaseSpeeds_df)
+Delay_mx <- sweep(BaseTravelRate_mx, 2, BaseTravelRate_mx[1,], "-")
+Delay_df <- data.frame(
+  Fwy_Rcr = Delay_mx[,"Fwy_Rcr"],
+  Fwy_NonRcr = Delay_mx[,"Fwy"] - Delay_mx[,"Fwy_Rcr"],
+  Art_Rcr = Delay_mx[,"Art_Rcr"],
+  Art_NonRcr = Delay_mx[,"Art"] - Delay_mx[,"Art_Rcr"]
+)
+rm(BaseTravelRate_mx, Delay_mx)
+
 #' Base arterial and freeway speeds by congestion level
 #'
 #' Base speeds on freeways and arterials by congestion level
@@ -597,21 +611,8 @@ rm(BaseSpeedInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "BaseSpeeds_df"
-usethis::use_data(BaseSpeeds_df, overwrite = TRUE)
+visioneval::savePackageDataset(BaseSpeeds_df, overwrite = TRUE)
 
-
-#----------------------------------------------------
-#Calculate and save recurring and non-recurring delay
-#----------------------------------------------------
-BaseTravelRate_mx <- 1 / as.matrix(BaseSpeeds_df)
-Delay_mx <- sweep(BaseTravelRate_mx, 2, BaseTravelRate_mx[1,], "-")
-Delay_df <- data.frame(
-  Fwy_Rcr = Delay_mx[,"Fwy_Rcr"],
-  Fwy_NonRcr = Delay_mx[,"Fwy"] - Delay_mx[,"Fwy_Rcr"],
-  Art_Rcr = Delay_mx[,"Art_Rcr"],
-  Art_NonRcr = Delay_mx[,"Art"] - Delay_mx[,"Art_Rcr"]
-)
-rm(BaseTravelRate_mx, Delay_mx)
 
 #' Freeway and arterial recurring and non-recurring delay by congestion level
 #'
@@ -631,7 +632,7 @@ rm(BaseTravelRate_mx, Delay_mx)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Delay_df"
-usethis::use_data(Delay_df, overwrite = TRUE)
+visioneval::savePackageDataset(Delay_df, overwrite = TRUE)
 
 
 #-------------------------------------------
@@ -686,7 +687,7 @@ rm(RampMeteringInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Ramp_df"
-usethis::use_data(Ramp_df, overwrite = TRUE)
+visioneval::savePackageDataset(Ramp_df, overwrite = TRUE)
 
 
 #-------------------------------------------------
@@ -741,7 +742,7 @@ rm(IncidentManagementInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Incident_df"
-usethis::use_data(Incident_df, overwrite = TRUE)
+visioneval::savePackageDataset(Incident_df, overwrite = TRUE)
 
 
 #------------------------------------------------
@@ -796,7 +797,7 @@ rm(SignalCoordinationInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Signal_df"
-usethis::use_data(Signal_df, overwrite = TRUE)
+visioneval::savePackageDataset(Signal_df, overwrite = TRUE)
 
 
 #--------------------------------------
@@ -851,7 +852,7 @@ rm(AccessManagementInp_ls)
 #'   }
 #' @source CalculateSpeeds.R script.
 "Access_df"
-usethis::use_data(Access_df, overwrite = TRUE)
+visioneval::savePackageDataset(Access_df, overwrite = TRUE)
 
 
 #-----------------------------------
@@ -882,6 +883,7 @@ usethis::use_data(Access_df, overwrite = TRUE)
 #' @export
 calculateSpeeds <- function(OpsDeployment_, OtherOpsEffects_mx = NULL) {
   #Calculate recurring and non-recurring (incident-related) delay
+  BaseSpeeds_df <- VETravelPerformance::BaseSpeeds_df
   BaseTravelRate_mx <- 1 / as.matrix(BaseSpeeds_df)
   Delay_mx <-
     sweep(BaseTravelRate_mx, 2, BaseTravelRate_mx[1,], "-")
@@ -893,6 +895,10 @@ calculateSpeeds <- function(OpsDeployment_, OtherOpsEffects_mx = NULL) {
   )
   rm(Delay_mx)
   #Calculate operations management delay reduction effects
+  Ramp_df <- VETravelPerformance::Ramp_df
+  Incident_df <- VETravelPerformance::Incident_df
+  Signal_df <- VETravelPerformance::Signal_df
+  Access_df <- VETravelPerformance::Access_df
   RampFactor_mx <-
     1 - OpsDeployment_["RampMeterDeployProp"] * as.matrix(Ramp_df) / 100
   IncidentFactor_mx <-
@@ -1064,7 +1070,7 @@ rm(Lambda_df, Ums_df)
 #' }
 #' @source CalculateRoadPerformance.R script.
 "DvmtSplit_LM"
-usethis::use_data(DvmtSplit_LM, overwrite = TRUE)
+visioneval::savePackageDataset(DvmtSplit_LM, overwrite = TRUE)
 
 
 #=========================================================================
@@ -1140,7 +1146,7 @@ rm(NhtsTripDistTimeInp_ls, NhtsTripDistTime_df, Rg, NhtsSpeed_df)
 #' }
 #' @source CalculateRoadPerformance.R script.
 "UrbanRuralAveSpeed_ls"
-usethis::use_data(UrbanRuralAveSpeed_ls, overwrite = TRUE)
+visioneval::savePackageDataset(UrbanRuralAveSpeed_ls, overwrite = TRUE)
 
 
 #================================================
@@ -1163,12 +1169,7 @@ CalculateRoadPerformanceSpecifications <- list(
       TYPE = "character",
       UNITS = "ID",
       PROHIBIT = "",
-      ISELEMENTOF = c(
-        "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI",
-        "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI",
-        "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC",
-        "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT",
-        "VT", "VA", "WA", "WV", "WI", "WY", "DC", "PR", NA)
+      ISELEMENTOF = ""
     ),
     item(
       NAME = "Marea",
@@ -1492,7 +1493,7 @@ CalculateRoadPerformanceSpecifications <- list(
 #' }
 #' @source CalculateRoadPerformance.R script.
 "CalculateRoadPerformanceSpecifications"
-usethis::use_data(CalculateRoadPerformanceSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateRoadPerformanceSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -1553,12 +1554,16 @@ CalculateRoadPerformance <- function(L) {
   #---------------------------------------------
   #Calculate Lambda
   DvmtSplitData_df <- data.frame(
-    LogPop = log1p(sum(L$Year$Marea$UrbanPop)),
+    LogPop = log1p(L$Year$Marea$UrbanPop),
     LnMiRatio = L$Year$Marea$FwyLaneMi / L$Year$Marea$ArtLaneMi
   )
+  DvmtSplit_LM <- VETravelPerformance::DvmtSplit_LM
   Lambda_Ma <- unname(predict(DvmtSplit_LM, newdata = DvmtSplitData_df))
   names(Lambda_Ma) <- Ma
   Lambda_Ma[Ma == "None"] <- NA
+  #Change Lambda values that are outside expected range (0.1 - 1.5)
+  Lambda_Ma[Lambda_Ma < 0.1] <- 0.1
+  Lambda_Ma[Lambda_Ma > 1.5] <- 1.5
   #Load Lambda adjustments if they exist
   if (!is.null(L$Global$Marea$LambdaAdj)) {
     LambdaAdj_Ma <- L$Global$Marea$LambdaAdj
@@ -1850,6 +1855,7 @@ CalculateRoadPerformance <- function(L) {
   #---------------------------------------------------
   #Define function to calculate the rural to urban average road speed ratio
   calcUrbRurHhSpeedRatio <- function() {
+    UrbanRuralAveSpeed_ls <- VETravelPerformance::UrbanRuralAveSpeed_ls
     UHPU_ <- L$Year$Marea$UrbanHhPropUrbanDvmt
     RHPU_ <- L$Year$Marea$NonUrbanHhPropUrbanDvmt
     HSR <- UrbanRuralAveSpeed_ls$SpeedRatio
@@ -1871,6 +1877,9 @@ CalculateRoadPerformance <- function(L) {
     NonUrbanAveSpeed_Ma["None"] <- MaxSpeed
     rm(MaxSpeed)
   }
+  #If any NonUrbanAveSpeed is less than 0, then set to 60
+  #This condition exists when there is no urban population in the marea
+  NonUrbanAveSpeed_Ma[NonUrbanAveSpeed_Ma < 0] <- 60
 
   #Proportions of freeway and arterial DVMT by congestion level
   #------------------------------------------------------------

@@ -88,27 +88,27 @@ lm(formula = makeFormula(EndTerms_), data = EstData_df)
 
 Residuals:
        Min         1Q     Median         3Q        Max 
--0.0150592 -0.0025932 -0.0000184  0.0025953  0.0142145 
+-0.0142881 -0.0021256 -0.0000383  0.0021285  0.0138720 
 
 Coefficients:
                              Estimate Std. Error t value Pr(>|t|)    
-(Intercept)                 9.887e-01  1.045e-03  946.50   <2e-16 ***
-Drivers                     9.366e-02  5.477e-04  171.02   <2e-16 ***
-NonDrivers                  3.912e-02  3.811e-04  102.65   <2e-16 ***
-LogIncome                   3.391e-02  9.519e-05  356.25   <2e-16 ***
-LogDensity                 -1.449e-02  2.479e-05 -584.43   <2e-16 ***
-IsUrbanMixNbrhd            -1.701e-01  8.130e-04 -209.25   <2e-16 ***
-FwyLaneMiPC                 1.304e+01  1.654e-01   78.84   <2e-16 ***
-VehLtDvr                   -1.840e-02  1.018e-04 -180.74   <2e-16 ***
-Drivers:LogIncome          -7.598e-03  4.970e-05 -152.87   <2e-16 ***
-NonDrivers:LogIncome       -3.848e-03  3.497e-05 -110.04   <2e-16 ***
-LogDensity:IsUrbanMixNbrhd  1.819e-02  8.779e-05  207.15   <2e-16 ***
+(Intercept)                 9.928e-01  8.621e-04 1151.70   <2e-16 ***
+Drivers                     7.863e-02  4.520e-04  173.98   <2e-16 ***
+NonDrivers                  3.230e-02  3.145e-04  102.71   <2e-16 ***
+LogIncome                   2.820e-02  7.855e-05  359.00   <2e-16 ***
+LogDensity                 -1.198e-02  2.046e-05 -585.52   <2e-16 ***
+IsUrbanMixNbrhd            -1.424e-01  6.709e-04 -212.28   <2e-16 ***
+FwyLaneMiPC                 1.080e+01  1.365e-01   79.15   <2e-16 ***
+VehLtDvr                   -1.531e-02  8.403e-05 -182.17   <2e-16 ***
+Drivers:LogIncome          -6.382e-03  4.102e-05 -155.60   <2e-16 ***
+NonDrivers:LogIncome       -3.180e-03  2.886e-05 -110.19   <2e-16 ***
+LogDensity:IsUrbanMixNbrhd  1.520e-02  7.245e-05  209.86   <2e-16 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Residual standard error: 0.003843 on 16299 degrees of freedom
-Multiple R-squared:  0.9858,	Adjusted R-squared:  0.9857 
-F-statistic: 1.128e+05 on 10 and 16299 DF,  p-value: < 2.2e-16
+Residual standard error: 0.003172 on 16299 degrees of freedom
+Multiple R-squared:  0.9859,	Adjusted R-squared:  0.9859 
+F-statistic: 1.139e+05 on 10 and 16299 DF,  p-value: < 2.2e-16
 
 ```
 
@@ -125,24 +125,24 @@ lm(formula = makeFormula(EndTerms_), data = EstData_df)
 
 Residuals:
      Min       1Q   Median       3Q      Max 
--0.19052 -0.03384 -0.00148  0.03221  0.27478 
+-0.22242 -0.03391 -0.00118  0.03213  0.29653 
 
 Coefficients:
                        Estimate Std. Error  t value Pr(>|t|)    
-(Intercept)           0.9130898  0.0098869    92.35   <2e-16 ***
-Drivers               0.8749403  0.0051884   168.63   <2e-16 ***
-NonDrivers            0.3717366  0.0037804    98.33   <2e-16 ***
-LogIncome             0.2801761  0.0009416   297.56   <2e-16 ***
-LogDensity           -0.1796167  0.0001586 -1132.35   <2e-16 ***
-VehLtDvr             -0.1742056  0.0010173  -171.25   <2e-16 ***
-Drivers:LogIncome    -0.0692104  0.0004841  -142.97   <2e-16 ***
-NonDrivers:LogIncome -0.0349504  0.0003538   -98.78   <2e-16 ***
+(Intercept)           0.9159244  0.0098446    93.04   <2e-16 ***
+Drivers               0.8770513  0.0051662   169.77   <2e-16 ***
+NonDrivers            0.3688203  0.0037642    97.98   <2e-16 ***
+LogIncome             0.2799887  0.0009375   298.64   <2e-16 ***
+LogDensity           -0.1795620  0.0001579 -1136.86   <2e-16 ***
+VehLtDvr             -0.1724488  0.0010129  -170.25   <2e-16 ***
+Drivers:LogIncome    -0.0694627  0.0004820  -144.11   <2e-16 ***
+NonDrivers:LogIncome -0.0347099  0.0003523   -98.52   <2e-16 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-Residual standard error: 0.05017 on 31205 degrees of freedom
-Multiple R-squared:  0.9835,	Adjusted R-squared:  0.9835 
-F-statistic: 2.65e+05 on 7 and 31205 DF,  p-value: < 2.2e-16
+Residual standard error: 0.04995 on 31205 degrees of freedom
+Multiple R-squared:  0.9836,	Adjusted R-squared:  0.9835 
+F-statistic: 2.666e+05 on 7 and 31205 DF,  p-value: < 2.2e-16
 
 ```
 
@@ -196,7 +196,7 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |Income          |Household |Year  |currency  |USD.2001  |NA, < 0  |                   |
 |Drivers         |Household |Year  |people    |PRSN      |NA, < 0  |                   |
 |Vehicles        |Household |Year  |vehicles  |VEH       |NA, < 0  |                   |
-|HhSize          |Household |Year  |people    |PRSN      |NA, < 0  |                   |
+|HhSize          |Household |Year  |people    |PRSN      |NA, <= 0 |                   |
 |IsUrbanMixNbrhd |Household |Year  |integer   |binary    |NA       |0, 1               |
 |Dvmt            |Household |Year  |compound  |MI/DAY    |NA, < 0  |                   |
 

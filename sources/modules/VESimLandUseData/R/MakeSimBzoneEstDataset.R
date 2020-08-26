@@ -19,7 +19,7 @@
 #The US Environmental Protection Agency's (EPA) [Smart Location Database](https://www.epa.gov/smartgrowth/smart-location-mapping) is the principal source of data used for developing the method for the synthesizing Bzones. The SLD includes a large number of land use and transportation measures at the Census block group level for the year 2010. The large majority of these are measures of the so called *5D* measures that have been found to have significant relationships to personal travel: density, diversity, design, distance to transit, and access to destinations. Several 5D measures are used in estimating the multimodal travel models that will be incorporated into VisionEval in the future. These measures are calculated by modules in the VELandUse package and they need to be calculated by modules in the VESimLandUse package as well. The SLD data used for estimating SimBzone models includes some additional data items that were added to the dataset for estimating the multimodal travel models. These include the amount of population within 5 miles of each block group and the amount of employment within 2 miles of each block group. The population and employment totals were computed based on straight-line distances between block group centroids. These values are used to compute a destination accessibility measure that is the [harmonic mean](https://en.wikipedia.org/wiki/Harmonic_mean) of the two values. This destination accessibility measure is used instead of the measures in the SLD which do not adequately distinguish accessibility in smaller urbanized areas. The harmonic mean of population within 5 miles and employment within 2 miles has been found to be useful in distinguishing area types in urbanized areas of different sizes. The `processSLD` carries out these steps.
 #
 ### National Transit Database (NTD)
-#The `processTransitData` function reads in 2010 transit service, agency, and urbanized area files downloaded from the National Transit Database [website](https://www.transit.dot.gov/ntd). These downloaded files are included in the `inst/extdata` directory of this package. The function sums up the annual vehicle miles for fixed-route transit and vehicle revenue miles for fixed route transit by urbanized area. The urbanized area names are checked against the names in the Smart Location Database and are made consistent so that the transit data can be joined with the SLD dataset.
+#The `processTransitData` function reads in 2010 transit service, agency, and urbanized area files downloaded from the National Transit Database [website](https://www.transit.dot.gov/ntd). These downloaded files are included in the `data-raw` directory of this package. The function sums up the annual vehicle miles for fixed-route transit and vehicle revenue miles for fixed route transit by urbanized area. The urbanized area names are checked against the names in the Smart Location Database and are made consistent so that the transit data can be joined with the SLD dataset.
 #
 ### Making the SimBzone Estimation Dataset
 #The SimBzone model estimation dataset combines the Census, SLD, and NTD datasets along with the latitudes and longitudes of the block group centroids (used for map documentation of models). The variables are limited to those needed to model Bzone attributes used in the multimodal travel model and other VisionEval modules. The dataset is cleaned to remove block groups that have no activity (i.e. households or jobs) or no land area. Comments in the script provide specifics about cleaning. In addition, some of the 5D measures are recalculated. The density measure (referred to as D1D in the SLD), a measure of households and jobs per acre, is calculated using the land area (excludes water bodies) recorded in the SLD rather than the unprotected land area for the following reasons:
@@ -95,7 +95,7 @@ processCensusHousingInc <- function(Data_df, BldSzVars_, IncVar) {
 #====================================================
 #Function to load and process smart location database
 #====================================================
-#' Read in and process Smart Location Databse (SLD)
+#' Read in and process Smart Location Database (SLD)
 #'
 #' \code{processSLD} reads in an augmented Smart Location Database in the form
 #' of a 'tibble' and processes it.
@@ -132,7 +132,7 @@ processCensusHousingInc <- function(Data_df, BldSzVars_, IncVar) {
 #' @export
 processSLD <- function() {
   #Load augmented SLD dataset developed for the multimodal travel model
-  SLD_tb <- readRDS("inst/extdata/SLD_tb.rds")
+  SLD_tb <- readRDS("data-raw/SLD_tb.rds")
   #Remove records for territories
   TerrFips_ <- c("60", "66", "69", "72")
   SLD_tb <- SLD_tb[!(SLD_tb$SFIPS %in% TerrFips_),]
@@ -197,7 +197,7 @@ processTransitData <- function() {
   #--------------------
   #Process service data
   #--------------------
-  Service_df <- read.csv("inst/extdata/2010_Service.csv", as.is = TRUE)
+  Service_df <- read.csv("data-raw/2010_Service.csv", as.is = TRUE)
   FieldsToKeep_ <-
     c(
       "Trs_Id",
@@ -238,7 +238,7 @@ processTransitData <- function() {
   #Process agency data
   #-------------------
   #Load agency information
-  Agency_df <- read.csv("inst/extdata/2010_Agency_Information.csv", as.is = TRUE)
+  Agency_df <- read.csv("data-raw/2010_Agency_Information.csv", as.is = TRUE)
   FieldsToKeep_ <-
     c(
       "Trs_Id",
@@ -253,7 +253,7 @@ processTransitData <- function() {
   Agency_df <- Agency_df[KeepStates_,]
   rm(KeepStates_)
   #Load urbanized area information and add to agency information
-  Uza_df <- read.csv("inst/extdata/2010_transit_uza_data.csv", as.is = TRUE)
+  Uza_df <- read.csv("data-raw/2010_transit_uza_data.csv", as.is = TRUE)
   Agency_df$Ua_Name <-
     Uza_df$Urbanized.Area[match(Agency_df$Trs_Id, Uza_df$ID)]
   rm(FieldsToKeep_, Uza_df)
@@ -261,7 +261,7 @@ processTransitData <- function() {
   #Correspond NTD urbanized areas with SLD urbanized areas
   #-------------------------------------------------------
   #Load SLD data
-  SLD_df <- readRDS("inst/extdata/SLD_df.rds")
+  SLD_df <- readRDS("data-raw/SLD_df.rds")
   #Identify urbanized area names to be renamed to be consistent with SLD
   Rename_ <- local({
     #Make vectors of urbanized area names from SLD and NTD
@@ -391,9 +391,9 @@ processTransitData <- function() {
 #' LocType - Location type (Urban, Town, Rural)
 #' @export
 createSimLandUseDataset <- function() {
-  D_df <- readRDS("inst/extdata/SLD_df.rds")
+  D_df <- readRDS("data-raw/SLD_df.rds")
   #Add state abbreviation
-  StFips_df <- readRDS("inst/extdata/StateFIPS_df.rds")
+  StFips_df <- readRDS("data-raw/StateFIPS_df.rds")
   D_df$SFIPS <- as.character(D_df$SFIPS)
   D_df$STATE <- StFips_df$Abbr[match(D_df$SFIPS, StFips_df$Fips)]
   rm(StFips_df)
@@ -403,7 +403,7 @@ createSimLandUseDataset <- function() {
   D_df$UZA_NAME <- paste(UzaName_, D_df$STATE, sep = ", ")
   rm(UzaName_)
   #Add the latitude and longitude of the block group centroids
-  load("inst/extdata/BlkGrpCtr_df.Rda")
+  load("data-raw/BlkGrpCtr_df.Rda")
   D_df$LAT <- BlkGrpCtr_df$lat[match(D_df$GEOID10, BlkGrpCtr_df$GeoId)]
   D_df$LNG <- BlkGrpCtr_df$lng[match(D_df$GEOID10, BlkGrpCtr_df$GeoId)]
   #Remove records for New York UZA that have no activity and no land
@@ -458,12 +458,12 @@ createSimLandUseDataset <- function() {
     OthEmp_Bz = with(D_df, EMPTOT - E5_RET10 - E5_SVC10)
   )
   #Combine census data
-  CensusBlkGrp_df <- readRDS("inst/extdata/CensusHouseTypeInc_df.rds")
+  CensusBlkGrp_df <- readRDS("data-raw/CensusHouseTypeInc_df.rds")
   D_df$PropSF <- CensusBlkGrp_df$PropSF[match(D_df$GEOID10, CensusBlkGrp_df$GeoID)]
   D_df$PropMF <- CensusBlkGrp_df$PropMF[match(D_df$GEOID10, CensusBlkGrp_df$GeoID)]
   D_df$MedianInc <- CensusBlkGrp_df$MedianInc[match(D_df$GEOID10, CensusBlkGrp_df$GeoID)]
   #Add the transit data
-  Transit_df <- readRDS("inst/extdata/Transit_df.rds")
+  Transit_df <- readRDS("data-raw/Transit_df.rds")
   D_df$TransitVehMi <-
     Transit_df$VehicleMiles[match(D_df$UA_NAME, Transit_df$UaName)]
   D_df$TransitRevMi <-
@@ -482,55 +482,62 @@ createSimLandUseDataset <- function() {
   D_df
 }
 
-#====================================================================
-#Do the data processing to create the sim land use estimation dataset
-#====================================================================
-#Process Census housing and income data if not already done
-#----------------------------------------------------------
-if (!file.exists("inst/extdata/CensusHouseTypeInc_df.rds"))  {
-  #Define a vector of state abbreviations
-  States_ <-
-    c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "HI",
-      "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN",
-      "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH",
-      "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA",
-      "WV", "WI", "WY")
-  #Define the variable names to retrieve
-  BldSzVars_ <- c(
-    "B25024_001E", "B25024_002E", "B25024_003E", "B25024_004E",
-    "B25024_005E",  "B25024_006E",  "B25024_007E",  "B25024_008E",
-    "B25024_009E",  "B25024_010E",  "B25024_011E")
-  IncVar <- "B19013_001E"
-  CensusBlkGrp_ls <- list()
-  for (St in States_) {
-    #Download data from Census
-    Census_df <-
-      get_acs(geography = "block group",
-              variables = c(BldSzVars_, IncVar),
-              state = St,
-              year = 2015)
-    #Process Census download
-    CensusBlkGrp_ls[[St]] <-
-      processCensusHousingInc(Census_df, BldSzVars_, IncVar)
+if ( dir.exists("data-raw") ) {
+  #====================================================================
+  #Do the data processing to create the sim land use estimation dataset
+  #====================================================================
+  #Process Census housing and income data if not already done
+  #----------------------------------------------------------
+  if (!file.exists("data-raw/CensusHouseTypeInc_df.rds"))  {
+    #Define a vector of state abbreviations
+    States_ <-
+      c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "HI",
+        "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN",
+        "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH",
+        "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA",
+        "WV", "WI", "WY")
+    #Define the variable names to retrieve
+    BldSzVars_ <- c(
+      "B25024_001E", "B25024_002E", "B25024_003E", "B25024_004E",
+      "B25024_005E",  "B25024_006E",  "B25024_007E",  "B25024_008E",
+      "B25024_009E",  "B25024_010E",  "B25024_011E")
+    IncVar <- "B19013_001E"
+    CensusBlkGrp_ls <- list()
+    for (St in States_) {
+      #Download data from Census
+      Census_df <-
+        get_acs(geography = "block group",
+                variables = c(BldSzVars_, IncVar),
+                state = St,
+                year = 2015)
+      #Process Census download
+      CensusBlkGrp_ls[[St]] <-
+        processCensusHousingInc(Census_df, BldSzVars_, IncVar)
+    }
+    #Combine into a data frame
+    CensusBlkGrp_df <- do.call(rbind, CensusBlkGrp_ls)
+    CensusBlkGrp_df$State <- rep(States_, unlist(lapply(CensusBlkGrp_ls, nrow)))
+    rownames(CensusBlkGrp_df) <- NULL
+    #Save the dataset and clean up
+    saveRDS(CensusBlkGrp_df, "data-raw/CensusHouseTypeInc_df.rds")
+    rm(States_, BldSzVars_, IncVar, CensusBlkGrp_ls, St, CensusBlkGrp_df)
   }
-  #Combine into a data frame
-  CensusBlkGrp_df <- do.call(rbind, CensusBlkGrp_ls)
-  CensusBlkGrp_df$State <- rep(States_, unlist(lapply(CensusBlkGrp_ls, nrow)))
-  rownames(CensusBlkGrp_df) <- NULL
-  #Save the dataset and clean up
-  saveRDS(CensusBlkGrp_df, "inst/extdata/CensusHouseTypeInc_df.rds")
-  rm(States_, BldSzVars_, IncVar, CensusBlkGrp_ls, St, CensusBlkGrp_df)
+  #Process the Smart Location Database if not already done
+  #-------------------------------------------------------
+  if (!file.exists("data-raw/SLD_df.rds"))  {
+    saveRDS(processSLD(), "data-raw/SLD_df.rds")
+  }
+  #Process transit data if not already done
+  #----------------------------------------
+  if (!file.exists("data-raw/Transit_df.rds"))  {
+    saveRDS(processTransitData(), "data-raw/Transit_df.rds")
+  }
+
+  SimLandUseData_df <- createSimLandUseDataset()
+} else {
+  load("data/SimLandUseData_df.rda")
 }
-#Process the Smart Location Database if not already done
-#-------------------------------------------------------
-if (!file.exists("inst/extdata/SLD_df.rds"))  {
-  saveRDS(processSLD(), "inst/extdata/SLD_df.rds")
-}
-#Process transit data if not already done
-#----------------------------------------
-if (!file.exists("inst/extdata/Transit_df.rds"))  {
-  saveRDS(processTransitData(), "inst/extdata/Transit_df.rds")
-}
+
 #Process and save the sim land use model estimation data if not already done
 #---------------------------------------------------------------------------
 #' Land use simulation model estimation dataset
@@ -574,10 +581,7 @@ if (!file.exists("inst/extdata/Transit_df.rds"))  {
 #' }
 #' @source MakeSimBzoneEstDataset.R script.
 "SimLandUseData_df"
-if (!file.exists("data/SimLandUseData_df.rda"))  {
-  SimLandUseData_df <- createSimLandUseDataset()
-  usethis::use_data(SimLandUseData_df, overwrite = TRUE)
-}
+visioneval::savePackageDataset(SimLandUseData_df, overwrite = TRUE)
 
 
 #====================

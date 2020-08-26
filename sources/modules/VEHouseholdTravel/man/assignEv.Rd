@@ -14,6 +14,8 @@ assignEv(Hh_df, Veh_df, EvRangePropYr_df, CurrYear,
 
 \item{EvRangePropYr_df}{A data frame consisting of expected range of EV.}
 
+\item{CurrYear}{The year for which the assignment of powertrian should be done.}
+
 \item{UseMaxDvmtCriterion}{A logical to indicated whether to use max dvmt criteria.}
 }
 \value{

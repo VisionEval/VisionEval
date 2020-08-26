@@ -5,15 +5,15 @@
 \title{Determine the activity density (households and jobs per acre) for a set of
 SimBzones assigned to a location type in an Azone.}
 \usage{
-calcDensityDistribution(Activity_Bz, LocType, TargetArea = NULL,
+calcDensityDistribution(Bz_df, LocType, TargetArea = NULL,
   TargetDensity = NULL, UzaProfileName = NULL)
 }
 \arguments{
-\item{Activity_Bz}{A numeric vector of the amount of activity assigned to
-each SimBzone for SimBzones assigned to a location type in an Azone.}
+\item{Bz_df}{A data frame containing synthetic Bzone data for Bzones for
+an Azone and location type (LocType).}
 
-\item{LocType}{A string identifying the location type (Urban, Town, Rural)
-that the SimBzones are assigned to.}
+\item{LocType}{A string identifying the location type: Urban, Town, or
+Rural.}
 
 \item{TargetArea}{A number identifying the area in acres that is assigned
 to accommodate the activity in the location type in the Azone. A value must

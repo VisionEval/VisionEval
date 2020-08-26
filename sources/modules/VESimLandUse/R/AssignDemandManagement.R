@@ -43,22 +43,22 @@
 #--------------------------------------------------
 TdmModel_ls <- VELandUse::TdmModel_ls
 
-#Save the TDM model data
-#-----------------------
-#' Travel demand management models
-#'
-#' A list of components used to predict the reduction in household DVMT as a
-#' consequence of participation in individualized marketing programs and
-#' employee commute options programs
-#'
-#' @format A list containing two vectors:
-#' \describe{
-#'  \item{PropDvmtReduce}{named vector of the proportional reduction in DVMT due to TDM program participation (names are ECO and IMP)}
-#'  \item{PropMilesPerWkr}{named vector of the ratio of work tour DVMT per worker to total DVMT (names are household size 1 to 8)}
-#'  }
-#' @source AssignDemandManagement.R
-"TdmModel_ls"
-usethis::use_data(TdmModel_ls, overwrite = TRUE)
+NULL # Don't need to save this - we'll go back to the well when needed
+# #Save the TDM model data
+# #-----------------------
+# #' Travel demand management models
+# #'
+# #' A list of components used to predict the reduction in household DVMT as a
+# #' consequence of participation in individualized marketing programs and
+# #' employee commute options programs
+# #'
+# #' @format A list containing two vectors:
+# #' \describe{
+# #'  \item{PropDvmtReduce}{named vector of the proportional reduction in DVMT due to TDM program participation (names are ECO and IMP)}
+# #'  \item{PropMilesPerWkr}{named vector of the ratio of work tour DVMT per worker to total DVMT (names are household size 1 to 8)}
+# #'  }
+# "TdmModel_ls"
+# visioneval::savePackageDataset(TdmModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -182,7 +182,7 @@ AssignDemandManagementSpecifications <- list(
       GROUP = "Year",
       TYPE = "people",
       UNITS = "PRSN",
-      PROHIBIT = c("NA", "< 0"),
+      PROHIBIT = c("NA", "<= 0"),
       ISELEMENTOF = ""
     ),
     item(
@@ -272,7 +272,7 @@ AssignDemandManagementSpecifications <- list(
 #' }
 #' @source AssignDemandManagement.R script.
 "AssignDemandManagementSpecifications"
-usethis::use_data(AssignDemandManagementSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignDemandManagementSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -443,4 +443,3 @@ documentModule("AssignDemandManagement")
 #   SaveDatastore = TRUE,
 #   DoRun = TRUE
 # )
-

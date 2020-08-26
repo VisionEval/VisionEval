@@ -632,6 +632,12 @@ Types <- function(){
       ),
       mode = "double"
     ),
+    crash = list(
+      units = list(
+        CRASH = c(CRASH = 1)
+      ),
+      mode = "double"
+    ),
     people = list(
       units = list(
         PRSN = c(PRSN = 1)
@@ -666,6 +672,12 @@ Types <- function(){
       units = list(
         HHJOB = c(HHJOB = 1)
       )
+    ),
+    drivers = list(
+      units = list(
+        DRV = c(DRV = 1)
+      ),
+      mode = "integer"
     )
   )
 }
@@ -1110,7 +1122,7 @@ checkSpec <- function(Spec_ls, SpecGroup, SpecNum) {
                      "The attribute must be a ", Req_ls$ValueType, " type.")
             Errors_ <- c(Errors_, Msg)
           }
-          if (!any(str_detect(Spec, Req_ls$ValuesAllowed))) {
+          if (!any(stringr::str_detect(Spec, Req_ls$ValuesAllowed))) {
             Msg <-
               paste0("The value of the ", Name, "attribute of the ", SpecGroup,
                      " specification number ", SpecNum, " is incorrect. ",

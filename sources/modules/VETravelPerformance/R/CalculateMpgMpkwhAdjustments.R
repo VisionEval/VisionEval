@@ -333,7 +333,7 @@ rm(Inp_ls, SpeedSmoothEffect_df, Spd_)
 #' }
 #' @source CalculateMpgMpkwhAdjustments.R script.
 "MpgMpkwhAdj_ls"
-usethis::use_data(MpgMpkwhAdj_ls, overwrite = TRUE)
+visioneval::savePackageDataset(MpgMpkwhAdj_ls, overwrite = TRUE)
 
 
 #================================================
@@ -541,7 +541,7 @@ CalculateMpgMpkwhAdjustmentsSpecifications <- list(
 #' }
 #' @source CalculateMpgMpkwhAdjustments.R script.
 "CalculateMpgMpkwhAdjustmentsSpecifications"
-usethis::use_data(CalculateMpgMpkwhAdjustmentsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateMpgMpkwhAdjustmentsSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -621,6 +621,9 @@ CalculateMpgMpkwhAdjustments <- function(L) {
   #-------------------------------------------------------------------------
   #Calculates speed smoothing maximum factors by road class for a given vehicle
   #type based on the estimated congested speeds
+
+  MpgMpkwhAdj_ls <- VETravelPerformance::MpgMpkwhAdj_ls
+
   calcMaxSpdSmAdj <- function(vt) {
     #Choose the speed smoothing factor model
     if (vt == "Ldv"){

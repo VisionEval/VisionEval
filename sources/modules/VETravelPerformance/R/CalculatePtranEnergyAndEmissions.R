@@ -5,7 +5,7 @@
 #<doc>
 #
 ## CalculatePtranEnergyAndEmissions Module
-#### January 23, 2019
+#### January 12, 2020
 #
 #This module calculates the energy consumption and carbon emissions from public transportation vehicles in urbanized areas. Note that fuel consumption and emissions from car services (e.g. taxi, Uber, Lyft) are calculated in conjunction with the calculation of household vehicle emissions and are attributed to the household.
 #
@@ -114,7 +114,7 @@ CalculatePtranEnergyAndEmissionsSpecifications <- list(
       GROUP = "Year",
       TYPE = "compound",
       UNITS = "MI/DAY",
-      PROHIBIT = "<= 0",
+      PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = ""
     ),
     item(
@@ -146,8 +146,8 @@ CalculatePtranEnergyAndEmissionsSpecifications <- list(
         "VanGGE"),
       TABLE = "Marea",
       GROUP = "Year",
-      TYPE = "energy",
-      UNITS = "GGE",
+      TYPE = "compound",
+      UNITS = "GGE/DAY",
       NAVALUE = -1,
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = "",
@@ -164,8 +164,8 @@ CalculatePtranEnergyAndEmissionsSpecifications <- list(
         "VanKWH"),
       TABLE = "Marea",
       GROUP = "Year",
-      TYPE = "energy",
-      UNITS = "KWH",
+      TYPE = "compound",
+      UNITS = "KWH/DAY",
       NAVALUE = -1,
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = "",
@@ -182,8 +182,8 @@ CalculatePtranEnergyAndEmissionsSpecifications <- list(
         "VanCO2e"),
       TABLE = "Marea",
       GROUP = "Year",
-      TYPE = "mass",
-      UNITS = "GM",
+      TYPE = "compound",
+      UNITS = "GM/DAY",
       NAVALUE = -1,
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = "",
@@ -229,7 +229,7 @@ CalculatePtranEnergyAndEmissionsSpecifications <- list(
 #' }
 #' @source CalculatePtranEnergyAndEmissions.R script.
 "CalculatePtranEnergyAndEmissionsSpecifications"
-usethis::use_data(CalculatePtranEnergyAndEmissionsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculatePtranEnergyAndEmissionsSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -311,6 +311,7 @@ CalculatePtranEnergyAndEmissions <- function(L) {
       )
     }
     Energy_MaPt <- sweep(Dvmt_MaPt, 2, MpgMpkwh_Pt, "/")
+    Energy_MaPt[Dvmt_MaPt == 0] <- 0
     Et <- c("GGE", "KWH")
     Energy_MaEt <- array(0, dim = c(length(Ma), 2), dimnames = list(Ma, Et))
     for (ma in Ma) {

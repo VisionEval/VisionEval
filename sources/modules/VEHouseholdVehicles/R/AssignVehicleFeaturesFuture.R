@@ -1,3 +1,6 @@
+#' @include AssignVehicleFeatures.R
+NULL
+
 #========================
 #AssignVehicleFeaturesFuture.R
 #========================
@@ -31,12 +34,12 @@
 ## Use estimation data set to create models
 
 # Load vehicle ownership model
-load("./data/VehOwnModels_ls.rda")
+load("data/VehOwnModels_ls.rda")
 
 # Load LtTrk Ownership
 #-------------------------
 # LtTrk ownership model
-load("./data/LtTruckModels_ls.rda")
+load("data/LtTruckModels_ls.rda")
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -306,8 +309,7 @@ AssignVehicleFeaturesFutureSpecifications <- list(
 #' }
 #' @source AssignVehicleFeaturesFuture.R script.
 "AssignVehicleFeaturesFutureSpecifications"
-usethis::use_data(AssignVehicleFeaturesFutureSpecifications, overwrite = TRUE)
-
+visioneval::savePackageDataset(AssignVehicleFeaturesFutureSpecifications, overwrite = TRUE)
 
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL

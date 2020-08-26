@@ -1,3 +1,6 @@
+#' @include LoadDefaultValues.R
+NULL
+
 #===================
 #CalculateTravelDemand.R
 #===================
@@ -75,15 +78,33 @@ DvmtLmModels_ls$NonMetro <- list(
 #' }
 #' @source CalculateTravelDemand.R script.
 "DvmtLmModels_ls"
-usethis::use_data(DvmtLmModels_ls, overwrite = TRUE)
+visioneval::savePackageDataset(DvmtLmModels_ls, overwrite = TRUE)
 
 
-#Load PHEV/HEV model data
-load("./data/PhevModelData_ls.rda")
+#Save PHEV/HEV model data
+#------------------------
+#Load PHEV/HEV model data object
+if ( dir.exists("data-raw") ) {
+  load("data-raw/PhevModelData_ls.rda")
+} else if ( file.exists("data/PhevModelData_ls.rda") ) {
+  load("data/PhevModelData_ls.rda")
+}
 
-#Load default values for Travel Demand module
-load("./data/TravelDemandDefaults_ls.rda")
-
+#' PHEV/HEV model
+#'
+#' A list containing PHEV/HEV model data
+#'
+#' @format A list having the following components:
+#' \describe{
+#'   \item{PhevRangePropYr_df}{a data frame containing PHEV range proportions}
+#'   \item{PhevMilePropModel_ls}{a list containing metropolitan and
+#'   non-metropolitan PHEV proportions models}
+#'   \item{HevMpgPropYr_df}{a data frame containing HEV MPG proportions}
+#'   \item{OptimPropYr_ar}{a numeric vector containing optimization proportions}
+#' }
+#' @source RPAT model
+"PhevModelData_ls"
+visioneval::savePackageDataset(PhevModelData_ls, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -1112,7 +1133,7 @@ CalculateTravelDemandSpecifications <- list(
 #' }
 #' @source CalculateTravelDemand.R script.
 "CalculateTravelDemandSpecifications"
-usethis::use_data(CalculateTravelDemandSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateTravelDemandSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -1598,6 +1619,7 @@ assignPHEV <- function(Hh_df, Veh_df, PhevRangePropYr_df, CurrYear,
 #' @param Hh_df A household data frame consisting of variables required for calculation.
 #' @param Veh_df A vehicle data frame consisting of variables required for calculation.
 #' @param EvRangePropYr_df A data frame consisting of expected range of EV.
+#' @param CurrYear The year for which the assignment of powertrian should be done.
 #' @param UseMaxDvmtCriterion A logical to indicated whether to use max dvmt criteria.
 #' @return A list of identifying the powertrain, dvmt, and efficiency of vehicles by
 #' powertrain.
@@ -2120,6 +2142,8 @@ CalculateTravelDemand <- function(L) {
   EvRangePropYr_df <- EvRangePropYr_df[, c("AutoRange", "AutoPropEv", "AutoMpkwh", "LtTruckRange",
                                            "LtTruckPropEv", "LtTruckMpkwh")]
 
+  PhevModelData_ls <- VEHouseholdTravel::PhevModelData_ls
+
   PhevResults_ <- assignPHEV(Hh_df = Hh_df[HasVeh_Hh, HhVar_],
                              Veh_df = Vehicles_df[, VehVar_],
                              PhevRangePropYr_df = PhevRangePropYr_df,
@@ -2199,9 +2223,8 @@ CalculateTravelDemand <- function(L) {
   # Calculate average electricity CO2e per KWh
   #---------------------------------------------
   if(!"Electricity" %in% L$Global$Fuel$Fuel){
-    if(!exists("TravelDemandDefaults_ls")){
-      TravelDemandDefaults_ls <- VEHouseholdTravel::TravelDemandDefaults_ls
-    }
+    TravelDemandDefaults_ls <- VEHouseholdTravel::TravelDemandDefaults_ls
+
     CI_df <- TravelDemandDefaults_ls$CarbonIntensity_df
     RegionName_ <- strsplit(L$G$Region, " ")[[1]]
     StateCode_ <- L$G$State

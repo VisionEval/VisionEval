@@ -555,7 +555,7 @@ server <- function(input, output, session) {
       datapath <- getScriptInfo()$datapath
       debugConsole(paste0("getModelModules entered with datapath: ", datapath))
       setwd(dirname(datapath))
-      modelModules_dt <- data.table::as.data.table(visioneval::parseModelScript(datapath, TestMode = TRUE))
+      modelModules_dt <- data.table::as.data.table(visioneval::parseModelScript(datapath)$ModuleCalls_df)
       debugConsole('getModelModules has finished')
       return(modelModules_dt)
     } else {

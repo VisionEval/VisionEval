@@ -28,7 +28,15 @@ library(visioneval)
 #SECTION 1: ESTIMATE AND SAVE MODEL PARAMETERS
 #=============================================
 
-load("inst/extdata/TruckBusAgeDist_.RData")
+#Load the alternative mode trip models from GreenSTEP
+TruckBusAgeDist_name <- 
+  if ( dir.exists("inst/extdata") ) {
+    "inst/extdata/TruckBusAgeDist_.RData"
+  } else {
+    system.file("extdata", "TruckBusAgeDist_.RData", package = "REReports")
+  }
+load(TruckBusAgeDist_name)
+
 #Save Truck and Bus age distribution data
 #-----------------------------
 #' Truck and Bus age distribution data
@@ -42,7 +50,7 @@ load("inst/extdata/TruckBusAgeDist_.RData")
 #' }
 #' @source CalculateTravelDemand.R script.
 "TruckBusAgeDist_mx"
-usethis::use_data(TruckBusAgeDist_mx, overwrite = TRUE)
+
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
 #================================================
@@ -906,7 +914,7 @@ ReportRPATMetricsSpecifications <- list(
 #' }
 #' @source ReportRPATMetrics.R script.
 "ReportRPATMetricsSpecifications"
-usethis::use_data(ReportRPATMetricsSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(ReportRPATMetricsSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -980,7 +988,7 @@ adjustHvyVehAgeDistribution <- function( CumDist_, AdjRatio ) {
 #' @param AgeDist_Ag Age distribution of vehicle type.
 #' @param Mpg__Yr A data frame of mileage of vehicles by type and year.
 #' @param Type A string identifying the type of vehicle ("Truck" or "Bus").
-#' @param CurrentYear A integer indicating the current year.
+#' @param CurrYear A integer indicating the current year.
 #' @return A numeric vector that indicates the mileage of vehicles.
 #' @name assignHvyVehFuelEconomy
 #' @export

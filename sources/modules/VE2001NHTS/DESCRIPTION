@@ -1,8 +1,8 @@
 Package: VE2001NHTS
 Type: Package
 Title: Create 2001 NHTS datasets for model estimation
-Version: 0.9
-Date: 11/03/17
+Version: 2.0.0
+Date: 2020-08-14
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: AASHTO
@@ -13,14 +13,14 @@ Description: This package creates and saves 3 data frames that are used to
     (NHTS) augmented with data on metropolitan area freeway supply and transit
     supply. The package produces a data frames of household characteristics and
     travel, vehicle characteristics, household tours .
-License: Apache License 2.0
+License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
-    visioneval,
-    usethis
+    visioneval
 Suggests:
     knitr
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+Roxygen: list(load='source')
+RoxygenNote: 7.1.1

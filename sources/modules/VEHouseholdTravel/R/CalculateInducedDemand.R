@@ -463,7 +463,7 @@ CalculateInducedDemandSpecifications <- list(
 #' }
 #' @source CalculateInducedDemand.R script.
 "CalculateInducedDemandSpecifications"
-usethis::use_data(CalculateInducedDemandSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateInducedDemandSpecifications, overwrite = TRUE)
 
 
 #=======================================================

@@ -93,7 +93,7 @@ ISELEMENTOF - Categorical values that are permitted. Values in the datastore are
 |Bzone         |Household |Year  |character |ID         |             |                             |
 |Marea         |Household |Year  |character |ID         |             |                             |
 |HhId          |Household |Year  |character |ID         |             |                             |
-|HhSize        |Household |Year  |people    |PRSN       |NA, < 0      |                             |
+|HhSize        |Household |Year  |people    |PRSN       |NA, <= 0     |                             |
 |Workers       |Household |Year  |people    |PRSN       |NA, < 0      |                             |
 |HhId          |Worker    |Year  |character |ID         |             |                             |
 |Marea         |Worker    |Year  |character |ID         |             |                             |

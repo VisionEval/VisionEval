@@ -1,8 +1,8 @@
 Package: VESimLandUseData
 Type: Package
 Title: Create dataset used for estimating land use simulation models
-Version: 0.9.0
-Date: 10/31/18
+Version: 2.0.0
+Date: 2020-08-14
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: Oregon Department of Transportation
@@ -12,12 +12,11 @@ Description: This package processes data from several sources to produce a
     their likely land use attributes. Datasets from the U.S. Census 2015
     American Community Survey, EPA Smart Location Database (SLD), and National
     Transit Database (NTD) are combined to produce this dataset.
-License: Apache License 2.0
+License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    usethis,
     tidycensus,
     stringr
 Suggests:
@@ -25,4 +24,5 @@ Suggests:
     rmarkdown
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+Roxygen: list(load='source')
+RoxygenNote: 7.1.1

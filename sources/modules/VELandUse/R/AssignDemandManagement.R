@@ -169,7 +169,7 @@ rm(TourMiles_df, TourMiles_ls, TourMiles_SzX, HhSizeCat_, PropMilesPerWkr_Sz)
 #'  }
 #' @source AssignDemandManagement.R
 "TdmModel_ls"
-usethis::use_data(TdmModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(TdmModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -340,7 +340,7 @@ AssignDemandManagementSpecifications <- list(
 #' }
 #' @source AssignDemandManagement.R script.
 "AssignDemandManagementSpecifications"
-usethis::use_data(AssignDemandManagementSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignDemandManagementSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -393,7 +393,9 @@ AssignDemandManagement <- function(L) {
 
   #Calculate household DVMT proportional reduction
   #-----------------------------------------------
-  #Calculate the proportion of household DVMT that worker DVMT per worker
+  #Calculate the proportion of household DVMT that worker DVMT per
+  #worker
+  if ( ! exists("TdmModel_ls") ) TdmModel_ls <- VELandUse::TdmModel_ls
   HhSizeIdx_ <- L$Year$Household$HhSize
   HhSizeIdx_[HhSizeIdx_ > 8] <- 8
   PropMilesPerWkr_Hh <- TdmModel_ls$PropMilesPerWkr[HhSizeIdx_]

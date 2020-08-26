@@ -1,0 +1,25 @@
+# Known versions of R - just create additional entries as needed
+# Your chances of a successful build go down with older versions
+# or with a version different from what the Makefile reports as
+# the default.
+3.6.0:
+    BioC:      https://www.bioconductor.org/packages/3.9/bioc
+    CRAN:      https://cran.microsoft.com/snapshot/2019-07-05
+3.6.1:
+    BioC:      https://www.bioconductor.org/packages/3.9/bioc
+    CRAN:      https://cran.microsoft.com/snapshot/2019-12-12
+3.6.2:
+    BioC:      https://www.bioconductor.org/packages/3.10/bioc
+    CRAN:      https://cran.microsoft.com/snapshot/2020-02-29
+3.6.3:
+    BioC:      https://www.bioconductor.org/packages/3.10/bioc
+    CRAN:      https://cran.microsoft.com/snapshot/2020-04-24
+4.0.0:
+    BioC:      https://www.bioconductor.org/packages/3.11/bioc
+    CRAN:      https://cran.microsoft.com/snapshot/2020-06-06
+4.0.1:
+    BioC:      https://www.bioconductor.org/packages/3.11/bioc
+    CRAN:      https://cran.microsoft.com/snapshot/2020-06-22
+4.0.2:
+    BioC:      https://www.bioconductor.org/packages/3.11/bioc
+    CRAN:      https://cloud.r-project.org

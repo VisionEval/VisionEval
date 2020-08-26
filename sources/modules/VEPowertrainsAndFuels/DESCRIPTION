@@ -1,22 +1,25 @@
 Package: VEPowertrainsAndFuels
 Type: Package
-Title: Assign powertrain and fuel characteristics to vehicles
-Version: 0.9.0
+Title: Default Powertrains And Fuels for ODOT Adopted Plans scenario (xAP)
+Version: 2.0.0
+Date: 2020-08-14
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
-Copyright: AASHTO
+Copyright: AASHTO, ODOT
 URL: https://github.com/gregorbj/VisionEval/sources/modules/VETravelCosts
 Description: Contains modules for inputting default powertrain and fuel
     characteristics and for allowing households to override some of the defaults
     with characteristics for their region. Calculates the carbon intensity of 
     fuels and assigns powertrains and powertrain characteristics to household 
-    vehicles and car service vehicles.
+    vehicles and car service vehicles. The default values are for the Oregon
+    DOT Adopted Plans scenario as of February 25, 2020. The ICEV MPG values
+    by model year were adjusted 6% lower to better match validation targets for
+    fuel consumption. This is the "xAP" version, 2020-07-24.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.1.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    usethis,
     VE2001NHTS,
     VEHouseholdTravel,
     data.table
@@ -24,7 +27,8 @@ Suggests:
     knitr
 Encoding: UTF-8
 VignetteBuilder: knitr
-RoxygenNote: 6.1.1
+Roxygen: list(load='source')
+RoxygenNote: 7.1.1
 Collate: 
     'LoadDefaultValues.R'
     'Initialize.R'

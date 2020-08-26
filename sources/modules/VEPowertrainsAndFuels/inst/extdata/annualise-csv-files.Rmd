@@ -1,0 +1,54 @@
+## Interpolate annual values for all PowertrainsAndFuels-new extdata
+[Rick Donnelly](mailto:rick.donnelly@wsp.com) | _WSP_ | `r date()`
+```{r init, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse); library(knitr)
+options(width = 98)
+```
+
+<br>
+Many of the PowertrainsAndFuels extdata obtained from Oregon DOT includes values in five-year intervals. The CI tests assume the data are in annual series, so we will replace the data to match this requirement. Start by finding the CSV files in question.
+```{r set_path}
+PATH <- "~/Models/VisionEval-Dev/sources/modules/VEPowertrainsAndFuels-new/inst/extdata"
+all_csv <- Sys.glob(file.path(PATH, "*.csv"))
+```
+
+The year is coded in all of the files, but is not consistently named. Thus, we'll specify the column names that qualify as such.
+```{r finger_colnames}
+possible_colnames <- c("Year", "ModelYear")
+```
+
+With those preliminaries out the way let's update the data. We'll process each of the CSV files in turn, checking first whether it needs to be processed. Some files are already in annual time series, so don't touch them. For those that are not start by enumerating the full range of annual steps, which we'll merge with the existing data. Those intermediate years will have missing values in all of the remaining fields. We can use the `na_interpolate` function in the `imputeTS` package to make short order of the process. We finish by overwriting the original file with the updated contents.
+```{r process_files}
+for (this_csv in all_csv) {
+  contents <- readr::read_csv(this_csv, col_types = cols())
+  
+  # Make sure at least one of our target field names is present, and that there is only one such field
+  target_field <- intersect(possible_colnames, colnames(contents))
+  if (length(target_field) != 1) {
+    stop(paste("In", this_csv, "target fields found=", target_field))
+  }
+  
+  # Find out what intervals are coded in the file
+  coded_intervals <- contents[[target_field]]
+  range <- max(coded_intervals) - min(coded_intervals)
+  if (range > length(coded_intervals)) {
+    print(paste("Interpolating missing years in", basename(this_csv)), quote = FALSE)
+    # If we do detect one or more gaps in the annual series then create a second
+    # tibble with only the years
+    dummy <- tibble(!!target_field := min(coded_intervals):max(coded_intervals))
+    
+    # Now merge these years with the original data, which will create rows with missing values for all of
+    # the columns. Then we'll replace all missing values in one pass.
+    add_missing_years <- left_join(dummy, contents, by = target_field)
+    interpolated <- imputeTS::na_interpolation(add_missing_years)
+    
+    # Replace the original data with the new annual time series
+    readr::write_csv(interpolated, this_csv)
+  } else {
+    print(paste(basename(this_csv), "is already coded in annual steps"), quote = FALSE)
+  }
+}
+```
+
+We see that in one case that there were no non-missing values in one of the fields, so `na_interpolate_ had nothing to work with. Otherwise the results appear to be robust.
+

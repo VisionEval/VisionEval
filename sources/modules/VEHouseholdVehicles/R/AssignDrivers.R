@@ -5,7 +5,7 @@
 #<doc>
 #
 ## AssignDrivers Module
-#### September 6, 2018
+#### July 8, 2020
 #
 #This module assigns drivers by age group to each household as a function of the numbers of persons and workers by age group, the household income, land use characteristics, and public transit availability. Users may specify the relative driver licensing rate relative to the model estimation data year in order to account for observed or projected changes in licensing rates.
 #
@@ -161,6 +161,7 @@ DriverModel_ls <- list(
   Metro = MetroDriverModel_ls,
   NonMetro = NonMetroDriverModel_ls
 )
+rm(D_df)
 
 #Save the driver choice model
 #----------------------------
@@ -182,7 +183,7 @@ DriverModel_ls <- list(
 #' }
 #' @source AssignDrivers.R script.
 "DriverModel_ls"
-usethis::use_data(DriverModel_ls, overwrite = TRUE)
+visioneval::savePackageDataset(DriverModel_ls, overwrite = TRUE)
 
 
 #================================================
@@ -201,29 +202,29 @@ AssignDriversSpecifications <- list(
     item(
       NAME =
         items(
-          "Drv15to19AdjProp",
-          "Drv20to29AdjProp",
-          "Drv30to54AdjProp",
-          "Drv55to64AdjProp",
-          "Drv65PlusAdjProp"),
-      FILE = "region_hh_driver_adjust_prop.csv",
+          "DrvPerPrsn15to19",
+          "DrvPerPrsn20to29",
+          "DrvPerPrsn30to54",
+          "DrvPerPrsn55to64",
+          "DrvPerPrsn65Plus"),
+      FILE = "region_hh_ave_driver_per_capita.csv",
       TABLE = "Region",
       GROUP = "Year",
-      TYPE = "double",
-      UNITS = "proportion",
+      TYPE = "compound",
+      UNITS = "DRV/PRSN",
       NAVALUE = -1,
       SIZE = 0,
-      PROHIBIT = c("NA", "< 0"),
+      PROHIBIT = c("NA", "< 0", "> 1"),
       ISELEMENTOF = "",
-      UNLIKELY = c("> 1.5"),
+      UNLIKELY = "",
       TOTAL = "",
       DESCRIPTION =
         items(
-          "Target proportion of unadjusted model number of drivers 15 to 19 years old (1 = no adjustment)",
-          "Target proportion of unadjusted model number of drivers 20 to 29 years old (1 = no adjustment)",
-          "Target proportion of unadjusted model number of drivers 30 to 54 years old (1 = no adjustment)",
-          "Target proportion of unadjusted model number of drivers 55 to 64 years old (1 = no adjustment)",
-          "Target proportion of unadjusted model number of drivers 65 or older (1 = no adjustment)"
+          "Target ratio of drivers to persons in the 15 to 19 years old age group",
+          "Target ratio of drivers to persons in the 20 to 29 years old age group",
+          "Target ratio of drivers to persons in the 30 to 54 years old age group",
+          "Target ratio of drivers to persons in the 55 to 64 years old age group",
+          "Target ratio of drivers to persons in the 65 or older age group"
         ),
       OPTIONAL = TRUE
     )
@@ -233,16 +234,16 @@ AssignDriversSpecifications <- list(
     item(
       NAME =
         items(
-          "Drv15to19AdjProp",
-          "Drv20to29AdjProp",
-          "Drv30to54AdjProp",
-          "Drv55to64AdjProp",
-          "Drv65PlusAdjProp"),
+          "DrvPerPrsn15to19",
+          "DrvPerPrsn20to29",
+          "DrvPerPrsn30to54",
+          "DrvPerPrsn55to64",
+          "DrvPerPrsn65Plus"),
       TABLE = "Region",
       GROUP = "Year",
-      TYPE = "double",
-      UNITS = "proportion",
-      PROHIBIT = c("NA", "< 0"),
+      TYPE = "compound",
+      UNITS = "DRV/PRSN",
+      PROHIBIT = c("NA", "< 0", "> 1"),
       ISELEMENTOF = "",
       OPTIONAL = TRUE
     ),
@@ -451,7 +452,7 @@ AssignDriversSpecifications <- list(
 #' }
 #' @source AssignDrivers.R script.
 "AssignDriversSpecifications"
-usethis::use_data(AssignDriversSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(AssignDriversSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -496,11 +497,11 @@ AssignDrivers <- function(L) {
   for (OutName in OutBinNames_) {
     Out_ls$Year$Household[[OutName]] <- rep(0, NumHh)
   }
-  #Identify vector of age and worker bins
-  Bins_ <- c("15to19", "20to29", "30to54", "55to64", "65Plus")
 
   #Function to make a model dataset for an age bin
   #-----------------------------------------------
+  Hh_df <- VE2001NHTS::Hh_df
+  
   makeModelDataset <- function(Bin) {
     # Make data frame for households that have persons in the age group
     Hh_df <- data.frame(
@@ -542,56 +543,80 @@ AssignDrivers <- function(L) {
     Per_df
   }
 
+  #Define a function to adjust drivers to match target ratio
+  #---------------------------------------------------------
+  adjustDrivers <-
+    function(Driver_, DriverProb_, TargetDriverProp) {
+      NumDriver <- sum(Driver_)
+      TargetNumDriver <- round(length(Driver_) * TargetDriverProp)
+      NumDriverChg <- TargetNumDriver - NumDriver
+      if (NumDriverChg > 0) {
+        IsChgCandidate_ <- which(Driver_ == 0)
+        AddDriverIdx_ <-
+          sample(IsChgCandidate_, NumDriverChg, prob = DriverProb_[IsChgCandidate_])
+        Driver_[AddDriverIdx_] <- 1
+      }
+      if (NumDriverChg < 0) {
+        IsChgCandidate_ <- which(Driver_ == 1)
+        RmDriverIdx_ <-
+          sample(IsChgCandidate_, abs(NumDriverChg), prob = 1 - DriverProb_[IsChgCandidate_])
+        Driver_[RmDriverIdx_] <- 0
+      }
+      Driver_
+    }
+
   #Assign drivers to households by age bin
   #---------------------------------------
+  DriverModel_ls <- VEHouseholdVehicles::DriverModel_ls
   for (Bin in Bins_) {
+    # Name the bin
     BinName <- paste0("Drv", Bin)
     # Create model dataset for Bin
     Per_df <- makeModelDataset(Bin)
-    # Get the driver age category adjustment prop
-    if (!is.null(L$Year$Region[[paste0("Drv", Bin, "AdjProp")]])) {
-      DrvAdjProp <- L$Year$Region[[paste0("Drv", Bin, "AdjProp")]]
-    } else {
-      DrvAdjProp <- 1
-    }
-    # Run metropolitan model
-    MetroPer_df <- Per_df[Per_df$LocType == "Urban",]
-    Driver_ <- applyBinomialModel(
-      DriverModel_ls$Metro,
-      MetroPer_df
-    )
-    if (DrvAdjProp != 1) {
-      DriverProp <- DrvAdjProp * sum(Driver_) / length(Driver_)
-      Driver_ <- applyBinomialModel(
+    # Initialize a vector to identify drivers (1) and non-drivers (0)
+    Driver_ <- rep(0, nrow(Per_df))
+    # Identify whether person is in an urban location type
+    IsUrban_ <- Per_df$LocType == "Urban"
+    # Run metropolitan model for persons in urban areas
+    if (any(IsUrban_)) {
+      Driver_[IsUrban_] <- applyBinomialModel(
         DriverModel_ls$Metro,
-        MetroPer_df,
-        TargetProp = DriverProp
+        Per_df[IsUrban_,]
       )
     }
-    NumDrivers_Hh <- tapply(Driver_, MetroPer_df$HhId, sum)
-    HhIdx <- match(names(NumDrivers_Hh), L$Year$Household$HhId)
-    Out_ls$Year$Household[[BinName]][HhIdx] <- unname(NumDrivers_Hh)
-    rm(MetroPer_df, Driver_, NumDrivers_Hh, HhIdx)
-    # Run nonmetropolitan model(if any)
-    if (any(Per_df$LocType!="Urban")) {
-    NonMetroPer_df <- Per_df[Per_df$LocType != "Urban",]
-    Driver_ <- applyBinomialModel(
-      DriverModel_ls$NonMetro,
-      NonMetroPer_df
-    )
-    if (DrvAdjProp != 1) {
-      DriverProp <- DrvAdjProp * sum(Driver_) / length(Driver_)
-      Driver_ <- applyBinomialModel(
+    # Run non-metropolitan model for persons in rural and town areas
+    if (any(!IsUrban_)) {
+      Driver_[!IsUrban_] <- applyBinomialModel(
         DriverModel_ls$NonMetro,
-        NonMetroPer_df,
-        TargetProp = DriverProp
+        Per_df[!IsUrban_,]
       )
     }
-    NumDrivers_Hh <- tapply(Driver_, NonMetroPer_df$HhId, sum)
+    #Adjust drivers if there is a target driver proportion for the bin
+    TargetDriverPropName <- paste0("DrvPerPrsn", Bin)
+    if (!is.null(L$Year$Region[[TargetDriverPropName]])) {
+      TargetDriverProp <- L$Year$Region[[TargetDriverPropName]]
+      DriverProb_ <- rep(0, length(Driver_))
+      if (any(IsUrban_)) {
+        DriverProb_[IsUrban_] <- applyBinomialModel(
+          Model_ls = DriverModel_ls$Metro,
+          Data_df = Per_df[IsUrban_,],
+          ReturnProbs = TRUE
+        )
+      }
+      if (any(!IsUrban_)) {
+        DriverProb_[!IsUrban_] <- applyBinomialModel(
+          Model_ls = DriverModel_ls$NonMetro,
+          Data_df = Per_df[!IsUrban_,],
+          ReturnProbs = TRUE
+        )
+      }
+      Driver_ <- adjustDrivers(Driver_, DriverProb_, TargetDriverProp)
+      rm(DriverProb_, TargetDriverProp)
+    }
+    NumDrivers_Hh <- tapply(Driver_, Per_df$HhId, sum)
     HhIdx <- match(names(NumDrivers_Hh), L$Year$Household$HhId)
     Out_ls$Year$Household[[BinName]][HhIdx] <- unname(NumDrivers_Hh)
-    rm(NonMetroPer_df, Driver_, NumDrivers_Hh, HhIdx)
-    }
+    rm(BinName, Per_df, Driver_, IsUrban_, TargetDriverPropName, NumDrivers_Hh, HhIdx)
   }
 
   #Tabulate number of driving age persons in each household

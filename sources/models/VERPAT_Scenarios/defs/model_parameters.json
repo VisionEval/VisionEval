@@ -10,12 +10,21 @@
   },
   {
     "NAME": "ScenarioInputFolder",
-    "VALUE": "scenario_inputs",
+    "VALUE": "scenario_root",
     "TYPE": "character",
     "UNITS": "NA",
     "PROHIBIT": "NA",
     "SIZE": 20,
     "ISELEMENTOF": ""
+  },
+  {
+    "NAME" : "ScenarioManagerFile",
+    "VALUE": "verpat_scenario_manager.csv",
+   "TYPE": "character",
+   "UNITS": "NA",
+   "PROHIBIT": "NA",
+   "SIZE": 30,
+   "ISELEMENTOF": ""
   },
   {
     "NAME" : "ScenarioOutputFolder",

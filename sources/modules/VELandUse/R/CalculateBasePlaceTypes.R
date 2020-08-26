@@ -16,9 +16,13 @@
 #=============================================
 
 ## Suggest to do : Household allocation model estimation
-load("./data/HhAllocationModelCoeff.rda")
-HhAllocationModelCoeff_df <- HhAllocationModelCoeff
-rm(HhAllocationModelCoeff)
+if ( dir.exists("data-raw") ) {
+  load("data-raw/HhAllocationModelCoeff.rda")
+  HhAllocationModelCoeff_df <- HhAllocationModelCoeff
+  rm(HhAllocationModelCoeff)
+} else {
+  load("data/HhAllocationModelCoeff_df.rda")
+}
 
 # Save the household allocation model coefficients
 #--------------------------------------------------
@@ -37,7 +41,7 @@ rm(HhAllocationModelCoeff)
 #' }
 #' @source CalculateBasePlaceTypes.R script.
 "HhAllocationModelCoeff_df"
-usethis::use_data(HhAllocationModelCoeff_df, overwrite = TRUE)
+visioneval::savePackageDataset(HhAllocationModelCoeff_df, overwrite = TRUE)
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -264,7 +268,7 @@ CalculateBasePlaceTypesSpecifications <- list(
 #' }
 #' @source CalculateBasePlaceTypes.R script.
 "CalculateBasePlaceTypesSpecifications"
-usethis::use_data(CalculateBasePlaceTypesSpecifications, overwrite = TRUE)
+visioneval::savePackageDataset(CalculateBasePlaceTypesSpecifications, overwrite = TRUE)
 
 
 #=======================================================
@@ -638,6 +642,7 @@ CalculateBasePlaceTypes <- function(L) {
   set.seed(L$G$Seed)
 
   # Assign area types to households
+  HhAllocationModelCoeff_df <- VELandUse::HhAllocationModelCoeff_df
   Hhlds$AreaType <- runLogit(HhldPop = Hhlds[ ,Ag], ModelData = Hhlds[ ,ModelVar_],
                              ModelCoeffs = HhAllocationModelCoeff_df, TargetPop = Target_At,
                             TargetGroups = ModelCoeffs_corresp[,2])

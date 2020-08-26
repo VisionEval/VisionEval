@@ -67,7 +67,8 @@ library(visioneval)
 library(plot3D)
 
 #Load 5Ds data frame
-D_df <- readRDS("5Ds_df.rds")
+#D_df <- readRDS("5Ds_df.rds")
+D_df <- VESimLandUseData::SimLandUseData_df
 
 
 #==================================================
@@ -148,12 +149,12 @@ UzaToPlot_ <- c(
   "Atlanta, GA",
   "Jacksonville, FL",
   "Cincinnati, OH",
-  "Dallas--Fort Worth--Arlington, TX",
+  "Dallas-Fort Worth-Arlington, TX",
   "Baltimore, MD",
-  "Denver--Aurora, CO",
+  "Denver-Aurora, CO",
   "Portland, OR",
-  "San Francisco--Oakland, CA",
-  "New York--Newark, NY"
+  "San Francisco-Oakland, CA",
+  "New York-Newark, NY"
 )
 ```
 
@@ -513,7 +514,7 @@ calcAveDensity <- function(AveDensity_, PropActivity_) {
 AdjDenDist_df <- adjDenDist(
   D1DGrp_Ua_ls[["Portland, OR"]]$PropActivity, 
   D1DGrp_Ua_ls[["Portland, OR"]]$AveDensity, 
-  ActDen_Ua["New York--Newark, NY"], 
+  ActDen_Ua["New York-Newark, NY"], 
   D1DGrp_ls$AveDensity)
 ```
 
@@ -528,8 +529,8 @@ plot(D1DGrp_Ua_ls[["Portland, OR"]]$PropActivity,
 addSmoothLine(1:20, D1DGrp_Ua_ls[["Portland, OR"]]$PropActivity)
 points(1:20, AdjDenDist_df$ActProp, col="red")
 addSmoothLine(1:20, AdjDenDist_df$ActProp, col="red")
-points(1:20, D1DGrp_Ua_ls[["New York--Newark, NY"]]$PropActivity, col = "green")
-addSmoothLine(1:20, D1DGrp_Ua_ls[["New York--Newark, NY"]]$PropActivity, col = "green")
+points(1:20, D1DGrp_Ua_ls[["New York-Newark, NY"]]$PropActivity, col = "green")
+addSmoothLine(1:20, D1DGrp_Ua_ls[["New York-Newark, NY"]]$PropActivity, col = "green")
 legend("topleft", lty = 1, col = c("black", "red", "green"), bty = "n",
        legend = c("Portland Density", "Portland at New York Density", "New York Density"))
 rm(AdjDenDist_df)
@@ -1318,7 +1319,7 @@ simulateAndCompare("Cincinnati, OH")
 The following 2 figures compare the simulated and observed values for the Dallas--Fort Worth--Arlington, TX urbanized area. The first figure compares the overall density, diversity, and destination accessibility distributions. The second figure compares the joint diversity and density distribution and the joint destination accessibility and density distribution.
 
 ```{r echo=FALSE}
-simulateAndCompare("Dallas--Fort Worth--Arlington, TX")
+simulateAndCompare("Dallas-Fort Worth-Arlington, TX")
 ```
 
 The following 2 figures compare the simulated and observed values for the Baltimore, MD urbanized area. The first figure compares the overall density, diversity, and destination accessibility distributions. The second figure compares the joint diversity and density distribution and the joint destination accessibility and density distribution.
@@ -1330,7 +1331,7 @@ simulateAndCompare("Baltimore, MD")
 The following 2 figures compare the simulated and observed values for the Denver--Aurora, CO urbanized area. The first figure compares the overall density, diversity, and destination accessibility distributions. The second figure compares the joint diversity and density distribution and the joint destination accessibility and density distribution.
 
 ```{r echo=FALSE}
-simulateAndCompare("Denver--Aurora, CO")
+simulateAndCompare("Denver-Aurora, CO")
 ```
 
 The following 2 figures compare the simulated and observed values for the Portland, OR urbanized area. The first figure compares the overall density, diversity, and destination accessibility distributions. The second figure compares the joint diversity and density distribution and the joint destination accessibility and density distribution.
@@ -1342,11 +1343,11 @@ simulateAndCompare("Portland, OR")
 The following 2 figures compare the simulated and observed values for the San Francisco--Oakland, CA urbanized area. The first figure compares the overall density, diversity, and destination accessibility distributions. The second figure compares the joint diversity and density distribution and the joint destination accessibility and density distribution.
 
 ```{r echo=FALSE}
-simulateAndCompare("San Francisco--Oakland, CA")
+simulateAndCompare("San Francisco-Oakland, CA")
 ```
 
 The following 2 figures compare the simulated and observed values for the New York--Newark, NY urbanized area. The first figure compares the overall density, diversity, and destination accessibility distributions. The second figure compares the joint diversity and density distribution and the joint destination accessibility and density distribution.
 
 ```{r echo=FALSE}
-simulateAndCompare("New York--Newark, NY")
+simulateAndCompare("New York-Newark, NY")
 ```
