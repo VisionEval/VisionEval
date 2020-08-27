@@ -330,7 +330,6 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
         }
       }
     }
-    rm(ModelState_ls, pos = 1)
     Out_ls[[tb]] <- data.frame(Out_ls[[tb]])
   }
   #Identify missing datasets
