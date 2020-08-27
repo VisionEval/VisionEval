@@ -1,9 +1,15 @@
 #!/bin/env Rscript
 
 # Load and install R package dependencies
+# These get put into ve-lib on Travis (since we don't have a separate
+# dev-lib there). They also become part of the package cache.
 
 if ( ! suppressWarnings(require("yaml")) ) {
   cat("Installing YAML package\n")
+  install.packages("yaml", repos="https://cloud.r-project.org", dependencies=NA)
+}
+if ( ! suppressWarnings(require("roxygen2")) ) {
+  cat("Installing roxygen2 package\n")
   install.packages("yaml", repos="https://cloud.r-project.org", dependencies=NA)
 }
 
