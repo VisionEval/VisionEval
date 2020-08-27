@@ -688,7 +688,14 @@ requireNamespace("stringr")
 # are placed into measureEnv (whence they will later be summarized)
 #
 makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
-  GeoValue <- Geography["Value"]
+  if ( Geography["Type"] != "Region" ) {
+    GeoValue <- Geography["Value"]
+    byRegion <- FALSE
+  } else {
+    GeoValue <- ""
+    byRegion <- TRUE # skip processing "By" specifications
+    # Yields one less dimension on results from summarizeDatasets
+  }
   measureName <- measureSpec$Name
 
   # Skip or include measures based on presence of required Dataset
@@ -710,35 +717,45 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
   } else
   if ( "Summarize" %in% names(measureSpec) ) {
     sumSpec <- measureSpec$Summarize
-    if ( ! "By" %in% names(sumSpec) ||
-         ! Geography["Type"] %in% sumSpec$By ) {
-      stop(paste("Script wants Geography Type ",Geography["Type"]," in 'By' but got ",sumSpec$By,"",sep="'"))
+    if ( ! byRegion ) {
+      if ( ! "By" %in% names(sumSpec) ||
+           ! Geography["Type"] %in% sumSpec$By ) {
+        stop(paste("Script wants Geography Type ",Geography["Type"]," in 'By' but got ",sumSpec$By,"",sep="'"))
+      }
     }
     usingBreaks <- "Breaks" %in% names(sumSpec) && ! is.null(sumSpec$Breaks)
     usingKey <- "Key" %in% names(sumSpec) && ! is.null(sumSpec$Key)
     measure <- visioneval::summarizeDatasets(
         Expr = sumSpec$Expr,
         Units = sumSpec$Units,
-        By_ = sumSpec$By,
+        By_ = if ( ! byRegion || usingBreaks ) sumSpec$By else NULL,
         Breaks_ls = if ( usingBreaks) sumSpec$Breaks else NULL,
         Table = sumSpec$Table,
         Key = if ( usingKey ) sumSpec$Key else NULL,
         Group = thisYear,
         QueryPrep_ls = QPrep_ls
       )
-    if ( ! usingBreaks ) {
-      measure <- measure[GeoValue]
+    if ( ! byRegion && ! usingBreaks ) {
+      measure <- measure[GeoValue]  # reduce to scalar value (one geographical unit)
       names(measure) <- measureName
     } else {
-      # WARNING: even though possible in theory, as written this
-      # won't work with breaks from more than one Dataset
-      measure <- measure[,GeoValue]
-      if ( "BreakNames" %in% names(sumSpec) ) {
-        breakNames <- sumSpec$BreakNames[[sumSpec$By[1]]]
-      } else {
-        breakNames <- as.character(sumSpec$Breaks[[sumSpec$By[1]]])
+      if ( ! byRegion ) { # need to reduce to vector for GeoValue
+        measure <- measure[,GeoValue]
       }
-      names(measure) <- paste(measureName,c("min",breakNames),sep=".")
+      if ( usingBreaks ) {
+        if ( "BreakNames" %in% names(sumSpec) ) {
+          breakNames <- sumSpec$BreakNames[[sumSpec$By[1]]]
+        } else {
+          breakNames <- as.character(sumSpec$Breaks[[sumSpec$By[1]]])
+        }
+        names(measure) <- paste(measureName,c("min",breakNames),sep=".")
+      } else {
+        if ( length(measure) != 1 ) {
+          message("Processing measure: ",measureName)
+          stop("Program error: expected scalar measure, got vector:",measure)
+        }
+        names(measure) <- measureName
+      }
     }
   } else
   {
@@ -802,8 +819,8 @@ makeMeasureDataFrame <- function(measureEnv) {
 #' left out of the VEmodel$groups, it will not be processed.
 #'
 #' @param Geography a named character vector with elements "Type" (currently supports
-#' either "Azone" or "Marea") and "Value" (any valid value for the corresponding Type
-#' from the model's geo.csv file).
+#' either "Region", "Azone" or "Marea") and "Value" (any valid value for the corresponding Type
+#' from the model's geo.csv file; for Region, an empty string).
 #' @param SpecFile is the file name of the file containing the query. Relative path
 #' interpreted relative to the model path (so you can put it next to run_model.R)
 #' @param outputFile template for generating scenario output file
@@ -824,8 +841,8 @@ ve.model.query <- function(
   if ( missing(Geography) ||
     ( ! is.character(Geography) ) ||
     ( ! "Type" %in% names(Geography) ) ||
-    ( ! Geography["Type"] %in% c("Azone","Marea") ) ||
-    ( ! "Value" %in% names(Geography) ) )
+    ( ! Geography["Type"] %in% c("Regions", "Azone","Marea") ) ||
+    ( Geography["Type"] != "Region" && ! "Value" %in% names(Geography) ) )
   {
     message("Geography parameter is not set up right.")
     cat("Geography should be a two-element named vector, with a structure like this:\n")
