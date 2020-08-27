@@ -667,6 +667,373 @@ ve.model.extract <- function(
   invisible(results)
 }
 
+# Query.R
+# This script provides illustrative functions for doing Datastore summary queries, using a SpecFile
+
+###########################################################################
+# Required libraries
+# Need to affix namespace resolution operator to use functions
+
+requireNamespace("stringr")
+
+###########################################################################
+# FUNCTION DEFINITIONS - helpers
+###########################################################################
+
+###########################################################################
+# FUNCTION: makeMeasure
+#
+# Process a measureSpec for a Year and Geography
+# Return the measureName, with the side effect that the value(s) of the measure
+# are placed into measureEnv (whence they will later be summarized)
+#
+makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
+  GeoValue <- Geography["Value"]
+  measureName <- measureSpec$Name
+
+  # Skip or include measures based on presence of required Dataset
+  if ( "Require" %in% names(measureSpec) ) {
+    if ( ! visioneval::isDatasetPresent(measureSpec$Require["Dataset"], measureSpec$Require["Table"], thisYear, QPrep_ls) ) {
+      return(paste(measureName,"(SKIPPED due to Require:)"))
+    }
+  } else
+  if ( "RequireNot" %in% names(measureSpec) ) {
+    if ( visioneval::isDatasetPresent(measureSpec$Require["Dataset"], measureSpec$Require["Table"], thisYear, QPrep_ls) ) {
+      return(paste(measureName,"(SKIPPED due to RequireNot:)"))
+    }
+  }
+
+  # Compute the measure based on the measureSpec     
+  if ( "Function" %in% names(measureSpec) ) {
+    measure <- eval(parse(text=measureSpec$Function), envir=measureEnv)
+    names(measure) <- measureName
+  } else
+  if ( "Summarize" %in% names(measureSpec) ) {
+    sumSpec <- measureSpec$Summarize
+    if ( ! "By" %in% names(sumSpec) ||
+         ! Geography["Type"] %in% sumSpec$By ) {
+      stop(paste("Script wants Geography Type ",Geography["Type"]," in 'By' but got ",sumSpec$By,"",sep="'"))
+    }
+    usingBreaks <- "Breaks" %in% names(sumSpec) && ! is.null(sumSpec$Breaks)
+    usingKey <- "Key" %in% names(sumSpec) && ! is.null(sumSpec$Key)
+    measure <- visioneval::summarizeDatasets(
+        Expr = sumSpec$Expr,
+        Units = sumSpec$Units,
+        By_ = sumSpec$By,
+        Breaks_ls = if ( usingBreaks) sumSpec$Breaks else NULL,
+        Table = sumSpec$Table,
+        Key = if ( usingKey ) sumSpec$Key else NULL,
+        Group = thisYear,
+        QueryPrep_ls = QPrep_ls
+      )
+    if ( ! usingBreaks ) {
+      measure <- measure[GeoValue]
+      names(measure) <- measureName
+    } else {
+      # WARNING: even though possible in theory, as written this
+      # won't work with breaks from more than one Dataset
+      measure <- measure[,GeoValue]
+      if ( "BreakNames" %in% names(sumSpec) ) {
+        breakNames <- sumSpec$BreakNames[[sumSpec$By[1]]]
+      } else {
+        breakNames <- as.character(sumSpec$Breaks[[sumSpec$By[1]]])
+      }
+      names(measure) <- paste(measureName,c("min",breakNames),sep=".")
+    }
+  } else
+  {
+    stop("Invalid Measure Specification")
+  }
+  
+  # Stash the measure results in measureEnv
+  for ( nm in names(measure) ) {
+    msr <- measure[nm]
+    attributes(msr) <- list(
+      Units = measureSpec$Units,
+      Description = measureSpec$Description
+    )
+    assign(nm,msr,env=measureEnv)
+  }
+
+  # Return the name(s), for output tracking
+  return(names(measure))
+}
+
+###########################################################################
+# FUNCTION: makeMeasureDataFrame
+#
+# Extract the measures made by makeMeasure from measureEnv and put them in a
+# data.frame suitable for writing to the output file
+#
+makeMeasureDataFrame <- function(measureEnv) {
+  Measures_     <- objects(measureEnv)
+  Values_       <- sapply(Measures_, get, envir=measureEnv)
+  Units_        <- unname(sapply(Measures_, function(x) attributes(get(x,envir=measureEnv))$Units))
+  Description_  <- unname(sapply(Measures_, function(x) attributes(get(x,envir=measureEnv))$Description))
+  Data_df       <- data.frame(
+    Measure     = Measures_,
+    thisYear    = Values_,
+    Units       = Units_,
+    Description = Description_
+  )
+  # The following addresses a unique naming standard in original PBOT script
+  Data_df$Measure <- gsub("_Ma", "_", Data_df$Measure)
+  Data_df$Measure <- gsub("_$", "", Data_df$Measure)
+  Data_df$Measure <- gsub("_\\.", ".", Data_df$Measure)
+  rownames(Data_df) <- NULL
+  return(Data_df)
+}
+
+###########################################################################
+# FUNCTION: ve.model.query
+#
+# VEModel function to process a query specification against a Datastore
+#
+
+#PROCESS QUERY DEFINITIONS A DATASTORE
+#================================================================
+#' Process a set of query definitions against the model's final Datastore
+#'
+#' \code{ve.model.query} an R6 function for VEModel that processes query specifications
+#' using the model's Datastore
+#'
+#' This function will create a set of output files with summary metrics in it. It will
+#' compute the specs for all the years in the Datastore, but if one of those years is
+#' left out of the VEmodel$groups, it will not be processed.
+#'
+#' @param Geography a named character vector with elements "Type" (currently supports
+#' either "Azone" or "Marea") and "Value" (any valid value for the corresponding Type
+#' from the model's geo.csv file).
+#' @param SpecFile is the file name of the file containing the query. Relative path
+#' interpreted relative to the model path (so you can put it next to run_model.R)
+#' @param outputFile template for generating scenario output file
+#' @param saveTo sub-directory of model path into which to write output files (defaults to "output" like extract)
+#' @param log, one of c("WARN","ERROR") for level at which to generate trace details (default "ERROR")
+#' @return A character vector with the names of the .csv files containing the computed measures.
+#' @export
+ve.model.query <- function(
+  Geography,
+  SpecFile = "Query-Spec.R",
+  outputFile = "Measures_%scenario%_%years%_%geography%.csv",
+  #   Default is a long-but-informative filename
+  saveTo="output", # an 
+  log="ERROR"
+  )
+{
+  # TODO: Geography "Value" should eventually be screened against model's 'defs/geo.csv'
+  if ( missing(Geography) ||
+    ( ! is.character(Geography) ) ||
+    ( ! "Type" %in% names(Geography) ) ||
+    ( ! Geography["Type"] %in% c("Azone","Marea") ) ||
+    ( ! "Value" %in% names(Geography) ) )
+  {
+    message("Geography parameter is not set up right.")
+    cat("Geography should be a two-element named vector, with a structure like this:\n")
+    cat("  Geography=c(Type='Marea',Value='RVMPO')\n")
+    cat("Type can be one of c('Azone','Marea'), Value must be consistent with defs/geo.csv\n")
+    return(character(0))
+  }
+
+  # Get SecenarioRoot and Scenarios using modelPaths
+  # We'll look for the SpecFile in path or dirname(path)
+  dataPath <- self$modelPath[self$stageCount]
+  ScenarioRoot <- dirname(dataPath)
+
+  Scenarios <- normalizePath(dataPath,mustWork=FALSE)
+  sd <- dir(Scenarios)
+  if (
+    self$status != "Complete" ||
+    length(grep("Datastore",sd))==0 ||
+    length(grep("ModelState.Rda",sd))== 0
+  ) {
+    message("Model appears not to have been run yet: ",self$status)
+    return(character(0))
+  }
+
+  # Years are those defined for the model, less any that are not selected via $groups
+  Years <- self$runParams$Years
+  groups <- self$groups
+  print(groups)
+  print(Years %in% groups$Group[groups$Selected=="Yes"])
+  Years <- Years[Years %in% groups$Group[groups$Selected=="Yes"]]
+  if ( length(Years)==0 || any(is.na(Years)) ) {
+    message("Invalid Years specified")
+    cat("No years appear to be selected (check VEmodel$groups)\n")
+    cat("Model has these Years available:",self$runParams$Years,"\n")
+    return(character(0))
+  }
+
+  # Gather the specifications, if they're not already there
+  # We will read SpecFile if it exists, and if not, use PMSpecifications
+  # already defined in the current R environment.
+  if ( ! is.character(SpecFile) || ! nzchar(SpecFile[1]) ) {
+    message("Invalid SpecFile")
+    cat("Provide the name, with optional path, to the file with the Query Specifications.\n")
+    return(character(0))
+  }
+  for ( specName in unique(c(SpecFile,"Query-Spec.R")) ) {
+    if ( !file.exists( SpecFile ) ) {
+      SpecFile <- file.path(dataPath,SpecFile)
+      if ( ! file.exists( SpecFile ) ) {
+        SpecFile <- file.path(ScenarioRoot,SpecFile)
+      }
+    }
+    if ( file.exists(SpecFile) ) break
+  }
+  SpecFile = normalizePath(SpecFile,winslash="/",mustWork=FALSE)
+  if ( ! file.exists(SpecFile) ) {
+    message("Specification File ",SpecFile," does not exist")
+    return(character(0))
+  } else {
+    specEnv <- new.env()
+    sys.source(SpecFile,envir=specEnv)
+    specs <- objects(specEnv)
+    if ( length(specs) != 1 ) {
+      print(specs)
+      message("Must define a single specification list in ",SpecFile)
+      return(character(0))
+    }
+    PMSpecifications <- get(specs,envir=specEnv)
+    displaySpec <- if ( exists("ve.runtime") ) {
+      sub(ve.runtime,"",SpecFile)
+    } else {
+      SpecFile
+    }
+    message(paste("Specification File: ",displaySpec,"",sep="'"))
+    rm(specEnv)
+  }
+
+  # Now run the query
+  outputFiles <- doQuery(
+    Scenarios=Scenarios,
+    Years=Years,
+    Geography=Geography,
+    Specifications=PMSpecifications,
+    outputFile=outputFile,
+    saveTo=saveTo,
+    DatastoreType=self$runParams$DatastoreType,
+    log=log.level(log)
+  )
+
+  return(outputFiles)
+}
+
+############################################################
+# PROCESS QUERY SPECIFICATIONS ON DATASTORE
+#
+doQuery <- function (
+  Scenarios,
+  Years,
+  Geography,
+  Specifications,
+  outputFile,
+  saveTo,
+  DatastoreType,
+  log=futile.logger(futile.logger::WARN)
+)
+{
+  if (
+    missing(Scenarios) ||
+    missing(Years) ||
+    missing(Geography) ||
+    missing(Specifications) ||
+    missing(outputFile) ||
+    missing(DatastoreType)
+  ) {
+    message("Invalid Setup for doQuery function")
+    return(character(0))
+  }
+    
+  ###########################################################################
+  # Finally, Process the Specification list
+  ###########################################################################
+
+  # Get down to business
+
+  old.wd <- getwd()
+
+  outputFiles <- character(0)
+  futile.logger::flog.threshold(log)
+  tryCatchLog::tryCatchLog(
+    {
+      for ( scenario in Scenarios ) { # scenario contains a path to a working directory with a Datastore in it
+
+        # Move to scenario directory
+        setwd(scenario)
+
+        # Scenario Name for reporting / outputFile
+        scenarioName <- basename(scenario)
+
+        # Confirm what we're working on
+        catYears <- paste(Years,collapse=",")
+        catGeography <- paste(Geography["Type"],"=",paste0("'",Geography["Value"],"'"))
+        cat(
+          "Building measures for:\n",
+          "Scenario:",scenarioName,"\n",
+          "Years:",catYears,"\n",
+          "Geography:",catGeography,"\n"
+        )
+
+        # Backstop to ensure that the saveTo driectory is available
+        save.path <- file.path(scenario,saveTo)
+        if ( ! dir.exists( save.path  ) ) dir.create( save.path )
+
+        # Build the outputFile name using the just reported specifications
+        outputFileToWrite <- stringr::str_replace(outputFile,"%scenario%",scenarioName)
+        outputFileToWrite <- stringr::str_replace(outputFileToWrite,"%years%",catYears)
+        outputFileToWrite <- stringr::str_replace(outputFileToWrite,"%geography%",stringr::str_remove_all(catGeography,"[ ']"))
+        outputFileToWrite <- normalizePath(file.path(save.path,outputFileToWrite),mustWork=FALSE)
+
+        # Prepare for datastore queries
+        #------------------------------
+        prepForQuery <- function() {
+          visioneval::prepareForDatastoreQuery(
+            DstoreLocs_ = c("Datastore"),
+            DstoreType = DatastoreType
+          )
+        }
+        QPrep_ls <- prepForQuery()
+
+        # Create the name of the data.frame that will collect the results
+        Measures_df <- NULL
+
+        # Iterate across the Years in the scenario
+        for ( thisYear in Years ) {
+
+          cat("Working on Year",thisYear,"\n")
+          results <- new.env()
+
+          # Iterate over the measures
+          for ( measureSpec in Specifications ) {
+            cat("Processing ",measureSpec$Name,"...",sep="")
+            measure <- makeMeasure(measureSpec,thisYear,Geography,QPrep_ls,results)
+            if ( length(measure)>1 ) for ( m in measure ) cat( paste0(m,"||") )
+            cat("..Processed\n")
+          }
+
+          # Add this Year's measures to the output data.frame
+          temp <- makeMeasureDataFrame(results)
+          if ( is.null(Measures_df) ) {
+            Measures_df<-temp[,c("Measure","Units","Description","thisYear")]
+          } else {
+            Measures_df<-cbind(Measures_df,thisYear=temp$thisYear )
+          }
+          names(Measures_df)[names(Measures_df)=="thisYear"]<-thisYear
+        }
+
+        # Write the measures for all the Years to the output file
+        cat("Saving measures in",basename(dirname(outputFileToWrite)),"as",basename(outputFileToWrite),"...")
+        write.csv(Measures_df, row.names = FALSE, file = outputFileToWrite)
+        cat("Saved\n")
+        outputFiles <- c(outputFiles,outputFileToWrite)
+      }
+    },
+    error=function(e) cat(geterrmessage(),"\n"),
+    finally=setwd(old.wd)
+  )
+  return(outputFiles)
+}
+
 # Here is VEModel R6 class
 
 VEModel <- R6::R6Class(
@@ -692,7 +1059,8 @@ VEModel <- R6::R6Class(
     copy=ve.model.copy,
     extract=ve.model.extract,
     list=ve.model.list,
-    inputs=ve.model.inputs
+    inputs=ve.model.inputs,
+    query=ve.model.query
   ),
   active = list(
     status=ve.model.status,

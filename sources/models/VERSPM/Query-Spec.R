@@ -33,7 +33,7 @@
 #           units of the corresponding dataset.
 #    "By" - a vector of Datasets along which to break out the Measure. Usually just "Marea".
 #           If doing Breaks, a vector of two, with the first one being the sub-breaks (e.g.
-#           PctMedianIncome).
+#           Income).
 #    "Table" - a vector of one or more tables that will be joined; If Table has more than one
 #           entry, you must specify "Key" to say how they are joined.
 #  OPTIONAL
@@ -208,33 +208,6 @@ PMSpecifications <- list(
     ),
     Units = "Persons",
     Description = "Number of persons residing in mixed use in urban area in RVMPO county"
-  ),
-
-  #Urban Population in mixed use in RVMPO county, broken out by income
-  #-------------------
-  list(
-    Name = "UrbanHhPopLowMFI_Ma",
-    Summarize = list(
-      Expr = "sum(HhSize[LocType == 'Urban'])",
-      Units_ = c(
-        HhSize = "",
-        LocType = "",
-        PctMedianIncome = "",
-        Marea = ""
-      ),
-      By = c(
-        "PctMedianIncome",
-        "Marea"),
-      Breaks = list(
-        PctMedianIncome = c(0.30, 0.50, 0.80, 1.00, 1.20, 2.00)
-      ),
-      BreakNames = list(
-        PctMedianIncome = c("030pct", "050pct", "080pct", "100pct", "120pct","200pct")
-      ),
-      Table = "Household"
-    ),
-    Units = "Persons",
-    Description = "Number of persons in households residing in urban area by Percent Median Family Income"
   ),
 
   #Urban Population in mixed use in RVMPO county, broken out by income

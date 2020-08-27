@@ -1,9 +1,9 @@
 #Measures_Demo.R
 
-#---------------
-#Packages to Use
-#---------------
-library(visioneval)
+#-----------------------------------------
+# visioneval has the query functions in it
+#-----------------------------------------
+requireNamespace("visioneval")
 
 #---------------------------
 #Prepare for datastore query
@@ -12,7 +12,7 @@ library(visioneval)
 #1) Path to datastore
 #2) Functions for reading data given the datastore type
 #3) Datastore listing 
-QPrep_ls <- prepareForDatastoreQuery(
+QPrep_ls <- visioneval::prepareForDatastoreQuery(
   DstoreLocs_ = "Datastore", 
   DstoreType = "RD")
 
@@ -23,7 +23,7 @@ QPrep_ls <- prepareForDatastoreQuery(
 #Archive is organized by group. Within each group folder is a set of CSV files,
 #one for each table in the group. Each CSV file lists the datasets included in
 #the table giving the dataset name, data type, units, and description.
-documentDatastoreTables(
+visioneval::documentDatastoreTables(
   SaveArchiveName = "DatastoreDocumentation", 
   QueryPrep_ls = QPrep_ls)
 
@@ -62,7 +62,7 @@ TablesRequest_ls <- list(
 #Call the readDatastoreTables function using the list of requested tables and
 #datasets
 TableResults_ls <-
-  readDatastoreTables(
+  visioneval::readDatastoreTables(
     Tables_ls = TablesRequest_ls,
     Group = "2020",
     QueryPrep_ls = QPrep_ls
@@ -186,7 +186,7 @@ TableResults_ls$Missing
 #Total household DVMT is in the Household table while the proportion of
 #household DVMT by vehicle access type is in the Vehicle table. The two tables
 #are joined using the HhId.
-summarizeDatasets(
+visioneval::summarizeDatasets(
   Expr = "sum((Dvmt * DvmtProp)[LocType == 'Urban' & VehicleAccess %in% c('LowCarSvc', 'HighCarSvc')])",
   Units_ = c(
     Dvmt = "",
@@ -204,4 +204,3 @@ summarizeDatasets(
   Group = "2020",
   QueryPrep_ls = QPrep_ls
 )
-

@@ -801,7 +801,7 @@ summarizeDatasets <-
       Data_ls <- readDatastoreTables(Tables_ls, Group, QueryPrep_ls)
       #Stop if any of the datasets are missing
       if (length(Data_ls$Missing[[Table]]) != 0) {
-        MissingDsets_ <- paste(Data_ls$Missing[[Table]], collapse = ", ")
+        MissingDsets_ <- paste(names(Data_ls$Missing[[Table]]), collapse = ", ")
         Msg <- paste("The following datasets are not present in the",
                      Table, "table", "in the", Group, "group:", MissingDsets_)
         stop(Msg)
