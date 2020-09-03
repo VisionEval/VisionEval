@@ -9,7 +9,7 @@
 # It's a list with named elements, developed from the following list:
 #
 # REQUIRED:
-# "Name" - the name (less any "_Ma") for the measure in the spreadsheet.
+# "Name" - the name for the measure in the spreadsheet.
 #          Be careful to give each measure a unique name.
 # "Units" - the OUTPUT Units in which the measure is expressed (can be converted/derived)
 # "Description" - the description of this measure (what it intends to do...)
@@ -52,18 +52,16 @@
 # contains exactly one such object definition.
 # So it could also be something like "MyMareaSpecifications <- list("
 
-# NOTE: the sample measures have a lot of PBOT-specific stuff hard-coded into their Expr's
-
 PMSpecifications <- list(
 
   #### DVMT
   #Urban area household DVMT
   #--------------------
   list(
-    Name = "UrbanHhDvmt_Ma",
+    Name = "UrbanHhDvmt",
     Summarize = list(
       Expr = "sum(UrbanHhDvmt)",
-      Units_ = c(
+      Units = c(
         UrbanHhDvmt = "MI/DAY",
         Marea = ""
       ),
@@ -74,33 +72,35 @@ PMSpecifications <- list(
     Description = "Daily vehicle miles traveled by households residing in the urban area"
   ), # every specification (sub-list) has to have a comma after it, except the last one
 
-  #Urban area household DVMT in RVMPO county
-  list(
-    Name = "UrbanHhDvmt_MaAz",
-    Summarize = list(
-      Expr = "sum(Dvmt[Azone == 'RVMPO' & LocType == 'Urban'] )",
-      Units_ = c(
-        Dvmt = "MI/DAY",
-        LocType = "",
-        Azone = "",
-        Marea = ""
-      ),
-      By = "Marea",
-      Table = "Household"
-    ),
-    Units = "Miles per day",
-    Description = "Daily vehicle miles traveled by households residing in the urban area in RVMPO county"
-  ),
 
-  #Urban area household DVMT in mix used in RVMPO county
+# EXAMPLE: the Expr can look at specific subsets when generating the metric
+
+#   #Urban area household DVMT in RVMPO county
+#   list(
+#     Name = "UrbanHhDvmtAz",
+#     Summarize = list(
+#       Expr = "sum(Dvmt[Azone == 'RVMPO' & LocType == 'Urban'] )",
+#       Units = c(
+#         Dvmt = "MI/DAY",
+#         LocType = "",
+#         Azone = "",
+#         Marea = ""
+#       ),
+#       By = "Marea",
+#       Table = "Household"
+#     ),
+#     Units = "Miles per day",
+#     Description = "Daily vehicle miles traveled by households residing in the urban area in RVMPO county"
+#   ),
+
+  #Urban area household DVMT in mix used
   list(
-    Name = "UrbanHhDvmt_MaAzMx",
+    Name = "UrbanHhDvmt_MixNbrhd",
     Summarize = list(
-      Expr = "sum(Dvmt[Azone == 'RVMPO'& LocType == 'Urban'&  IsUrbanMixNbrhd == '1'])",
-      Units_ = c(
+      Expr = "sum(Dvmt[LocType == 'Urban' & IsUrbanMixNbrhd == '1'])",
+      Units = c(
         Dvmt = "MI/DAY",
         LocType = "",
-        Azone = "",
         IsUrbanMixNbrhd = "",
         Marea = ""
       ),
@@ -108,13 +108,13 @@ PMSpecifications <- list(
       Table = "Household"
     ),
     Units = "Miles per day",
-    Description = "Daily vehicle miles traveled by households residing in mixed use in the urban area in RVMPO county"
+    Description = "Daily vehicle miles traveled by households residing in mixed use in the urban area"
   ),
 
   #Urban area public transit 'van' DVMT
   #-------------------------------
   list(
-    Name = "UrbanVanDvmt_Ma",
+    Name = "UrbanVanDvmt",
     Summarize = list(
       Expr = "sum(VanDvmt)",
       Units = c(
@@ -131,7 +131,7 @@ PMSpecifications <- list(
   #Urban area commercial service vehicle DVMT
   #-------------------------------------
   list(
-    Name = "UrbanComSvcDvmt_Ma",
+    Name = "UrbanComSvcDvmt",
     Summarize = list(
       Expr = "sum(ComSvcUrbanDvmt)",
       Units = c(
@@ -147,19 +147,19 @@ PMSpecifications <- list(
 
   #Urban area light-duty vehicle DVMT
   list(
-    Name = "UrbanLdvDvmt_Ma",
-    Function = "UrbanHhDvmt_Ma + UrbanVanDvmt_Ma + UrbanComSvcDvmt_Ma",
+    Name = "UrbanLdvDvmt",
+    Function = "UrbanHhDvmt + UrbanVanDvmt + UrbanComSvcDvmt",
     Units = "Miles per day",
     Description = "Sum of daily vehicle miles traveled by households residing in the urban area, commercial service travel attributable to the demand of urban area households and businesses, and on-demand transit van travel in the urban area."
   ),
 
-  #Urban Population in Marea
+  #Population residing in "Urban" LocType
   #-------------------
   list(
-    Name = "UrbanHhPop_Ma",
+    Name = "UrbanHhPop",
     Summarize = list(
       Expr = "sum(HhSize[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         HhSize = "",
         LocType = "",
         Marea = ""
@@ -168,55 +168,16 @@ PMSpecifications <- list(
       Table = "Household"
     ),
     Units = "Persons",
-    Description = "Number of persons residing in urban area"
+    Description = "Number of persons residing in urban area location type"
   ),
 
-  #Urban Population in RVMPO county
+  #Urban Population, broken out by income
   #-------------------
   list(
-    Name = "UrbanHhPop_MaAz",
-    Summarize = list(
-      Expr = "sum(HhSize[Azone == 'RVMPO' & LocType == 'Urban'])",
-      Units_ = c(
-        HhSize = "",
-        LocType = "",
-        Azone = "",
-        Marea = ""
-      ),
-      By = "Marea",
-      Table = "Household"
-    ),
-    Units = "Persons",
-    Description = "Number of persons residing in urban area in RVMPO county"
-  ),
-
-  #Urban Population in mixed use in RVMPO county
-  #-------------------
-  list(
-    Name = "UrbanHhPop_MaAzMx",
-    Summarize = list(
-      Expr = "sum(HhSize[Azone == 'RVMPO'& LocType == 'Urban'& IsUrbanMixNbrhd == '1'])",
-      Units_ = c(
-        HhSize = "",
-        LocType = "",
-        Azone = "",
-        IsUrbanMixNbrhd = "",
-        Marea = ""
-      ),
-      By = "Marea",
-      Table = "Household"
-    ),
-    Units = "Persons",
-    Description = "Number of persons residing in mixed use in urban area in RVMPO county"
-  ),
-
-  #Urban Population in mixed use in RVMPO county, broken out by income
-  #-------------------
-  list(
-    Name = "UrbanHhPopLowInc_Ma",
+    Name = "UrbanHhPopLowInc",
     Summarize = list(
       Expr = "sum(HhSize[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         HhSize = "",
         LocType = "",
         Income = "USD",
@@ -234,37 +195,21 @@ PMSpecifications <- list(
       Table = "Household"
     ),
     Units = "Persons",
-    Description = "Number of persons in low income (0to20K 2010$) households residing in urban area"
+    Description = "Number of persons in urban location by income strata"
   ),
 
   #DVMT per Capita in Marea
   list(
-    Name = "UrbanLdvDmvtPerCap_Ma",
-    Function = "UrbanLdvDvmt_Ma / UrbanHhPop_Ma",
+    Name = "UrbanLdvDmvtPerCap",
+    Function = "UrbanLdvDvmt / UrbanHhPop",
     Units = "Dvmt per person",
-    Description = "daily vehicle miles traveled per person residing in the urban area."
-  ),
-
-  #urban DVMT per Capita in RVMPO county
-  list(
-    Name = "UrbanLdvDmvtPerCap_MaAz",
-    Function = "UrbanHhDvmt_MaAz / UrbanHhPop_MaAz",
-    Units = "Dvmt per person",
-    Description = "daily vehicle miles traveled per person residing in the urban area in RVMPO county."
-  ),
-
-  #urban DVMT per Capita in mixed use in RVMPO county
-  list(
-    Name = "UrbanLdvDmvtPerCap_MaAzMx",
-    Function = "UrbanHhDvmt_MaAzMx / UrbanHhPop_MaAzMx",
-    Units = "Dvmt per person",
-    Description = "daily vehicle miles traveled per person residing in mixed use in the urban area in RVMPO county."
+    Description = "daily vehicle miles traveled per person residing in the urban location."
   ),
 
   #Urban area Bus DVMT
   #-------------------------------
   list(
-    Name = "UrbanBusDvmt_Ma",
+    Name = "UrbanBusDvmt",
     Summarize = list(
       Expr = "sum(BusFwyDvmt)+ sum(BusArtDvmt) + sum(BusOthDvmt)",
       Units = c(
@@ -283,7 +228,7 @@ PMSpecifications <- list(
   #Urban area Hvy Trk DVMT
   #-------------------------------
   list(
-    Name = "UrbanHvyTrkDvmt_Ma",
+    Name = "UrbanHvyTrkDvmt",
     Summarize = list(
       Expr = "sum(HvyTrkFwyDvmt)+ sum(HvyTrkArtDvmt) + sum(HvyTrkOthDvmt)",
       Units = c(
@@ -302,7 +247,7 @@ PMSpecifications <- list(
   #Urban area Rail DVMT
   #-------------------------------
   list(
-    Name = "UrbanRailDvmt_Ma",
+    Name = "UrbanRailDvmt",
     Summarize = list(
       Expr = "sum(RailDvmt)",
       Units = c(
@@ -321,7 +266,7 @@ PMSpecifications <- list(
   #Household fuel consumption for Urban
   #------------------------------------
   list(
-    Name = "UrbanHhGGE_Ma",
+    Name = "UrbanHhGGE",
     Summarize = list(
       Expr = "sum(DailyGGE[LocType == 'Urban'])",
       Units = c(
@@ -339,7 +284,7 @@ PMSpecifications <- list(
   #Commercial service fuel consumption for Urban
   #---------------------------------------------
   list(
-    Name = "UrbanComSvcGGE_Ma",
+    Name = "UrbanComSvcGGE",
     Summarize = list(
       Expr = "sum(ComSvcUrbanGGE )",
       Units = c(
@@ -356,7 +301,7 @@ PMSpecifications <- list(
   #Public transit van fuel consumption for Urban area
   #---------------------------------------------
   list(
-    Name = "UrbanVanGGE_Ma",
+    Name = "UrbanVanGGE",
     Summarize = list(
       Expr = "sum(VanGGE)",
       Units = c(
@@ -373,8 +318,8 @@ PMSpecifications <- list(
   #Light-duty vehicle fuel consumption for urban area
   #---------------------------------------------
   list(
-    Name = "UrbanLdvGGE_Ma",
-    Function = "UrbanHhGGE_Ma + UrbanComSvcGGE_Ma + UrbanVanGGE_Ma",
+    Name = "UrbanLdvGGE",
+    Function = "UrbanHhGGE + UrbanComSvcGGE + UrbanVanGGE",
     Units = "Gas gallon equivalents per day",
     Description = "Average daily fuel consumption for light-duty vehicle travel attributable to households and businesses in the urban area"
   ),
@@ -382,7 +327,7 @@ PMSpecifications <- list(
   #Bus fuel consumption for urban area
   #---------------------------------------------
   list(
-    Name = "UrbanBusGGE_Ma",
+    Name = "UrbanBusGGE",
     Summarize = list(
       Expr = "sum(BusGGE)",
       Units = c(
@@ -399,7 +344,7 @@ PMSpecifications <- list(
   #Rail fuel consumption for urban area
   #---------------------------------------------
   list(
-    Name = "UrbanRailGGE_Ma",
+    Name = "UrbanRailGGE",
     Summarize = list(
       Expr = "sum(RailGGE)",
       Units = c(
@@ -416,7 +361,7 @@ PMSpecifications <- list(
   #Heavy truck fuel consumption for Urban area
   #---------------------------------------------
   list(
-    Name = "UrbanHvyTrkGGE_Ma",
+    Name = "UrbanHvyTrkGGE",
     Summarize = list(
       Expr = "sum(HvyTrkUrbanGGE)",
       Units = c(
@@ -436,10 +381,10 @@ PMSpecifications <- list(
   #Number of households in urban area
   #--------------------------------------
   list(
-    Name = "UrbanHhNum_Ma",
+    Name = "UrbanHhNum",
     Summarize = list(
       Expr = "count(HhSize[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         HhSize = "",
         LocType = "",
         Marea = ""
@@ -451,14 +396,13 @@ PMSpecifications <- list(
     Description = "Number of households residing in urban area"
   ),
 
-
   #Household Number of vehicles in urban area
   #------------------
   list(
-    Name = "UrbanHhVehicles_Ma",
+    Name = "UrbanHhVehicles",
     Summarize = list(
       Expr = "sum(NumAuto[LocType == 'Urban']) + sum(NumLtTrk[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         NumAuto = "VEH",
         NumLtTrk = "VEH",
         LocType = "",
@@ -474,8 +418,8 @@ PMSpecifications <- list(
   #Average number of vehicles per household in urban area
   #----------------------------------------
   list(
-    Name = "UrbanHhAveVehPerHh_Ma",
-    Function = "UrbanHhVehicles_Ma / UrbanHhNum_Ma",
+    Name = "UrbanHhAveVehPerHh",
+    Function = "UrbanHhVehicles / UrbanHhNum",
     Units = "Household light-duty vehicles per household",
     Description = "Average number of light-duty vehicles owned/leased by households residing in urban area"
   ),
@@ -483,10 +427,10 @@ PMSpecifications <- list(
   #Number of workers in urban
   #--------------------------
   list(
-    Name = "UrbanHhWorkers_Ma",
+    Name = "UrbanHhWorkers",
     Summarize = list(
       Expr = "sum(Workers[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         Workers = "PRSN",
         LocType = "",
         Marea = ""
@@ -502,10 +446,10 @@ PMSpecifications <- list(
   #Number of drivers in urban
   #--------------------------
   list(
-    Name = "UrbanHhDrivers_Ma",
+    Name = "UrbanHhDrivers",
     Summarize = list(
       Expr = "sum(Drivers[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         Drivers = "PRSN",
         LocType = "",
         Marea = ""
@@ -520,11 +464,11 @@ PMSpecifications <- list(
   #Number of households in urban-mixed neighborhoods
   #-------------------------------------------------
   list(
-    Name = "NumUrbanMixHh_Ma",
+    Name = "NumUrbanMixHh",
     Require = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
       Expr = "sum(IsUrbanMixNbrhd[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         IsUrbanMixNbrhd = "",
         LocType = "category",
         Marea = ""
@@ -537,11 +481,11 @@ PMSpecifications <- list(
   ),
 
   list(
-    Name = "NumUrbanMixHh_Ma",
+    Name = "NumUrbanMixHh",
     RequireNot = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
       Expr = "sum(IsUrbanMixNbrhd)",
-      Units_ = c(
+      Units = c(
         IsUrbanMixNbrhd = "",
         Marea = ""
       ),
@@ -557,7 +501,7 @@ PMSpecifications <- list(
   #Household CO2e for urban area
   #------------------------
   list(
-    Name = "UrbanHhCO2e_Ma",
+    Name = "UrbanHhCO2e",
     Summarize = list(
       Expr = "sum(DailyCO2e[LocType == 'Urban'])",
       Units = c(
@@ -575,7 +519,7 @@ PMSpecifications <- list(
   #Commercial service CO2e for urban area
   #---------------------------------
   list(
-    Name = "UrbanComSvcCO2e_Ma",
+    Name = "UrbanComSvcCO2e",
     Summarize = list(
       Expr = "sum(ComSvcUrbanCO2e)",
       Units = c(
@@ -592,7 +536,7 @@ PMSpecifications <- list(
   #Van CO2e for urban area
   #------------------
   list(
-    Name = "UrbanVanCO2e_Ma",
+    Name = "UrbanVanCO2e",
     Summarize = list(
       Expr = "sum(VanCO2e)",
       Units = c(
@@ -609,8 +553,8 @@ PMSpecifications <- list(
   #Light-duty vehicle CO2e for urban area
   #---------------------------------
   list(
-    Name = "UrbanLdvCO2e_Ma",
-    Function = "UrbanHhCO2e_Ma + UrbanVanCO2e_Ma + UrbanComSvcCO2e_Ma",
+    Name = "UrbanLdvCO2e",
+    Function = "UrbanHhCO2e + UrbanVanCO2e + UrbanComSvcCO2e",
     Units = "Metric tons CO2e per year",
     Description = "Average annual production of greenhouse gas emissions from light-duty vehicle travel of households and businesses in the urban area"
   ),
@@ -618,8 +562,8 @@ PMSpecifications <- list(
   #Light-duty vehicle CO2e Rate for urban area
   #---------------------------
   list(
-    Name = "UrbanLdvCO2eRate_Ma",
-    Function = "UrbanLdvCO2e_Ma / (UrbanLdvDvmt_Ma * 365)",
+    Name = "UrbanLdvCO2eRate",
+    Function = "UrbanLdvCO2e / (UrbanLdvDvmt * 365)",
     Units = "Grams CO2e per mile",
     Description = "Average greenhouse gas emissions per mile of light duty vehicle travel in the urban area"
   ),
@@ -627,7 +571,7 @@ PMSpecifications <- list(
   #Bus CO2e for urban area
   #---------------------------
   list(
-    Name = "UrbanBusCO2e_Ma",
+    Name = "UrbanBusCO2e",
     Summarize = list(
       Expr = "sum(BusCO2e)",
       Units = c(
@@ -644,7 +588,7 @@ PMSpecifications <- list(
   #Rail CO2e for urban area
   #---------------------------
   list(
-    Name = "UrbanRailCO2e_Ma",
+    Name = "UrbanRailCO2e",
     Summarize = list(
       Expr = "sum(RailCO2e)",
       Units = c(
@@ -661,8 +605,8 @@ PMSpecifications <- list(
   #Bus CO2e Rate for urban area
   #---------------------------
   list(
-    Name = "UrbanBusCO2eRate_Ma",
-    Function = "(UrbanBusCO2e_Ma * 1000000) / (UrbanBusDvmt_Ma * 365)",
+    Name = "UrbanBusCO2eRate",
+    Function = "(UrbanBusCO2e * 1000000) / (UrbanBusDvmt * 365)",
     Units = "grams CO2e per mile",
     Description = "Average greenhouse gas emissions per mile of public transit bus travel in the urban area"
   ),
@@ -670,7 +614,7 @@ PMSpecifications <- list(
   #Heavy Truck CO2e for Urban
   #---------------------------
   list(
-    Name = "UrbanHvyTrkCO2e_Ma",
+    Name = "UrbanHvyTrkCO2e",
     Summarize = list(
       Expr = "sum(HvyTrkUrbanCO2e)",
       Units = c(
@@ -687,8 +631,8 @@ PMSpecifications <- list(
   #Heavy Truck CO2e Rate for urban area
   #---------------------------
   list(
-    Name = "UrbanHvyTrkAveCO2eRate_Ma",
-    Function = "(UrbanHvyTrkCO2e_Ma * 1000000) / (UrbanHvyTrkDvmt_Ma * 365)",
+    Name = "UrbanHvyTrkAveCO2eRate",
+    Function = "(UrbanHvyTrkCO2e * 1000000) / (UrbanHvyTrkDvmt * 365)",
     Units = "Grams CO2e per mile",
     Description = "Average greenhouse gas emissions per mile of heavy truck travel in the urban area"
   ),
@@ -697,10 +641,10 @@ PMSpecifications <- list(
   ###Trips, Delay, Speed and Mode shift 
   #Walk Trips in Urban area          
   list(
-    Name = "UrbanWalkTrips_Ma",
+    Name = "UrbanWalkTrips",
     Summarize = list(
       Expr = "sum(WalkTrips[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         WalkTrips = "TRIP/DAY",
         LocType = "",
         Marea = ""
@@ -714,10 +658,10 @@ PMSpecifications <- list(
 
   #Bike Trips in Urban area          
   list(
-    Name = "UrbanBikeTrips_Ma",
+    Name = "UrbanBikeTrips",
     Summarize = list(
       Expr = "sum(BikeTrips[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         BikeTrips = "TRIP/DAY",
         LocType = "",
         Marea = ""
@@ -731,10 +675,10 @@ PMSpecifications <- list(
 
   #Transit Trips in Urban area          
   list(
-    Name = "UrbanTransitTrips_Ma",
+    Name = "UrbanTransitTrips",
     Summarize = list(
       Expr = "sum(TransitTrips[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         TransitTrips = "TRIP/DAY",
         LocType = "",
         Marea = ""
@@ -749,8 +693,8 @@ PMSpecifications <- list(
   #Mode shift Trips in urban area
   #------------------
   list(
-    Name = "UrbanModeShiftTrips_Ma",
-    Function = "UrbanWalkTrips_Ma+UrbanBikeTrips_Ma+UrbanTransitTrips_Ma",
+    Name = "UrbanModeShiftTrips",
+    Function = "UrbanWalkTrips+UrbanBikeTrips+UrbanTransitTrips",
     Units = "Trips per Day",
     Description = "Average number mode shift trips (Bike, Walk, & Transit) per day in urban area"
   ),
@@ -759,7 +703,7 @@ PMSpecifications <- list(
   #total delay of ldv in urban area
   #---------------------------
   list(
-    Name = "UrbanLdv_TotalDelay_Ma",
+    Name = "UrbanLdv_TotalDelay",
     Summarize = list(
       Expr = "sum(LdvTotDelay)",
       Units = c(
@@ -776,7 +720,7 @@ PMSpecifications <- list(
   #total delay of hvy trk in urban area
   #---------------------------
   list(
-    Name = "UrbanHvyTrk_TotalDelay_Ma",
+    Name = "UrbanHvyTrk_TotalDelay",
     Summarize = list(
       Expr = "sum(HvyTrkTotDelay)",
       Units = c(
@@ -793,8 +737,8 @@ PMSpecifications <- list(
   #total delay of ldv and hvy trk in urban area
   #---------------------------
   list(
-    Name = "UrbanLdv_HvyTrk_TotalDelay_Ma",
-    Function = "UrbanLdv_TotalDelay_Ma + UrbanHvyTrk_TotalDelay_Ma",
+    Name = "UrbanLdv_HvyTrk_TotalDelay",
+    Function = "UrbanLdv_TotalDelay + UrbanHvyTrk_TotalDelay",
     Units = "Hours",
     Description = "Total light duty vehicle and heavy truck delay (hours per day) on the urban area roads"
   ),
@@ -802,7 +746,7 @@ PMSpecifications <- list(
   #Light duty vehicle speed in urban area
   #---------------------------
   list(
-    Name = "UrbanLvdAveSp_Ma",
+    Name = "UrbanLvdAveSp",
     Summarize = list(
       Expr = "mean(LdvAveSpeed)",
       Units = c(
@@ -819,7 +763,7 @@ PMSpecifications <- list(
   #Heavy truck speed in urban area
   #---------------------------
   list(
-    Name = "UrbanHvyTrkAveSp_Ma",
+    Name = "UrbanHvyTrkAveSp",
     Summarize = list(
       Expr = "mean(HvyTrkAveSpeed)",
       Units = c(
@@ -836,7 +780,7 @@ PMSpecifications <- list(
   #Bus speed in urban area
   #---------------------------
   list(
-    Name = "UrbanBusAveSp_Ma",
+    Name = "UrbanBusAveSp",
     Summarize = list(
       Expr = "mean(BusAveSpeed)",
       Units = c(
@@ -855,10 +799,10 @@ PMSpecifications <- list(
   #Vehicle ownership cost in urban area
   #------------------
   list(
-    Name = "UrbanVehOwnershipCost_Ma",
+    Name = "UrbanVehOwnershipCost",
     Summarize = list(
       Expr = "mean(OwnCost[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         OwnCost = "USD",
         LocType = "",
         Marea = ""
@@ -873,10 +817,10 @@ PMSpecifications <- list(
   #Vehicle average out-of-pocket cost in dollars per mile of vehicle travel in urban area
   #------------------
   list(
-    Name = "UrbanAveVehCostPM_Ma",
+    Name = "UrbanAveVehCostPM",
     Summarize = list(
       Expr = "mean(AveVehCostPM[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         AveVehCostPM = "USD",
         LocType = "",
         Marea = ""
@@ -891,10 +835,10 @@ PMSpecifications <- list(
   #Vehicle Operating cost in urban area
   #------------------
   list(
-    Name = "UrbanVehOperatingCost_Ma",
+    Name = "UrbanVehOperatingCost",
     Summarize = list(
       Expr = "mean(AveVehCostPM[LocType == 'Urban']) * mean(Dvmt[LocType == 'Urban'])*365",
-      Units_ = c(
+      Units = c(
         AveVehCostPM = "USD",
         Dvmt = "MI/DAY",
         LocType = "",
@@ -910,10 +854,10 @@ PMSpecifications <- list(
   #Total annual household income in urban area
   #------------------
   list(
-    Name = "UrbanTotalHhIncome_Ma",
+    Name = "UrbanTotalHhIncome",
     Summarize = list(
       Expr = "sum(Income[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         Income = "USD",
         LocType = "",
         Marea = ""
@@ -928,8 +872,8 @@ PMSpecifications <- list(
   #Average annual household income in urban area
   #---------------------------------
   list(
-    Name = "UrbanAveHhIncome_Ma",
-    Function = "UrbanTotalHhIncome_Ma / UrbanHhNum_Ma",
+    Name = "UrbanAveHhIncome",
+    Function = "UrbanTotalHhIncome / UrbanHhNum",
     Units = "USD per year",
     Description = "Average annual household income in the urban area"
   ),
@@ -937,10 +881,10 @@ PMSpecifications <- list(
   #Total annual low household income in urban area
   #------------------
   list(
-    Name = "UrbanTotalHhIncomeLowInc_Ma",
+    Name = "UrbanTotalHhIncomeLowInc",
     Summarize = list(
       Expr = "sum(Income[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         Income = "USD",
         LocType = "",
         Marea = ""
@@ -964,10 +908,10 @@ PMSpecifications <- list(
   #Number of low income households in urban area
   #--------------------------------------
   list(
-    Name = "UrbanHhNumLowInc_Ma",
+    Name = "UrbanHhNumLowInc",
     Summarize = list(
       Expr = "count(HhSize[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         HhSize = "",
         LocType = "",
         Income = "USD",
@@ -975,7 +919,8 @@ PMSpecifications <- list(
       ),
       By = c(
         "Income",
-        "Marea"),
+        "Marea"
+      ),
       Breaks = list(
         Income = c(20000, 40000, 60000, 80000, 100000)
       ),    
@@ -991,8 +936,8 @@ PMSpecifications <- list(
   #Average annual low household income in urban area
   #---------------------------------
   list(
-    Name = "UrbanAveHhIncomeLowInc_Ma",
-    Function = "UrbanTotalHhIncomeLowInc_Ma.min / UrbanHhNumLowInc_Ma.min",
+    Name = "UrbanAveHhIncomeLowInc",
+    Function = "UrbanTotalHhIncomeLowInc.min / UrbanHhNumLowInc.min",
     Units = "USD per year",
     Description = "Average annual low household income (0to20K 2010$) in the urban area"
   ),
@@ -1000,18 +945,18 @@ PMSpecifications <- list(
   #Average annual household DVMT in urban area
   #---------------------------------
   list(
-    Name = "UrbanAveHhDVMT_Ma",
-    Function = "UrbanHhDvmt_Ma / UrbanHhNum_Ma",
+    Name = "UrbanAveHhDVMT",
+    Function = "UrbanHhDvmt / UrbanHhNum",
     Units = "Vehicle Mile Travel",
     Description = "Average household DVMT in urban area"
   ),
 
   # Average Household operating cost for low income - Inc0to20K
   list(
-    Name = "UrbanVehOperatingCostLowInc_Ma",
+    Name = "UrbanVehOperatingCostLowInc",
     Summarize = list(
       Expr = "mean(AveVehCostPM[LocType == 'Urban'])* mean(Dvmt[LocType == 'Urban'])*365",
-      Units_ = c(
+      Units = c(
         AveVehCostPM = "USD",
         LocType = "",
         Income = "USD",
@@ -1036,10 +981,10 @@ PMSpecifications <- list(
 
   # Average Household vehicle ownership cost for low income - Inc0to20K
   list(
-    Name = "UrbanVehOwnershipCostLowInc_Ma",
+    Name = "UrbanVehOwnershipCostLowInc",
     Summarize = list(
       Expr = "mean(OwnCost[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         OwnCost = "USD",
         LocType = "",
         Income = "USD",
@@ -1063,10 +1008,10 @@ PMSpecifications <- list(
 
   #low income Hh Dvmt in urban area
   list(
-    Name = "UrbanHhDvmtLowInc_Ma",
+    Name = "UrbanHhDvmtLowInc",
     Summarize = list(
       Expr = "sum(Dvmt[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         Dvmt = "MI/DAY",
         LocType = "",
         Income = "USD",
@@ -1090,24 +1035,24 @@ PMSpecifications <- list(
 
   #Low income household vehicle Own & out-of-pocket costs share of HH low Income total (all low income HHs)
   list(
-    Name = "HhVehTravCostShareLowInc_Ma",
-    Function = "(UrbanVehOperatingCostLowInc_Ma.min  + UrbanVehOwnershipCostLowInc_Ma.min * UrbanHhNumLowInc_Ma.min)/ UrbanTotalHhIncomeLowInc_Ma.min",
+    Name = "HhVehTravCostShareLowInc",
+    Function = "(UrbanVehOperatingCostLowInc.min  + UrbanVehOwnershipCostLowInc.min * UrbanHhNumLowInc.min)/ UrbanTotalHhIncomeLowInc.min",
     Units = "Proportion",
     Description = "Low income (0to20K 2010$) household vehicle Own & out-of-pocket costs share of HH low income total (all low income HHs)in urban area"
   ),
 
   #household vehicle Own & out-of-pocket costs share of HH income total (all HHs)
   list(
-    Name = "HhVehTravCostShare_Ma",
-    Function = "((UrbanVehOperatingCost_Ma + UrbanVehOwnershipCost_Ma)* UrbanHhNum_Ma) / UrbanTotalHhIncome_Ma",
+    Name = "HhVehTravCostShare",
+    Function = "((UrbanVehOperatingCost + UrbanVehOwnershipCost)* UrbanHhNum) / UrbanTotalHhIncome",
     Units = "Proportion",
     Description = "Household vehicle Own & out-of-pocket costs share of HH income total (all HHs) in urban area"
   ),
 
   #urban DVMT per Capita in LowInc HHs
   list(
-    Name = "UrbanLdvDmvtPerCapLowInc_Ma",
-    Function = "UrbanHhDvmtLowInc_Ma.min / UrbanHhPopLowInc_Ma.min",
+    Name = "UrbanLdvDmvtPerCapLowInc",
+    Function = "UrbanHhDvmtLowInc.min / UrbanHhPopLowInc.min",
     Units = "Dvmt per person",
     Description = "daily vehicle miles traveled per person in low income (0to20K 2010$) households residing in the urban area."
   ),
@@ -1115,10 +1060,10 @@ PMSpecifications <- list(
   #Average car service light truck proportion of car service DVMT
   #--------------------------------------------------------------
   list(
-    Name = "MareaCarSvcLtTrkDvmtProp_Ma",
+    Name = "MareaCarSvcLtTrkDvmtProp",
     Summarize = list(
       Expr = "sum(DvmtProp[VehicleAccess != 'Own' & Type == 'LtTrk']) / sum(DvmtProp[VehicleAccess != 'Own'])",
-      Units_ = c(
+      Units = c(
         DvmtProp = "",
         VehicleAccess = "",
         Type = "",
@@ -1134,10 +1079,10 @@ PMSpecifications <- list(
   #Average population density
   #--------------------------
   list(
-    Name = "UrbanAvePopDen_Ma",
+    Name = "UrbanAvePopDen",
     Summarize = list(
       Expr = "sum(UrbanPop) / sum(UrbanArea)",
-      Units_ = c(
+      Units = c(
         UrbanArea = "ACRE",
         UrbanPop = "PRSN",
         Marea = ""
@@ -1152,11 +1097,11 @@ PMSpecifications <- list(
   #Median Bzone population density
   #-------------------------------
   list(
-    Name = "MedianBzonePopDen_Ma",
+    Name = "MedianBzonePopDen",
     Require = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
       Expr = "median(D1B[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         D1B = "PRSN/ACRE",
         LocType = "Category",
         Marea = ""
@@ -1169,11 +1114,11 @@ PMSpecifications <- list(
   ),
 
   list(
-    Name = "MedianBzonePopDen_Ma",
+    Name = "MedianBzonePopDen",
     RequireNot = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
       Expr = "median(UrbanPop / UrbanArea)",
-      Units_ = c(
+      Units = c(
         UrbanPop = "PRSN",
         UrbanArea = "ACRE",
         Marea = ""
@@ -1188,11 +1133,11 @@ PMSpecifications <- list(
   #Average activity density
   #------------------------
   list(
-    Name = "AveActivityDen_Ma",
+    Name = "AveActivityDen",
     Require = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
       Expr = "sum(NumHh[LocType == 'Urban'] + TotEmp[LocType == 'Urban']) / sum(UrbanArea)",
-      Units_ = c(
+      Units = c(
         NumHh = "HH",
         TotEmp = "PRSN",
         UrbanArea = "ACRE",
@@ -1209,8 +1154,8 @@ PMSpecifications <- list(
   #Proportion of households in urban-mixed neighborhoods
   #-----------------------------------------------------
   list(
-    Name = "PropUrbanMixHh_Ma",
-    Function = "NumUrbanMixHh_Ma / UrbanHhNum_Ma",
+    Name = "PropUrbanMixHh",
+    Function = "NumUrbanMixHh / UrbanHhNum",
     Units = "Proportion of Households",
     Description = "Proportion of urbanized area households that reside in urban-mixed neighborhoods"
   ),
@@ -1218,10 +1163,10 @@ PMSpecifications <- list(
   #Total daily work parking cost
   #-----------------------------
   list(
-    Name = "HhTotDailyWkrParkingCost_Ma",
+    Name = "HhTotDailyWkrParkingCost",
     Summarize = list(
       Expr = "sum(ParkingCost[LocType == 'Urban'])",
-      Units_ = c(
+      Units = c(
         ParkingCost = "",
         LocType = "",
         Marea = ""
@@ -1240,7 +1185,7 @@ PMSpecifications <- list(
   #Total daily non-work parking cost
   #---------------------------------
   list(
-    Name = "HhTotDailyOthParkingCost_Ma",
+    Name = "HhTotDailyOthParkingCost",
     Summarize = list(
       Expr = "sum(OtherParkingCost[LocType == 'Urban'])",
       Units = c(
@@ -1258,7 +1203,7 @@ PMSpecifications <- list(
   #Proportion of single-family dwelling units
   #------------------------------------------
   list(
-    Name = "PropSFDU_Ma",
+    Name = "PropSFDU",
     Require = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
       Expr = "sum(SFDU[LocType == 'Urban']) / (sum(NumHh[LocType == 'Urban']))",
@@ -1276,7 +1221,7 @@ PMSpecifications <- list(
   ),
 
   list(
-    Name = "PropSFDU_Ma",
+    Name = "PropSFDU",
     RequireNot = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
       Expr = "sum(SFDU) / (sum(NumHh))",
@@ -1295,7 +1240,7 @@ PMSpecifications <- list(
   #Vehicle trips in urban
   #---------------------------------
   list(
-    Name = "UrbanVehicleTrips_Ma",
+    Name = "UrbanVehicleTrips",
     Summarize = list(
       Expr = "sum(VehicleTrips[LocType == 'Urban'])",
       Units = c(
@@ -1313,7 +1258,7 @@ PMSpecifications <- list(
   #Average Vehicle trip length in urban
   #---------------------------------
   list(
-    Name = "UrbanVehTripLen_Ma",
+    Name = "UrbanVehTripLen",
     Summarize = list(
       Expr = "sum(AveVehTripLen[LocType == 'Urban'])",
       Units = c(
@@ -1331,10 +1276,10 @@ PMSpecifications <- list(
   #Average car service auto proportion of car service DVMT
   #--------------------------------------------------------------
   list(
-    Name = "MareaCarSvcAutoDvmtProp_Ma",
+    Name = "MareaCarSvcAutoDvmtProp",
     Summarize = list(
       Expr = " sum(DvmtProp[VehicleAccess != 'Own' & Type == 'Auto']) / sum(DvmtProp[VehicleAccess != 'Own'])",
-      Units_ = c(
+      Units = c(
         DvmtProp = "",
         VehicleAccess = "",
         Type = "",
@@ -1349,7 +1294,7 @@ PMSpecifications <- list(
 
   #Household car service DVMT in Marea
   list(
-    Name = "MareaHouseholdCarSvcDvmt_Ma",
+    Name = "MareaHouseholdCarSvcDvmt",
     Summarize = list(
       Expr = "sum(Dvmt[VehicleAccess != 'Own' ] * DvmtProp[VehicleAccess != 'Own' ])",
       Units = c(
