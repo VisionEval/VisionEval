@@ -2,7 +2,7 @@
 #run_model.R
 #===========
 
-#This script demonstrates the VisionEval framework for a demonstration RPAT Module
+#This script demonstrates the VisionEval framework for a demonstration of VERSPM
 
 #Load libraries
 #--------------
