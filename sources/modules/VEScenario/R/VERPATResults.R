@@ -382,6 +382,7 @@ VERPATResults <- function(L){
   close(File)
 
   # Write the output configuration file
+  VERPATOutputConfig <- VEScenario::VERPATOutputConfig
   JSON <- paste("var outputconfig = ", VERPATOutputConfig$VERPAT, ";", sep="")
   File <- file(file.path(ModelPath, L$Global$Model$ScenarioOutputFolder, "output-cfg.js"), "w")
   message('Writing output configuration to', File, '\n')
