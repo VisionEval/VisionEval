@@ -10,7 +10,7 @@ if ( ! suppressWarnings(require("yaml")) ) {
 }
 if ( ! suppressWarnings(require("roxygen2")) ) {
   cat("Installing roxygen2 package\n")
-  install.packages("yaml", repos="https://cloud.r-project.org", dependencies=NA)
+  install.packages("roxygen2", repos="https://cloud.r-project.org", dependencies=NA)
 }
 
 cat("Installing to:",.libPaths()[1],"\n")
