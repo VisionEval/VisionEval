@@ -249,14 +249,24 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,path=NULL,stage=NULL) {
   }
   to.delete <- private$artifacts(path=path,outputOnly=outputOnly)
   if ( length(to.delete)>0 ) {
-    print(gsub(ve.runtime,"",to.delete))
-    if ( force || (force <- confirm("Clear ALL prior model results?")) ) {
+    to.delete <- gsub(paste0("^",getwd(),"/"),"",to.delete)
+    print(to.delete)
+    if ( interactive() ) {
+      choices <- to.delete
+      preselect <- if (force || outputOnly ) to.delete else character(0)
+      to.delete <- select.list(choices=choices,preselect=preselect,multiple=TRUE,title="Delete Select Outputs")
+      force <- length(to.delete)>0
+    } else {
+      force <- ( force || length(to.delete)>0 )
+    }
+    if ( force) {
+      print(dir(to.delete),recursive=TRUE)
       unlink(to.delete,recursive=TRUE)
       self$modelState <- lapply(
         self$modelPath,
         function(x) list()
       )
-      cat("Model results cleared.\n")
+      cat("Model",(if(outputOnly) "outputs" else "results"),"cleared.\n")
     } else {
       cat("Model results NOT cleared.\n")
     }
@@ -477,8 +487,14 @@ prepSelect <- function(self,what,details=FALSE) {
   if ( details ) {
     show <- selectOrder[ selectOrder %in% names(df) ]
     detail.fields <- show[-grep(name,show)]
+    if ( what=="fields" ) {
+      list.fields <- self[["list"]](details=TRUE,selected=FALSE)
+      df$Description <- substr(list.fields$Description,1,40)
+      detail.fields <- c(detail.fields,"Description")
+      show <- c(show,"Description")
+      }
     detail.function <- function(x) {
-      paste(x[name],paste(paste(detail.fields,x[detail.fields],sep=":"),collapse=", "),sep=" | ")
+      paste(x[name],paste(paste(detail.fields,x[detail.fields],sep=": "),collapse=", "),sep=" | ")
     }
   } else {
     show <- name
