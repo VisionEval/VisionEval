@@ -829,7 +829,6 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
         QueryPrep_ls = QPrep_ls
       )
     if ( ! byRegion && ! usingBreaks ) {
-      # TODO: Handle missing GeoValue (all values) or list of GeoValues
       # For now, GeoValue must be present and just a single value
       measure <- measure[GeoValue]  # reduce to scalar value (one geographical unit)
       names(measure) <- measureName
@@ -932,7 +931,7 @@ ve.model.query <- function(
   SpecFile = "Query-Spec.R",
   outputFile = "Measures_%scenario%_%years%_%geography%.csv",
   #   Default is a long-but-informative filename
-  saveTo="output", # folder in which to put outputFile (if FALSE, return list of data.frames)
+  saveTo="output", # folder in which to put outputFile (if FALSE or empty string, return list of data.frames)
   log="ERROR"  # set to "WARN" if to get detailed information on warnings as they happen
   )
 {
@@ -944,9 +943,15 @@ ve.model.query <- function(
     return(character(0))
   }
   if ( Geography %in% c("Azone","Marea") ) {
-    if ( missing(GeoValue) || ! is.character(GeoValue) ) {
-      GeoValue <- ""
-      message("Breaking measures by ",Geography,"; including all values")
+    if ( missing(GeoValue) || ! is.character(GeoValue) || length(GeoValue)>1 || ! nzchar(GeoValue) ) {
+      message("Not supported: Breaking measures by ",Geography,"; including all values")
+      # TODO: need to assemble proper combinations of By/GeoValues when unpacking results from
+      # summarizeDatasets in makeMeasure: we end up with a 2-D matrix, not a vector or scalar, and
+      # we need to transform that to a long form with suitable names for each element
+      # (Measure-GeoValue-ByLevel). Not hard, just book-keeping (remove matrix dim to get a vector,
+      # but understand row/column order and build suitable names, checking length/order of names
+      # against original dim)
+      return(character(0))
     } else {
       message("Evaluating measures for each ",Geography,": ",GeoValue)
     }
@@ -983,6 +988,7 @@ ve.model.query <- function(
       saveTo = "output" # re-install the default
   } 
   if ( is.character(saveTo) ) { # could be a directory
+    if ( ! nzchar(saveTo) ) saveTo <- "output" # empty string replaced by default
     if ( ! ( grepl("^[/\\]",saveTo) | grepl("^.:",saveTo) ) ) { # relative path
       # saveTo is a relative path, so create it relative to dataPath
       saveTo <- normalizePath(file.path(dataPath,saveTo),winslash="/",mustWork=FALSE)
@@ -1064,14 +1070,12 @@ ve.model.query <- function(
   # Superficial sanity check of PMSpecifications (deeper checks within visioneval::summarizeDatasets)
   # Also rewrite the geography (so we can mostly reuse spec files for "Region","Marea", or "Azone"
   # TODO: Probably need better error recovery
-  # TODO: If we're using a geography table, and it's not the same as Geography, then we
-  # want to skip the spec. So in the for loop, we want to rebuild PMSpecifications, only
-  # copying over specs that make sense for this geography.
   have.names <- character(0)
   spec.valid <- is.list(PMSpecifications)
+  specProcessed <- list()
+  small.geo <- c("Marea","Azone")
   if ( spec.valid ) {
-    for ( test.spec.num in 1:length(PMSpecifications) ) {
-      test.spec <- PMSpecifications[[test.spec.num]]
+    for ( test.spec in PMSpecifications ) {
       nm.test.spec <- names(test.spec) # may be NULL
       if ( is.null(nm.test.spec) ) spec.valid <- FALSE
       if ( spec.valid ) {
@@ -1092,31 +1096,51 @@ ve.model.query <- function(
           test.sum <- test.spec[["Summarize"]]
           if ( Geography["Type"] == "Region" ) {
             # Region: remove Marea or Azone from "By" and "Units", if present
-            test.by <- test.sum[["By"]]
-            any.geo <- ( test.by %in% c("Marea","Azone") )
-            if ( any ( ! any.geo ) ) {
-              # remove geography but leave the rest
-              # cat( "In ",test.spec[["Name"]],"By from:",test.by,"to",test.by[!any.geo],"\n" )
-              test.sum[["By"]] <- test.by[!any.geo]
-            } else if ( all(any.geo) ) {
-              # cat( "In ",test.spec[["Name"]],"Removing all from",test.by,"\n" )
-              test.sum["By"] <- NULL # Single brackets - remove element entire
-            } # else leave "By" untouched.
+            if ( "By" %in% names(test.sum) ) {
+              test.by <- test.sum[["By"]]
+              any.geo <- ( test.by %in% small.geo )
+              if ( any ( ! any.geo ) ) { # By includes tables other than geography
+                # remove geography but leave the rest
+                # cat( "In ",test.spec[["Name"]],"By from:",test.by,"to",test.by[!any.geo],"\n" )
+                test.sum[["By"]] <- test.by[!any.geo]
+              } else if ( all(any.geo) ) {
+                # cat( "In ",test.spec[["Name"]],"Removing all from",test.by,"\n" )
+                test.sum["By"] <- NULL # Single brackets - remove element entire
+              } # else leave "By" untouched.
+            }
             if ( "Units" %in% names(test.sum) ) {
               test.units <- test.sum[["Units"]]
-              any.geo <- ( "Marea" %in% names(test.units) | "Azone" %in% names(test.units) )
+              any.geo <- ( names(test.units) %in% small.geo )
               if ( any ( ! any.geo ) ) {
                 # remove geography
-                test.sum[["By"]] <- test.by[!any.geo]
-              } else {
-                test.sum["By"] <- NULL # Single brackets - remove element entire
-              }
+                test.sum[["Units"]] <- test.units[!any.geo]
+              } else if ( all(any.geo) ) { # Only has the geo table in Units
+                test.sum["Units"] <- NULL # Single brackets - remove element entire
+              } # else leave "Units" untouched
             }
-          } else { # Summarizing by geography
+          } else { # Summarizing by geography ("Azone" or "Marea")
             # TODO: Geography "Value" should eventually be screened against model's 'defs/geo.csv'
             # TODO: If "Table" is the same as "By" and not GeographyType, skip that specification
             # with a message (or we could use Require). So any dip into the Marea table or the
             # Azone table only gets processed if we are running for that GeographyType.
+            if ( ! Geography["Type"] %in% small.geo ) {
+              message("Invalid Geography Type for query specification: ",Geography["Type"])
+              spec.valid <- FALSE
+              next
+            }
+            geotest <- ( test.sum[["Table"]] %in% small.geo ) # Which Table elements are the small geography
+            # Write the following in case more than one Table element is a small geography
+            # Mostly, that would probably be a logic error in the query specification
+            if ( any( geotest) && any(test.sum[["Table"]][geotest] != Geography["Type"]) ) {
+              message(
+                "Skipping specification ",test.spec[["Name"]],
+                " due to Table mismatch: ",
+                Geography["Type"]," vs. Table ",paste(test.sum[["Table"]][geotest],collapse=", ")
+              )
+              next  # Skip thist test.spec
+            }
+            # If Table is not a conflicting small.geo,
+            # swap small geography in spec with Geography["Type"]
             if ( Geography["Type"] == "Marea" ) {
               geo.from <- "Azone"
               geo.to <- "Marea"
@@ -1127,10 +1151,10 @@ ve.model.query <- function(
             # Check that "By" and "Units" include geo.from
             # If geo.from BUT NOT geo.to in "By" and "Units", change geo.from to geo.to
             #   if we have both in the spec, don't touch geo.from or geo.to
-            # If geo.to not in "By" and "Units", add geo.to to By and geo.to = ''" to Units
+            # If geo.to not in "By" and "Units", add geo.to to By and geo.to = '' to "Units"
             test.sum.by <- test.sum[["By"]]
-            azb <- test.sum.by %in% geo.from
-            if ( ! geo.to %in% ( test.sum.by ) ) {
+            azb <- ( test.sum.by %in% geo.from )
+            if ( ! ( geo.to %in% test.sum.by ) ) {
               if ( any(azb) ) {
                 test.sum.by[azb] <- geo.to
               } else {
@@ -1139,10 +1163,10 @@ ve.model.query <- function(
               test.sum[["By"]] <- test.sum.by
             }
             test.sum.units <- test.sum[["Units"]]
-            cat("Spec name:",test.spec[["Name"]],"\n")
-            cat("Units before:",paste(names(test.sum.units),collapse=","),"\n")
+#             cat("Spec name:",test.spec[["Name"]],"\n")
+#             cat("Units before:",paste(names(test.sum.units),collapse=","),"\n")
             azb <- test.sum.units %in% geo.from
-            if ( ! geo.to %in% names(test.sum.units) ) {
+            if ( ! (geo.to %in% names(test.sum.units)) ) {
               if ( any(azb) ) {
                 names(test.sum.units)[azb] <- geo.to
               } else {
@@ -1150,19 +1174,26 @@ ve.model.query <- function(
               }
               test.sum[["Units"]] <- test.sum.units
             }
-            cat("Units after:",paste(names(test.sum.units),collapse=","),"\n")
+#             cat("Units after:",paste(names(test.sum.units),collapse=","),"\n")
           }
           test.spec[["Summarize"]] <- test.sum
         }
-        if ( spec.valid ) PMSpecifications[[test.spec.num]] <- test.spec
+        if ( spec.valid ) {
+          specProcessed[[length(specProcessed)+1]] <- test.spec
+        }
       }
       if ( ! spec.valid ) break
     }
+    if ( spec.valid) PMSpecifications <- specProcessed
   }
   if ( ! spec.valid ) {
     # Report failing spec name, if it has one...
     if ( !is.na(have.names) && have.names[1] ) cat("In Specification '",test.spec$Name,"\n")
     message("Invalid measure specification.")
+    return(character(0))
+  }
+  if ( length(specProcessed) == 0 ) {
+    message("No valid measure specifications provided.")
     return(character(0))
   }
 
@@ -1312,7 +1343,9 @@ doQuery <- function (
         }
       }
     },
-    error=function(e) cat(geterrmessage(),"\n"),
+    error=function(e) {
+      cat("Error:",geterrmessage(),"\n")
+    },
     finally=setwd(old.wd)
   )
   return(outputFiles)
