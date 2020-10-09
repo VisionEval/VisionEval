@@ -1,0 +1,66 @@
+Change what initializeModel does:
+  It acquires several kinds of parameters
+
+    Environment in .VisionEval (configuraton file like environment variables)
+      # All of these have defaults if they are not overwritten
+      # They are copied up into ve.model$envspec if that object does not exist
+      # They can be altered at runtime - VEModel$run (e.g. to try a new run_model.R variant)
+      # run_parameters.json will be consulted, but only used if not already defined
+      # Priority: ve.model$envspec, then .VisionEval, then run_parameters.json, then indicated defaults
+
+      DatastoreName   = "Datastore"
+      OutputName      = "outputs"
+      InputName       = "inputs"
+      ParamName       = "defs"
+      RunParamFile    = "run_parameters.json"
+      GeoFile         = "geo.csv" # Look first in ParamDir, second in InputDir
+      ModelParamFile  = "model_parameters.json" # Look first in ParamDir, second in InputDir
+      DatastoreType   = "RD"
+      ModelScriptName = "run_model.R"
+      Seed            = 1
+
+    Runtime Base Model Parameters
+      # expect these to be set by VEModel$run based on model directory
+      # so we won't look for them until that function runs,then set them as follows
+
+      # first look for ve.model$basemodel
+      # if ModelDir not present, set ModelDir to getwd()
+      # if the following not defined, set ParamDir and InputDir to ModelDir
+      # build/complete ve.model$basemodel as needed
+
+      ModelDir  = absolute/relative to getwd() directory containing run_model.R (or parent thereof)
+      InputDir  = absolute/relative to getwd() directory containing InputName
+      ParamDir  = absolute/relative to getwd() directory containing ParamName
+      OutputDir = absolute/relative to getwd() directory containing Stages (for the base model)
+
+      # the model that ultimately runs is ModelDir/ModelScriptName
+      # the base model inputs are in InputDir/InputName
+      # the base model defs are in ParamDir/ParamName
+
+      # the model stages will be built in OutputDir/<stage>
+      #   the <stage> directory will hold
+      #     DatastoreName
+      #     OutputName (directory for extracts and ad hoc queries)
+      #     ModelState.rda # always with that name
+      #     Previous Model States (rotated with date of run that created)
+      #     Previous Datastores (rotated with date of run that created)
+      #     Log*.txt # always with name based on model run time
+
+    Model run parameters
+      # look for these in ve.model$basemodel$ParamDir/ParamName (run_parameters.json)
+      # they are loaded at runtime into ve.model$scenario
+      Model       = VERSPM Test
+      Region      = RVMPO
+      BaseYear    = 2010
+      Years       = [2010, 2038]
+
+    Scenario run parameters
+      # look first for inputs in ve.model$scenario$InputDir/InputName
+      # if required input is not found, then look in ve.model$basemodel$InputDir/InputName
+      Scenario    = Name of scenario (within Model)
+      Description = Description of scenario
+      InputDir    = Directory to seek first for input files (defaults to basemodel$InputDir)
+      OutputDir   = Directory to locate outputs directory (defaults to basemodel$OutputDir)
+
+The above may not play nice with the idea that scenarios will only run the stages they need.
+But we can get to that later perhaps...

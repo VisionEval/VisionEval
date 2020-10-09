@@ -933,7 +933,7 @@ parseModelScript <-
 #'
 #' This function takes a specified module and package, checks whether the
 #' package has been installed and whether the module is in the package. The
-#' function returns an error message is the package is not installed or if
+#' function returns an error message if the package is not installed or if
 #' the module is not present in the package. If the module has been called by
 #' another module the value of the 'CalledBy' argument will be used to identify
 #' the calling module as well so that the user understands where the call is

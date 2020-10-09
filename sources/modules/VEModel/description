@@ -1,0 +1,27 @@
+Package: VEModel
+Type: Package
+Title: Utilities for Managing VisionEval Models and Samples
+Version: 1.0.0
+Date: 2020-10-13
+Author: Jeremy Raw [aut, cre]
+Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
+Copyright: None
+URL: https://Github.com/VisionEval
+Description: Contains R6 object management code providing functions
+  and objects to set up VisionEval models, run them, and query or extract
+  their output.
+License: file UNLICENSE
+LazyData: TRUE
+Depends: R (>= 3.6.0)
+Imports:
+    visioneval,
+    jsonlite,
+    R6,
+    stringr,
+    tryCatchLog,
+    futile.logger
+Suggests:
+    knitr
+Encoding: UTF-8
+VignetteBuilder: knitr
+RoxygenNote: 7.1.1

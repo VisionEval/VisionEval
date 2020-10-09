@@ -703,8 +703,10 @@ ve.model.extract <- function(
   saving <- is.character(saveTo) && nzchar(saveTo)[1]
   
   visioneval::assignDatastoreFunctions(self$runParams$DatastoreType)
-  fields <- self$fields
-  extract <- fields[fields$Selected=="Yes",c("Name","Table","Group","Stage")]
+  fields <- ( self$fields )
+
+  extract <- fields[ ( fields$Selected=="Yes" & fields$Stage==stage ) ,c("Name","Table","Group","Stage")]
+
   tables <- split( extract$Name, list(extract$Table,extract$Group,extract$Stage) )
   tables <- tables[which(sapply(tables,length)!=0)]
   DataSpecs <- lapply( names(tables), function(T.G.S) {
@@ -729,6 +731,7 @@ ve.model.extract <- function(
   results <- lapply(DataSpecs, function(d) {
         if (!quiet && saving ) message("Extracting data for Table ",d$Data$Table[1]," in Group ",d$Data$Group[1])
         # Do this in a for-loop rather than faster "apply" to avoid dimension and class/type problems.
+        # TODO: make sure this works for earlier stages where not all fields will be defined...
         ds.ext <- list()
         for ( fld in 1:nrow(d$Data) ) {
           dt <- d$Data[fld,]
@@ -830,9 +833,18 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
       )
     if ( ! byRegion && ! usingBreaks ) {
       # For now, GeoValue must be present and just a single value
+      # TODO: if measure is a vector, its elements will have names of the
+      # values that were applied (all value of Geography, but if By was breaks
+      # at a regional level, it will be the default break names)
       measure <- measure[GeoValue]  # reduce to scalar value (one geographical unit)
       names(measure) <- measureName
     } else {
+      # TODO: base the following on the dimensions of measure and whether or not
+      # we have GeoValue. Rows are the first dimension, columns are the second dimension
+      # Using as.vector() to flatten the matrix will do (though it removes names)
+      # for each column; within column, for each row. Assign the names first,
+      # then name the elements - names do not have to be unique, so we can build
+      # one dimension at a time.
       if ( ! byRegion ) { # need to reduce to vector for GeoValue
         measure <- measure[,GeoValue]
       }
@@ -951,6 +963,8 @@ ve.model.query <- function(
       # (Measure-GeoValue-ByLevel). Not hard, just book-keeping (remove matrix dim to get a vector,
       # but understand row/column order and build suitable names, checking length/order of names
       # against original dim)
+      # NOTE: the resulting array/matrix has dimension names reflecting the "By" element values;
+      # Use those by default (but we can override the break descriptions)
       return(character(0))
     } else {
       message("Evaluating measures for each ",Geography,": ",GeoValue)
@@ -1351,6 +1365,94 @@ doQuery <- function (
   return(outputFiles)
 }
 
+# ve.query.move function
+ve.query.move <- function(from,to="top") {
+  # from is a vector of indices into self$querySpec, either integers or names
+  # to is an index (integer or name) of length 1, which must not exist in "from"
+  #  (moving a slice inside itself is a noop).
+}
+
+# S3 classes and generic functions to support them (used by VEOutput)
+# These wrap a data.frame (subset from VEOutput$modelIndex)
+# VEfields
+# VEgroups
+# VEtables
+
+# S3 class wrapping a single query spec
+# Could construct an edit function for it...
+# Helper function creates an individual spec from parameters
+# VEQuerySpec
+
+# Here is the emerging VEQuery R6 class
+# One of these is constructed by VEOutput$query
+# Perhaps have some S3 generic functions defined...
+
+VEQuery <- R6::R6Class(
+  "VEQuery",
+  public = list(
+    initialize=ve.init.query,
+    print=ve.query.print,
+    run=ve.query.run,               # Option to save
+    copy=ve.query.copy,             # Duplicates the query (for further editing)
+    save=ve.query.save,             # With optional file name prefix (this does an R 'dump' to source)
+    load=ve.query.load,             # With a file selection dialog if no name available and interactive()
+    print=ve.query.print,           # With optional details
+    search=ve.query.search,         # Search for a spec by some feature (returns a list)
+    insert=ve.query.insert,         # Add a pre-constructed spec (list element class VEQuerySpec) to querySpec list (before param)
+    move=ve.query.move,             # Reorder querySpec using from/to specification
+    check=ve.query.check            # Ensure specs are all valid (can use a subset from search)
+  ),
+  active = list(
+    geography=ve.query.geography,
+    geovalue=ve.query.geovalue,
+    specs=ve.query.specs            # Active interface to querySpec
+    ),
+  private = list(
+    queryGeo=NULL,
+    queryGeoValue=NULL,
+    queryFile="",
+    queryResults=NULL,              # list of data.frames with query results
+    querySpec=list(),               # access via active specs
+    queryPrep=NULL,                 # structure for running with summarizeDatasets code
+    queryRunSpec=NULL,              # specs after filtering for validity against geography, etc.
+    outputObject=NULL               # VEOutput object, passed through "$new"
+  )
+)
+
+# Here is the VEOutput R6 class
+# One of these is constructed by VEModel$output
+
+VEOutput <- R6::R6Class(
+  "VEOutput",
+  public = list(
+    model=ve.output.model,          # Access to parent model
+    initialize=ve.init.output,
+    select=ve.output.select,
+    extract=ve.output.extract,
+    list=ve.output.list,
+    search=ve.output.list,
+    inputs=ve.output.inputs,
+    print=ve.output.print,
+    units=ve.output.units,          # Set units on field list (modifies private$modelIndex)
+    query=ve.output.query           # Create a VEQuery object from named query file, or menu
+  active = list(
+    groups=ve.output.groups,
+    tables=ve.output.tables,
+    fields=ve.output.fields
+  ),
+  private = list(
+    modelObject=NULL,               # passed to $initialize from object creating it
+    outputPath=NULL,                # root for extracts and queries; modelPath/output
+    modelInputs=NULL,
+    modelIndex=NULL,
+    ModelState=NULL,
+    groupsSelected=character(0),
+    tablesSelected=character(0),
+    fieldsSelected=character(0),
+    index=ve.output.index
+  )
+)
+
 # Here is the VEModel R6 class
 # One of these objects is returned by "openModel"
 
@@ -1359,39 +1461,38 @@ VEModel <- R6::R6Class(
   public = list(
     modelName=NULL,
     modelPath=NULL,
-    modelState=NULL,
-    modelOutputs=NULL,
-    modelInputs=NULL,
-    modelIndex=NULL,
-    groupsSelected=character(0),
-    tablesSelected=character(0),
-    fieldsSelected=character(0),
+#     modelInputs=NULL,                      # VEOutput object
+#     modelIndex=NULL,                       # VEOutput object
+#     groupsSelected=character(0),           # VEOutput object
+#     tablesSelected=character(0),           # VEOutput object
+#     fieldsSelected=character(0),           # VEOutput object
     stageCount=NULL,
     runParams=NULL,
     runStatus=NULL,
     initialize=ve.init.model,
     run=ve.run.model,
-    print=ve.print.model,
+    print=ve.print.model,                  # provides generic print functionality
     dir=ve.model.dir,
     clear=ve.model.clear,
     copy=ve.model.copy,
-    select=ve.model.select,
-    extract=ve.model.extract,
-    list=ve.model.list,
-    inputs=ve.model.inputs,
-    query=ve.model.query
+    output=ve.model.output,                # Create a VEOutput object (if model is run)
+#     select=ve.model.select,                # VEOutput object
+#     extract=ve.model.extract,              # VEOutput object
+#     list=ve.model.list,                    # VEOutput object
+#     search=ve.model.list,                  # VEOutput object
+#     inputs=ve.model.inputs                 # VEOutput object
   ),
   active = list(
     status=ve.model.status,
-    groups=ve.model.groups,
-    tables=ve.model.tables,
-    fields=ve.model.fields
+#     groups=ve.model.groups,                # VEOutput
+#     tables=ve.model.tables,                # VEOutput
+#     fields=ve.model.fields                 # VEOutput
   ),
   private = list(
     runError=NULL,
-    ModelState=NULL,
     artifacts = ve.artifacts,
-    index=ve.model.index
+#     ModelState=NULL,                       # VEOutput
+#     index=ve.model.index                   # VEOutput
   )
 )
 

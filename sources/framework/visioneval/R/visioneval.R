@@ -696,8 +696,8 @@ initializeModel <-
 #' introduces a package dependency.
 #'
 #' This function simply returns TRUE. It is used to state a module
-#' dependency explicitly to support internal Module calls without
-#' naming a specific package.
+#' dependency explicitly to support internal Module calls that do not
+#' explicitly name a package.
 #'
 #' @param Module During parsing, module is added to the list of
 #'   packages to be searched for modules. Otherwise ignored.
