@@ -448,7 +448,3 @@ TravelTimeReliability <- function(L) {
  #----------------------------------
  #documentModule("TravelTimeReliability")
 
-
-
-      
-      
