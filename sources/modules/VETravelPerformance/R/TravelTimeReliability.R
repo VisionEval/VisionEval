@@ -38,8 +38,7 @@
 # #Uncomment following lines during code development. Recomment when done.
 # # library(visioneval)
 # # library(stringr)
-library(magrittr)
-library(dplyr)
+# 
 # 
 # #SECTION 1A: LOAD SPEED DATA
 # #==========================================
@@ -155,6 +154,16 @@ TravelTimeReliabilitySpecifications <- list(
       UNITS = "ID",
       PROHIBIT = "",
       ISELEMENTOF = ""
+    ),
+    item(
+      NAME = "Level",
+      TABLE = "OtherOpsEffectiveness",
+      GROUP = "Global",
+      TYPE = "character",
+      UNITS = "category",
+      PROHIBIT = "",
+      ISELEMENTOF = c("None", "Mod", "Hvy", "Sev", "Ext"),
+      OPTIONAL = TRUE
     ),
     item(
       NAME = items(
