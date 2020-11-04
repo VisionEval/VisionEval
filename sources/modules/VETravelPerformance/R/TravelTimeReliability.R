@@ -39,95 +39,9 @@
 # # library(visioneval)
 # # library(stringr)
 # 
-# 
-# #SECTION 1A: LOAD SPEED DATA
-# #==========================================
-# #---------------------
-# #Load congested speeds 
-# #---------------------
-# UmsInp_ls <- items(
-#   item(
-#     NAME = "Area",
-#     TYPE = "character",
-#     PROHIBIT = "",
-#     ISELEMENTOF = "",
-#     UNLIKELY = "",
-#     TOTAL = ""
-#   ),
-#   item(
-#     NAME =
-#       items("FwyAveModSpd",
-#             "FwyAveHvySpd",
-#             "FwyAveSevSpd",
-#             "FwyAveExtSpd",
-#             "ArtAveModSpd",
-#             "ArtAveHvySpd",
-#             "ArtAveSevSpd",
-#             "ArtAveExtSpd"),
-#     TYPE = "double",
-#     PROHIBIT = c("< 0"),
-#     ISELEMENTOF = "",
-#     UNLIKELY = "",
-#     TOTAL = ""
-#   )
-# )
-# 
-# 
-# 
-# #Read in Urban Mobility Study datasets
-# #-------------------------------------
-# UmsInp_df <-
-#   processEstimationInputs(
-#     UmsInp_ls,
-#     "ums_2009.csv",
-#     "CalculateRoadPerformance.R")
-# rm(UmsInp_ls)
-# 
-# #========================================================================
-# #SECTION 1B: LOAD AND SAVE METROPOLITAN SPEED PARAMETERS
-# #========================================================================
-# # Base speeds used in the CalculateRoadPerformance module are 
-# #levels relative to average levels, estimated maximum reductions possible by
-# #congestion category, facility type, congestion type (recurring vs. incident),
-# #and assumed deployment relative to the average for a metropolitan area of the
-# #size.
-# 
-# #----------------------------------------------------------
-# #Load and base speeds (assuming no operations improvements)
-# #----------------------------------------------------------
-# BaseSpeedInp_ls <- items(
-#   item(
-#     NAME = "Level",
-#     TYPE = "character",
-#     PROHIBIT = "",
-#     ISELEMENTOF = "",
-#     UNLIKELY = "",
-#     TOTAL = ""
-#   ),
-#   item(
-#     NAME =
-#       items("Fwy",
-#             "Art",
-#             "Fwy_Rcr",
-#             "Art_Rcr"),
-#     TYPE = "double",
-#     PROHIBIT = c("< 0"),
-#     ISELEMENTOF = "",
-#     UNLIKELY = "",
-#     TOTAL = ""
-#   )
-# )
-# BaseSpeeds_df <-   processEstimationInputs(
-#   BaseSpeedInp_ls,
-#   "base_speeds.csv",
-#   "CalculateSpeeds.R")
-# row.names(BaseSpeeds_df) <- BaseSpeeds_df$Level
-# BaseSpeeds_df <- BaseSpeeds_df[,1]
-# rm(BaseSpeedInp_ls)
-# 
-
+#
 #================================================
-#SECTION 1C: CALCULATE TRAVEL TIME INDEX
+#SECTION 1: CALCULATE TRAVEL TIME INDEX
 #================================================
 
 TravelTimeReliabilitySpecifications <- list(
@@ -318,7 +232,7 @@ visioneval::savePackageDataset(TravelTimeReliabilitySpecifications, overwrite = 
     
     
 #=======================================================
-#SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
+#SECTION 2: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
 #=======================================================
     
 #' Calculate travel time reliability measures
@@ -340,24 +254,17 @@ TravelTimeReliability <- function(L) {
   assign("%>%",getFromNamespace("%>%","magrittr"))
   
     #------
-  #Define naming vectors for Mareas and congestion levels
-  Ma <- L$Year$Marea$Marea
-  Marea_df= data.frame(L$Year$Marea)  
-  Cl <- c("None", "Mod", "Hvy", "Sev", "Ext")
-  Vt <- c("Ldv", "HvyTrk", "Bus")
+ #Define naming vectors for Mareas and congestion levels
+ Ma <- L$Year$Marea$Marea
+ Marea_df= data.frame(L$Year$Marea)  
+ Cl <- c("None", "Mod", "Hvy", "Sev", "Ext")
+ Vt <- c("Ldv", "HvyTrk", "Bus")
  Rc <- c("Fwy", "Art", "Oth")
  #Initialize outputs list
  Out_ls <- initDataList()
  Out_ls$Global$Marea <- list()
  Out_ls$Year$Marea <- list()
-  #FwyModCong_BTI <- FwyModCongSpeed / FwyNoneCongSpeed
-  #FwyHvyCong_BTI <- FwyHvyCongSpeed / FwyNoneCongSpeed
-  #FwySevCong_BTI <- FwySevCongSpeed / FwyNoneCongSpeed
-  #FwyExtCong_BTI <- FwyExtCongSpeed / FwyNoneCongSpeed
-  #ArtModCong_BTI <- ArtModCongSpeed / ArtNoneCongSpeed
-  #ArtHvyCong_BTI <- ArtHvyCongSpeed / ArtNoneCongSpeed
-  #ArtSevCong_BTI <- ArtSevCongSpeed / ArtNoneCongSpeed
-  #ArtExtCong_BTI <- ArtExtCongSpeed / ArtNoneCongSpeed  
+  
  #Function to remove attributes
  unattr <- function(X_) {
    attributes(X_) <- NULL
@@ -395,27 +302,6 @@ TravelTimeReliability <- function(L) {
                  ArtHvyCong_BTI = 5.3746 / (1 + exp(- 1.5782 - 0.85867*mean(ArtHvyCong_TTI)))^(1/0.04953),
                  ArtSevCong_BTI = 5.3746 / (1 + exp(- 1.5782 - 0.85867*mean(ArtSevCong_TTI)))^(1/0.04953),
                  ArtExtCong_BTI = 5.3746 / (1 + exp(- 1.5782 - 0.85867*mean(ArtExtCong_TTI)))^(1/0.04953))
-   
- 
- 
- # FwyModCong_TTI <- L$Year$Marea$FwyModCongSpeed / L$Year$Marea$FwyNoneCongSpeed
- # FwyHvyCong_TTI <- L$Year$Marea$FwyHvyCongSpeed / L$Year$Marea$FwyNoneCongSpeed
- # FwySevCong_TTI <- L$Year$Marea$FwySevCongSpeed / L$Year$Marea$FwyNoneCongSpeed
- # FwyExtCong_TTI <- L$Year$Marea$FwyExtCongSpeed / L$Year$Marea$FwyNoneCongSpeed
- # ArtModCong_TTI <- L$Year$Marea$ArtModCongSpeed / L$Year$Marea$ArtNoneCongSpeed
- # ArtHvyCong_TTI <- L$Year$Marea$ArtHvyCongSpeed / L$Year$Marea$ArtNoneCongSpeed
- # ArtSevCong_TTI <- L$Year$Marea$ArtSevCongSpeed / L$Year$Marea$ArtNoneCongSpeed
- # ArtExtCong_TTI <- L$Year$Marea$ArtExtCongSpeed / L$Year$Marea$ArtNoneCongSpeed
-      
- #Save performance measures
- # L$Year$Marea$FwyModCong_TTI <- FwyModCong_TTI 
- # L$Year$Marea$FwyHvyCong_TTI <- FwyHvyCong_TTI 
- # L$Year$Marea$FwySevCong_TTI <- FwySevCong_TTI 
- # L$Year$Marea$FwyExtCong_TTI <- FwyExtCong_TTI  
- # L$Year$Marea$ArtModCong_TTI <- ArtModCong_TTI
- # L$Year$Marea$ArtHvyCong_TTI <- ArtHvyCong_TTI 
- # L$Year$Marea$ArtExtCong_TTI <- ArtSevCong_TTI 
- # L$Year$Marea$ArtSevCong_TTI <- ArtExtCong_TTI 
   
  Out_ls$Year$Marea$FwyModCong_TTI <- TTR_df$FwyModCong_TTI 
  Out_ls$Year$Marea$FwyHvyCong_TTI <- TTR_df$FwyHvyCong_TTI 
