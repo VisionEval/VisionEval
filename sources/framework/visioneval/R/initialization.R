@@ -84,7 +84,7 @@ initModelStateFile <-
 #' components of the list that keeps track of the model state.
 #'
 #' Key variables that are important for managing the model run are stored in a
-#' list (ModelState_ls) that is managed in the global environment. This
+#' list (ModelState_ls) that is managed in the ve.model environment. This
 #' function extracts named components of the list.
 #'
 #' @param Names_ A string vector of the components to extract from the
@@ -138,19 +138,6 @@ setModelState <-
     result <- try(save(ModelState_ls, file=FileName))
     if ( class(result) == 'try-class' ) stop('Could not write to ', FileName)
 
-#     i <- 1
-#     while ( i <= 5 ){
-#       result <- try(save(ModelState_ls, file=FileName))
-#       if ( class(result) == 'try-class' ){
-#         cat(paste0('setModelState: ', FileName, ' is not currently writeable'))
-#         i <- i + 1
-#       } else {
-#         break()
-#       }
-#     }
-# 
-#     if ( i > 5 ) stop('Could not write to ', FileName)
-
     if ( ! "ve.model" %in% search() ) stop("ve.model environment not available.")
     assign("ModelState_ls", ModelState_ls, envir=as.environment("ve.model"))
     TRUE
@@ -175,21 +162,6 @@ setModelState <-
 #' @return A list containing the specified components from the model state file.
 #' @export
 readModelState <- function(Names_ = "All", FileName = "ModelState.Rda", envir=NULL) {
-#   if (file.exists(FileName)) {
-#     #writeLog(paste0('readModelState: loading ', FileName, ' \n'))
-#     i <- 1
-#     while( i <= 5 ){
-#       result <- try(load(FileName), silent=TRUE)
-# 
-#       if (class(result) != 'try-error'){
-#         break()
-#       } else {
-#         #writeLog(paste0('readModelState: error loading ', FileName, '\n'))
-#         i <- i + 1
-#       }
-#     }
-#     if ( i > 5 ) stop('Could not load ', FileName)
-#   }
 
   if ( missing(envir) || is.null(envir) ) {
     if ( ! "ve.model" %in% search() ) {
