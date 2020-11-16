@@ -54,10 +54,10 @@ Here's a sequence of steps that will get you started:
 5. Start RStudio and open the VisionEval-dev.Rproj project\
    (On most graphic display machines, just double-click it)
 6. Execute the ve.build() function:\
-   (A full build from scratch takes from 45 minutes to an hour and a half on a typical Windows machine)\
+   (A full build from scratch takes from 45 minutes to an hour and a half on a typical Windows machine)
    ```
    ve.build()
-   ```\
+   ```
 7. Once the build is done, you can get into the runtime environment in two ways:
    1. By executing ve.run() from the VisionEval-dev RStudio project.
    2. By double-clicking the VisionEval.Rproj RStudio project file down in the
@@ -126,10 +126,10 @@ build a different branch in the same place), you should clean your output:
 ```
 ve.build(c("clean")
 ```
-You can build an installer by doing this:\
+You can build an installer by doing this:
 ```
 ve.build("installer")
-```\
+```
 If you ask for an installer and you have not already built the runtime, it will go ahead and do that for you anyway.
 
 The complete set of build targets is documented in build/Makefile.md. Some of the "-clean" targets can be helpful for
