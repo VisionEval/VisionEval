@@ -29,8 +29,9 @@ Imports:
     stringr,
     filesstrings,
     rhdf5,
-    knitr
+    knitr,
+    futile.logger
 Encoding: UTF-8
 Roxygen: list(load='source')
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1
 biocViews: Infrastructure

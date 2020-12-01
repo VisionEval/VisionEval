@@ -8,11 +8,7 @@
 # https://www.tidyverse.org/blog/2019/11/roxygen2-7-0-0/#r6-documentation
 # https://roxygen2.r-lib.org/articles/rd.html#r6
 
-requireNamespace("jsonlite")
-requireNamespace("R6")
-requireNamespace("visioneval")
-requireNamespace("futile.logger")
-requireNamespace("tryCatchLog")
+self=private=NULL
 
 # Function: ve.model.path
 # Use the modelPath parameter to find run_model.R files
@@ -46,7 +42,7 @@ requireNamespace("tryCatchLog")
 
 ## Helper
 confirmDialog <- function(msg) {
-  conf <- askYesNo(msg,prompts="y/n/c")
+  conf <- utils::askYesNo(msg,prompts="y/n/c")
   if ( is.na(conf) ) conf<-FALSE # Cancel is the same as No
   return(conf)
 }
@@ -63,7 +59,7 @@ isAbsolutePath <- function(modelPath) {
 getModelRoots <- function(get.root=0) {
   roots <- c( getwd() )
   if ( exists("ve.runtime") ) {
-    roots <- c( ve.runtime, roots )
+    roots <- c( get("ve.runtime"), roots )
   }
   # VEModelPath is an optional directory in which to seek or put models
   # Hierarchy of places:
@@ -93,6 +89,7 @@ getModelRoots <- function(get.root=0) {
 
 ## Helper
 #  Get unique file name based on newName in folder newPath
+#  NewPath is the directory it should go in, newName is the name to disambiguate
 getUniqueName <- function(newPath,newName) {
   newModelPath <- file.path(newPath,newName)
   tryName <- newName; try <- 1
@@ -115,10 +112,7 @@ modelInRoot <- function(root) {
 
 ## Helper function
 #  Examine modelPath and return (sub-)directories containing run_model.R
-#  If modelPath identifies a standard model that is not already installed among the roots
-#  divert into installing it. Can also call install separately
-#  The dots are passed to installStandardModel
-findModel <- function( modelPath=NULL, install=TRUE, ... ) {
+findModel <- function( modelPath=NULL ) {
 
   # Does modelPath explicitly mention run_model.R?
   if ( is.null(modelPath) ) stop("Must provide modelPath locator.")
@@ -149,80 +143,84 @@ findModel <- function( modelPath=NULL, install=TRUE, ... ) {
 
   # No run_model in modelPath relative to "roots" - look for standard model perhaps
   # If we have more than a bare name in modelPath, we've failed
-  if ( modelPath != basename(modelPath) ) {
-    stop("No run_model.R in [",paste(modelPath,dir.exists(modelPath),sep=":",collapse=","),"]")
-  }
-
-  # Remaining modelPath consists of "bare words" - might be a standard model
-  # But we won't look for a standard model unless install is TRUE
-  if ( ! install ) {
-    stop("Cannot locate run_model.R in [",paste(modelPath,dir.exists(modelPath),sep=":",collapse=","),"]")
-  }
-
-  # User requested "install", so we'll see if modelPath names a standard model
-  return ( installStandardModel( modelPath, ... ) )
+  stop("No run_model.R in [",paste(modelPath,dir.exists(modelPath),sep=":",collapse=","),"]")
 }
 
 ## Helper
 #  Look up a standard model
 #  model is bare name of standard model
 findStandardModel <- function( model ) {
-  model <- model[1]
   standardModels <- system.file("models",package="VEModel")
+  if ( is.null(model) || ! nzchar(model) ) return( dir(standardModels) )
+
+  model <- model[1]
   if ( ! nzchar(standardModels) || ! model %in% dir(standardModels) ) {
     standardModels <- getOption("VEStandardModels",default=normalizePath("inst/models"))
   }
   model <- file.path(standardModels,model)
   if ( ! dir.exists(model) ) {
-    stop("No standard model for ",model)
+    stop(
+      "No standard model called ",model,"\n",
+      "installModel() to list available models"
+      )
   }
   return(model)
 }
 
-## install a standard model either as a template (skeleton==TRUE) or a sample (skeleton==FALSE)
+## install a standard model either as a template (skeleton==TRUE) or
+## a sample (skeleton==FALSE)
+#  We're still expecting to distribute with standard models pre-installed
 #  Called automatically from findModel, where modelPath must be a bare model name
 #  Can install from other locations by calling this function with a more elaborate modelPath
 
-installStandardModel <- function( modelName, confirm=TRUE, skeleton=!confirm ) {
+SampleModelDataFormat <- c( templ="Template",samp="Sample" )
+
+installStandardModel <- function( modelName, modelPath, confirm, skeleton ) {
   # Locate and install standard modelName into modelPath
   #   If modelPath is NULL or empty string, create conflict-resolved modelName in first available standard root
   #   If modelPath is an existing directory, put modelName into it (conflict-resolved name)
   #   If modelPath does not exist, but dirname(modelPath) exists, create new directory and put the model there
   #   If dirname(modelPath) also does not exist, tell user dirname(modelPath) does not exist and they have to try again
   model <- findStandardModel( modelName )
+  if ( is.null(modelName) || ! nzchar(modelName) ) return(model) # Vector of available standard model names
+
+  # Set up destination modelPath
+  root <- getModelRoots(1)
+  if ( missing(modelPath) || is.null(modelPath) ) modelPath <- modelName
+  if ( ! isAbsolutePath(modelPath) ) {
+    installPath <- normalizePath(file.path(root,modelPath),winslash="/",mustWork=FALSE)
+  }
+  if ( dir.exists(installPath) ) {
+    installPath <- getUniqueName( dirname(installPath), basename(modelPath) )
+  }
 
   # Confirm installation if requested
   install <- TRUE
-  skeleton <- if ( skeleton ) "template" else "sample"
+  skeleton <- if ( skeleton ) "templ" else "samp"
   if ( confirm && interactive() ) {
-    msg <- paste0("Install standard model '",modelName,"' as ",skeleton,"?\n")
+    msg <- paste0("Install standard model '",modelName,"' (",SampleModelDataFormat[skeleton],") in ",installPath,"?\n")
     install <- confirmDialog(msg)
   }
 
   if ( ! install ) stop("Model ",modelName," not installed.",call.=FALSE)
-  message("Installing ",modelName," from ",model," as ",skeleton)
 
-  # Set up destination modelPath if it is not present (will use the first root)
-  modelPath <- getModelRoots(1)
-
-  installPath <- getUniqueName( modelPath, modelName )
-  dir.create(installPath) # getUniqueName guarantees it doesn't exist
+  # Now do the installation
+  message("Installing ",modelName," from ",model," as ",SampleModelDataFormat[skeleton])
+  dir.create(installPath)
 
   # Locate the model and data source files
   model.path <- file.path(model,"model")
   model.files <- dir(model.path,full.names=TRUE)
 
   data.path <- file.path(model,skeleton)
-  if ( ! dir.exists(data.path) ) stop("No ",skeleton," available for ",modelName)
+  if ( ! dir.exists(data.path) ) stop("No ",SampleModelDataFormat[skeleton]," available for ",modelName)
   data.files <- dir(data.path,full.names=TRUE)
 
   file.copy(model.files,installPath,recursive=TRUE) # Copy standard model into modelPath
   file.copy(data.files,installPath,recursive=TRUE) # Copy skeleton data into modelPath
   message("Installed ",modelName," in ",installPath)
 
-  run.model <- modelInRoot(installPath)
-  if ( ! all(nzchar(run.model)) ) stop("No run_model.R in ",paste(run.model,collapse=","))
-  return( dirname(run.model) ) # return list of installed directories containing run_model.R
+  return( list(modelName=modelName,modelPath=installPath) )
 }
 
 ve.model.copy <- function(newName=NULL,newPath=NULL) {
@@ -276,11 +274,11 @@ loadModelState <- function(path) {
   return(model.state)
 }
 
-# Initialize a VEModel from modelPath/modelName, optionally installing a standard model
-ve.init.model <- function(modelPath=NULL,modelName=NULL,install=TRUE,confirm=!install,skeleton=!confirm) {
+# Initialize a VEModel from modelPath/modelName
+ve.model.init <- function(modelPath=NULL,modelName=NULL) {
 
   # Identify the run_model.R root location
-  self$modelPath <- findModel(modelPath,install,confirm,skeleton)
+  self$modelPath <- findModel(modelPath)
 
   # The remainder sets up the components for this model management structure
   print(self$modelPath)
@@ -296,6 +294,8 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL,install=TRUE,confirm=!in
   } else {
     self$modelName <- modelName
   }
+
+  # TODO: make this work with the new initializeModel(RunMode="Load") option
 
   # Gather defs/run_parameters.json
   if ( file.exists(rpfile <- file.path(self$modelPath[1],"defs","run_parameters.json")) ) {
@@ -331,7 +331,7 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL,install=TRUE,confirm=!in
 }
 
 log.level <- function(level) {
-  legal.levels <- list(
+  legal.levels <- c(
     "DEBUG"=futile.logger::DEBUG,
     "ERROR"=futile.logger::ERROR,
     "FATAL"=futile.logger::FATAL,
@@ -390,7 +390,7 @@ ve.model.run <- function(verbose=TRUE,path=NULL,stage=NULL,log="ERROR") {
           self$status <- "Stopped"
         }
         if (verbose) {
-          cat("Model Stage:",gsub(ve.runtime,"",stage),"\n")
+          cat("Model Stage:",gsub(get("ve.runtime"),"",stage),"\n")
           if ( self$status != "Complete" ) cat("Error:",self$status,"\n")
         }
         model.state.path <- file.path(self$modelPath[ms],"ModelState.Rda")
@@ -461,7 +461,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,path=NULL,stage=NULL) {
     if ( interactive() ) {
       choices <- to.delete
       preselect <- if (force || outputOnly ) to.delete else character(0)
-      to.delete <- select.list(choices=choices,preselect=preselect,multiple=TRUE,title="Delete Select Outputs")
+      to.delete <- utils::select.list(choices=choices,preselect=preselect,multiple=TRUE,title="Delete Select Outputs")
       force <- length(to.delete)>0
     } else {
       force <- ( force || length(to.delete)>0 )
@@ -595,7 +595,7 @@ VEModel <- R6::R6Class(
     runStatus=NULL,
 
     # Methods
-    initialize=ve.init.model,
+    initialize=ve.model.init,
     run=ve.model.run,
     print=ve.model.print,                   # provides generic print functionality
     dir=ve.model.dir,
@@ -615,10 +615,10 @@ VEModel <- R6::R6Class(
   )
 )
 
-#' Install and Use a VisionEval Model
+#' Open a VisionEval Model
 #'
 #' @description
-#' `openModel` opens a VisionEval model and returns a VEModel object (q.v.) through
+#' \code{openModel} opens a VisionEval model and returns a VEModel object (q.v.) through
 #'    which it can be manipulated (run or queried)
 #'
 #' @details
@@ -626,52 +626,75 @@ VEModel <- R6::R6Class(
 #'   The basic use of `openModel` is also described in the VisionEval Getting-Started
 #'   document on the VisionEval website (also in the VisionEval installer).
 #
-#' @section Model Path and Name
+#' @section Model Path and Name:
+#'
 #' The `modelPath` parameter locates a model object. When a model is opened, a
 #'   a relative modelPath will be sought in the user's runtime `models` directory.
 #'   An absolute path will be sought only in the user's file system.
 #'
 #' The `modelName` parameters will specify the name of the model directory within
-#'   modelPath. That can be used to install a standard model again (in a different
-#'   subdirectory), or to look for a model in a different directory than the visioneval
-#'   runtime `models` directory (or a substitute provided through `options(VEModelPath=...)`.
+#'   modelPath.
 #'
 #' You can set an alternate location for the "models" subdirectory by providing an
 #'   a path using, for example, `options(VEModelPath='mymodels')`. Relative paths
 #'   will be sought below the VisionEval runtime directory. Absolute paths will
 #'   be sought in the user's file system.
 #'
-#' An error will be raised if a model cannot be found or created with the indicated
+#' An error will be raised if a model cannot be found with the indicated
 #'   modelPath and modelName.
 #'
-#' @section Standard Models
-#' If a model is indicated by a name with no path (e.g. `openModel('VERSPM')`) and it is
-#'   not found in the `models` directory, then a VisionEval standard model will be sought
-#'   by that name in the VEModel package and copied to the `models` directory. To skip that search,
-#'   open the model with `installModel=FALSE`. If the parameter `installData=TRUE` (default),
-#'   the full sample data will be copied and the sample model can be run. If `installData=FALSE`
-#'   only skeleton `inputs` and `defs` will be copied (no actual data will ge supplied and the
-#'   model won't run until data is provided).
+#' @section Available Models:
 #'
-#' @section Available Models
 #' You can see the available models by providing an empty string for the `modelPath`.
 #'   A VEModelList (q.v.) object will be printed as a side-effect, and also returned invisibly.
 #'   You can open an installed model from the VEModelList using
 #'   square brackets to index the list by position (`VEModelList[1]`) or by name
-#'   (`VEModelList['VERSPM']`). To open an un-installed standard model, just provide
-#'   the standard model name as modelPath.
+#'   (`VEModelList['VERSPM']`).
 #'
 #' @param modelPath Directory containing a VisionEval model; if an empty character string is
-#'     provided, prints a list of available standard models (see details)
-#' @param modelName Name displayed for this model (also used as basename for model copy);
-#'   defaults to `basename(modelPath)`
-#' @param installModel if TRUE (default), if the model path and name are not found,
-#'   look instead for `modelPath` as the name of a standard model and install
-#'   (copy) it to the `models` directory as modelName.
-#' @param installData if TRUE (default), install full sample data if modelPath installs a standard model (see details)
+#'     provided, prints a list of available models (see details)
+#' @param modelName Name displayed for this model; defaults to `basename(modelPath)`
 #' @return A VEModel object or a VEModelList of available models if no modelPath or modelName is
 #'   provided; see details and `vignette("VEModel")`
 #' @export
-openModel <- function(modelPath, modelName = NULL, install=TRUE) {
-  return( VEModel$new(modelPath = modelPath, modelName = modelName, install=install) )
+openModel <- function(modelPath="", modelName = NULL) {
+  # TODO: if ( missing(modelPath) || !nzchar(modelPath) ) print dir(ve.runtime/models)
+  return( VEModel$new(modelPath = modelPath, modelName = modelName) )
+}
+
+#' Install a Standard VisionEval Model
+#'
+#' @description
+#' `installModel` installs a local copy of a standard VisionEval model and returns a VEModel object (q.v.) through
+#'    which it can be manipulated (run or queried)
+#'
+#' @details
+#' See `vignette(package='VEModel')` for available help and reference materials.
+#'   The basic use of `openModel` is also described in the VisionEval Getting-Started
+#'   document on the VisionEval website (also in the VisionEval installer).
+#
+#' An error will be raised if a model cannot be found or created with the indicated
+#'   modelPath and modelName.
+#'
+#' You can see the available built-in (standard) models by providing an empty string for the `modelName`.
+#'
+#' @param modelName Name of a standard model to install; if empty or NULL (default), list
+#'   available standard models.
+#' @param modelPath Location to place the copy of modelName standard model. Created relative to
+#'   ve.runtime/models. If directory does not exist, create it and copy the modelName into it.
+#'   If directory does exist, create a unique variant of modelName adjacent to it. If it is NULL
+#'   create a unique variant of modelName in ve.runtime/models.
+#' @param skeleton if TRUE (default), install just skeleton files for the model; otherwise
+#'   install the sample model.
+#' @param confirm if TRUE (default) and running interactively, prompt user to confirm, otherwise
+#'   just do it.
+#' @return A VEModel object of the model that was just installed
+#' @export
+installModel <- function(modelName=NULL, modelPath=NULL, skeleton=FALSE, confirm=!skeleton) {
+  model <- installStandardModel(modelName, modelPath, confirm, skeleton)
+  if ( is.list(model) ) {
+    return( VEModel$new( modelPath=model$modelPath, modelName=model$modelName ) )
+  } else {
+    return( model ) # should be a character vector of available standard models
+  }
 }

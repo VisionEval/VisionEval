@@ -24,6 +24,7 @@ Components:
       - jsonlite
       - stringr
       - filesstrings
+      - futile.logger
     BioC:
       - rhdf5
   VE2001NHTS:

@@ -13,7 +13,7 @@ library(visioneval)
 #----------------
 initializeModel(
   ModelScriptFile = "run_model.R",
-  ParamDir = "../VE-State-Stage-1/defs",
+  ParamDir = "../Stage-1/defs",
   RunParamFile = "run_parameters.json",
   GeoFile = "geo.csv",
   ModelParamFile = "model_parameters.json",

@@ -28,8 +28,8 @@
 #' \code{listDatastoreRD} a visioneval framework datastore connection function
 #' that lists the contents of an RData (RD) type datastore.
 #'
-#' This function lists the contents of a datastore for an RData (RD) type
-#' datastore.
+#' This function writes a listing of the contents of a datastore for
+#'   an RData (RD) type ' datastore.
 #'
 #' @param DataListing_ls a list containing named elements describing a new data
 #' item being added to the datastore listing and the model state file. The list
@@ -43,11 +43,8 @@
 #' @export
 listDatastoreRD <- function(DataListing_ls = NULL) {
   #Load the model state file
-  if (exists("ModelState_ls")) { # look in "ve.model" environment specifically
-    G <- getModelState()
-  } else {
-    G <- readModelState()
-  }
+  G <- readModelState() # will load from file if not already present in getModelEnvironment()
+
   #If no Datastore component, get from DatastoreListing.Rda
   if (is.null(G$Datastore)) {
     load(file.path(G$DatastoreName, "DatastoreListing.Rda"))
@@ -256,7 +253,7 @@ initDatasetRD <- function(Spec_ls, Group) {
     Msg <- paste0("Specified table - ", Table, " - doesn't exist. ",
                   "The table must be initialized before the dataset can ",
                   "be initialized.")
-    writeLog(Msg)
+    writeLog(Msg,Level="error")
     stop(Msg)
   }
   #Get the table length
@@ -320,7 +317,7 @@ readFromTableRD <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, 
   if (DstoreDir == "") {
     G <- getModelState()
   } else {
-    G <- readModelState(FileName = file.path(DstoreDir, "ModelState.Rda"))
+    G <- readModelState(FileName = file.path(DstoreDir, getModelStateFileName()))
   }
   #If DstoreLoc is NULL get the name of the datastore from the model state
   if (is.null(DstoreLoc)) DstoreLoc <- G$DatastoreName
@@ -352,7 +349,7 @@ readFromTableRD <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, 
           "One or more specified indicies for reading data from ",
           Table, " exceed ", AllowedLength
         )
-      writeLog(Message)
+      writeLog(Message,Level="error")
       stop(Message)
     } else {
       Dataset <- Dataset[Index]
@@ -434,7 +431,7 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL) {
           "One or more specified indicies for reading data from ",
           file.path(Group, Table, Name), " exceed the length of the dataset."
         )
-      writeLog(Message)
+      writeLog(Message,Level="error")
       stop(Message)
     } else {
       Dataset[Index] <- Data_
@@ -661,7 +658,7 @@ initDatasetH5 <- function(Spec_ls, Group) {
   } else {
     Message <- paste0("SIZE specification for dataset (", Name,
                       ") is not present.")
-    writeLog(Message)
+    writeLog(Message,Level="Error")
     stop(Message)
   }
   #Create the dataset
@@ -733,7 +730,7 @@ readFromTableH5 <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, 
   if (DstoreDir == "") {
     G <- getModelState()
   } else {
-    G <- readModelState(FileName = file.path(DstoreDir, "ModelState.Rda"))
+    G <- readModelState(FileName = file.path(DstoreDir, getModelStateFileName()))
   }
   #If DstoreLoc is NULL get the name of the datastore from the model state
   if (is.null(DstoreLoc)) DstoreLoc <- G$DatastoreName
@@ -757,7 +754,7 @@ readFromTableH5 <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, 
           "One or more specified indicies for reading data from ",
           Table, " exceed ", AllowedLength
         )
-      writeLog(Message)
+      writeLog(Message,Level="error")
       stop(Message)
     }
   }
@@ -821,7 +818,7 @@ writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL) {
       paste0(
         "writeToTable passed NULL Data_ "
       )
-    writeLog(Message)
+    writeLog(Message,Level="error")
     stop(Message)
   }
   Data_[is.na(Data_)] <- Spec_ls$NAVALUE
@@ -870,16 +867,10 @@ assignDatastoreFunctions <- function(DstoreType) {
   if (DstoreType %in% AllowedDstoreTypes_) {
     DstoreFuncs_ <- lapply(paste0(DstoreNames_,DstoreType),function(x) get(x) ) # make a list of function objects
     names(DstoreFuncs_) <- DstoreNames_
-    if ( ! "ve.model" %in% search() ) {
-      # ve.model does not exist, so create and attach it
-      ve.model <- attach(DstoreFuncs_,name="ve.model")
-    } else {
-      # ve.model exists, so assign the DStoreFuncs_ to DstoreNames_ in that environment
-      lapply(DstoreNames_,function(n) assign(n,DstoreFuncs_[[n]],envir=as.environment("ve.model")))
-    }
+    lapply(DstoreNames_,function(n) assign(n,DstoreFuncs_[[n]],envir=modelEnvironment()))
   } else {
     Msg <-
-      paste0("Unknown 'DatastoreType' in the 'run_parameters.json' file - ",
+      paste0("Unknown 'DatastoreType' in 'run_parameters.json' - ",
              DstoreType,"\nRecognized Types:",
              paste(AllowedDstoreTypes_, collapse = ", "))
     stop(Msg)
@@ -1097,9 +1088,9 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
       SplitRef_ <- unlist(strsplit(DstoreRef, "/"))
       RefHead <- paste(SplitRef_[-length(SplitRef_)], collapse = "/")
       if (RefHead == "") {
-        ModelStateFile <- "ModelState.Rda"
+        ModelStateFile <- getModelStateFileName()
       } else {
-        ModelStateFile <- paste(RefHead, "ModelState.Rda", sep = "/")
+        ModelStateFile <- paste(RefHead, getModelStateFileName(), sep = "/")
       }
       readModelState(FileName = ModelStateFile)
     }
@@ -1254,7 +1245,7 @@ setInDatastore <-
             "setInDatastore got NULL Data_ with arguments Group: ",
             Group, ", Table: ", Table, ", Name: ", Name
           )
-        writeLog(Message)
+        writeLog(Message,Level="error")
         stop(Message)
       }
       if (!is.null(attributes(Data_)$SIZE)) {

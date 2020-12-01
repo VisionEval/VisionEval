@@ -1670,23 +1670,21 @@ parseInputFieldNames <-
 #' the VisionEval requirements.
 #' @param ModuleName a string identifying the name of the module (used to document
 #' module in error messages).
-#' @param Dir a string identifying the relative path to the directory where the
-#' model inputs are contained.
 #' @return A list containing the results of the input processing. The list has
 #' two components. The first (Errors) is a vector of identified file and data
 #' errors. The second (Data) is a list containing the data in the input files
 #' organized in the standard format for data exchange with the datastore.
 #' @export
 processModuleInputs <-
-  function(ModuleSpec_ls, ModuleName, Dir = "inputs") {
+  function(ModuleSpec_ls, ModuleName) {
     G <- getModelState()
-    InpSpec_ls <- ModuleSpec_ls$Inp
+    InpSpec_ls <- (ModuleSpec_ls$Inp)
 
     #ORGANIZE THE SPECIFICATIONS BY INPUT FILE AND NAME
     SortSpec_ls <- list()
     for (i in 1:length(InpSpec_ls)) {
       Spec_ls <- InpSpec_ls[[i]]
-      File <- Spec_ls$FILE
+      File <- basename(Spec_ls$FILE)
       Name <- Spec_ls$NAME
       if (is.null(SortSpec_ls[[File]])) {
         SortSpec_ls[[File]] <- list()
@@ -1707,19 +1705,22 @@ processModuleInputs <-
       FileWarn_ <- character(0)
       #Extract the specifications
       Spec_ls <- SortSpec_ls[[File]]
-      #Check that file exists
-      if (!file.exists(file.path(Dir, File))) {
+      #Check that file exists (INPUTDIR is added in doProcessInpSpec,
+      #INPUTDIR is NA if file does not exist
+      #We defer error handling to here so we can report on all missing files at once.
+      FilePath <- file.path(Spec_ls$INPUTDIR,Spec_ls$FILE)
+      if ( is.na(Spec_ls$INPUTDIR) ) { # it's either a length-1 character vector or NA
         Msg <-
           paste(
             "Input file error.", "File '", File, "' required by '",
-            ModuleName, "' is not present in the 'inputs' directory."
+            ModuleName, "' is not present in any 'inputs' directory."
           )
         FileErr_ <- c(FileErr_, Msg)
         FileErr_ls <- c(FileErr_ls, FileErr_)
         next()
       }
       #Read in the data file and check that it is properly formatted
-      Data_df <- try(read.csv(file.path(Dir, File), as.is = TRUE), silent = TRUE)
+      Data_df <- try(read.csv(FilePath, as.is = TRUE), silent = TRUE)
       if (class(Data_df) == "try-error") {
         Msg <-
           paste0(
@@ -1751,7 +1752,7 @@ processModuleInputs <-
       ParsingErrors_ <- unlist(lapply(ParsedNames_ls, function(x) x$Error))
       if (length(ParsingErrors_) != 0) {
         writeLog(
-          c("Input file field name errors as follows:", ParsingErrors_))
+          c("Input file field name errors as follows:", ParsingErrors_),Level="error")
         FileErr_ <- c(FileErr_, ParsingErrors_)
         FileErr_ls <- c(FileErr_ls, FileErr_)
         next()
@@ -2042,7 +2043,7 @@ processModuleInputs <-
             "Has one or more errors in the data inputs as follows:"
           )
         FileErr_ <- c(FileErr_, Msg, DataErr_ls$Errors)
-        writeLog(FileErr_)
+        writeLog(FileErr_,Level="error")
       }
       FileErr_ls <- c(FileErr_ls, FileErr_)
       if (length(DataErr_ls$Warnings) != 0) {
@@ -2053,7 +2054,7 @@ processModuleInputs <-
             "Has one or more warnings for the data inputs as follows:"
           )
         FileWarn_ <- c(FileWarn_, Msg, DataErr_ls$Warnings)
-        writeLog(FileWarn_)
+        writeLog(FileWarn_,Level="warn")
       }
       FileWarn_ls <- c(FileWarn_ls, FileWarn_)
     }#End loop through input files

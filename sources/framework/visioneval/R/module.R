@@ -586,7 +586,7 @@ testModule <-
     Msg <- paste0("Testing ", ModuleName, ".")
     initModelStateFile(Dir = ParamDir, ParamFile = RunParamFile)
     initLog(ModuleName)
-    writeLog(Msg, Print = TRUE)
+    writeLog(Msg,Level="warn")
     rm(Msg)
 
     #Assign the correct datastore interaction functions
@@ -635,7 +635,7 @@ testModule <-
     #Load datastore if specified or initialize new datastore
     #-------------------------------------------------------
     if (LoadDatastore) {
-      writeLog("Attempting to load datastore.", Print = TRUE)
+      writeLog("Attempting to load datastore.", Level="warn")
       DatastoreName <- getModelState()[["DatastoreName"]]
       if (!file.exists(DatastoreName)) {
         Msg <-
@@ -650,14 +650,14 @@ testModule <-
         GeoFile = GeoFile,
         SaveDatastore = FALSE
       )
-      writeLog("Datastore loaded.", Print = TRUE)
+      writeLog("Datastore loaded.", Level="warn")
     } else {
-      writeLog("Attempting to initialize datastore.", Print = TRUE)
-      initDatastore()
-      readGeography(Dir = ParamDir, GeoFile = GeoFile)
+      writeLog("Attempting to initialize datastore.", Level="warn")
+      initDatastore(ParamDir = ParamDir, GeoFile = GeoFile, ModelParamFile = ModelParamFile)
+      readGeography()
       initDatastoreGeography()
-      loadModelParameters(ModelParamFile = ModelParamFile)
-      writeLog("Datastore initialized.", Print = TRUE)
+      loadModelParameters()
+      writeLog("Datastore initialized.", Level="warn")
     }
 
     #Load module specifications and check whether they are proper
@@ -668,7 +668,7 @@ testModule <-
       load(SpecsFileName)
       return(processModuleSpecs(get(SpecsName)))
     }
-    writeLog("Attempting to load and check specifications.", Print = TRUE)
+    writeLog("Attempting to load and check specifications.", Level="warn")
     Specs_ls <- loadSpec()
     #Check for errors
     Errors_ <- checkModuleSpecs(Specs_ls, ModuleName)
@@ -676,8 +676,8 @@ testModule <-
       Msg <-
         paste0("Specifications for module '", ModuleName,
                "' have the following errors.")
-      writeLog(Msg)
-      writeLog(Errors_)
+      writeLog(Msg,Level="error")
+      writeLog(Errors_,Level="error")
       Msg <- paste0("Specifications for module '", ModuleName,
                     "' have one or more errors. Check the log for details.")
       stop(Msg)
@@ -685,7 +685,7 @@ testModule <-
     }
     rm(Errors_)
     writeLog("Module specifications successfully loaded and checked for errors.",
-             Print = TRUE)
+             Level="warn")
     #Check for developer warnings
     DeveloperWarnings_ls <-
       lapply(c(Specs_ls$Inp, Specs_ls$Get, Specs_ls$Set), function(x) {
@@ -694,7 +694,7 @@ testModule <-
     DeveloperWarnings_ <-
       unique(unlist(lapply(DeveloperWarnings_ls, function(x) x[!is.null(x)])))
     if (length(DeveloperWarnings_) != 0) {
-      writeLog(DeveloperWarnings_)
+      writeLog(DeveloperWarnings_,Level="warn")
       Msg <- paste0(
         "Specifications check for module '", ModuleName, "' generated one or ",
         "more warnings. Check log for details."
@@ -706,18 +706,18 @@ testModule <-
     #Process, check, and load module inputs
     #--------------------------------------
     if (is.null(Specs_ls$Inp)) {
-      writeLog("No inputs to process.", Print = TRUE)
+      writeLog("No inputs to process.", Level="warn")
       # If no inputs and is Initialize module return
       # i.e. all inputs are optional and none are provided
       if (ModuleName == "Initialize") return()
     } else {
       writeLog("Attempting to process, check and load module inputs.",
-             Print = TRUE)
+             Level="warn")
       # Process module inputs
       ProcessedInputs_ls <- processModuleInputs(Specs_ls, ModuleName)
       # Write warnings to log if any
       if (length(ProcessedInputs_ls$Warnings != 0)) {
-        writeLog(ProcessedInputs_ls$Warnings)
+        writeLog(ProcessedInputs_ls$Warnings,Level="warn")
       }
       # Write errors to log and stop if any errors
       if (length(ProcessedInputs_ls$Errors) != 0)  {
@@ -725,14 +725,14 @@ testModule <-
           "Input files for module ", ModuleName,
           " have errors. Check the log for details."
         )
-        writeLog(ProcessedInputs_ls$Errors)
+        writeLog(ProcessedInputs_ls$Errors,Level="error")
         stop(Msg)
       }
       # If module is NOT Initialize, save the inputs in the datastore
       if (ModuleName != "Initialize") {
         inputsToDatastore(ProcessedInputs_ls, Specs_ls, ModuleName)
         writeLog("Module inputs successfully checked and loaded into datastore.",
-                 Print = TRUE)
+                 Level="warn")
       } else {
         if (DoRun) {
           # If module IS Initialize, apply the Initialize function
@@ -740,17 +740,17 @@ testModule <-
           InitializedInputs_ls <- initFunc(ProcessedInputs_ls)
           # Write warnings to log if any
           if (length(InitializedInputs_ls$Warnings != 0)) {
-            writeLog(InitializedInputs_ls$Warnings)
+            writeLog(InitializedInputs_ls$Warnings,Level="warn")
           }
           # Write errors to log and stop if any errors
           if (length(InitializedInputs_ls$Errors) != 0) {
-            writeLog(InitializedInputs_ls$Errors)
+            writeLog(InitializedInputs_ls$Errors,Level="error")
             stop("Errors in Initialize module inputs. Check log for details.")
           }
           # Save inputs to datastore
           inputsToDatastore(InitializedInputs_ls, Specs_ls, ModuleName)
           writeLog("Module inputs successfully checked and loaded into datastore.",
-                   Print = TRUE)
+                   Level="warn")
           return() # Break out of function because purpose of Initialize is to process inputs.
         } else {
           return(ProcessedInputs_ls)
@@ -762,7 +762,7 @@ testModule <-
     #---------------------------------------------------------------------
     writeLog(
       "Checking whether datastore contains all datasets in Get specifications.",
-      Print = TRUE)
+      Level="warn")
     G <- getModelState()
     Get_ls <- Specs_ls$Get
     #Vector to keep track of missing datasets that are specified
@@ -847,7 +847,7 @@ testModule <-
         paste0("The following datasets identified in the Get specifications ",
                "for module ", ModuleName, " are missing from the datastore.")
       Msg <- paste(c(Msg, Missing_), collapse = "\n")
-      writeLog(Msg)
+      writeLog(Msg,Level="error")
       stop(
         paste0("Datastore is missing one or more datasets specified in the ",
                "Get specifications for module ", ModuleName, ". Check the log ",
@@ -862,7 +862,7 @@ testModule <-
     }
     writeLog(
       "Datastore contains all datasets identified in module Get specifications.",
-      Print = TRUE)
+      Level="warn")
 
     #Run the module and check that results meet specifications
     #---------------------------------------------------------
@@ -876,10 +876,10 @@ testModule <-
     if (DoRun) {
       writeLog(
         "Running module and checking whether outputs meet Set specifications.",
-        Print = TRUE
+        Level="warn"
       )
       if (SaveDatastore) {
-        writeLog("Also saving module outputs to datastore.", Print = TRUE)
+        writeLog("Also saving module outputs to datastore.", Level="warn")
       }
       #Load the module function
       Func <- get(ModuleName)
@@ -946,7 +946,7 @@ testModule <-
           }
           #Handle warnings
           if (!is.null(R$Warnings)) {
-            writeLog(R$Warnings)
+            writeLog(R$Warnings,Level="warn")
             Msg <-
               paste0("Module ", ModuleName, " has reported one or more warnings. ",
                      "Check log for details.")
@@ -954,7 +954,7 @@ testModule <-
           }
           #Handle errors
           if (!is.null(R$Errors) & StopOnErr) {
-            writeLog(R$Errors)
+            writeLog(R$Errors,Level="warn")
             Msg <-
               paste0("Module ", ModuleName, " has reported one or more errors. ",
                      "Check log for details.")
@@ -1010,7 +1010,7 @@ testModule <-
             }
             #Handle warnings
             if (!is.null(R$Warnings)) {
-              writeLog(R$Warnings)
+              writeLog(R$Warnings,Level="warn")
               Msg <-
                 paste0("Module ", ModuleName, " has reported one or more warnings. ",
                        "Check log for details.")
@@ -1018,7 +1018,7 @@ testModule <-
             }
             #Handle errors
             if (!is.null(R$Errors) & StopOnErr) {
-              writeLog(R$Errors)
+              writeLog(R$Errors,Level="error")
               Msg <-
                 paste0("Module ", ModuleName, " has reported one or more errors. ",
                        "Check log for details.")
@@ -1031,7 +1031,7 @@ testModule <-
             paste0("Following are inconsistencies between module outputs and the ",
                    "module Set specifications:")
           Msg <- paste(c(Msg, ResultsCheck_), collapse = "\n")
-          writeLog(Msg)
+          writeLog(Msg,Level="error")
           rm(Msg)
           stop(
             paste0("The outputs for module ", ModuleName, " are inconsistent ",
@@ -1040,13 +1040,13 @@ testModule <-
         }
       }
       writeLog("Module run successfully and outputs meet Set specifications.",
-               Print = TRUE)
+               Level="warn")
       if (SaveDatastore) {
-        writeLog("Module outputs saved to datastore.", Print = TRUE)
+        writeLog("Module outputs saved to datastore.", Level="warn")
       }
       #Print success message if no errors found
       Msg <- paste0("Congratulations. Module ", ModuleName, " passed all tests.")
-      writeLog(Msg, Print = TRUE)
+      writeLog(Msg, Level="warn")
       rm(Msg)
 
       #Return the specifications, data list, and functions list if DoRun is FALSE
@@ -1540,7 +1540,7 @@ writeVENameRegistry <-
       }
       #Read in the name registry file as a list
       NameRegistry_ls <-
-        fromJSON(readLines(NameRegistryFile), simplifyDataFrame = FALSE)
+        jsonlite::fromJSON(readLines(NameRegistryFile), simplifyDataFrame = FALSE)
       #Remove any existing registry entries for the module
       for (x in c("Inp", "Set")) {
         NameRegistry_df <- readVENameRegistry(NameRegistryDir)
@@ -1618,7 +1618,7 @@ writeVENameRegistry <-
       #Add the the module specifications to the registry
       NameRegistry_ls$Inp <- c(NameRegistry_ls$Inp, Inp_ls)
       NameRegistry_ls$Set <- c(NameRegistry_ls$Set, Set_ls)
-      writeLines(toJSON(NameRegistry_ls,pretty=TRUE), NameRegistryFile)
+      writeLines(jsonlite::toJSON(NameRegistry_ls,pretty=TRUE), NameRegistryFile)
     }
     return(list(Inp=Inp_ls,Set=Set_ls))
   }
@@ -1657,7 +1657,7 @@ readVENameRegistry <-
       stop("VENameRegistry.json file is not present in the identified directory.")
     }
     #Read in the name registry file
-    fromJSON(readLines(NameRegistryFile))
+    jsonlite::fromJSON(readLines(NameRegistryFile))
   }
 
 
@@ -1705,7 +1705,7 @@ getRegisteredGetSpecs <-
       stop("VENameRegistry.json file is not present in the identified directory.")
     }
     #Read in the name registry file
-    NameRegistry_df <- fromJSON(readLines(NameRegistryFile))
+    NameRegistry_df <- jsonlite::fromJSON(readLines(NameRegistryFile))
     #Identify attributes to return
     AttrNames_ <-
       c("NAME", "TABLE", "GROUP", "TYPE", "UNITS", "PROHIBIT", "ISELEMENTOF")
@@ -2292,6 +2292,9 @@ documentModule <- function(ModuleName){
 #' that requires creating from the datastore the datasets which cause the error
 #' to occur. This function fetches the datasets from the datastore and returns
 #' them in the form they are required to be in to run the module.
+#'
+#' Armed with the return from this function, you can manually source
+#' a module and then step through its function call with the debugger...
 #'
 #' @param ModuleName a string identifying the name of the module.
 #' @param PackageName a string identifying the name of the package that the

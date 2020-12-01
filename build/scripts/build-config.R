@@ -221,7 +221,7 @@ evalq(
     #   quiet - if TRUE, then print a message about what is being tested
     #
     # Value: TRUE if the most recently modified source file is newer
-    #        than the oldest target file
+    #        than the newest target file
     if (!quiet) cat("Comparing",srcpath,"to",paste(tgtpath,collapse="\n"),"\n")
     if ( any(is.null(srcpath)) || any(is.na(srcpath)) || any(nchar(srcpath))==0 || ! file.exists(srcpath) ) return(TRUE)
     if ( any(is.null(tgtpath)) || any(is.na(tgtpath)) || any(nchar(tgtpath))==0 || ! file.exists(tgtpath) ) return(TRUE)

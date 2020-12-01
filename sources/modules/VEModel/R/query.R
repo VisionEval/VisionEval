@@ -1,6 +1,6 @@
 # Query.R
-#' @include "output.R"
-NULL
+#' @include output.R
+self=private=NULL
 
 ve.init.query <- function() { # parameters yet to come - hook to model
   NULL
@@ -65,7 +65,6 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
     }
     usingBreaks <- "Breaks" %in% names(sumSpec) && ! is.null(sumSpec$Breaks)
     usingKey <- "Key" %in% names(sumSpec) && ! is.null(sumSpec$Key)
-    assign("spec",sumSpec,envir=globalenv())
     measure <- visioneval::summarizeDatasets(
         Expr = sumSpec$Expr,
         Units_ = sumSpec$Units,
@@ -93,7 +92,6 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
       if ( ! byRegion ) { # need to reduce to vector for GeoValue
         measure <- measure[,GeoValue]
       }
-      assign("measure",measure,envir=globalenv())
       if ( usingBreaks ) {
         if ( "BreakNames" %in% names(sumSpec) ) {
           breakNames <- sumSpec$BreakNames[[sumSpec$By[1]]]
@@ -120,7 +118,7 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
       Units = measureSpec$Units,
       Description = measureSpec$Description
     )
-    assign(nm,msr,env=measureEnv)
+    assign(nm,msr,envir=measureEnv)
   }
 
   # Return the name(s), for output tracking
@@ -320,7 +318,7 @@ ve.query.run <- function(
       }
       PMSpecifications <- get(specs,envir=specEnv)
       displaySpec <- if ( exists("ve.runtime") ) {
-        sub(ve.runtime,"",SpecFile)
+        sub(get("ve.runtime"),"",SpecFile)
       } else {
         SpecFile
       }
@@ -489,7 +487,7 @@ doQuery <- function (
   outputFile,
   saveTo,
   DatastoreType,
-  log=futile.logger(futile.logger::WARN)
+  log=""
 )
 {
   if (
@@ -597,7 +595,7 @@ doQuery <- function (
         # Add the measures to the output list
         if ( saving ) {
           cat("Saving measures in",basename(dirname(outputFileToWrite)),"as",basename(outputFileToWrite),"...")
-          write.csv(Measures_df, row.names = FALSE, file = outputFileToWrite)
+          utils::write.csv(Measures_df, row.names = FALSE, file = outputFileToWrite)
           cat("Saved\n")
           outputFiles <- c(outputFiles,outputFileToWrite) # Saving: return list of file names
         } else {

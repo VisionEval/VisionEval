@@ -1,4 +1,5 @@
 # Output.R
+self=private=NULL
 
 ve.init.output <- function(ModelState,model) { # parameters yet to come - hook to model
   self$model <- model
@@ -106,7 +107,7 @@ ve.output.index <- function() {
     # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each
     # column)
     # message("Adding inputs to Inputs data.frame")
-    ccases <- complete.cases(GroupTableName)
+    ccases <- stats::complete.cases(GroupTableName)
     GroupTableName <- GroupTableName[ccases,]
     # message("Length of complete.cases:",nrow(GroupTableName))
     Index <- rbind(Index,GroupTableName)
@@ -154,7 +155,7 @@ ve.output.select <- function( what, details=FALSE ) {
     message("Unknown entity to select from:",paste(what,collapse=","))
     invisible(character(0))
   }
-  selected <- select.list(choices=select.from$choices,preselect=select.from$selected,multiple=TRUE,
+  selected <- utils::select.list(choices=select.from$choices,preselect=select.from$selected,multiple=TRUE,
     title=paste("Select",paste(toupper(substring(what,1,1)),substring(what,2),sep=""),sep=" "))
   self[[what]] <- select.from$names[ select.from$choices %in% selected ] # character(0) if none selected => selects all
   invisible(self[[what]]) # print result to see what actually got selected.
@@ -348,6 +349,7 @@ ve.output.extract <- function(
         )
       }
     )
+  model.env = visioneval::modelEnvironment()
   results <- lapply(DataSpecs, function(d) {
         if (!quiet && saving ) message("Extracting data for Table ",d$Data$Table[1]," in Group ",d$Data$Group[1])
         # Do this in a for-loop rather than faster "apply" to avoid dimension and class/type problems.
@@ -355,7 +357,7 @@ ve.output.extract <- function(
         ds.ext <- list()
         for ( fld in 1:nrow(d$Data) ) {
           dt <- d$Data[fld,]
-          ds.ext[[dt$Name]] <- readFromTable(Name=dt$Name,Table=dt$Table,Group=dt$Group,DstoreLoc=dt$Loc,ReadAttr=FALSE)
+          ds.ext[[dt$Name]] <- model.env$readFromTable(Name=dt$Name,Table=dt$Table,Group=dt$Group,DstoreLoc=dt$Loc,ReadAttr=FALSE)
         }
         return( data.frame(ds.ext) )
       }
@@ -372,8 +374,9 @@ ve.output.extract <- function(
         out.path <- file.path(self$model$modelPath[s],saveTo)
         if ( ! dir.exists(out.path) ) dir.create(out.path,recursive=TRUE)
         fn <- file.path(out.path,f)
-        write.csv(data,file=fn)
-        if (!quiet) message("Write output file: ",gsub(ve.runtime,"",fn))
+        utils::write.csv(data,file=fn)
+        if ( ! exists("ve.runtime") ) ve.runtime <- getwd()
+        if (!quiet) message("Write output file: ",gsub(get("ve.runtime"),"",fn))
       }
     )
   } else {
@@ -392,7 +395,7 @@ ve.output.print <- function() {
 ve.output.query <- function(...) {
   if ( is.null(private$queryObject) ) {
     query <- VEQuery$new(...) # parameters TBD
-    if ( query.valid() ) {
+    if ( query$check() ) {
       private$queryObject <- query
     } else {
       private$queryObject <- NULL

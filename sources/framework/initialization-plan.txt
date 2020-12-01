@@ -1,9 +1,9 @@
 Change what initializeModel does:
-  It acquires several kinds of parameters
+  It acquires several kinds of parameters.
 
-    Environment in .VisionEval (configuraton file like environment variables)
+    Environment in .VisionEval (configuration file like environment variables)
       # All of these have defaults if they are not overwritten
-      # They are copied up into ve.model$envspec if that object does not exist
+      # They are copied up into ve.model$envspec (a list) if that object does not exist
       # They can be altered at runtime - VEModel$run (e.g. to try a new run_model.R variant)
       # run_parameters.json will be consulted, but only used if not already defined
       # Priority: ve.model$envspec, then .VisionEval, then run_parameters.json, then indicated defaults
@@ -23,7 +23,7 @@ Change what initializeModel does:
       # expect these to be set by VEModel$run based on model directory
       # so we won't look for them until that function runs,then set them as follows
 
-      # first look for ve.model$basemodel
+      # first look for ve.model$basemodel (a list of parameters)
       # if ModelDir not present, set ModelDir to getwd()
       # if the following not defined, set ParamDir and InputDir to ModelDir
       # build/complete ve.model$basemodel as needed
@@ -55,7 +55,24 @@ Change what initializeModel does:
       Years       = [2010, 2038]
 
     Scenario run parameters
-      # look first for inputs in ve.model$scenario$InputDir/InputName
+      # TODO: Need to work this out to track with VEScenario structures - inputs for
+      #       scenario categories/levels based on the combinations, plus an output directory.
+      #       Auto-composing the names would be good... (output directory is for the combination
+      #       of everything)
+      # TODO: To handle the stages, we may need to process first by stage, then by all the
+      #       variants of input files in the stage, so we get every combination of inputs
+      #       for the stage first. Then we move on to Stage 2, where we use every possible
+      #       variation in Stage 1 as an input to every possible variation in Stage 2. Then
+      #       we repeat with Stage 3. To support that, VEScenario will need to identify which
+      #       modules run in which stages, and then look at variant input files for those
+      #       modules by seeing which option combinations touch which modules.
+      # TODO: What if a scenario option changes modules in two different stages? In that case
+      #       we end up with (say) Stage 1 for that option combined with everything else, and
+      #       when we do the next stage affected by the option (say) Stage 3, we'll always
+      #       load the earlier stages that include that option and combine with every other
+      #       option that also affects Stage 3. Obviously, we'll need to play with that, but
+      #       I think the stage-based approach will solve the ordering problem.
+      # Look first for inputs in ve.model$scenario$InputDir/InputName
       # if required input is not found, then look in ve.model$basemodel$InputDir/InputName
       Scenario    = Name of scenario (within Model)
       Description = Description of scenario

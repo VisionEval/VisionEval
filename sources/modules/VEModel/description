@@ -10,7 +10,7 @@ URL: https://Github.com/VisionEval
 Description: Contains R6 object management code providing functions
   and objects to set up VisionEval models, run them, and query or extract
   their output.
-License: file UNLICENSE
+License: file LICENSE
 LazyData: TRUE
 Depends: R (>= 3.6.0)
 Imports:
@@ -25,3 +25,7 @@ Suggests:
 Encoding: UTF-8
 VignetteBuilder: knitr
 RoxygenNote: 7.1.1
+Collate: 
+    'models.R'
+    'output.R'
+    'query.R'

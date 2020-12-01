@@ -71,7 +71,6 @@ writeLines(json,NameRegistryFile)
 
 cat("Parsing model scripts for use of modules\n")
 model.path <- file.path(ve.runtime,"models")
-model.mods <- list()
 scan.models <- dir(file.path(model.path,ve.models),pattern="run_model\\.R",recursive=TRUE,full.names=TRUE)
 models <- lapply(scan.models,FUN=function(model) {
   script <- visioneval::parseModelScript(model,TestMode=TRUE)$ModuleCalls_df

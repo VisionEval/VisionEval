@@ -4,8 +4,6 @@
 
 #Functions for querying a datastore. See framework/docs/QueryDocs.R
 
-utils::globalVariables("ModelState_ls")
-
 #=============================
 #PREPARE FOR A DATASTORE QUERY
 #=============================
@@ -69,7 +67,7 @@ prepareForDatastoreQuery <- function(DstoreLocs_, DstoreType) {
   }
   #Get listing for each datastore
   Prep_ls$Listing <- lapply(DstoreLocs_, function(x) {
-    return( readModelState(FileName = file.path(dirname(x),"ModelState.Rda")) )
+    return( readModelState(FileName = file.path(dirname(x),getModelStateFileName())) )
   })
   names(Prep_ls$Listing) <- DstoreLocs_
 
@@ -292,6 +290,9 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
 #' missing in each table.
 #' @export
 readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
+  #TODO: reassess the need for this function - does the use case
+  #      exist? Was it ever properly implemented?
+
   #Extract the datastore reading functions
   readFromTable <- QueryPrep_ls$Functions$readFromTable
   listDatastore <- QueryPrep_ls$Functions$listDatastore
@@ -306,8 +307,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
     Out_ls[[tb]] <- list()
     Ds <- names(Tables_ls[[tb]])
     for (Loc in DstoreLocs_) {
-      if ( ! "ve.model" %in% search() ) stop("ve.model environment is not available.")
-      assign("ModelState_ls", QueryPrep_ls$Listing[[Loc]], envir=as.environment("ve.model"))
+      assign("ModelState_ls", QueryPrep_ls$Listing[[Loc]], envir=modelEnvironment(Create=FALSE))
       HasTable <- checkTableExistence(tb, Group, ModelState_ls$Datastore)
       if (HasTable) {
         for (ds in Ds) {
