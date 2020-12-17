@@ -86,8 +86,10 @@ if ( debug>1 ) {
   print(paste(package.names,source.modules[package.names],file.exists(source.modules[package.names]),sep=":"))
 }
 
+ve.express <- Sys.getenv("VE_EXPRESS","NO") != "NO"
+
 # Copy test elements from components, if requested in configuration
-if (ve.runtests) {
+if (ve.runtests && ! ve.express) {
   # Copy any additional test folders to ve.src
   # Mostly for "Test_Data", but any set of stuff needed for all tests
   ve.src.files <- pkgs.db[pkgs.test,]
@@ -206,7 +208,7 @@ for ( module in seq_along(package.names) ) {
     me <- de <- ck <- nt <- vr <- as.logical(NA)
     package.built <- (me <- moduleExists(package.names[module], built.path.binary)) &&
                      (de <- ( dir.exists(build.dir) && ! newerThan(package.paths[module],build.dir,quiet=(!debug))) ) &&
-#                     (ck <- dir.exists(check.dir) ) &&
+                     (ck <- ( ve.express || dir.exists(check.dir) ) ) &&
                      (nt <- ! newerThan( quiet=(debug<2),
                               src.module,
                               file.path(built.path.binary,
@@ -253,7 +255,10 @@ for ( module in seq_along(package.names) ) {
     } else {
       cat("++++++++++ Copying module source",package.paths[module],"to build/test environment...\n")
     }
-    if ( dir.exists(build.dir) || file.exists(build.dir) ) unlink(build.dir,recursive=TRUE) # Get rid of the build directory and start fresh
+    if ( ! ve.express ) {
+      if ( dir.exists(build.dir) || file.exists(build.dir) )
+        unlink(build.dir,recursive=TRUE) # Get rid of the build directory and start fresh
+    }
     pkg.files <- dir(package.paths[module],recursive=TRUE,all.files=FALSE) # not hidden files, relative to package.paths[module]
     dot.files <- dir(package.paths[module],pattern="^\\.RBuildignore$",all.files=TRUE)
     if ( length(dot.files)>0 ) pkg.files <- c(pkg.files,dot.files)
@@ -272,15 +277,17 @@ for ( module in seq_along(package.names) ) {
   if ( ! package.built ) {
     cat("++++++++++ Pre-build / Document ",package.names[module]," in ",build.dir,"\n",sep="")
     withr::with_dir(build.dir,roxygen2::roxygenise())
-    cat("++++++++++ Checking and pre-processing ",package.names[module]," in ",build.dir,"\n",sep="")
-    # Run the module check (prior to building anything)
-    # Run Roxygen with load='source' option in package DESCRIPTION
-    # Requires us to set the working directory outside devtools:check, otherwise it gets very
-    # confused about where to put the generated /data elements.
-    # Need to set "check.dir" location explicitly to "check_dir=build.dir" (otherwise lost in space)
-    check.results <- withr::with_dir(build.dir,devtools::check(".",check_dir=build.dir,document=FALSE,error_on="error"))
-    cat("++++++++++ Check results\n")
-    print(check.results)
+    if ( ! ve.express ) {
+      cat("++++++++++ Checking and pre-processing ",package.names[module],"\nin ",build.dir,"\n",sep="")
+      # Run the module check (prior to building anything)
+      # Run Roxygen with load='source' option in package DESCRIPTION
+      # Requires us to set the working directory outside devtools:check, otherwise it gets very
+      # confused about where to put the generated /data elements.
+      # Need to set "check.dir" location explicitly to "check_dir=build.dir" (otherwise lost in space)
+      check.results <- withr::with_dir(build.dir,devtools::check(".",check_dir=build.dir,document=FALSE,error_on="error"))
+      cat("++++++++++ Check results\n")
+      print(check.results)
+    }
     # devtools::check leaves the package loaded after its test installation to a temporary library
     # Therefore we need to explicitly detach it so we can install it properly later on
     if ( (bogus.package <- paste("package:",package.names[module],sep="")) %in% search() ) {
@@ -296,7 +303,7 @@ for ( module in seq_along(package.names) ) {
     if ( length(tmp.build)>0 && file.exists(tmp.build) ) unlink(tmp.build)
 
     # Run the tests on build.dir if requested
-    if ( ve.runtests ) {
+    if ( ve.runtests && ! ve.express ) {
       test.script <- file.path(build.dir,ve.packages$Test[module])
       message("Executing tests from ",test.script,"\n")
       callr::rscript(script=test.script,wd=build.dir,libpath=.libPaths(),fail_on_status=FALSE)

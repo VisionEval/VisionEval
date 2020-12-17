@@ -23,7 +23,6 @@ Components:
       - knitr
       - jsonlite
       - stringr
-      - filesstrings
       - futile.logger
     BioC:
       - rhdf5
@@ -31,6 +30,16 @@ Components:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
+  VEModel:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
+    CRAN:
+      - jsonlite
+      - R6
+      - stringr
+      - tryCatchLog
+      - futile.logger
   VEScenario:
     Type: module
     Path: sources/modules
@@ -70,6 +79,7 @@ Components:
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 2 }
     CRAN:
+      - filesstrings
       - data.table
       - pscl
     VE:
@@ -171,35 +181,28 @@ Components:
 # "Type: model" components may have tests, and are copied to "models" folder of runtime under their name
 # The "group" is unused for testing - it is always the "last" group for the models
 # The test script relative path is copied to the "test" environment
-  VERPAT:
-    Type: model
-    Path: sources/models
-    Test: { Script: run_model.R, Group: 5 }
-  VERPAT_Scenarios:
-    Type: model
-    Path: sources/models
-  VERSPM:
-    Type: model
-    Path: sources/models
-    Test: { Script: Test1/run_model.R, Group: 5 }
-  VERSPM_MM:
-    Type: model
-    Path: sources/models
-    Test: { Script: Test1/run_model.R, Group: 5 }    
-  VERSPM_TTR:
-    Type: model
-    Path: sources/models
-    Test: { Script: Test1/run_model.R, Group: 5 }    
+#   VERPAT:
+#     Type: model
+#     Path: sources/models
+#     Test: { Script: run_model.R, Group: 5 }
+#   VERPAT_Scenarios:
+#     Type: model
+#     Path: sources/models
+#   VERSPM:
+#     Type: model
+#     Path: sources/models
+#     Test: { Script: Test1/run_model.R, Group: 5 }
+#   VERSPM_MM:
+#     Type: model
+#     Path: sources/models
+#     Test: { Script: Test1/run_model.R, Group: 5 }    
 #   VERSPM-VehAdj:
 #     Type: model
 #     Path: sources/models
 #     Test: { Script: Test1/run_model.R, Group: 5 }    
-  VERSPM_Scenarios:
-    Type: model
-    Path: sources/models
-  VEScenarios:
-    Type: model
-    Path: sources/models
+#   VERSPM_Scenarios:
+#     Type: model
+#     Path: sources/models
   VE-State:
     Type: model
     Path: sources/models

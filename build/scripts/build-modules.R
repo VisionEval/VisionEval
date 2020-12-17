@@ -89,7 +89,7 @@ if ( debug>1 ) {
 }
 
 # Oonfigure the build process
-ve.express <- Sys.getenv("VE_EXPRESS","NO") != "NO"
+ve.express <- ( length(ve.only.build)==0 && Sys.getenv("VE_EXPRESS","NO") != "NO" )
 
 # Copy test elements from components, if requested in configuration
 if (ve.runtests && ! ve.express) {
