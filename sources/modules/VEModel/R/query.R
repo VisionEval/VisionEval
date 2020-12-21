@@ -466,7 +466,7 @@ ve.query.run <- function(
     outputFile=outputFile,
     saveTo=saveTo,
     DatastoreType=self$runParams$DatastoreType,
-    log=log.level(log)
+    log=log
   )
 
   invisible(outputFiles)

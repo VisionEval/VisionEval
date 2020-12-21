@@ -118,22 +118,6 @@ ve.init.model <- function(modelPath=NULL,modelName=NULL   ,...) {
   self$status <- self$runStatus[length(self$runStatus)]
 }
 
-log.level <- function(level) {
-  legal.levels <- list(
-    "DEBUG"=futile.logger::DEBUG,
-    "ERROR"=futile.logger::ERROR,
-    "FATAL"=futile.logger::FATAL,
-    "INFO"=futile.logger::INFO,
-    "TRACE"=futile.logger::TRACE,
-    "WARN"=futile.logger::WARN
-  )
-  if ( level %in% names(legal.levels) ) {
-    return(legal.levels[level])
-  } else {
-    return(legal.levels["ERROR"])
-  }
-}
-
 ve.run.model <- function(verbose=TRUE,path=NULL,stage=NULL,log="ERROR") {
   # Unlike .dir the path/stage says where to start - the run will
   # then continue by running that stage then each following stage
@@ -153,7 +137,7 @@ ve.run.model <- function(verbose=TRUE,path=NULL,stage=NULL,log="ERROR") {
       envir <- as.environment("ve.model")
     }
     self$status <- ""
-    futile.logger::flog.threshold(log.level(log))
+    futile.logger::flog.threshold(log)
     tryCatchLog::tryCatchLog(
       {
         self$status <- "Running"
@@ -1220,7 +1204,7 @@ ve.model.query <- function(
     outputFile=outputFile,
     saveTo=saveTo,
     DatastoreType=self$runParams$DatastoreType,
-    log=log.level(log)
+    log=log
   )
 
   invisible(outputFiles)

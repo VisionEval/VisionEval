@@ -26,11 +26,18 @@ ve.output.index <- function() {
   for ( stage in length(private$ModelState) ) {
     ms <- private$ModelState[[stage]]
     if ( length(ms)==0 ) next
+    if ( ! "Datastore" %in% names(ms) ) {
+      message("Datastore not defined in ModelState: ",paste(names(ms),collapse=","))
+      message("Clear model results and try again.")
+      return(list())
+    } else if ( ! is.list(ms$Datastore) ) {
+      message("Datastore is incomplete: ",class(ms$Datastore)," ",length(ms$Datastore))
+      message("Clear model results and try again.")
+      return(list())
+    }
+      
     ds <- (ms$Datastore)
     model.path <- file.path(basename(dirname(self$model$modelPath[stage])),basename(self$model$modelPath[stage]))
-
-    # TODO: change this to parse the model from run_model.R if modelstate does not exist
-    # Use
 
     # message("Processing ",basename(self$model$modelPath[stage]))
     # NOTE: Datastore element ds of ModelState is a data.frame.

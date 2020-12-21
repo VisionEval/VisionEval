@@ -26,8 +26,8 @@ LazyData: TRUE
 Depends: R (>= 2.10)
 Imports:
     jsonlite,
+    yaml,
     stringr,
-    filesstrings,
     rhdf5,
     knitr,
     futile.logger

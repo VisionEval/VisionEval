@@ -14,6 +14,39 @@
 #functions which call the core functions to move data to and from the datastore
 #in order to run modules.
 
+#Here is what each of these generic functions does:
+#
+#initDatastore
+#   TODO: implement "parent Datastore" to implicitly include
+#   compatible groups, tables, names from another Datastore location
+#   The index of this Datastore includes the other Datastore, but
+#   we add a path to the structure indicating which physical
+#   Datastore holds the most current version of each Dataset.
+#
+#initTable
+#   Make a Table space for a Dataset.
+#   
+#initDataset
+#   Creates an empty Dataset
+#   This only appears to be used in its H5 version (so may not need
+#   to export it)
+#
+#readFromTable
+#   TODO: map through Datastore index to the physical location
+#   of the Table/Dataset.
+#
+#writeToTable
+#   TODO: write always to the immediate Datastore, but treat it as
+#   missing and rebuild entirely if we write to a Dataset that is not
+#   physically located in the current Datastore.
+#
+#listDatastore
+#  This function is principally used internally, but may be called at
+#  the top level without parameters to build a datastore index into
+#  ModelState. In the RD version, it also builds a file with the
+#  Datastore table of contents in it. In the H5 version, the H5
+#  Datastore furnishes its own index.
+#  TODO: manage indexing parent Datastores
 
 ###############################################################################
 #                                                                             #
@@ -42,6 +75,7 @@
 #' written to the model state file.
 #' @export
 listDatastoreRD <- function(DataListing_ls = NULL) {
+  #TODO: Using this to update the data listing is "just wrong"
   #Load the model state file
   G <- readModelState() # will load from file if not already present in getModelEnvironment()
 
@@ -101,7 +135,7 @@ listDatastoreRD <- function(DataListing_ls = NULL) {
 #' listDatastore function which adds a listing of the datastore contents to the
 #' model state file.
 #' @export
-#' @import filesstrings stats utils
+#' @import stats utils
 initDatastoreRD <- function(AppendGroups = NULL) {
   G <- getModelState()
   DatastoreName <- G$DatastoreName
@@ -109,7 +143,7 @@ initDatastoreRD <- function(AppendGroups = NULL) {
   if (is.null(AppendGroups)) {
     #If datastore exists, delete
     if (file.exists(DatastoreName)) {
-      dir.remove(DatastoreName)
+      unlink(DatastoreName,recursive=TRUE)
     }
     #Create datastore
     dir.create(DatastoreName)
@@ -610,9 +644,8 @@ initDatastoreH5 <- function(AppendGroups = NULL) {
 #' @param Length a number identifying the table length.
 #' @return The value TRUE is returned if the function is successful at creating
 #'   the table. In addition, the listDatastore function is run to update the
-#'   inventory in the model state file. The function stops if the group in which
-#'   the table is to be placed does not exist in the datastore and a message is
-#'   written to the log.
+#'   inventory in the model state file. The function will create any
+#'   missing Group as it creates the Table.
 #' @export
 #' @import rhdf5
 initTableH5 <- function(Table, Group, Length) {
@@ -709,7 +742,7 @@ initDatasetH5 <- function(Spec_ls, Group) {
 #' @param Group a string representation of the name of the datastore group the
 #' data is to be read from.
 #' @param DstoreLoc a string representation of the file path of the datastore.
-#' NULL if the datastore is the current directory.
+#' NULL if the datastore is for the current model.
 #' @param Index A numeric vector identifying the positions the data is to be
 #'   written to. NULL if the entire dataset is to be read.
 #' @param ReadAttr A logical identifying whether to return the attributes of
@@ -721,18 +754,22 @@ initDatasetH5 <- function(Spec_ls, Group) {
 readFromTableH5 <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, ReadAttr = TRUE) {
   #Get the directory where the datastore is located from DstoreLoc
   if (is.null(DstoreLoc)) {
-    DstoreDir <- ""
+    DstoreDir <- NULL
   } else {
-    ParseDstoreLoc_ <- unlist(strsplit(DstoreLoc, "/"))
-    DstoreDir <- paste(ParseDstoreLoc_[-length(ParseDstoreLoc_)], collapse = "/")
+    DstoreDir <- dirname(DstoreLoc)
   }
   #Load the model state file
-  if (DstoreDir == "") {
+  if ( is.null(DstoreDir) ) {
     G <- getModelState()
   } else {
-    G <- readModelState(FileName = file.path(DstoreDir, getModelStateFileName()))
+    G <- readModelState(FileName = file.path(DstoreDir, getModelStateFileName()),envir=new.env())
   }
-  #If DstoreLoc is NULL get the name of the datastore from the model state
+  #If DstoreLoc is NULL get the name of the datastore from the model
+  #state
+  # JRaw TODO: Model state should save path of Datastore
+  # TODO: Keep rethinking how we track the Datastore location
+  # (relative/absolute). Need the ModelState to work relative to the
+  # Datastore if we copy all of them to a different absolute location.
   if (is.null(DstoreLoc)) DstoreLoc <- G$DatastoreName
   #Check that dataset exists to read from
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
@@ -873,7 +910,7 @@ assignDatastoreFunctions <- function(DstoreType) {
       paste0("Unknown 'DatastoreType' in 'run_parameters.json' - ",
              DstoreType,"\nRecognized Types:",
              paste(AllowedDstoreTypes_, collapse = ", "))
-    stop(Msg)
+    stop(writeLog(Msg,Level="error"))
   }
 }
 
@@ -1044,6 +1081,8 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
     Type <- Spec_ls$TYPE
     #Identify datastore files and groups to get data from
     if (Group == "Global") {
+      # JRaw TODO: get this to support "Loaded" Datastores that have
+      # not been copied.
       DstoreGroup <- "Global"
       if (!is.null(G$DatastoreReferences$Global)) {
         Files_ <- c(G$DatastoreName, G$DatastoreReferences$Global)
@@ -1085,14 +1124,8 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
     }
     #Fetch the data and add to the input list
     getModelListing <- function(DstoreRef) {
-      SplitRef_ <- unlist(strsplit(DstoreRef, "/"))
-      RefHead <- paste(SplitRef_[-length(SplitRef_)], collapse = "/")
-      if (RefHead == "") {
-        ModelStateFile <- getModelStateFileName()
-      } else {
-        ModelStateFile <- paste(RefHead, getModelStateFileName(), sep = "/")
-      }
-      readModelState(FileName = ModelStateFile)
+      ModelStateFile <- paste(dirname(DstoreRef), getModelStateFileName(), sep = "/")
+      return( readModelState(FileName = ModelStateFile, envir=new.env()) )
     }
     for (File in Files_) {
       DstoreListing_ls <- getModelListing(DstoreRef = File)$Datastore
@@ -1137,7 +1170,7 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
     rm(Spec_ls, Group, Table, Name, Type, DstoreGroup, Files_)
   }
   #Return the list
-  L
+  return( L )
 }
 
 

@@ -16,13 +16,13 @@
 #' of a VisionEval model datastore. The list includes the location(s) of the
 #' datastore(s) to be queried, the listing(s) for those datastores, and the
 #' functions to be used for reading the datastore(s). More than one datastore
-#' may be specified so that if datastore references are used in a model run,
+#' may be specified so that if DATASTORE REFERENCES are used in a model run,
 #' datasets from the referenced datastores may be queried as well. Note that the
 #' capability for querying multiple datastores is only for the purpose of
-#' querying datastores for a single model scenario. This capability should not
-#' be used to compare multiple scenarios. The function does not segregate
-#' datasets by datastore. Attempting to use this function to compare multiple
-#' scenarios could produce unpredictable results.
+#' querying datastores for a single model scenario spread over multiple stages.
+#' This capability should not be used to compare multiple scenarios. The
+#' function does not segregate datasets by datastore. Attempting to use this
+#' function to compare multiple scenarios could produce unpredictable results.
 #'
 #' @param DstoreLocs_ a string vector identifying the paths to all of the
 #' datastores to extract the datasets from. Each entry must be the full relative
@@ -225,7 +225,6 @@ listDatasets <- function(Table, Group, QueryPrep_ls) {
 #' functions for listing and read the datastore(s).
 #' @return a logical identifying whether the archive file has been saved.
 #' @export
-#' @import filesstrings
 documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
   GroupNames_ <- QueryPrep_ls$Listing$Datastore$Datastore$groupname
   Groups_ <- GroupNames_[-grep("/", GroupNames_)]
@@ -245,7 +244,7 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
     }
   }
   zip(paste0(SaveArchiveName, ".zip"), TempDir)
-  remove_dir(TempDir)
+  unlink(TempDir,recursive=TRUE)
   TRUE
 }
 # #Example

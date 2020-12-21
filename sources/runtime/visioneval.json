@@ -1,0 +1,143 @@
+// Default VisionEval run parameters file
+// This file is in JSON format
+// Wrap everything in curly braces to create a single JSON object
+// The object has a series of attributes (names) which are are the configuration values
+//
+// This file lists all available VisionEval run parameters
+// Each parameter is described and listed with its default value
+// Alternate values are suggested in comments
+//
+// For you "old school VisionEvaluators", the only parameters currently nailed to initializeModel
+//   is the DatastoreName parameter, which triggers loading a Datastore (the LoadDatastore flag
+//   is optional; it will be set TRUE if DatastoreName is empty).
+// Also, configuration files are "cascading", and parameters will be sought in the following
+// places:
+//     - runtime root (this file, which is intended to establish the input and results directories)
+//     - "models" directory (possibly non-standard location if set here)
+//     - specific model directory
+//     - model defs directory from run_parameters.json (directory and filename configurable here)
+//     - parameters passed to initializeModel (from run_model.R, whose name is also configurable)
+//     - parameters set in a RunParam_ls list (R object) prior to running the model
+//
+// Configuration files can have the name of your choice from the following list:
+//     - visioneval.json
+//     - .visioneval (like a Linux/Unix profile - still in JSON format, however)
+//     - visioneval.cnf (still JSON format)
+//     - run_parameters.json (yes, you can put that at any level; it is required to exist by that
+//         name in 'defs')
+//
+// Files will be sought in that specific order, and the first one found in a particular directory
+// will be the one that is used, even if others exist. If you run a model with log="trace", it will
+// tell you which files it used, and which configuration parameters were loaded from each file, so
+// if something is "off" you can figure out exactly where it went wrong.
+//
+// Update list of available parameters by doing this from a unix-like shell:
+//     cd VE/sources; find sources -name '*.R' -exec grep "getRunParameter" \{\} \;
+// Or the equivalent in your capable text editor.
+//
+// This file defines everything sensibly with the default you will get if you
+//   remove the parameter from all configuration files.
+// Parameters commented out below are always overridden sensibly at runtime by the
+//   VEModel/VEScenario API
+{
+  // Runtime Environment Standard locations (relative to ve.runtime)
+  // These will rarely need to be changed
+  "ModelRoot"        : "models", // Location to look by default for VEModel::openModel, relative to ve.runtime
+                                 // May be a vector of locations, but all must be relative paths
+                                 // Could also be a (single) absolute path, which may or may not
+                                 // have anything to do with ve.runtime
+  "ModelScript"      : "run_model\\.R", // This is treated as an R regular expression.
+                                          // The model script pattern is NOT case sensitive. If you
+                                          // have more than one matching file (e.g. something like
+                                          // "run_model_[[:digit:]]+\\.R"), they are presumed to
+                                          // be model stages and will be processed in OS collation
+                                          // order. These are sought recursively in ModelDir at
+                                          // runtime (when the model is loaded), and executed in the
+                                          // order found (which may not be what you expect). Look
+                                          // closely at VEModel$runModel
+  "ModelStateFileName" : "ModelState.Rda",
+
+  // "ModelScriptFile"  : "run_model.R" // relative to getwd() will initializing model, or to
+                           // an absolute path. That is how we always used to do it.
+                           // Must be set in the configuration path before a model is opened or sourced.
+                           // Generally, ModelScriptFile is deprecated in favor of "ModelScript"
+                           // (which uses a regular expression to locate valid scripts; see above)
+                           // Use ModelScriptFile if you want to provide an absolute path for a
+                           // one-script model (no external stages). If it is not an absolute path,
+                           // it will be used like "ModelScript" but with the grep flags
+                           // "fixed=TRUE" and "ignore.case=TRUE".
+                           // VEModel::openModel will set explicit absolute model paths based on
+                           // examining the model directory, and the working directory will be
+                           // the model root below which ModelScripts were sought.
+
+  "DatastoreName"    : "Datastore",
+  // "InputPath"     : [], // This parameter exists but you should just let VEModel and VEScenario set it.
+                           // This is a vector of root locations to seek InputDirName.
+                           // When an input file is sought, the first version found in
+                           // InputPath/InputDirName is used (allows scenario overrides).
+                           // Default for regular model is to look in ModelDir (see below)
+                           // Staged models will add stage subfolders of ModelDir as each stage is
+                           // run (see StageTemplate below) then in the model root, if the
+                           // ModelScriptFiles are in subdirectories of the ModelPath
+
+  // Names of standard model files (could redefine for individual models)
+  // Rarely need to be changed
+  "RunParamFile"     : "run_parameters.json",
+  "GeoFile"          : "geo.csv",
+  "UnitsFile"        : "units.csv",
+  "DeflatorsFile"    : "deflators.csv",
+  "ModelParamFile"   : "model_parameters.json",
+
+  // Structure of model inputs and outputs (set globally or on a per-model basis prior to running)
+  // The directories can be absolute paths, but that is not recommended as it will mash all your
+  // models together.
+  "InputDir"         : "inputs",   // Location of inputs, relative to InputPath
+  "ResultsDir"       : ".",        // location of Datastore and ModelState.rda relative to ModelDir
+                                   // Model stages will each get a subfolder within ResultsDir
+                                   // Scenarios managed by VEScenario will set this to "." even if
+                                   // the base model set it somewhere else. The scenario manager
+                                   // will set the model working directory to its results folder,
+                                   // and pull the script and inputs from the base model
+                                   // description, with scenario-specific inputs first on the
+                                   // InputPath
+  "OutputDir"        : "output",   // location of extracts and query results relative to ModelDir
+  "ParamDir"         : "defs",     // Location of model definitions relative to InputPath
+  "StageTemplate"    : "Stage-",   // prefix for subdirectories created for each model stage
+                                   // if the model is using "runStage" instructions in run_model.R
+                                   // "Slugified" Name (if available) or number will be appended.
+                                   // Usually all stages will share the same inputs, and the files
+                                   // should be placed in ModelDir/InputDirName (see sample models).
+                                   // StageTemplate is also used to construct locations in
+                                   // ResultsDir (or the scenario subfolder of ResultsDir) for each
+                                   // stage.
+                                   // If model stages are created externally by scripts in
+                                   // subfolders of ModelDir, StageTemplate is ignored. The stage
+                                   // directory containing the run_model.R will be pushed onto the
+                                   // InputPath. The results directory for the stage will have the
+                                   // same name as each input directory where the staged script was
+                                   // found. If model stages are created externally by multiple
+                                   // run_model_<digit>.R files (for example, using a ModelScript
+                                   // pattern), each of subdirectories will be named after the
+                                   // basename of the run_model script (including the "run_model"
+                                   // part - so build your ModelScript pattern and file names
+                                   // accordingly).
+
+  // Parameters that can be either global or set at runtime
+  "DatastoreType"    : "RD",       // can redefine this model-by-model if desired
+  "SaveDatastore"    : TRUE,       // often overridden at runtime
+  "Seed"             : 1,          // Default is 1 if not overridden at runtime
+
+  // Parameters that must be set in run_parameters.json for the model
+  // "Region"           : "RVMPO",             // Could also set at model root
+  // "BaseYear"         : "2010",              // Could also set at model root
+  // "Years"            : ["2010", "2038"],    // Could also set at model root
+  // "Model"            : "VERSPM Test",
+  // "Scenario"         : "Test",              // VEScenario overrides this
+  // "Description"      : "Test of VERSPM",    // VEScenario overrides this
+
+  // Parameters set dynamically in pre-loaded RunParam_ls
+  // Eventually most useful to run models inside Docker images or similar
+  // "ModelDir"      : "."    // This is where the results and outputs are placed
+  //   // ModelDir may never be explicitly set - it is the working directory
+  //   // as the model runs.
+}

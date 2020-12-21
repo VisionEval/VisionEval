@@ -2,208 +2,98 @@
 #initialization.R
 #================
 
-#This script defines various functions that are invoked to initialize a model
-#run. Several of the functions are also invoked when modules are run.
+#This script defines functions used to set up and manage a model
+#run. These are helpers for finding the ModelState and running modules
 
 # Get rid of the global function references
 utils::globalVariables(c("initTable","writeToTable","ModelState_ls","listDatastore"))
-
-
-#CREATE R ENVIRONMENT FOR MODEL
-#==============================
-#' Attach an R environment to the search path for the active model
-#'
-#' \code{modelEnvironment} a visioneval framework control function that locates
-#' the environment for elements of the active model, creating it and placing it
-#' on the search path if necessary. That environment contains the ModelState,
-#' the Datastore access function aliases and related information. If create is
-#' \code{FALSE}, throw an error instead of creating a new environment
-#' if it does not already exist. The environment should be emptied and
-#' recreated whenever a new model is initialized, either to load or run
-#' it.
-#'
-#' @param Create a logical indicating whether a missing model environment
-#' should be created.
-#' @return an R environment attached to "ve.model" on the search path.
-#' @export
-modelEnvironment <- function(Create=TRUE) {
-  # export this function since it can be useful in the VEModel
-  # package
-  if ( ! "ve.model" %in% search() ) {
-    if ( ! Create ) stop("Missing ve.model environment.")
-    ve.model <- attach(NULL,name="ve.model")
-  } else {
-    ve.model <- as.environment("ve.model")
-  }
-  return(ve.model)
-}
-
-#GET VISIONEVAL RUN STEPS
-#========================
-#' Get end user API run mode.
-#'
-#' \code{getRunMode} a visioneval framework control function
-#' that controls how initializeModel and runModule/runScript/Stage
-#' operations are processed (see visioneval::initializeModel)
-#'
-#' The default for RunMode runs all steps.
-#'
-#' @param RunMode list of values identifying initialization steps.
-#' @return vector subset of c("Load","Run")
-getRunMode <- function(RunMode=NULL) {
-  envir=modelEnvironment()
-  runSteps <- c("Load","Run")
-  if ( ! is.null(RunMode) && length(RunMode)>0 && all(nzchar(RunMode)) ) {
-    mode <- runSteps[ runSteps %in% RunMode ]
-    if ( length(mode)>0 ) runSteps <- mode
-  } else {
-    VEInitializeMode <- get0("RunMode",envir=envir,inherits=FALSE,ifnotfound=NULL)
-    if ( !is.null(VEInitializeMode) ) {
-      runSteps <- VEInitializeMode
-    }
-  }
-  return ( envir$runSteps <- runSteps )
-}
 
 #INITIALIZE MODEL STATE
 #======================
 #' Initialize model state.
 #'
-#' \code{initModelStateFile} a visioneval framework control function that loads
-#' model run parameters into the model state list in the global workspace and
-#' optionally saves it as file.
+#' \code{initModelState} a visioneval framework control function that builds creates
+#' a new ModelState_ls structure in the model environment, optionally saving it to
+#' ModelState.rda.
 #'
-#' This function creates the model state list and loads model run parameters
-#' recorded in the 'parameters.json' file into the model state list. It also
-#' optionally saves the model state list in a file (ModelState.Rda).
+#' Parameters are can be supplied from run_parameters.json or from the function
+#' invocation (the latter mostly for backwards compatibility). The new structure of
+#' runtime parameters moves environmental parameters to configuration files outside the
+#' model (e.g. DatastoreType) and reserves model specific elements for
+#' run_parameters.json (Model, BaseYear, Years). See \code{loadConfiguration}.
 #'
 #' @param Save A logical (default=TRUE) indicating whether the model state file
 #'   should be written out.
-#' @param ... Additional named parameters that will override VisionEval.cnf or
-#'   run_parameters.json. These historically include:
-#' Dir [A string identifying the name of the directory where the global
-#' parameters, deflator, and default units files are located. The default value
-#' is defs.]
-#' ParamFile [A string identifying the name of the global parameters file.
-#' The default value is run_parameters.json.]
-#' DeflatorFile [A string identifying the name of the file which contains
-#' deflator values by year (e.g. consumer price index). The default value is
-#' deflators.csv.]
-#' UnitsFile [A string identifying the name of the file which contains
-#' default units for complex data types (e.g. currency, distance, speed, etc.).
-#' The default value is units.csv.]
-
+#' @param Param_ls A named list of model run parameters
 #' @return TRUE if the model state list is created and file is saved, FALSE if
 #' the model state file was not saved.
 #' @export
 #' @import jsonlite
-initModelStateFile <- function(Save=TRUE,...) {
-  #   Obtain run parameters values RunParam_ls in ve.model environment (if it already exists),
-  #   otherwise create a new empty list of run parameters. VEModel API creates ve.model and for
-  #   backward compatibility, the modelEnvironment() function will create it if it does not exist.
-  #   The VEModel API will set InitialValues from VisionEval.cnf in ve.runtime
-  #   VEModel API will override values using VisionEval.cnf in the run_model.R folder
-  #   This function furnishes default values for the Dir/ParamDir and ParamFile if they are not
-  #   defined already in RunParam_ls (maps Dir into ParamDir) or not in list(...)
-  #   This function opens ParamDir/ParamFile and adds run parameters found there
-  RunParam_ls <- get0("RunParam_ls",envir=modelEnvironment(),inherits=FALSE,ifnotfound=list())
-  dotParams_ls <- list(...)
-  # Replace any items in RunParam_ls from items in dotParams_ls
-  RunParam_ls[ names(dotParams_ls) ] <- dotParams_ls
-  if ( ! "ParamDir" %in% names(RunParam_ls) ) {
-    if ( "Dir" %in% names(RunParam_ls) ) {
-      RunParam_ls$ParamDir = RunParam_ls$Dir
-    }
-  }
-  ParamLocations <- c("ParamFile","ParamDir")
-  defined <- ParamLocations %in% names(RunParam_ls)
-  if ( ! all( defined ) ) {
-    # Set parameter file default values
-    RunParam_ls[ ! defined ] <- list(ParamFile="run_parameters.json",ParamDir="defs")[ ! defined ]
+initModelState <- function(Save=TRUE,Param_ls=NULL) {
+
+  # Load model environment (should have RunParam_ls already loaded, furnishing ...)
+  model.env <- modelEnvironment()
+  if ( ! is.list(Param_ls) ) {
+    Param_ls <- model.env$RunParam_ls;
   }
 
-  # Check for existence of run_parameters.json
-  # Eventually, we'll make its non-existence NOT an error
-  # Though we will still need all the required elements defined somewhere else.
-  ParamFilePath <- file.path(RunParam_ls$ParamDir,  RunParam_ls$ParamFile)
-  if ( ! file.exists(ParamFilePath) ) {
-    Message <- paste("Missing parameter file: ", ParamFilePath)
-    stop( writeLog(Message,Level="error") )
-  }
-
-  # Override elements not defined in dots with elements from ParamFile_ls
-  # May replace elements defined in VisionEval.conf or otherwise in ve.model$RunParam_ls
-  # Also can't override ParamLocations (we've already used them so it's too late)
-  ParamFile_ls <- jsonlite::fromJSON(ParamFilePath)
-  ParamFile_ls <- ParamFile_ls[ names(ParamFile_ls)[ ! ( names(ParamFile_ls) %in% c(ParamLocations, names(dotParams_ls)) ) ] ]
-  RunParam_ls[ names(ParamFile_ls) ] <- (ParamFile_ls)
-
-  #   Furnish default values for DeflatorFile, UnitsFile, ModelParamFile and GeoFile if not defined
-  #   in list(...). The default for InputDir is backward compatible. The VEModel$run function will
-  #   set it to a vector of places to look (effectively a PATH) - when an input file is sought,
-  #   the first version of the file encountered on the list of directories will be used.
-  DefFiles  <- list( # a named list, not a character vector
-    DeflatorFile   = "deflators.csv",
-    UnitsFile      = "units.csv",
-    GeoFile        = "geo.csv",
-    ModelParamFile = "model_parameters.json",
-    InputDir       = "inputs"
-  )
-  missingDefs <- ! names(DefFiles) %in% names(RunParam_ls)
-  RunParam_ls[ names(DefFiles)[missingDefs] ] <- DefFiles[missingDefs]
-  
   # The required parameters will be the initial elements for the ModelState
   # Other RunParam_ls elements will be placed in ModelState_ls$RunParam_ls
   RequiredParam_ <- c(
     "Model", "Scenario", "Description", "Region", "BaseYear", "Years",
     "DatastoreName", "Seed"
   )
-  ParamExists_ <- RequiredParam_ %in% names(RunParam_ls)
+  ParamExists_ <- RequiredParam_ %in% names(Param_ls)
   if (any(!ParamExists_)) {
     MissingParam_ <- RequiredParam_[!ParamExists_]
     Message <- c(
-      "Missing model run parameters (not set in VisionEval.cnf or run_parameters.json or call to initializeModel):",
+      "Missing model run parameters (not set in VisionEval configuration or function call):",
       paste(MissingParam_, collapse = ", ")
     )
     stop( writeLog(Message,Level="error") )
   } 
-  # Now install the parameters - the required parameters become the foundation for
+
+  # Install the parameters - the required parameters become the foundation for
   # ModelState_ls. Other parameters are placed in newModelState_ls$RunParameters,
   # (including things like ParamDir, UnitsFile, etc.)
-  newModelState_ls <- RunParam_ls[RequiredParam_]
-  newModelState_ls$RunParam_ls <- RunParam_ls[ ! (names(RunParam_ls) %in% RequiredParam_) ]
+  newModelState_ls <- Param_ls[RequiredParam_]
+  # ModelState version of Param_ls now also includes the required parameters
+  # Formerly: newModelState_ls$RunParam_ls <- RunParam_ls[ ! (names(RunParam_ls) %in% RequiredParam_) ]
+  newModelState_ls$RunParam_ls <- Param_ls
   newModelState_ls$LastChanged <- Sys.time()
 
-  DeflatorFilePath <- file.path(RunParam_ls$ParamDir, RunParam_ls$DeflatorFile)
-  if ( ! file.exists(DeflatorFilePath) ) {
-    stop( writeLog(paste("Could not locate DeflatorFile:",DeflatorFilePath),Level="error") )
-  }
+  # Also load the complete deflators and units files, which will be accessed later via ModelState_ls
+  DeflatorFile <- getRunParameter("DeflatorFile",Default="deflators.csv",Param_ls=Param_ls)
+  DeflatorFilePath <- findRuntimeInputFile(DeflatorFile,Dir="ParamDir",DefaultDir="defs",Param_ls=Param_ls)
   newModelState_ls$Deflators <- read.csv(DeflatorFilePath, as.is = TRUE)
 
-  UnitsFilePath <- file.path(RunParam_ls$ParamDir, RunParam_ls$UnitsFile)
-  if ( ! file.exists(UnitsFilePath) ) {
-    stop( writeLog(paste("Could not locate DeflatorFile:",UnitsFilePath),Level="error") )
-  }
+  UnitsFile <- getRunParameter("UnitsFile",Default="units.csv",Param_ls=Param_ls)
+  UnitsFilePath <- findRuntimeInputFile(UnitsFile,Dir="ParamDir",Param_ls=Param_ls)
   newModelState_ls$Units <- read.csv(UnitsFilePath, as.is = TRUE)
 
-  envir = modelEnvironment()
-  envir$ModelState_ls <- newModelState_ls
-  envir$RunParam_ls <- RunParam_ls
-  if ( Save) save(ModelState_ls, envir=envir, file = getModelStateFileName())
+  # Establish the ModelState in model.env (and optionally the ModelStateFilePath)
+  model.env$ModelState_ls <- newModelState_ls
+  model.env$RunParam_ls <- Param_ls; # Includes all the run Parameters, including "required"
+  # Note that the ModelStateFileName is always saved in getwd() - we need to be running
+  # where the state will be saved.
+  if ( Save) save(ModelState_ls, envir=model.env, file = getModelStateFileName(Param_ls))
 
   return(Save) 
 }
-#initModelStateFile(ParamDir = "tests/defs")
+#initModelState(ParamDir = "tests/defs")
 
 #LOAD MODEL STATE
 #================
 #' Load ModelState into ve.model environment
 #'
 #' \code{loadModelState} a visioneval framework control function that
-#' loads the ModelState for a model run into the ve.model environment
+#' loads the ModelState for a model run into the ve.model environment.
+#' Will replace any ModelState that is already there, so be cautious to
+#' get the environment right, and to make sure that any existing ModelState
+#' in memory is not unsaved (shouldn't be a problem inside a model run).
 #'
 #' @param FileName A string identifying the name of the file that contains
-#' the ModelState_ls list. The default name is 'ModelState.Rda'.
+#' the ModelState_ls list. The default is the ModelStateFileName in getwd().
 #' @param envir An environment into which to load ModelState.Rda
 #' (default ve.model)
 #' @return TRUE if ModelState was loaded, FALSE if it could not be
@@ -211,12 +101,8 @@ initModelStateFile <- function(Save=TRUE,...) {
 #' @export
 loadModelState <- function(FileName=getModelStateFileName(),envir=NULL) {
   if ( is.null(envir) ) envir = modelEnvironment()
-  # TODO: do some error checking on what "envir" is
-  # TODO: use a function to find default ModelState FileName
-  if ( ! "ModelState_ls" %in% ls(envir) ) {
-    if (file.exists(FileName)) {
-      load(FileName,envir=envir)
-    }
+  if (file.exists(FileName)) {
+    load(FileName,envir=envir)
   }
   invisible( "ModelState_ls" %in% ls(envir) )
 }
@@ -280,7 +166,11 @@ function(ChangeState_ls=list(), FileName = getModelStateFileName(), Save=TRUE) {
       changeModelState_ls[[changeNames[i]]] <- ChangeState_ls[[i]]
     }
     changeModelState_ls$LastChanged <- Sys.time()
-    envir$ModelState_ls <- changeModelState_ls
+    if ( "ModelState_ls" %in% ls(envir) ) {
+      envir$ModelState_ls <- changeModelState_ls
+    } else {
+      stop(writeLog("No ModelState_ls in model environment",Level="error"),call.=FALSE)
+    }
   }
 
   if ( Save ) {
@@ -295,66 +185,20 @@ function(ChangeState_ls=list(), FileName = getModelStateFileName(), Save=TRUE) {
   invisible(TRUE)
 }
 
-#GET A VISIONEVAL OPTION FROM CONFIGURATION
-#==========================================
-#' Fetch a VisionEval option (providing a default)
-#'
-#' \code{getVEOption} a visioneval framework control function that
-#' locates and returns the value for a VisionEval option
-#'
-#' @param OptionName a character string naming an option
-#' @param OptionDefault an R object providing a default value for the
-#'   option if it is not set
-#' @param SetOption a logical; if TRUE, remember the option in ve.model$VEOptions
-#' @return the value of the option (or its default value)
-#' @export
-getVEOption <- function(OptionName=NULL,OptionDefault=NULL,SetOption=FALSE) {
-  # TODO: Look in the following places (use first one found)
-  # Existing value in R option at paste0("visioneval.",OptionName)
-  # Existing option value from VEOptions in "ve.model" environment
-  # VisionEval.ini in RunDirectory/getwd()
-  #   (side effect: load any not already set in ve.model$VEOptions)
-  # VisionEval.ini in ve.runtime
-  #   (side effect: load any not already set in ve.model$VEOptions)
-  # OptionDefault
-
-  # TODO: create a setVEOption (where OptionName may be a vector,
-  #   in which case OptionDefault must be a named list of the same length)
-  #   OptionName[n] is set to OptionDefault[[OptionName]]
-  #   Could also just pull OptionName from names(OptionDefault)
-  #   Or create a separate function called setVEOption
-  # TODO: allow setVEOption to create a VisionEval.ini file
-
-  Option <- OptionDefault
-  if ( SetOption) {
-    # create ve.model$VEOptions if it doesn't exist
-    # assign ve.model$VEOptions[[OptionName]]
-  }
-  return(Option)
-}
-
-#IDENTIFY MODEL STATE FILE
-#=========================
-#' Get model state file name and attach attribute saying if it exists
+#GET MODEL STATE FILENAME
+#========================
+#' Get model state file name
 #'
 #' \code{getModelStateFileName} a visioneval framework control function that
-#' reports the (user-configurable model state file name and reports
-#' whether the files exists (\code{attribute("exists")})
+#' reports the model state file name for this model (from configuration)
 #'
-#' @return a character string containing the standard ModelState (base)name and an
-#' attribute \code{"exists"} saying if it exists.
+#' @param Param_ls a run parameter list to search (if NULL, the default, load the RunParam_Ls from
+#    the modelEnvironment if that exists
+#' @return a character string containing the ModelState file base name
 #' @export
-getModelStateFileName <- function() {
-  # TODO: manage the complete model state path
-  envir <- modelEnvironment()
-  # use the basename - not legal (yet) to specific any directory
-  # other than getwd()
-  modelStateName <- get0(
-    "ModelStateName", envir=envir, inherits=FALSE,
-    ifnotfound={ envir$ModelStateName <- basename(getVEOption("ModelStateName", "ModelState.Rda")) }
-  )
-  # The exists attribute is fluid
-  return(modelStateName)
+getModelStateFileName <- function(Param_ls=NULL) {
+  # We'll look in envir$RunParam_ls for name and path information
+  return(basename(getRunParameter("ModelStateName", Default="ModelState.Rda")))
 }
 
 #READ MODEL STATE FILE
@@ -383,7 +227,7 @@ readModelState <- function(Names_ = "All", FileName=NULL, envir=NULL) {
   if ( !is.null(FileName) || ! exists("ModelState_ls",envir=envir,inherits=FALSE) ) {
     if ( is.null(FileName) ) FileName <- getModelStateFileName()
     if ( ! loadModelState(FileName,envir) ) {
-      Msg <- paste0("Could not load ModelState from",FileName)
+      Msg <- paste0("Could not load ModelState from",FileName,"in",getwd())
       writeLog(Msg,Level="error")
       stop(Msg,call.=FALSE)
     }
@@ -451,211 +295,767 @@ getUnits <- function(Type_) {
 #getUnits("currency")
 #getUnits("area")
 
-#INITIALIZE RUN LOG
 #==================
-#' Initialize run log.
+#PARSE MODULE CALLS
+#==================
+#' parse the list of module calls from the ModelScriptFile
 #'
-#' \code{initLog} a visioneval framework control function that creates a log
-#' (text file) that stores messages generated during a model run.
+#' Process the raw list of module calls and their parameters from the ModelScriptFile and expand
+#' them into a detailee list of input/output specifications.
 #'
-#' This function creates a log file that is a text file which stores messages
-#' generated during a model run. The name of the log is 'Log <date> <time>'
-#' where '<date>' is the initialization date and '<time>' is the initialization
-#' time. The log is initialized with the scenario name, scenario description and
-#' the date and time of initialization.
-#'
-#' @param TimeStamp Force the log message time stamp to this value
-#' (default: \code{Sys.time()})
-#' @param Threshold Logging threshold to display (see
-#' \code{writeLog()} for available levels). Messages below the
-#' threshold will be ignored. Default is "info" which shows a lot.
-#' "warn" is typical for running a model, and "error" for only the
-#' worst.
-#' @param Suffix A character string appended to the file name for the log file.
-#' For example, if the suffix is 'CreateHouseholds', the log file is named
-#' 'Log_CreateHouseholds.txt'. The default value is NULL in which case the
-#' suffix is the date and time.
-#' @return TRUE if the log is created successfully. It creates a log file in the
-#'   working directory and identifies the name of the log file in the
-#'   model state file.
-#' @export
-initLog <- function(TimeStamp = NULL, Threshold="info", Suffix = NULL) {
-  # TODO: integrate with running a model from VEModel$run
-  # TODO: also ensure that it is backward compatible if just sourcing run_model.R
-  # TODO: use ve.env to grab the active logger name
+#' @param ModuleCalls_df a list of module calls returned from \code{parseModelScript}
+#' @param AlreadyInitialized a character vector of names of packages that
+#'   would already have been initialized (if loading a pre-existing Datastore)
+#' @param RequiredPackages a character vector of packages already required
+#' @param Save if FALSE, just update ModelState in memory, otherwise write changes to disk
+#' @return A list of all processed module specifications
+parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized, RequiredPackages, Save=TRUE ) {
 
-  if (is.null(TimeStamp)) {
-    TimeStamp <- as.character(Sys.time())
-  }
-  LogInitTime <- gsub(" ","_",TimeStamp)
+  ModuleCalls_df <- unique(ModuleCalls_df)
 
-  if (!is.null(Suffix)) {
-    LogFile <- paste0("Log_", Suffix, ".txt")
-  } else {
-    LogFile <- paste0("Log_", gsub(":", "_", LogInitTime), ".txt")
-  }
-  # Set up logger and threshold in the model environment
-  envir=modelEnvironment()
-  envir$ve.logger <- "ve.logger"
-  if ( ! exists("ve.log.threshold",envir=envir) ) {
-    # ve.log.threshold set manually is preserved
-    if ( toupper(Threshold) %in% names(log.threshold) ) {
-      envir$ve.log.threshold <- log.threshold[toupper(Threshold)]
+  # Report any required packages that are not also in module calls
+  umc <- unique(ModuleCalls_df$PackageName)
+  explicitRequired_ <- unique(RequiredPackages)
+  if ( any( not.in.umc <- ! (explicitRequired_ %in% umc) ) ) {
+    for ( p in explicitRequired_[not.in.umc] ) {
+      writeLog(paste("Package",p,"is required"),Level="warn")
     }
   }
+  RequiredPackages <- c(umc,explicitRequired_)
 
-  # Create and provision the ve.logger
-  futile.logger::flog.appender(futile.logger::appender.tee(LogFile),name=envir$ve.logger)
-  futile.logger::flog.threshold(envir$ve.log.threshold, name=envir$ve.logger)
-
-  # Log header
-  futile.logger::flog.layout( function(level,msg,...) cat(msg,...,"\n"), name=envir$ve.logger )
-  # The following are not errors, but give them that log level to ensure they get out
-  futile.logger::flog.error("Model Run:",LogInitTime,name=envir$ve.logger)
-
-  # Log standard format
-  futile.logger::flog.layout( layout.visioneval,name=envir$ve.logger)
-
-  invisible(list(LogFile=LogFile,ModelStart=TimeStamp))
-}
-#initLog()
-
-# futile.logger layout for visioneval (adjusted from futile.logger::layout.simple)
-
-prepare_arg <- function(x) {
-  if (is.null(x) || length(x) == 0) return(deparse(x))
-  return(x)
-}
-
-layout.visioneval <- function(level, msg, id='', ...)
-{
-  the.time <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  if (length(list(...)) > 0) {
-    parsed <- lapply(list(...), prepare_arg)
-    msg <- do.call(sprintf, c(msg, parsed))
+  #Get list of installed packages
+  #Check that all module packages are in list of installed packages
+  InstalledPkgs_ <- rownames(installed.packages())
+  MissingPkg_ <- RequiredPackages[!(RequiredPackages %in% InstalledPkgs_)]
+  if (length(MissingPkg_ != 0)) {
+    Msg <-
+    paste0("One or more required packages need to be installed in order ",
+      "to run the model. Following are the missing package(s): ",
+      paste(MissingPkg_, collapse = ", "), ".")
+    writeLog(Msg,Level="error")
+    stop(Msg)
   }
-  return( sprintf("[%s] %s : %s\n", substr(names(level),1,1), the.time, msg) )
+  #Check for 'Initialize' module in each package if so add to ModuleCalls_df
+  Add_ls <- list()
+  # Do not add Initialize if the package was required in an earlier model stage
+  # Results of Initialization in that case will already be in the Datastore
+  for (Pkg in unique(setdiff(ModuleCalls_df$PackageName,AlreadyInitialized))) {
+    PkgData <- data(package = Pkg)$results[,"Item"]
+    if ("InitializeSpecifications" %in% PkgData) {
+      Add_df <-
+      data.frame(
+        ModuleName = "Initialize",
+        PackageName = Pkg,
+        RunFor = "AllYears",
+        RunYear = "Year"
+      )
+      Add_ls[[Pkg]] <- Add_df
+    }
+  }
+  #Insert Initialize module entries into ModuleCalls_df
+  Pkg_ <- names(Add_ls)
+  for (Pkg in Pkg_) {
+    Idx <- head(grep(Pkg, ModuleCalls_df$PackageName), 1)
+    End <- nrow(ModuleCalls_df)
+    ModuleCalls_df <- rbind(
+      ModuleCalls_df[1:(Idx - 1),],
+      Add_ls[[Pkg]],
+      ModuleCalls_df[Idx:End,]
+    )
+  }
+
+  #Identify all modules and datasets in required packages
+  Datasets_df <-
+  data.frame(
+    do.call(
+      rbind,
+      lapply(RequiredPackages, function(x) {
+        data(package = x)$results[,c("Package", "Item")]
+      })
+    ), stringsAsFactors = FALSE
+  )
+  WhichAreModules_ <- grep("Specifications", Datasets_df$Item)
+  ModulesByPackage_df <- Datasets_df[WhichAreModules_,]
+  ModulesByPackage_df$Module <-
+  gsub("Specifications", "", ModulesByPackage_df$Item)
+  ModulesByPackage_df$Item <- NULL
+  DatasetsByPackage_df <- Datasets_df[-WhichAreModules_,]
+  names(DatasetsByPackage_df) <- c("Package", "Dataset")
+  #Save the modules and datasets lists in the model state
+  setModelState(
+    list (
+      ModulesByPackage_df = ModulesByPackage_df,
+      DatasetsByPackage_df = DatasetsByPackage_df,
+      RequiredVEPackages = RequiredPackages
+    ),
+    Save=Save
+  )
+
+  #Iterate through each module call and check availability and specifications
+  #create combined list of all specifications
+  # ModulesByPackage_df lists all modules available in the packages
+  # ModuleCalls_df lists only modules that appear in runModule commands
+  # AllSpecs_ls is a list of processed specifications, which is returned from the function
+  Errors_ <- character(0)
+  AllSpecs_ls <- list()
+  for (i in 1:nrow(ModuleCalls_df)) {
+    AllSpecs_ls[[i]] <- list()
+    ModuleName <- ModuleCalls_df$ModuleName[i]
+    AllSpecs_ls[[i]]$ModuleName <- ModuleName
+    PackageName <- ModuleCalls_df$PackageName[i]
+    AllSpecs_ls[[i]]$PackageName <- PackageName
+    AllSpecs_ls[[i]]$RunFor <- ModuleCalls_df$RunFor[i]
+    #Check module availability
+    Err <- checkModuleExists(ModuleName, PackageName, InstalledPkgs_)
+    if (length(Err) > 0) {
+      Errors_ <- c(Errors_, Err)
+      next()
+    }
+    #Load and check the module specifications
+    Specs_ls <- processModuleSpecs(getModuleSpecs(ModuleName, PackageName))
+    Err <- checkModuleSpecs(Specs_ls, ModuleName)
+    if (length(Err) > 0) {
+      Errors_ <- c(Errors_, Err)
+      next()
+    } else {
+      AllSpecs_ls[[i]]$Specs <- Specs_ls
+    }
+    #If the 'Call' spec is not null and is a list, check the called module
+    if (!is.null(Specs_ls$Call) && is.list(Specs_ls$Call)) {
+      #Iterate through module calls
+      for (j in 1:length(Specs_ls$Call)) {
+        Call_ <- unlist(strsplit(Specs_ls$Call[[j]], "::"))
+        #Check module availability
+        if (length(Call_) == 2) { # package explicitly specified
+          Err <-
+          checkModuleExists(
+            Call_[2],
+            Call_[1],
+            InstalledPkgs_,
+            c(Module = ModuleName, Package = PackageName))
+        } else  {
+          if (length(Call_) == 1) { # only module name is provided
+            if (! any(Call_ %in% ModulesByPackage_df$Module) ) {
+              Err <- c(
+                paste0("Error in runModule call for module ", Call_,"."),
+                "It is not present in any package already identified in the model run script.",
+                "Please add requirePackage(<package-with-module>) to the script."
+              )
+            } else {
+              callPkgs_ <- ModuleCalls_df$PackageName[Call_ %in% ModuleCalls_df$ModuleName]
+              if ( length(callPkgs_)==1 ) { # use existing explicit call to module
+                Call_ <- c( callPkgs_, Call_ )
+              } else  { # callPkgs_ is probably length 0, but could also have more than 1
+                Pkg <- ModulesByPackage_df$Package[ModulesByPackage_df$Module == Call_]
+                Call_ <- c(unique(Pkg), Call_)
+                if (length(Call_) > 2 ) { # More than one package contains the module
+                  callPkgs_ <- Call_[-length(Call_)]
+                  callModule_ <- Call_[length(Call_)]
+                  testPkgs_ <- callPkgs_[callPkgs_ %in% explicitRequired_]
+                  if ( length(testPkgs_) == 0 ) testPkgs_ <- callPkgs_  # No explicit required package
+                  if ( length(testPkgs_) > 1 ) { # Could not resolve by explicit required package
+                    Msg_ <- paste("Providing module",callModule_,"from package",testPkgs_[1])
+                    Warn_ <- c(
+                      Msg_,
+                      paste("Also present in: ", paste(testPkgs_[2:length(testPkgs_)],collapse=", ")),
+                      "Use requirePackage() to force selection."
+                    )
+                    writeLog(Warn_,Level="warn")
+                  } else { # Resolved to exactly one package with the module
+                    writeLog(paste("Provided module",callModule_,"from Package",testPkgs_[1]),Level="info")
+                  }
+                  Call_ <- c(testPkgs_[1],callModule_) # Use the first package found, unless explicit
+                }
+              }
+            }
+          } else {
+            Err <- paste("Cannot fathom Call specification:",Specs_ls$Call[[j]])
+          }
+        }
+        if (length(Err) > 0) {
+          Errors_ <- c(Errors_, Err)
+          next()
+        }
+        # Load and check the module specifications and add Get specs if
+        # there are no specification errors
+        for (i in 1:(length(Call_)-1)) { # Code above forces length(Call_) always to be 2 or fail
+          CallSpecs_ls <-
+          processModuleSpecs(getModuleSpecs(Call_[length(Call_)], Call_[i]))
+          Err <- checkModuleSpecs(CallSpecs_ls, Call_[length(Call_)])
+          if (length(Err) > 0) {
+            Errors_ <- c(Errors_, Err)
+            next()
+          } else {
+            AllSpecs_ls[[i]]$Specs$Get <-
+            c(AllSpecs_ls[[i]]$Specs$Get <- Specs_ls$Get)
+          }            
+        }
+      }
+    }
+
+    #If any errors, print to log and stop execution
+    if (length(Errors_) > 0) {
+      Msg <-
+      paste0("There are one or more errors in the module calls:\n",
+        "package not installed, or module not present in package, ",
+        "or errors in module specifications.")
+      writeLog(c(Msg,Errors_),Level="error")
+      stop(Msg," Check log for details")
+    }
+  }
+  return(AllSpecs_ls)
 }
 
-# Internal log level translation table
-log.threshold <- c(
-    futile.logger::INFO,
-    futile.logger::TRACE,
-    futile.logger::DEBUG,
-    futile.logger::WARN,
-    futile.logger::ERROR,
-    futile.logger::FATAL
-  )
-log.function <- list(
-    INFO  = futile.logger::flog.info,
-    TRACE = futile.logger::flog.trace,
-    DEBUG = futile.logger::flog.debug,
-    WARN  = futile.logger::flog.warn,
-    ERROR = futile.logger::flog.error,
-    FATAL = futile.logger::flog.fatal
+#DOCUMENT A MODULE
+#=================
+#' Produces markdown documentation for a module
+#'
+#' \code{documentModule} a visioneval framework module developer function
+#' that creates a vignettes directory if one does not exist and produces
+#' module documentation in markdown format which is saved in the vignettes
+#' directory.
+#'
+#' This function produces documentation for a module in markdown format. A
+#' 'vignettes' directory is created if it does not exist and the markdown file
+#' and any associated resources such as image files are saved in that directory.
+#' The function is meant to be called within and at the end of the module
+#' script. The documentation is created from a commented block within the
+#' module script which is enclosed by the opening tag, <doc>, and the closing
+#' tag, </doc>. (Note, these tags must be commented along with all the other
+#' text in the block). This commented block may also include tags which identify
+#' resources to include within the documentation. These tags identify the
+#' type of resource and the name of the resource which is located in the 'data'
+#' directory. A colon (:) is used to separate the resource type and resource
+#' name identifiers. For example:
+#' <txt:DvmtModel_ls$EstimationStats$NonMetroZeroDvmt_GLM$Summary>
+#' is a tag which will insert text which is located in a component of the
+#' DvmtModel_ls list that is saved as an rdata file in the 'data' directory
+#' (i.e. data/DvmtModel_ls.rda). The following 3 resource types are recognized:
+#' * txt - a vector of strings which are inserted as lines of text in a code block
+#' * fig - a png file which is inserted as an image
+#' * tab - a matrix or data frame which is inserted as a table
+#' The function also reads in the module specifications and creates
+#' tables that document user input files, data the module gets from the
+#' datastore, and the data the module produces that is saved in the datastore.
+#' This function is intended to be called in the R script which defines the
+#' module. It is placed near the end of the script (after the portions of the
+#' script which estimate module parameters and define the module specifications)
+#' so that it is run when the package is built. It may not properly in other
+#' contexts.
+#'
+#' @param ModuleName A string identifying the name of the module
+#' (e.g. 'CalculateHouseholdDvmt')
+#' @return None. The function has the side effects of creating a 'vignettes'
+#' directory if one does not exist, copying identified 'fig' resources to the
+#' 'vignettes' directory, and saving the markdown documentation file to the
+#' 'vignettes' directory. The markdown file is named with the module name and
+#' has a 'md' suffix.
+#' @export
+#' @import knitr
+documentModule <- function(ModuleName){
+
+  # Do not bother to re-run if in BUILD phase (only processed during
+  # documentation/check step).
+  if ( toupper(Sys.getenv("VE_BUILD_PHASE","SAVE")) != "SAVE" ) return()
+
+  #Make vignettes directory if doesn't exist
+  #-----------------------------------------
+  if(!file.exists("inst/module_docs")) dir.create("inst/module_docs")
+
+  #Define function to trim strings
+  #-------------------------------
+  trimStr <-
+  function(String, Delimiters = NULL, Indices = NULL, Characters = NULL) {
+    Chars_ <- unlist(strsplit(String, ""))
+    if (!is.null(Delimiters)) {
+      Start <- which(Chars_ == Delimiters[1]) + 1
+      End <- which(Chars_ == Delimiters[2]) - 1
+      Result <- paste(Chars_[Start:End], collapse = "")
+    }
+    if (!is.null(Indices)) {
+      Result <- paste(Chars_[-Indices], collapse = "")
+    }
+    if (!is.null(Characters)) {
+      Result <- paste(Chars_[!(Chars_ %in% Characters)], collapse = "")
+    }
+    Result
+  }
+
+  #Define function to split documentation into list
+  #------------------------------------------------
+  splitDocs <-
+  function(Docs_, Idx_) {
+    Starts_ <- c(1, Idx_ + 1)
+    Ends_ <- c(Idx_ - 1, length(Docs_))
+    apply(cbind(Starts_, Ends_), 1, function(x) Docs_[x[1]:x[2]])
+  }
+
+  #Define function to process documentation tag
+  #--------------------------------------------
+  #Returns list identifying documentation type and reference
+  processDocTag <- function(DocTag) {
+    DocTag <- trimStr(DocTag, Delimiters = c("<", ">"))
+    DocTagParts_ <- unlist(strsplit(DocTag, ":"))
+    if (length(DocTagParts_) != 2) {
+      DocTag_ <- c(Type = "none", Reference = "none")
+    } else {
+      DocTag_ <- DocTagParts_
+      names(DocTag_) <- c("Type", "Reference")
+      DocTag_["Type"] <- tolower(DocTag_["Type"])
+      if (!(DocTag_["Type"] %in% c("txt", "tab", "fig"))) {
+        DocTag_["Type"] <- "none"
+      }
+    }
+    DocTag_
+  }
+
+  #Define function to insert Rmarkdown for 'txt' tags
+  #--------------------------------------------------
+  insertTxtMarkdown <- function(Reference) {
+    Object <- unlist(strsplit(Reference, "\\$"))[1]
+    File <- paste0("data/", Object, ".rda")
+    if (file.exists(File)) {
+      load(File)
+      if (!is.null(eval(parse(text = Reference)))) {
+        Text_ <- eval(parse(text = Reference))
+        Markdown_ <- c(
+          "```",
+          Text_,
+          "```"
+        )
+        rm(list = Object)
+      } else {
+        return("Error in module documentation tag reference")
+      }
+    } else {
+      return("Error in module documentation tag reference")
+    }
+    Markdown_
+  }
+
+  #Define function to insert Rmarkdown for 'fig' tags
+  #--------------------------------------------------
+  insertFigMarkdown <- function(Reference) {
+    FromFile <- paste0("data/", Reference)
+    ToFile <- paste0("inst/module_docs/", Reference)
+    if (file.exists(FromFile)) {
+      if (file.exists(ToFile)) file.remove(ToFile)
+      file.copy(from = FromFile, to = ToFile)
+      file.remove(FromFile)
+      Markdown_ <- paste0("![", Reference, "](", Reference, ")")
+    } else {
+      return("Error in module documentation tag reference")
+    }
+    Markdown_
+  }
+
+  #Define function to insert Rmarkdown for 'tab' tags
+  #--------------------------------------------------
+  insertTabMarkdown <- function(Reference) {
+    Object <- unlist(strsplit(Reference, "\\$"))[1]
+    File <- paste0("data/", Object, ".rda")
+    if (file.exists(File)) {
+      load(File)
+      if (!is.null(eval(parse(text = Reference)))) {
+        Table_df <- eval(parse(text = Reference))
+        ColNames <- colnames(Table_df)
+        Markdown_ <- c(
+          "",
+          kable(
+            eval(Table_df),
+            format = "markdown",
+            col.names = ColNames)
+        )
+        rm(list = Object, Table_df, ColNames)
+      } else {
+        return("Error in module documentation tag reference")
+      }
+    } else {
+      return("Error in module documentation tag reference")
+    }
+    Markdown_
+  }
+
+  #Locate documentation portion of script and strip off leading comments
+  #---------------------------------------------------------------------
+  FilePath <- paste0("R/", ModuleName, ".R")
+  Text_ <- readLines(FilePath)
+  DocStart <- grep("#<doc>", Text_) + 1
+  DocEnd <- grep("#</doc>", Text_) - 1
+  Docs_ <-
+  unlist(lapply(Text_[DocStart:DocEnd], function(x) trimStr(x, Indices = 1)))
+
+  #Insert knitr code for inserting documentation tag information
+  #-------------------------------------------------------------
+  #Locate statistics documentation tags
+  TagIdx_ <- grep("<", Docs_)
+  #If one or more tags, split Docs_ and insert tag content
+  if (length(TagIdx_) > 0) {
+    #Split documentation into list of components before and after tags
+    Docs_ls <- splitDocs(Docs_, TagIdx_)
+    #Initialize new list into which knitr-processed tags will be inserted
+    RevDocs_ls <- list(
+      Docs_ls[1]
+    )
+    #Iterate through tags and insert knitr-processed tags
+    #if there are any tags
+    for (n in 1:length(TagIdx_)) {
+      Idx <- TagIdx_[n]
+      DocTag_ <- processDocTag(Docs_[Idx])
+      if (DocTag_["Type"] == "none") {
+        Markdown_ <- "Error in module documentation tag"
+      }
+      if (DocTag_["Type"] == "txt") {
+        Markdown_ <- insertTxtMarkdown(DocTag_["Reference"])
+      }
+      if (DocTag_["Type"] == "fig") {
+        Markdown_ <- insertFigMarkdown(DocTag_["Reference"])
+      }
+      if (DocTag_["Type"] == "tab") {
+        Markdown_ <- insertTabMarkdown(DocTag_["Reference"])
+      }
+      RevDocs_ls <- c(
+        RevDocs_ls,
+        list(Markdown_),
+        Docs_ls[n + 1]
+      )
+    }
+  } else {
+    RevDocs_ls <- list(
+      list(Docs_)
+    )
+  }
+
+  #Functions to assist in loading and processing module specifications
+  #-------------------------------------------------------------------
+  #Define function to process specifications
+  processModuleSpecs <- function(Spec_ls) {
+    #Define a function to expand a specification having multiple NAMEs
+    expandSpec <- function(SpecToExpand_ls, ComponentName) {
+      Names_ <- unlist(SpecToExpand_ls$NAME)
+      Descriptions_ <- unlist(SpecToExpand_ls$DESCRIPTION)
+      Expanded_ls <- list()
+      for (i in 1:length(Names_)) {
+        Temp_ls <- SpecToExpand_ls
+        Temp_ls$NAME <- Names_[i]
+        Temp_ls$DESCRIPTION <- Descriptions_[i]
+        Expanded_ls <- c(Expanded_ls, list(Temp_ls))
+      }
+      Expanded_ls
+    }
+    #Define a function to process a component of a specifications list
+    processComponent <- function(Component_ls, ComponentName) {
+      Result_ls <- list()
+      for (i in 1:length(Component_ls)) {
+        Temp_ls <- Component_ls[[i]]
+        Result_ls <- c(Result_ls, expandSpec(Temp_ls, ComponentName))
+      }
+      Result_ls
+    }
+    #Process the list components and return the results
+    Out_ls <- list()
+    Out_ls$RunBy <- Spec_ls$RunBy
+    if (!is.null(Spec_ls$NewInpTable)) {
+      Out_ls$NewInpTable <- Spec_ls$NewInpTable
+    }
+    if (!is.null(Spec_ls$NewSetTable)) {
+      Out_ls$NewSetTable <- Spec_ls$NewSetTable
+    }
+    if (!is.null(Spec_ls$Inp)) {
+      Out_ls$Inp <- processComponent(Spec_ls$Inp, "Inp")
+    }
+    if (!is.null(Spec_ls$Get)) {
+      Out_ls$Get <- processComponent(Spec_ls$Get, "Get")
+    }
+    if (!is.null(Spec_ls$Set)) {
+      Out_ls$Set <- processComponent(Spec_ls$Set, "Set")
+    }
+    if (!is.null(Spec_ls$Call)) {
+      Out_ls$Call <- Spec_ls$Call
+    }
+    Out_ls
+  }
+  #Define a function to load the specifications
+  loadSpecs <- function(ModuleName) {
+    ModuleSpecs <- paste0(ModuleName, "Specifications")
+    ModuleSpecsFile <- paste0("data/", ModuleSpecs, ".rda")
+    if (file.exists(ModuleSpecsFile)) {
+      load(ModuleSpecsFile)
+      eval(parse(text = ModuleSpecs))
+    } else {
+      list()
+    }
+  }
+  #Define function to creates a data frame from specifications Inp, Get, or Set
+  makeSpecsTable <- function(ModuleName, Component, SpecNames_) {
+    Specs_ls <- processModuleSpecs(loadSpecs(ModuleName))[[Component]]
+    if (Component == "Inp") {
+      Specs_ls <- lapply(Specs_ls, function(x) {
+        if (!("OPTIONAL" %in% names(x))) {
+          x$OPTIONAL <- FALSE
+        }
+        x
+      })
+      SpecNames_ <- c(SpecNames_, "OPTIONAL")
+    }
+    Specs_ls <- lapply(Specs_ls, function(x) x[SpecNames_])
+    Specs_ls <- lapply(Specs_ls, function(x) {
+      data.frame(lapply(x, function(y) {
+        if (length(y) == 1) {
+          y
+        } else {
+          paste(y, collapse = ", ")
+        }
+      }))
+    })
+    do.call(rbind, Specs_ls)
+  }
+  #Define function to break long strings into lines
+  wordWrap <- function(WordString, MaxLength) {
+    Words_ls <- list(
+      "",
+      unlist(strsplit(WordString, " "))
+    )
+    #Define recursive function to peel off first words from string
+    getFirstWords <- function(Words_ls) {
+      if (length(Words_ls[[2]]) == 0) {
+        return(Words_ls[[1]][-1])
+      } else {
+        RemWords_ <- Words_ls[[2]]
+        NumChar_ <- cumsum(nchar(RemWords_))
+        NumChar_ <- NumChar_ + 1
+        IsFirst_ <- NumChar_ < MaxLength
+        AddString <-paste(RemWords_[IsFirst_], collapse = " ")
+        RemWords_ <- RemWords_[!IsFirst_]
+        getFirstWords(list(
+          c(Words_ls[[1]], AddString),
+          RemWords_
+        ))
+      }
+    }
+    paste(getFirstWords(Words_ls), collapse = "<br>")
+  }
+
+  #Insert documentation of user input files
+  #----------------------------------------
+  #Make a table of Inp specifications
+  SpecNames_ <-
+  c("NAME", "FILE", "TABLE", "GROUP", "TYPE", "UNITS", "PROHIBIT",
+    "ISELEMENTOF", "UNLIKELY", "DESCRIPTION")
+  InpSpecs_df <- makeSpecsTable(ModuleName, "Inp", SpecNames_)
+  #Make markdown text
+  if (!is.null(InpSpecs_df)) {
+    InpMarkdown_ <- c(
+      "",
+      "## User Inputs",
+      "The following table(s) document each input file that must be provided in order for the module to run correctly. User input files are comma-separated valued (csv) formatted text files. Each row in the table(s) describes a field (column) in the input file. The table names and their meanings are as follows:",
+      "",
+      "NAME - The field (column) name in the input file. Note that if the 'TYPE' is 'currency' the field name must be followed by a period and the year that the currency is denominated in. For example if the NAME is 'HHIncomePC' (household per capita income) and the input values are in 2010 dollars, the field name in the file must be 'HHIncomePC.2010'. The framework uses the embedded date information to convert the currency into base year currency amounts. The user may also embed a magnitude indicator if inputs are in thousand, millions, etc. The VisionEval model system design and users guide should be consulted on how to do that.",
+      "",
+      "TYPE - The data type. The framework uses the type to check units and inputs. The user can generally ignore this, but it is important to know whether the 'TYPE' is 'currency'",
+      "",
+      "UNITS - The units that input values need to represent. Some data types have defined units that are represented as abbreviations or combinations of abbreviations. For example 'MI/HR' means miles per hour. Many of these abbreviations are self evident, but the VisionEval model system design and users guide should be consulted.",
+      "",
+      "PROHIBIT - Values that are prohibited. Values may not meet any of the listed conditions.",
+      "",
+      "ISELEMENTOF - Categorical values that are permitted. Value must be one of the listed values.",
+      "",
+      "UNLIKELY - Values that are unlikely. Values that meet any of the listed conditions are permitted but a warning message will be given when the input data are processed.",
+      "",
+      "DESCRIPTION - A description of the data.",
+      ""
+    )
+    InpSpecs_ls <- split(InpSpecs_df[, names(InpSpecs_df) != "FILE"], InpSpecs_df$FILE)
+    FileNames_ <- names(InpSpecs_ls)
+    for (fn in FileNames_) {
+      InpMarkdown_ <- c(
+        InpMarkdown_,
+        paste("###", fn)
+      )
+      IsOptional <- unique(InpSpecs_ls[[fn]]$OPTIONAL)
+      if (IsOptional) {
+        InpMarkdown_ <- c(
+          InpMarkdown_,
+          "This input file is OPTIONAL.",
+          ""
+        )
+      }
+      SpecsTable_df <-
+      InpSpecs_ls[[fn]][, !(names(InpSpecs_ls[[fn]]) %in% c("TABLE", "GROUP", "OPTIONAL"))]
+      # SpecsTable_df$DESCRIPTION <-
+      #   unname(sapply(as.character(SpecsTable_df$DESCRIPTION), function(x)
+      #   {wordWrap(x, 40)}))
+      Geo <- as.character(unique(InpSpecs_ls[[fn]]$TABLE))
+      HasGeo <- Geo %in% c("Marea", "Azone", "Bzone", "Czone")
+      Year <- as.character(unique(InpSpecs_ls[[fn]]$GROUP))
+      if (HasGeo) {
+        if (Year == "Year") {
+          GeoYearDescription <- paste(
+            "Must contain a record for each", Geo, "and model run year."
+          )
+        }
+        if (Year == "BaseYear") {
+          GeoYearDescription <- paste(
+            "Must contain a record for each", Geo, "for the base year only."
+          )
+        }
+        if (Year == "Global") {
+          GeoYearDescription <- paste(
+            "Must contain a record for each", Geo, "which is applied to all years."
+          )
+        }
+      } else {
+        GeoYearDescription <- paste(
+          "Must contain a record for each model run year"
+        )
+      }
+      if (Year == "Year") {
+        Year_df <- data.frame(
+          NAME = "Year",
+          TYPE = "",
+          UNITS = "",
+          PROHIBIT = "",
+          ISELEMENTOF = "",
+          UNLIKELY = "",
+          DESCRIPTION = GeoYearDescription
+        )
+        SpecsTable_df <- rbind(Year_df, SpecsTable_df)
+      }
+      if (HasGeo) {
+        Geo_df <- data.frame(
+          NAME = "Geo",
+          TYPE = "",
+          UNITS = "",
+          PROHIBIT = "",
+          ISELEMENTOF = paste0(Geo, "s"),
+          UNLIKELY = "",
+          DESCRIPTION = GeoYearDescription
+        )
+        InpMarkdown_ <- c(
+          InpMarkdown_,
+          kable(rbind(Geo_df, SpecsTable_df))
+        )
+      } else {
+        InpMarkdown_ <- c(
+          InpMarkdown_,
+          kable(SpecsTable_df)
+        )
+      }
+    }
+  } else {
+    InpMarkdown_ <- c(
+      "",
+      "## User Inputs",
+      "This module has no user input requirements."
+    )
+  }
+  #Add the markdown text to the documentation list
+  RevDocs_ls <- c(
+    RevDocs_ls,
+    list(InpMarkdown_)
   )
 
-#WRITE TO LOG
-#============
-#' Write to log.
-#'
-#' \code{writeLog} a visioneval framework control function that writes a message
-#' to the run log.
-#'
-#' This function logs messages to the VisionEval log, which will be stdout
-#' (the console) if not running a model, and the model log file if a model
-#' is running.
-#'
-#' A character vector may be provided for Msg, in which case each
-#' element of the vector will become one line in the log.
-#'
-#' @param Msg A character vector, whose first element must not be empty.
-#' @param Level character string identifying log level
-#' @param Logger character string identifying where to send the log message
-#' @return TRUE if the message is written to the log successfully.
-#' It appends the time and the message text to the run log.
-#' @export
-writeLog <- function(Msg = "", Level="Info", Logger="") {
-  if ( missing(Msg) || ! nzchar(Msg) ) {
-    message(
-      "writeLog(Msg,Level,Logger): No message supplied\n",
-      "Available Log Levels:\n",
-      paste(names(log.threshold),collapse=", ")
+  #Insert documentation of module inputs
+  #-------------------------------------
+  #Make a table of Get specifications
+  SpecNames_ <-
+  c("NAME", "TABLE", "GROUP", "TYPE", "UNITS", "PROHIBIT", "ISELEMENTOF")
+  GetSpecs_df <- makeSpecsTable(ModuleName, "Get", SpecNames_)
+  #Make markdown text
+  if (!is.null(GetSpecs_df)) {
+    GetMarkdown_ <- c(
+      "",
+      "## Datasets Used by the Module",
+      "The following table documents each dataset that is retrieved from the datastore and used by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:",
+      "",
+      "NAME - The dataset name.",
+      "",
+      "TABLE - The table in the datastore that the data is retrieved from.",
+      "",
+      "GROUP - The group in the datastore where the table is located. Note that the datastore has a group named 'Global' and groups for every model run year. For example, if the model run years are 2010 and 2050, then the datastore will have a group named '2010' and a group named '2050'. If the value for 'GROUP' is 'Year', then the dataset will exist in each model run year group. If the value for 'GROUP' is 'BaseYear' then the dataset will only exist in the base year group (e.g. '2010'). If the value for 'GROUP' is 'Global' then the dataset will only exist in the 'Global' group.",
+      "",
+      "TYPE - The data type. The framework uses the type to check units and inputs. Refer to the model system design and users guide for information on allowed types.",
+      "",
+      "UNITS - The units that input values need to represent. Some data types have defined units that are represented as abbreviations or combinations of abbreviations. For example 'MI/HR' means miles per hour. Many of these abbreviations are self evident, but the VisionEval model system design and users guide should be consulted.",
+      "",
+      "PROHIBIT - Values that are prohibited. Values in the datastore do not meet any of the listed conditions.",
+      "",
+      "ISELEMENTOF - Categorical values that are permitted. Values in the datastore are one or more of the listed values.",
+      ""
+    )
+    SpecsTable_df <- GetSpecs_df
+    GetMarkdown_ <- c(
+      GetMarkdown_,
+      kable(SpecsTable_df)
     )
   } else {
-    # empty Logger logs to ROOT (console, unless appender changed)
-    # named logger logs to that one, if defined, otherwise ROOT
-    # initLog will define ve.logger
-    Level <- toupper(Level)
-    if ( ! Level %in% names(log.function) ) Level="WARN"
-    if ( ! nzchar(Logger) && exists("ve.logger") ) Logger=get("ve.logger") # to avoid global name definition failure
-    for ( m in Msg ) {
-      log.function[[Level]](m,name=Logger)
-    }
+    GetMarkdown_ <- c(
+      "",
+      "## Datasets Used by the Module",
+      "This module uses no datasets that are in the datastore."
+    )
   }
-  invisible(Msg)
-}
+  #Add the markdown text to the documentation list
+  RevDocs_ls <- c(
+    RevDocs_ls,
+    list(GetMarkdown_)
+  )
 
-#LOAD SAVED DATASTORE
-#====================
-#' Load saved datastore.
-#'
-#' \code{loadDatastore} a visioneval framework control function that copies an
-#' existing saved datastore and writes information to run environment.
-#'
-#' This function copies a saved datastore as the working datastore attributes
-#' the global list with related geographic information. This function enables
-#' scenario variants to be built from a constant set of starting conditions.
-#'
-#' @param FileToLoad A string identifying the full path name to the saved
-#'   datastore. Path name can either be relative to the working directory or
-#'   absolute.
-#' @param Dir A string identifying the path of the geography definition file (GeoFile),
-#'   default to 'defs' relative to the working directory
-#' @param GeoFile A string identifying the name of the geography definition file
-#'   (see 'readGeography' function) that is consistent with the saved datastore.
-#'   The geography definition file must be located in the 'defs' directory.
-#' @param SaveDatastore A logical identifying whether an existing datastore
-#'   will be saved. It is renamed by appending the system time to the name. The
-#'   default value is TRUE.
-#' @return TRUE if the datastore is loaded. It copies the saved datastore to
-#'   working directory as 'datastore.h5'. If a 'datastore.h5' file already
-#'   exists, it first renames that file as 'archive-datastore.h5'. The function
-#'   updates information in the model state file regarding the model geography
-#'   and the contents of the loaded datastore. If the stored file does not exist
-#'   an error is thrown.
-#' @export
-loadDatastore <- function(FileToLoad, Dir="defs/", GeoFile, SaveDatastore = TRUE) {
-  GeoFile <- file.path(Dir, GeoFile)
-  G <- getModelState()
-  #If data store exists, rename
-  DatastoreName <- G$DatastoreName
-  if (file.exists(DatastoreName) & SaveDatastore) {
-    TimeString <- gsub(" ", "_", as.character(Sys.time()))
-    ArchiveDatastoreName <-
-      paste0(unlist(strsplit(DatastoreName, "\\."))[1],
-            "_", TimeString, ".",
-            unlist(strsplit(DatastoreName, "\\."))[2])
-    ArchiveDatastoreName <- gsub(":", "-", ArchiveDatastoreName)
-    file.copy(DatastoreName, ArchiveDatastoreName)
-  }
-  if (file.exists(FileToLoad)) {
-    file.copy(FileToLoad, DatastoreName)
-    Geo_df <- read.csv(GeoFile, colClasses = "character")
-    Update_ls <- list()
-    Update_ls$BzoneSpecified <- !all(is.na(Geo_df$Bzone))
-    Update_ls$CzoneSpecified <- !all(is.na(Geo_df$Czone))
-    Update_ls$Geo_df <- Geo_df
-    setModelState(Update_ls)
-    listDatastore()
+  #Insert documentation of module outputs
+  #--------------------------------------
+  #Make a table of Set specifications
+  SpecNames_ <-
+  c("NAME", "TABLE", "GROUP", "TYPE", "UNITS", "PROHIBIT", "ISELEMENTOF", "DESCRIPTION")
+  SetSpecs_df <- makeSpecsTable(ModuleName, "Set", SpecNames_)
+  #Make markdown text
+  if (!is.null(SetSpecs_df)) {
+    SetMarkdown_ <- c(
+      "",
+      "## Datasets Produced by the Module",
+      "The following table documents each dataset that is placed in the datastore by the module. Each row in the table describes a dataset. All the datasets must be present in the datastore. One or more of these datasets may be entered into the datastore from the user input files. The table names and their meanings are as follows:",
+      "",
+      "NAME - The dataset name.",
+      "",
+      "TABLE - The table in the datastore that the data is placed in.",
+      "",
+      "GROUP - The group in the datastore where the table is located. Note that the datastore has a group named 'Global' and groups for every model run year. For example, if the model run years are 2010 and 2050, then the datastore will have a group named '2010' and a group named '2050'. If the value for 'GROUP' is 'Year', then the dataset will exist in each model run year. If the value for 'GROUP' is 'BaseYear' then the dataset will only exist in the base year group (e.g. '2010'). If the value for 'GROUP' is 'Global' then the dataset will only exist in the 'Global' group.",
+      "",
+      "TYPE - The data type. The framework uses the type to check units and inputs. Refer to the model system design and users guide for information on allowed types.",
+      "",
+      "UNITS - The native units that are created in the datastore. Some data types have defined units that are represented as abbreviations or combinations of abbreviations. For example 'MI/HR' means miles per hour. Many of these abbreviations are self evident, but the VisionEval model system design and users guide should be consulted.",
+      "",
+      "PROHIBIT - Values that are prohibited. Values in the datastore do not meet any of the listed conditions.",
+      "",
+      "ISELEMENTOF - Categorical values that are permitted. Values in the datastore are one or more of the listed values.",
+      "",
+      "DESCRIPTION - A description of the data.",
+      ""
+    )
+    SpecsTable_df <- SetSpecs_df
+    # SpecsTable_df$DESCRIPTION <-
+    #   unname(sapply(as.character(SpecsTable_df$DESCRIPTION), function(x)
+    #     {wordWrap(x, 40)}))
+    SetMarkdown_ <- c(
+      SetMarkdown_,
+      kable(SpecsTable_df)
+    )
   } else {
-    Message <- paste("File", FileToLoad, "not found.")
-    writeLog(Message,Level="error")
-    stop(Message)
+    SetMarkdown_ <- c(
+      "",
+      "## Datasets Produced by the Module",
+      "This module produces no datasets to store in the datastore."
+    )
   }
-  TRUE
-}
+  #Add the markdown text to the documentation list
+  RevDocs_ls <- c(
+    RevDocs_ls,
+    list(SetMarkdown_)
+  )
 
+  #Produce markdown file documentation
+  #-----------------------------------
+  writeLines(unlist(RevDocs_ls), paste0("inst/module_docs/", ModuleName, ".md"))
+}
 
 #READ GEOGRAPHIC SPECIFICATIONS
 #==============================
@@ -677,73 +1077,43 @@ loadDatastore <- function(FileToLoad, Dir="defs/", GeoFile, SaveDatastore = TRUE
 #'
 #' @param Save A logical (default=TRUE) indicating whether the model state
 #'   should be saved to the model state file, or just updated in ve.model environment
-#' @param ... Additional named arguments may explicitly override ParamDir and GeoFile
-#'   (otherwise these will be sought in the ModelState after having been set in
-#'   VisionEval.cnf or in run_parameters.json).
-#' ParamDir [A string identifying the path to the geographic
-#'   specifications file. Note: don't include the final separator in the
-#'   path name 'e.g. not defs/'.]
-#' GeoFile [A string identifying the name of the geographic
-#'   specifications file. This is a csv-formatted text file which contains
-#'   columns named 'Azone', 'Bzone', 'Czone', and 'Marea'. The 'Azone' column
-#'   must have zone names in all rows. The 'Bzone' and 'Czone' columns can be
-#'   unspecified (NA in all rows) or may have have unique names in every row.
-#'   The 'Marea' column (referring to metropolitan areas) identifies
-#'   metropolitan areas corresponding to the most detailed level of specified
-#'   geography (or 'None' no metropolitan area occupies any portion of the
-#'   zone.]
 #' @return The value TRUE is returned if the function is successful at reading
+#' @param Param_ls a list of parameters
 #'   the file and the specifications are consistent. It stops if there are any
 #'   errors in the specifications. All of the identified errors are written to
 #'   the run log. A data frame containing the file entries is added to the
 #'   model state file as Geo_df'.
 #' @export
-readGeography <- function(Save=TRUE,...) {
+readGeography <- function(Save=TRUE,Param_ls=NULL) {
   #Check for errors in the geographic definitions file
+
+  # Load model environment (should have RunParam_ls already loaded, furnishing ...)
+  if ( ! is.list(Param_ls) ) {
+    model.env <- modelEnvironment()
+    Param_ls <- model.env$RunParam_ls
+  }
 
   #Read in geographic definitions if file exists, otherwise error
   #--------------------------------------------------------------
-  params <- list(...)
-  Params_ls < readModelState()$RunParam_ls
-  paramNames <- c("ParamDir","GeoFile")
-  defined <- paramNames %in% Params_ls
-  Params_ls <- Params_ls[paramNames[defined]] # sub-list of relevant parameters (possibly empty)
-  if ( length(params) > 0 ) {
-    override <- paramNames %in% params
-    if ( any(override) ) {
-      Params_ls[paramNames[override]] <- params[paramNames[override]]
-      defined <- paramNames %in% Params_ls
-    }
-  }
-  if ( ! all(defined) ) {
-    Message <- paste("Missing file location elements for readGeograpy: ",paste(paramNames[!defined],collapse=","))
-    writeLog(Message,Level="error")
-    stop(Message)
-  }
-
-  Filepath <- file.path(Params_ls$ParamDir, Params_ls$GeoFile)
-  if (file.exists(Filepath)) {
-    Geo_df <- read.csv(Filepath, colClasses = "character")
-  } else {
-    Message <- paste("Missing", Params_ls$GeoFile, "in folder", Params_ls$ParamDir, ".")
-    writeLog(Message,Level="error")
-    stop(Message)
-  }
-
+  GeoFile <- getRunParameter("GeoFile",Default="geo.csv",Param_ls=Param_ls)
+  GeoFilePath <- findRuntimeInputFile(GeoFile,Dir="ParamDir",DefaultDir="defs",Param_ls=Param_ls)
+  Geo_df <- read.csv(GeoFilePath, colClasses="character")
+  attr(Geo_df,"file") <- GeoFilePath
   CheckResults_ls <- checkGeography(Geo_df)
+
   #Notify if any errors
   Messages_ <- CheckResults_ls$Messages
   if (length(Messages_) > 0) {
     writeLog(Messages_,Level="error")
-    stop(paste0("One or more errors in ", Params_ls$GeoFile, ". See log for details."))
+    stop(paste0("One or more errors in ", GeoFilePath, ". See log for details."))
   } else {
     writeLog("Geographical indices successfully read.",Level="info")
   }
-  #Update the model state file
-  setModelState(CheckResults_ls$Update,Save=Save)
-  TRUE
-}
 
+  #Update the model state file with loaded and checked geography
+  setModelState(CheckResults_ls$Update,Save=Save)
+  return(TRUE)
+}
 
 #CHECK GEOGRAPHIC SPECIFICATIONS
 #===============================
@@ -769,8 +1139,9 @@ checkGeography <- function(Geo_df) {
   #Check that file has all required fields and extract field attributes
   #--------------------------------------------------------------------
   FieldNames_ <- c("Azone", "Bzone", "Czone", "Marea")
-  if (!(all(names(Geo_df) %in% FieldNames_))) {
-    Message <- "'geography.csv' is missing some required fields."
+  missing <- ! (FieldNames_ %in% names(Geo_df))
+  if ( any(missing) ) {
+    Message <- paste(attr(Geo_df,"file"),"is missing required fields:",paste(FieldNames_[missing],collapse=", "))
     writeLog(Message,Level="error")
     stop(Message)
   }
@@ -798,7 +1169,7 @@ checkGeography <- function(Geo_df) {
     #Are Bzones completely specified
     if (any(is.na(Geo_df$Bzone))) {
       Messages_ <- c(Messages_,
-                     "Either all Bzone entries must be NA or no Bzone entries must be NA.")
+        "Either all Bzone entries must be NA or no Bzone entries must be NA.")
     }
     #Are any Bzone names duplicated
     if (any(duplicated(Geo_df$Bzone))) {
@@ -816,7 +1187,7 @@ checkGeography <- function(Geo_df) {
     })
     if (any(unlist(lapply(AzoneMareas_, length)) > 1)) {
       Messages_ <- c(Messages_,
-                     "At least one Azone is assigned more than one Marea.")
+        "At least one Azone is assigned more than one Marea.")
     }
   }
   #Determine whether entries are correct if Czones have been specified
@@ -824,7 +1195,7 @@ checkGeography <- function(Geo_df) {
     #Are Czones completely specified
     if (any(is.na(Geo_df$Czone))) {
       Messages_ <- c(Messages_,
-                     "Either all Czone entries must be NA or no Czone entries must be NA.")
+        "Either all Czone entries must be NA or no Czone entries must be NA.")
     }
     #Are any Czone names duplicated
     if (any(duplicated(Geo_df$Czone))) {
@@ -842,15 +1213,14 @@ checkGeography <- function(Geo_df) {
     })
     if (any(unlist(lapply(AzoneMareas_, length)) > 1)) {
       Messages_ <- c(Messages_,
-                     "At least one Azone is assigned more than one Marea.")
+        "At least one Azone is assigned more than one Marea.")
     }
   }
   #Return messages and
   Update_ls <- list(Geo_df = Geo_df, BzoneSpecified = BzoneSpecified,
-                    CzoneSpecified = CzoneSpecified)
+    CzoneSpecified = CzoneSpecified)
   list(Messages = Messages_, Update = Update_ls)
 }
-
 
 #INITIALIZE DATASTORE GEOGRAPHY
 #==============================
@@ -882,47 +1252,47 @@ initDatastoreGeography <- function(GroupNames = NULL) {
   #Make lists of zone specifications
   Mareas_ <- unique(G$Geo_df$Marea)
   MareaSpec_ls <- list(MODULE = "visioneval",
-                       NAME = "Marea",
-                       TABLE = "Marea",
-                       TYPE = "character",
-                       UNITS = "",
-                       NAVALUE = "NA",
-                       PROHIBIT = "",
-                       ISELEMENTOF = "",
-                       SIZE = max(nchar(Mareas_)))
+    NAME = "Marea",
+    TABLE = "Marea",
+    TYPE = "character",
+    UNITS = "",
+    NAVALUE = "NA",
+    PROHIBIT = "",
+    ISELEMENTOF = "",
+    SIZE = max(nchar(Mareas_)))
   Azones_ <- unique(G$Geo_df$Azone)
   AzoneSpec_ls <- list(MODULE = "visioneval",
-                       NAME = "Azone",
-                       TABLE = "Azone",
-                       TYPE = "character",
-                       UNITS = "",
-                       NAVALUE = "NA",
-                       PROHIBIT = "",
-                       ISELEMENTOF = "",
-                       SIZE = max(nchar(Azones_)))
+    NAME = "Azone",
+    TABLE = "Azone",
+    TYPE = "character",
+    UNITS = "",
+    NAVALUE = "NA",
+    PROHIBIT = "",
+    ISELEMENTOF = "",
+    SIZE = max(nchar(Azones_)))
   if(G$BzoneSpecified) {
     Bzones_ <- unique(G$Geo_df$Bzone)
     BzoneSpec_ls <- list(MODULE = "visioneval",
-                         NAME = "Bzone",
-                         TABLE = "Bzone",
-                         TYPE = "character",
-                         UNITS = "",
-                         NAVALUE = "NA",
-                         PROHIBIT = "",
-                         ISELEMENTOF = "",
-                         SIZE = max(nchar(Bzones_)))
+      NAME = "Bzone",
+      TABLE = "Bzone",
+      TYPE = "character",
+      UNITS = "",
+      NAVALUE = "NA",
+      PROHIBIT = "",
+      ISELEMENTOF = "",
+      SIZE = max(nchar(Bzones_)))
   }
   if(G$CzoneSpecified) {
     Czones_ <- unique(G$Geo_df$Czone)
     CzoneSpec_ls <- list(MODULE = "visioneval",
-                         NAME = "Czone",
-                         TABLE = "Czone",
-                         TYPE = "character",
-                         UNITS = "",
-                         NAVALUE = "NA",
-                         PROHIBIT = "",
-                         ISELEMENTOF = "",
-                         SIZE = max(nchar(Czones_)))
+      NAME = "Czone",
+      TABLE = "Czone",
+      TYPE = "character",
+      UNITS = "",
+      NAVALUE = "NA",
+      PROHIBIT = "",
+      ISELEMENTOF = "",
+      SIZE = max(nchar(Czones_)))
   }
   #Initialize geography tables and zone datasets
   if (is.null(GroupNames)) GroupNames <- c("Global", G$Years)
@@ -1001,7 +1371,6 @@ initDatastoreGeography <- function(GroupNames = NULL) {
   TRUE
 }
 
-
 #LOAD MODEL PARAMETERS
 #=====================
 #' Load model global parameters file into datastore.
@@ -1023,7 +1392,7 @@ initDatastoreGeography <- function(GroupNames = NULL) {
 loadModelParameters <- function() {
   G <- getModelState()
   RunParam_ls <- G$RunParam_ls
-  ModelParamInfo <- c("ParamDir","ModelParamFile","InputDir")
+  ModelParamInfo <- c("ParamDir","ModelParamFile")
   missingParams <- ! ModelParamInfo %in% names(RunParam_ls)
   if ( any(missingParams) ) {
     stop(
@@ -1039,9 +1408,10 @@ loadModelParameters <- function() {
   writeLog("Loading model parameters file.",Level="info")
   ParamFile <- file.path(RunParam_ls$ParamDir, RunParam_ls$ModelParamFile)
   if (!file.exists(ParamFile)) {
-    # Not Found: Try again looking this time in InputDir
-    ParamFile <- file.path(RunParam_ls$InputDir, RunParam_ls$ModelParamFile)
-    if (!file.exists(ParamFile)) {
+    # Not Found: Try again looking this time in InputPath
+    InputPath <- getRunParameter("InputPath",Default=getwd(),Param_ls=RunParam_ls)
+    ParamFile <- file.path(RunParam_ls$InputPath, RunParam_ls$ModelParamFile)
+    if (!any(file.exists(ParamFile))) {
       # Still Not Found: Throw an error
       ErrorMsg <- paste0(
         "Model parameters file (",
@@ -1050,6 +1420,8 @@ loadModelParameters <- function() {
         paste(RunParam_ls$ParamDir,RunParam_ls$InputDir,collapse=", ")
       )
       stop( writeLog(ErrorMsg,Level="error") )
+    } else {
+      ParamFile <- ParamFile[1] # may have multiple InputPaths; pick the first found file
     }
   }
 
@@ -1064,20 +1436,20 @@ loadModelParameters <- function() {
       Value <- as.numeric(Param_df$VALUE[i])
     }
     Spec_ls <-
-      list(
-        NAME    = Param_df$NAME[i],
-        TABLE   = "Model",
-        TYPE    = Type,
-        UNITS   = Param_df$UNITS[i],
-        NAVALUE = ifelse(Param_df$TYPE[i] == "character", "NA", -9999),
-        SIZE    = ifelse(
-          Param_df$TYPE[i] == "character",
-          nchar(Param_df$VALUE[i]),
-          0
-        ),
-        LENGTH  = 1,
-        MODULE  = G$Model
-      )
+    list(
+      NAME    = Param_df$NAME[i],
+      TABLE   = "Model",
+      TYPE    = Type,
+      UNITS   = Param_df$UNITS[i],
+      NAVALUE = ifelse(Param_df$TYPE[i] == "character", "NA", -9999),
+      SIZE    = ifelse(
+        Param_df$TYPE[i] == "character",
+        nchar(Param_df$VALUE[i]),
+        0
+      ),
+      LENGTH  = 1,
+      MODULE  = G$Model
+    )
     writeToTable(Value, Spec_ls, Group = "Global", Index = NULL)
   }
 }
@@ -1134,7 +1506,7 @@ parseModelScript <- function(FilePath) {
     rbind.data.frame,
     lapply(
       extractElement("runScript"),
-      function(x) normalizeElementFieleds(x$runScript,ScriptCallNames)
+      function(x) normalizeElementFields(x$runScript,ScriptCallNames)
     )
   )
 
@@ -1145,7 +1517,7 @@ parseModelScript <- function(FilePath) {
       function(x) normalizeElementFields(x$Stage,StageCallNames)
     )
   )
-  
+
   InitParams_ls      <- lapply(extractElement("initializeModel"),function(x)x$initializeModel)[[1]] # Ignore more than one
   RequiredVEPackages <- sapply(extractElement("requirePackage"),function(x)x$requirePackage$Package) # Vector of package names
 
@@ -1228,810 +1600,275 @@ extractModelElements <- function(test.expr,depth=0) {
   }
   return(parsed.calls)
 }
-# library(visioneval)
-# parsed <- parseModelScript("run_model.R")
+
 
 parseModelScriptOld <-
-  function(FilePath = "Run_Model.R") {
-    writeLog("Parsing model script",Level="info")
-    if (!file.exists(FilePath)) {
-      Msg <-
-        paste0("Specified model script file (", FilePath, ") does not exist.")
-      writeLog(Msg,Level="error")
-      stop(Msg)
-    }
-    rawScript <- readLines(FilePath) # so we can extract requirePackage calls (see below)
-
-    # remove commented lines from run_model script file (possibly entire lines).
-    rawScript <- gsub("^[:space:]*#.*","",rawScript)
-
-    # get required packages
-    requirePackages_ <- "requirePackage"
-    RequiredVEPackages <- grep(requirePackages_,rawScript,value=TRUE)
-    RequiredVEPackages <- sub("[^(]*\\([ \"']*([^\"')]+)[ \"']*\\).*","\\1",RequiredVEPackages)
-
-    Script <- paste(rawScript, collapse = " ")
-    RunModuleCalls_ <- unlist(strsplit(Script, "runModule"))[-1]
-    if (length(RunModuleCalls_) == 0) {
-      Msg <- "Specified script contains no 'runModule' function calls."
-      stop(Msg)
-    }
-    Errors_ <- character(0)
-    addError <- function(Error) {
-      Errors_ <<- c(Errors_, Error)
-    }
-    #Utility function to remove spaces from string
-    removeSpaces <- function(String) {
-      gsub(" ", "", String)
-    }
-    #Utility function to clean up string
-    cleanString <- function(String) {
-      ToRemove = c(" ", "\\(", ")", '\\\"')
-      for (SubString in ToRemove) {
-        String <- gsub(SubString, "", String)
-      }
-      String
-    }
-    #Utility function to extract the arguments part of a function call
-    extractArgsString <- function(String) {
-      substring(String,
-                regexpr("\\(", String),
-                regexpr("\\)", String))
-    }
-    #Utility function to extract the value of a named argument
-    getNamedArgumentValue <-
-      function(ArgString, ArgName) {
-        CommaPos <- regexpr(",", ArgString)
-        if (CommaPos > 0) {
-          ArgValue <-
-            substring(ArgString,
-                      regexpr("=", ArgString) + 1,
-                      CommaPos - 1)
-        } else {
-          ArgValue <-
-            substring(ArgString,
-                      regexpr("=", ArgString) + 1,
-                      nchar(ArgString))
-        }
-        cleanString(ArgValue)
-      }
-    #Utility function to extract the value of an unnamed argument
-    getUnnamedArgumentValue <-
-      function(ArgString) {
-        ArgStringTrim <-
-          substring(ArgString,
-                    regexpr("\\\"", ArgString) + 1,
-                    nchar(ArgString))
-        cleanString(substring(ArgStringTrim,
-                              1,
-                              regexpr("\\\"", ArgStringTrim)))
-      }
-    #Function to extract the name and value of an argument from a string
-    getArg <-
-      function(ArgsString, ArgPos) {
-        ArgString <- removeSpaces(ArgsString[ArgPos])
-        #Define standard argument names
-        ArgNames_ <-
-          c("ModuleName", "PackageName", "RunFor", "Year")
-        #Check whether any of the argument names is in the ArgString
-        ArgNameCheck_ <-
-          sapply(ArgNames_, function(x) {
-            ArgName <- paste0(x, "=")
-            regexpr(ArgName, ArgString)
-          }) > 0
-        if (any(ArgNameCheck_)) {
-          ArgName <- names(ArgNameCheck_)[ArgNameCheck_]
-          ArgValue <- getNamedArgumentValue(ArgString, ArgName)
-        } else {
-          ArgName <- ArgNames_[ArgPos]
-          ArgValue <- getUnnamedArgumentValue(ArgString)
-        }
-        list(ArgName = ArgName, ArgValue = ArgValue)
-      }
-    #Function to extract all the arguments of runModule function call
-    getArgs <-
-      function(String) {
-        PrelimArgs_ <- unlist(strsplit(extractArgsString(String), ","))
-        Args_ls <-
-          list(ModuleName = NULL,
-               PackageName = NULL,
-               RunFor = NULL)
-        for (i in 1:length(PrelimArgs_)) {
-          Arg_ls <- getArg(PrelimArgs_, i)
-          Args_ls[[Arg_ls$ArgName]] <- Arg_ls$ArgValue
-        }
-        unlist(Args_ls)
-      }
-    #Iterate through RunModuleCalls_ and extract the arguments
-    Args_ls <- list()
-    for (i in 1:length(RunModuleCalls_)) {
-      Args_ <- getArgs(RunModuleCalls_[i])
-      #Error if not all mandatory arguments are matched
-      if (length(Args_) != 4) {
-        Msg <- paste0("runModule call #",
-                      i,
-                      " has improperly specified arguments.")
-        addError(Msg)
-      }
-      #Add to list
-      Args_ls[[i]] <- Args_
-    }
-    #If there are any errors, print error message
-    if (length(Errors_) != 0) {
-      writeLog("One or more 'runModule' function calls have errors as follows:",Level="error")
-      writeLog(Errors_,Level="error")
-      stop(
-        "One or more errors in model run script. Must fix before model initialization can be completed."
-      )
-    }
-    ModuleCalls_df <-
-      data.frame(do.call(rbind, Args_ls), stringsAsFactors = FALSE)
-    writeLog("Success parsing model script",Level="info")
-    return(list(ModuleCalls_df = ModuleCalls_df, RequiredVEPackages = RequiredVEPackages))
+function(FilePath = "Run_Model.R") {
+  writeLog("Parsing model script",Level="info")
+  if (!file.exists(FilePath)) {
+    Msg <-
+    paste0("Specified model script file (", FilePath, ") does not exist.")
+    writeLog(Msg,Level="error")
+    stop(Msg)
   }
+  rawScript <- readLines(FilePath) # so we can extract requirePackage calls (see below)
 
+  # remove commented lines from run_model script file (possibly entire lines).
+  rawScript <- gsub("^[:space:]*#.*","",rawScript)
 
-#CHECK MODULE AVAILABILITY
-#=========================
-#' Check whether a module required to run a model is present
-#'
-#' \code{checkModuleExists} a visioneval framework control function that checks
-#' whether a module required to run a model is present.
-#'
-#' This function takes a specified module and package, checks whether the
-#' package has been installed and whether the module is in the package. The
-#' function returns an error message if the package is not installed or if
-#' the module is not present in the package. If the module has been called by
-#' another module the value of the 'CalledBy' argument will be used to identify
-#' the calling module as well so that the user understands where the call is
-#' coming from.
-#'
-#' @param ModuleName A string identifying the module name.
-#' @param PackageName A string identifying the package name.
-#' @param InstalledPkgs_ A string vector identifying the names of packages that
-#' are installed.
-#' @param CalledBy A string vector having two named elements. The value of the
-#' 'Module' element is the name of the calling module. The value of the
-#' 'Package' element is the name of the package that the calling module is in.
-#' @return TRUE if all packages and modules are present and FALSE if not.
-#' @export
-checkModuleExists <-
-  function(ModuleName,
-           PackageName,
-           InstalledPkgs_ = rownames(installed.packages()),
-           CalledBy = NA) {
-    ErrorMsg <- character(0)
-    PackageMissing <- FALSE
-    ModuleMissing <- FALSE
-    #Check whether the package is installed and module is present in package
-    PackageMissing <- !(PackageName %in% InstalledPkgs_)
-    if (!PackageMissing) {
-      PkgData_ <- data(package=PackageName)$results[,"Item"]
-      PkgModules_ <- PkgData_[grep("Specifications", PkgData_)]
-      PkgModules_ <- gsub("Specifications", "", PkgModules_)
-      ModuleMissing <- !(ModuleName %in% PkgModules_)
-    }
-    #Compose error messages if any
-    if (PackageMissing) {
-      if (all(is.na(CalledBy))) {
-        ErrorMsg <-
-          paste0("Error in runModule call for module ", ModuleName,
-                 " in package ", PackageName, ". Package ", PackageName,
-                 " is not installed.")
-      } else {
-        ErrorMsg <-
-          paste0("Error in runModule call for module ", CalledBy["Module"],
-                 " in package ", CalledBy["Package"], ". This module calls Module ",
-                 ModuleName, " in package ", PackageName, ". Package ", PackageName,
-                 " is not installed.")
-      }
-    }
-    if (ModuleMissing) {
-      if (all(is.na(CalledBy))) {
-        ErrorMsg <-
-          paste0("Error in runModule call for module ", ModuleName,
-                 " in package ", PackageName, ". Module ", ModuleName,
-                 " is not present in package.")
-      } else {
-        ErrorMsg <-
-          paste0("Error in runModule call for module ", CalledBy["Module"],
-                 " in package ", CalledBy["Package"], ". This module calls Module ",
-                 ModuleName, " in package ", PackageName, ". Module ", ModuleName,
-                 " is not present in package.")
-      }
-    }
-    #Return the error message
-    ErrorMsg
+  # get required packages
+  requirePackages_ <- "requirePackage"
+  RequiredVEPackages <- grep(requirePackages_,rawScript,value=TRUE)
+  RequiredVEPackages <- sub("[^(]*\\([ \"']*([^\"')]+)[ \"']*\\).*","\\1",RequiredVEPackages)
+
+  Script <- paste(rawScript, collapse = " ")
+  RunModuleCalls_ <- unlist(strsplit(Script, "runModule"))[-1]
+  if (length(RunModuleCalls_) == 0) {
+    Msg <- "Specified script contains no 'runModule' function calls."
+    stop(Msg)
   }
-
-
-#GET MODULE SPECIFICATIONS
-#=========================
-#' Retrieve module specifications from a package
-#'
-#' \code{getModuleSpecs} a visioneval framework control function that retrieves
-#' the specifications list for a module and returns the specifications list.
-#'
-#' This function loads the specifications for a module in a package. It returns
-#' the specifications list.
-#'
-#' @param ModuleName A string identifying the name of the module.
-#' @param PackageName A string identifying the name of the package that the
-#' module is in.
-#' @return A specifications list that is the same as the specifications list
-#' defined for the module in the package.
-#' @export
-getModuleSpecs <- function(ModuleName, PackageName) {
-  eval(parse(text = paste0(PackageName, "::", ModuleName, "Specifications")))
-}
-# Test_ls <-
-#   getModuleSpecs(ModuleName = "CreateBzones", PackageName = "vedemo1")
-# rm(Test_ls)
-
-
-#EXPAND SPECIFICATION
-#====================
-#' Expand a Inp, Get, or Set specification so that is can be used by other
-#' functions to process inputs and to read from or write to the datastore.
-#'
-#' \code{expandSpec} a visioneval framework control function that takes a Inp,
-#' Get, or Set specification and processes it to be in a form that can be used
-#' by other functions which use the specification in processing inputs or
-#' reading from or writing to the datastore. The parseUnitsSpec function is
-#' called to parse the UNITS attribute to extract name, multiplier, and year
-#' values. When the specification has multiple values for the NAME attribute,
-#' the function creates a specification for each name value.
-#'
-#' The VisionEval design allows module developers to assign multiple values to
-#' the NAME attributes of a Inp, Get, or Set specification where the other
-#' attributes for those named datasets (or fields) are the same. This greatly
-#' reduces duplication and the potential for error in writing module
-#' specifications. However, other functions that check or use the specifications
-#' are not capable of handling specifications which have NAME attributes
-#' containing multiple values. This function expands a specification with
-#' multiple values for a  NAME attribute into multiple specifications, each with
-#' a single value for the NAME attribute. In addition, the function calls the
-#' parseUnitsSpec function to extract multiplier and year information from the
-#' value of the UNITS attribute. See that function for details.
-#'
-#' @param SpecToExpand_ls A standard specifications list for a specification
-#' whose NAME attribute has multiple values.
-#' @param ComponentName A string that is the name of the specifications
-#' that the specification is a part of (e.g. "Inp", "Get", "Set").
-#' @return A list of standard specifications lists which has a component for
-#' each value in the NAME attribute of the input specifications list.
-#' @export
-#Define a function which expands a specification with multiple NAME items
-expandSpec <- function(SpecToExpand_ls, ComponentName) {
-  SpecToExpand_ls <- parseUnitsSpec(SpecToExpand_ls, ComponentName)
-  Names_ <- unlist(SpecToExpand_ls$NAME)
-  Descriptions_ <- unlist(SpecToExpand_ls$DESCRIPTION)
-  Expanded_ls <- list()
-  for (i in 1:length(Names_)) {
-    Temp_ls <- SpecToExpand_ls
-    Temp_ls$NAME <- Names_[i]
-    Temp_ls$DESCRIPTION <- Descriptions_[i]
-    Expanded_ls <- c(Expanded_ls, list(Temp_ls))
-  }
-  Expanded_ls
-}
-
-
-#FILTER INP SPECIFICATIONS BASED ON WHETHER SPECIFICATION IS OPTIONAL
-#====================================================================
-#' Filters Inp specifications list based on OPTIONAL specification attributes.
-#'
-#' \code{doProcessInpSpec} a visioneval framework control function that filters
-#' out Inp specifications whose OPTIONAL specification attribute is TRUE but the
-#' specified input file is not present.
-#'
-#' An Inp specification component may have an OPTIONAL specification whose value
-#' is TRUE. If so, and if the specified input file is present, then the input
-#' specification needs to be processed. This function checks whether the
-#' OPTIONAL specification is present, whether its value is TRUE, and whether the
-#' file exists. If all of these are true, then the input specification needs to
-#' be processed. The input specification also needs to be processed if it is
-#' not optional. A specification is not optional if the OPTIONAL attribute is
-#' not present or if it is present and the value is not TRUE. The function
-#' returns a list of all the Inp specifications that meet these criteria.
-#'
-#' @param InpSpecs_ls A standard specifications list for Inp specifications.
-#' @param InputDir A vector of paths in which to seek input files;
-#'   the first path containing the named file will be used.
-#' @return A list containing the Inp specification components that meet the
-#'   criteria of being optional and present or being not optional. If
-#'   the file is not optional and not present, throw an error and stop.
-#'   The FILE element will be expanded to file.path(InputDir,$FILE) in
-#'   the spec that is returned.
-#' @export
-doProcessInpSpec <- function(InpSpecs_ls, InputDir) {
-  #Define function to check an individual specification
-  #Return TRUE if missing file is not an error
-  checkOptional <- function(SpecToCheck_ls) {
-    IsOptional <- FALSE
-    if (!is.null(SpecToCheck_ls$OPTIONAL)) {
-      if (SpecToCheck_ls$OPTIONAL == TRUE) {
-        IsOptional <- TRUE
-      }
-    }
-    IsOptional
-  }
-  #Return all input specifications that must be processed
-  Out_ls <- list()
-  j <- 1
-  for (i in 1:length(InpSpecs_ls)) {
-    Spec_ls <- InpSpecs_ls[[i]]
-    File <- file.path(InputDir, Spec_ls$FILE) # might be a vector
-    FileExists <- file.exists(File)
-    if ( ! any(FileExists) ) {
-      if ( checkOptional(Spec_ls) ) {
-        next # Do not add to Out_ls; continue to next InpSpec
-      } else {
-        Spec_ls$INPUTDIR <- NA # Required, but missing; trap later
-      }
-    } else {
-      Spec_ls$INPUTDIR <- InputDir[FileExists][1]
-    }
-    Out_ls[[j]] <- Spec_ls
-    j <- j + 1
-  }
-  Out_ls
-}
-#Test code
-# setwd("tests")
-# source("data/TestOptionalSpecs.R")
-# doProcessInpSpec(TestOptionalSpecs$Inp)
-# setwd("..")
-# rm(TestOptionalSpecs)
-
-
-#PROCESS MODULE SPECIFICATIONS
-#=============================
-#' Process module specifications to expand items with multiple names.
-#'
-#' \code{processModuleSpecs} a visioneval framework control function that
-#' processes a full module specifications list, expanding all elements in the
-#' Inp, Get, and Set components by parsing the UNITS attributes and duplicating
-#' every specification which has multiple values for the NAME attribute.
-#'
-#' This function process a module specification list. If any of the
-#' specifications include multiple listings of data sets (i.e. fields) in a
-#' table, this function expands the listing to establish a separate
-#' specification for each data set.
-#'
-#' @param Spec_ls A specifications list.
-#' @return A standard specifications list with expansion of the multiple item
-#' specifications.
-#' @export
-processModuleSpecs <- function(Spec_ls) {
-  G <- getModelState()
-  #Define a function to process a component of a specifications list
-  processComponent <- function(Component_ls, ComponentName) {
-    Result_ls <- list()
-    for (i in 1:length(Component_ls)) {
-      Temp_ls <- Component_ls[[i]]
-      Result_ls <- c(Result_ls, expandSpec(Temp_ls, ComponentName))
-    }
-    Result_ls
-  }
-  #Process the list components and return the results
-  Out_ls <- list()
-  Out_ls$RunBy <- Spec_ls$RunBy
-  if (!is.null(Spec_ls$NewInpTable)) {
-    Out_ls$NewInpTable <- Spec_ls$NewInpTable
-  }
-  if (!is.null(Spec_ls$NewSetTable)) {
-    Out_ls$NewSetTable <- Spec_ls$NewSetTable
-  }
-  if (!is.null(Spec_ls$Inp)) {
-    InputDir <- if ( "InputDir" %in% names(G$RunParam_ls) ) {
-      (G$RunParam_ls$InputDir)  # May be a vector; first matching file will be used
-    } else { # backward compatible
-      normalizePath("inputs",winslash="/",mustWork=FALSE)
-    }
-    FilteredInpSpec_ls <- doProcessInpSpec(Spec_ls$Inp, InputDir)
-    if (length(FilteredInpSpec_ls) > 0) {
-      Out_ls$Inp <- processComponent(FilteredInpSpec_ls, "Inp")
-    }
-  }
-  if (!is.null(Spec_ls$Get)) {
-    Out_ls$Get <- processComponent(Spec_ls$Get, "Get")
-  }
-  if (!is.null(Spec_ls$Set)) {
-    Out_ls$Set <- processComponent(Spec_ls$Set, "Set")
-  }
-  if (!is.null(Spec_ls$Call)) {
-    Out_ls$Call <- Spec_ls$Call
-  }
-  Out_ls
-}
-
-
-#SIMULATE DATA STORE TRANSACTIONS
-#================================
-#' Create simulation of datastore transactions.
-#'
-#' \code{simDataTransactions} a visioneval framework control function that loads
-#' all module specifications in order (by run year) and creates a simulated
-#' listing of the data which is in the datastore and the requests of data from
-#' the datastore and checks whether tables will be present to put datasets in
-#' and that datasets will be present that data is to be retrieved from.
-#'
-#' This function creates a list of the datastore listings for the working
-#' datastore and for all datastore references. The list includes a 'Global'
-#' component, in which 'Global' references are simulated, components for each
-#' model run year, in which 'Year' references are simulated, and if the base
-#' year is not one of the run years, a base year component, in which base year
-#' references are simulated. For each model run year the function steps through
-#' a data frame of module calls as produced by 'parseModelScript', and loads and
-#' processes the module specifications in order: adds 'NewInpTable' references,
-#' adds 'Inp' dataset references, checks whether references to datasets
-#' identified in 'Get' specifications are present, adds 'NewSetTable' references,
-#' and adds 'Set' dataset references. The function compiles a vector of error
-#' and warning messages. Error messages are made if: 1) a 'NewInpTable' or
-#' 'NewSetTable' specification of a module would create a new table for a table
-#' that already exists; 2) a dataset identified by a 'Get' specification would
-#' not be present in the working datastore or any referenced datastores; 3) the
-#' 'Get' specifications for a dataset would not be consistent with the
-#' specifications for the dataset in the datastore. The function compiles
-#' warnings if a 'Set' specification will cause existing data in the working
-#' datastore to be overwritten. The function writes warning and error messages
-#' to the log and stops program execution if there are any errors.
-#'
-#' @param AllSpecs_ls A list containing the processed specifications of all of
-#' the modules run by model script in the order that the modules are called with
-#' duplicated module calls removed. Information about each module call is a
-#' component of the list in the order of the module calls. Each component is
-#' composed of 3 components: 'ModuleName' contains the name of the module,
-#' 'PackageName' contains the name of the package the module is in, and
-#' 'Specs' contains the processed specifications of the module. The 'Get'
-#' specification component includes the 'Get' specifications of all modules
-#' that are called by the module.
-#'
-#' @return There is no return value. The function has the side effect of
-#' writing messages to the log and stops program execution if there are any
-#' errors.
-#' @export
-simDataTransactions <- function(AllSpecs_ls) {
-  G <- getModelState()
-
-  #Initialize errors and warnings vectors
-  #--------------------------------------
   Errors_ <- character(0)
-  addError <- function(Msg) {
-    Errors_ <<- c(Errors_, Msg)
+  addError <- function(Error) {
+    Errors_ <<- c(Errors_, Error)
   }
-  Warnings_ <- character(0)
-  addWarning <- function(Msg) {
-    Warnings_ <<- c(Warnings_, Msg)
+  #Utility function to remove spaces from string
+  removeSpaces <- function(String) {
+    gsub(" ", "", String)
   }
-
-  #Make a list to store the working datastore and all referenced datastores
-  #------------------------------------------------------------------------
-  RunYears_ <- getYears()
-  BaseYear <- G$BaseYear
-  if (BaseYear %in% RunYears_) {
-    Years_ <- RunYears_
-  } else {
-    Years_ <- c(BaseYear, RunYears_)
+  #Utility function to clean up string
+  cleanString <- function(String) {
+    ToRemove = c(" ", "\\(", ")", '\\\"')
+    for (SubString in ToRemove) {
+      String <- gsub(SubString, "", String)
+    }
+    String
   }
-  Dstores_ls <-
-    list(
-      Global = list()
+  #Utility function to extract the arguments part of a function call
+  extractArgsString <- function(String) {
+    substring(String,
+      regexpr("\\(", String),
+        regexpr("\\)", String))
+  }
+  #Utility function to extract the value of a named argument
+  getNamedArgumentValue <-
+  function(ArgString, ArgName) {
+    CommaPos <- regexpr(",", ArgString)
+    if (CommaPos > 0) {
+      ArgValue <-
+      substring(ArgString,
+        regexpr("=", ArgString) + 1,
+        CommaPos - 1)
+    } else {
+      ArgValue <-
+      substring(ArgString,
+        regexpr("=", ArgString) + 1,
+        nchar(ArgString))
+    }
+    cleanString(ArgValue)
+  }
+  #Utility function to extract the value of an unnamed argument
+  getUnnamedArgumentValue <-
+  function(ArgString) {
+    ArgStringTrim <-
+    substring(ArgString,
+      regexpr("\\\"", ArgString) + 1,
+      nchar(ArgString))
+    cleanString(substring(ArgStringTrim,
+      1,
+      regexpr("\\\"", ArgStringTrim)))
+  }
+  #Function to extract the name and value of an argument from a string
+  getArg <-
+  function(ArgsString, ArgPos) {
+    ArgString <- removeSpaces(ArgsString[ArgPos])
+    #Define standard argument names
+    ArgNames_ <-
+    c("ModuleName", "PackageName", "RunFor", "Year")
+    #Check whether any of the argument names is in the ArgString
+    ArgNameCheck_ <-
+    sapply(ArgNames_, function(x) {
+      ArgName <- paste0(x, "=")
+      regexpr(ArgName, ArgString)
+    }) > 0
+    if (any(ArgNameCheck_)) {
+      ArgName <- names(ArgNameCheck_)[ArgNameCheck_]
+      ArgValue <- getNamedArgumentValue(ArgString, ArgName)
+    } else {
+      ArgName <- ArgNames_[ArgPos]
+      ArgValue <- getUnnamedArgumentValue(ArgString)
+    }
+    list(ArgName = ArgName, ArgValue = ArgValue)
+  }
+  #Function to extract all the arguments of runModule function call
+  getArgs <-
+  function(String) {
+    PrelimArgs_ <- unlist(strsplit(extractArgsString(String), ","))
+    Args_ls <-
+    list(ModuleName = NULL,
+      PackageName = NULL,
+      RunFor = NULL)
+    for (i in 1:length(PrelimArgs_)) {
+      Arg_ls <- getArg(PrelimArgs_, i)
+      Args_ls[[Arg_ls$ArgName]] <- Arg_ls$ArgValue
+    }
+    unlist(Args_ls)
+  }
+  #Iterate through RunModuleCalls_ and extract the arguments
+  Args_ls <- list()
+  for (i in 1:length(RunModuleCalls_)) {
+    Args_ <- getArgs(RunModuleCalls_[i])
+    #Error if not all mandatory arguments are matched
+    if (length(Args_) != 4) {
+      Msg <- paste0("runModule call #",
+        i,
+        " has improperly specified arguments.")
+      addError(Msg)
+    }
+    #Add to list
+    Args_ls[[i]] <- Args_
+  }
+  #If there are any errors, print error message
+  if (length(Errors_) != 0) {
+    writeLog("One or more 'runModule' function calls have errors as follows:",Level="error")
+    writeLog(Errors_,Level="error")
+    stop(
+      "One or more errors in model run script. Must fix before model initialization can be completed."
     )
-  for (Year in Years_) Dstores_ls[[Year]] <- list()
-
-  #Add the working datastore inventory to the datastores list
-  #----------------------------------------------------------
-  Dstores_ls[["Global"]] <-
-    G$Datastore[grep("Global", G$Datastore$group),]
-  # for (Year in RunYears_) {
-  #   Dstores_ls[[Year]][[G$DatastoreName]] <-
-  #     G$Datastore[grep(Year, G$Datastore$group),]
-  # }
-  getDatastoreYears <- function() {
-    DstoreGroups_ls <- strsplit(G$Datastore$group, "/")
-    ToKeep_ <- unlist(lapply(DstoreGroups_ls, function(x) length(x) == 2))
-    DstoreGroups_ls <- DstoreGroups_ls[ToKeep_]
-    DstoreGroups_ <- unique(unlist(lapply(DstoreGroups_ls, function(x) x[2])))
-    DstoreGroups_[!(DstoreGroups_ %in% "Global")]
   }
-  for (Year in getDatastoreYears()) {
-    Dstores_ls[[Year]] <-
-      G$Datastore[grep(Year, G$Datastore$group),]
-  }
+  ModuleCalls_df <-
+  data.frame(do.call(rbind, Args_ls), stringsAsFactors = FALSE)
+  writeLog("Success parsing model script",Level="info")
+  return(list(ModuleCalls_df = ModuleCalls_df, RequiredVEPackages = RequiredVEPackages))
+}
 
-  # #Function to get datastore inventory corresponding to datastore reference
-  # #------------------------------------------------------------------------
-  # getInventoryRef <- function(DstoreRef) {
-  #   SplitRef_ <- unlist(strsplit(DstoreRef, "/"))
-  #   RefHead <- paste(SplitRef_[-length(SplitRef_)], collapse = "/")
-  #   paste(RefHead, getModelStateFileName(), sep = "/")
-  # }
-  #
-  # #Get datastore inventories for datastore references
-  # #--------------------------------------------------
-  # if (!is.null(G$DatastoreReferences)) {
-  #   RefNames_ <- names(G$DatastoreReferences)
-  #   for (Name in RefNames_) {
-  #     Refs_ <- G$DatastoreReferences[[Name]]
-  #     for (Ref in Refs_) {
-  #       if (file.exists(Ref)) {
-  #         RefDstore_df <-
-  #           readModelState(FileName = getInventoryRef(Ref))$Datastore
-  #         RefDstore_df <- RefDstore_df[grep(Name, RefDstore_df$group),]
-  #         Dstores_ls[[Name]][[Ref]] <- RefDstore_df
-  #         rm(RefDstore_df)
-  #
-  #       } else {
-  #         Msg <-
-  #           paste0("The file '", Ref,
-  #                  "' included in the 'DatastoreReferences' in the ",
-  #                  "'run_parameters.json' file is not present.")
-  #         addError(Msg)
+#PROCESS INPUT FILES
+#===================
+#' Locate and Load Input Files to Datastore
+#'
+#' \code{processInputFiles} will process the model specification list and load
+#' any input files that are required
+#'
+#' @param AllSpecs_ls a list of model specifications (from parseModuleCalls)
+#' @return None
+#' @export
+processInputFiles <- function(AllSpecs_ls) {
+  #Set up a list to store processed inputs for all modules
+  ve.model <- modelEnvironment()
+  ProcessedInputs_ls <- list()
+  #Process inputs for all modules and add results to list
+  # ORIGINAL VERSION:
+  #     for (i in 1:nrow(ModuleCalls_df)) {
+  #       Module <- ModuleCalls_df$ModuleName[i]
+  #       Package <- ModuleCalls_df$PackageName[i]
+  #       EntryName <- paste(Package, Module, sep = "::")
+  #       ModuleSpecs_ls <- processModuleSpecs(getModuleSpecs(Module, Package))
+  #       #If there are inputs, process them
+  #       if (!is.null(ModuleSpecs_ls$Inp)) {
+  #         ProcessedInputs_ls[[EntryName]] <- processModuleInputs(ModuleSpecs_ls, Module)
+  #         #If module is Initialize process inputs with Initialize function
+  #         if (Module == "Initialize") {
+  #           if (length(ProcessedInputs_ls[[Module]]$Errors) == 0) {
+  #             initFunc <- eval(parse(text = paste(Package, Module, sep = "::")))
+  #             InitData_ls <- ProcessedInputs_ls[[EntryName]]
+  #             InitializedInputs_ls <- initFunc(InitData_ls)
+  #             ProcessedInputs_ls[[EntryName]]$Data <- InitializedInputs_ls$Data
+  #             ProcessedInputs_ls[[EntryName]]$Errors <- InitializedInputs_ls$Errors
+  #             if (length(InitializedInputs_ls$Warnings > 0)) {
+  #               writeLog(InitializedInputs_ls$Warnings,Level="warn")
+  #             }
+  #           }
+  #         }
   #       }
   #     }
-  #   }
-  # }
+  for (Spec in AllSpecs_ls) {
+    Module <- Spec$ModuleName
+    Package <- Spec$PackageName
+    EntryName <- paste(Package, Module, sep = "::")
+    ModuleSpecs_ls <- (Spec$Specs)
+    #If there are inputs, process them
+    if (!is.null(ModuleSpecs_ls$Inp)) {
+      ProcessedInputs_ls[[EntryName]] <- processModuleInputs(ModuleSpecs_ls, Module)
+      # Process inputs with Initialize function
+      if (Module == "Initialize") {
+        if (length(ProcessedInputs_ls[[EntryName]]$Errors) == 0) {
+          initFunc <- eval(parse(text = paste(Package, Module, sep = "::")))
+          InitData_ls <- ProcessedInputs_ls[[EntryName]]
+          InitializedInputs_ls <- initFunc(InitData_ls)
+          ProcessedInputs_ls[[EntryName]]$Data <- InitializedInputs_ls$Data
+          ProcessedInputs_ls[[EntryName]]$Errors <- InitializedInputs_ls$Errors
+          if (length(InitializedInputs_ls$Warnings > 0)) {
+            writeLog(InitializedInputs_ls$Warnings,Level="warn")
+          }
+        }
+      }
+    }
+  }
+  #Check whether there are any input errors
+  InpErrors_ <- unlist(lapply(ProcessedInputs_ls, function (x) {
+    x$Errors
+  }))
+  HasErrors <- length(InpErrors_ != 0)
+  if (HasErrors) {
+    writeLog(InpErrors_,Level="errors")
+    stop("Input files have errors. Check the log for details.")
+  }
+  rm(InpErrors_)
 
-  #Define function to add table reference to datastore inventory
-  #-------------------------------------------------------------
-  addTableRef <- function(Dstore_df, TableSpec_, IsBaseYear, MakeTableType) {
-    Group <- TableSpec_$GROUP
-    if (Group == "Year") Group <- Year
-    Table <- TableSpec_$TABLE
-    #Check if table already exists
-    HasTable <- checkTableExistence(Table, Group, Dstore_df)
-    #If table exists then possible error, otherwise add reference to table
-    if (HasTable) {
-      #Is not an error if the group is 'Global' and year is not the base year
-      #Because not a conflict between tables created by different modules
-      if (Group == "Global" & !IsBaseYear) {
-        NewDstore_df <- Dstore_df
-        #Otherwise is an error
-      } else {
-        if (MakeTableType == "Inp") {
-          MakeTableSpecName <- "MakeInpTable"
+  #Load model inputs into the datastore
+  #------------------------------------
+  # Original Process
+  #     for (i in 1:nrow(ModuleCalls_df)) {
+  #       #Get information on the inputs
+  #       Module <- ModuleCalls_df$ModuleName[i]
+  #       Package <- ModuleCalls_df$PackageName[i]
+  #       EntryName <- paste(Package, Module, sep = "::")
+  #       ModuleSpecs_ls <- processModuleSpecs(getModuleSpecs(Module, Package))
+  #       #Eliminate writing any new input table to Global group if it already exists
+  #       if (!is.null(ModuleSpecs_ls$NewInpTable)) {
+  #         NewInpTableSpecs_ls <- ModuleSpecs_ls$NewInpTable
+  #         GlobalTableExists_ <- unlist(lapply(NewInpTableSpecs_ls, function(x) {
+  #           if (x$GROUP == "Global") {
+  #             checkTableExistence(x$TABLE, "Global", ve.model$ModelState_ls$Datastore)
+  #           } else {
+  #             FALSE
+  #           }
+  #         }))
+  #         if (all(GlobalTableExists_)) {
+  #           ModuleSpecs_ls$NewInpTable <- NULL
+  #         } else {
+  #           ModuleSpecs_ls$NewInpTable <- NewInpTableSpecs_ls[!GlobalTableExists_]
+  #         }
+  #       }
+  #       #Load inputs to datastore
+  #       if (!is.null(ModuleSpecs_ls$Inp)) {
+  #         inputsToDatastore(ProcessedInputs_ls[[EntryName]], ModuleSpecs_ls, Module)
+  #       }
+  #     }
+  for (Spec in AllSpecs_ls) {
+    #Get information on the inputs
+    Module <- Spec$ModuleName
+    Package <- Spec$PackageName
+    EntryName <- paste(Package, Module, sep = "::")
+    ModuleSpecs_ls <- (Spec$Specs)
+    #Eliminate writing any new input table to Global group if it already exists
+    if (!is.null(ModuleSpecs_ls$NewInpTable)) {
+      NewInpTableSpecs_ls <- ModuleSpecs_ls$NewInpTable
+      GlobalTableExists_ <- unlist(lapply(NewInpTableSpecs_ls, function(x) {
+        if (x$GROUP == "Global") {
+          checkTableExistence(x$TABLE, "Global", ve.model$ModelState_ls$Datastore)
         } else {
-          MakeTableSpecName <- "MakeSetTable"
+          FALSE
         }
-        Msg <-
-          paste0("Error: ", MakeTableSpecName, "specification for module '",
-                 TableSpec_$MODULE, "' will create a table '", Table,
-                 "' that already exists in the working datastore.")
-        addError(Msg)
-        NewDstore_df <- Dstore_df
-      }
-    } else {
-      NewDstore_df <- data.frame(
-        group = c(Dstore_df$group, paste0("/", Group)),
-        name = c(Dstore_df$name, Table),
-        groupname = c(Dstore_df$groupname, paste0(Group, "/", Table)),
-        stringsAsFactors = FALSE
-      )
-      NewDstore_df$attributes <- c(Dstore_df$attributes, list(TableSpec_))
-    }
-    NewDstore_df
-  }
-
-  #Define function to add dataset reference to datastore inventory
-  #---------------------------------------------------------------
-  addDatasetRef <- function(Dstore_df, DatasetSpec_, IsBaseYear) {
-    Group <- DatasetSpec_$GROUP
-    if (Group == "Year") Group <- Year
-    Table <- DatasetSpec_$TABLE
-    Name <- DatasetSpec_$NAME
-    #Check if dataset already exists
-    HasDataset <- checkDataset(Name, Table, Group, Dstore_df)
-    #If dataset exists then warn and check consistency of specifications
-    if (HasDataset) {
-      #No need to check if the group is 'Global' and year is not the base year
-      #Because not a conflict between datasets created by different modules
-      if (Group == "Global" & !IsBaseYear) {
-        NewDstore_df <- Dstore_df
-        #Otherwise issue a warning and check for consistent data specifications
+      }))
+      if (all(GlobalTableExists_)) {
+        ModuleSpecs_ls$NewInpTable <- NULL
       } else {
-        #Add warning that existing dataset will be overwritten
-        Msg <-
-          paste0("Module '", Module, "' will overwrite dataset '", Name,
-                 "' in table '", Table, "'.")
-        addWarning(Msg)
-        #Check attributes are consistent
-        DstoreDatasetAttr_ls <-
-          getDatasetAttr(Name, Table, Group, Dstore_df)
-        AttrConsistency_ls <-
-          checkSpecConsistency(DatasetSpec_, DstoreDatasetAttr_ls)
-        if (length(AttrConsistency_ls$Errors != 0)) {
-          addError(AttrConsistency_ls$Errors)
-        }
-        NewDstore_df <- Dstore_df
+        ModuleSpecs_ls$NewInpTable <- NewInpTableSpecs_ls[!GlobalTableExists_]
       }
-    } else {
-      NewDstore_df <- data.frame(
-        group = c(Dstore_df$group, paste0("/", Group)),
-        name = c(Dstore_df$name, Name),
-        groupname = c(Dstore_df$groupname, paste0(Group, "/", Table, "/", Name)),
-        stringsAsFactors = FALSE
-      )
-      NewDstore_df$attributes <-
-        c(Dstore_df$attributes,
-          list(DatasetSpec_[c("NAVALUE", "SIZE", "TYPE", "UNITS")]))
     }
-    NewDstore_df
-  }
-
-  #Define function to check whether dataset is optional
-  #----------------------------------------------------
-  isOptional <- function(Spec_ls) {
-    if (!is.null(Spec_ls$OPTIONAL)) {
-      Spec_ls$OPTIONAL
-    } else {
-      FALSE
+    #Load inputs to datastore
+    if (!is.null(ModuleSpecs_ls$Inp)) {
+      inputsToDatastore(ProcessedInputs_ls[[EntryName]], ModuleSpecs_ls, Module)
     }
-  }
-
-  #Iterate through run years and modules to simulate model run
-  #-----------------------------------------------------------
-  for (Year in RunYears_) {
-    #Iterate through module calls
-    for (i in 1:length(AllSpecs_ls)) {
-      Module <- AllSpecs_ls[[i]]$ModuleName
-      Package <- AllSpecs_ls[[i]]$PackageName
-      RunFor <- AllSpecs_ls[[i]]$RunFor
-      if (RunFor == "BaseYear" & Year != "BaseYear") break()
-      if (RunFor == "NotBaseYear" & Year == "BaseYear") break()
-      ModuleSpecs_ls <-
-        processModuleSpecs(getModuleSpecs(Module, Package))
-
-      #Add 'Inp' table references to the working datastore inventory
-      #-------------------------------------------------------------
-      if (!is.null(ModuleSpecs_ls$NewInpTable)) {
-        for (j in 1:length(ModuleSpecs_ls$NewInpTable)) {
-          Spec_ls <- ModuleSpecs_ls$NewInpTable[[j]]
-          Spec_ls$MODULE <- Module
-          if (Spec_ls[["GROUP"]] == "Global") {
-            RefGroup <- "Global"
-          } else {
-            RefGroup <- Year
-          }
-          #Get the datastore inventory for the group
-          Dstore_df <- Dstores_ls[[RefGroup]]
-          #Add the table reference and check for table add error
-          Dstores_ls[[RefGroup]] <-
-            addTableRef(Dstore_df, Spec_ls, Year == BaseYear, "Inp")
-          rm(Spec_ls, RefGroup, Dstore_df)
-        }
-        rm(j)
-      }
-
-      #Add 'Inp' dataset references to the working datastore inventory
-      #---------------------------------------------------------------
-      if (!is.null(ModuleSpecs_ls$Inp)) {
-        for (j in 1:length(ModuleSpecs_ls$Inp)) {
-          Spec_ls <- ModuleSpecs_ls$Inp[[j]]
-          Spec_ls$MODULE <- Module
-          if (Spec_ls[["GROUP"]] == "Global") {
-            RefGroup <- "Global"
-          } else {
-            RefGroup <- Year
-          }
-          #Get the datastore inventory for the group
-          Dstore_df <- Dstores_ls[[RefGroup]]
-          #Add the dataset reference and check for dataset add error
-          Dstores_ls[[RefGroup]] <-
-            addDatasetRef(Dstore_df, Spec_ls, Year == BaseYear)
-          rm(Spec_ls, RefGroup, Dstore_df)
-        }
-        rm(j)
-      }
-
-      #Check for presence of 'Get' dataset references in datastore inventory
-      #---------------------------------------------------------------------
-      if (!is.null(ModuleSpecs_ls$Get)) {
-        for (j in 1:length(ModuleSpecs_ls$Get)) {
-          Spec_ls <- ModuleSpecs_ls$Get[[j]]
-          Spec_ls$MODULE <- Module
-          Group <- Spec_ls[["GROUP"]]
-          Table <- Spec_ls[["TABLE"]]
-          Name <- Spec_ls[["NAME"]]
-          if (Group == "Global") {
-            Group <- "Global"
-          }
-          if (Group == "BaseYear") {
-            Group <- G$BaseYear
-          }
-          if (Group == "Year") {
-            Group <- Year
-          }
-          DatasetFound <- FALSE
-          Dstore_df <- Dstores_ls[[Group]]
-          DatasetInDstore <- checkDataset(Name, Table, Group, Dstore_df)
-          if (!DatasetInDstore) {
-            next()
-          } else {
-            DatasetFound <- TRUE
-            DstoreAttr_ <- getDatasetAttr(Name, Table, Group, Dstore_df)
-            AttrConsistency_ls <-
-              checkSpecConsistency(Spec_ls, DstoreAttr_)
-            if (length(AttrConsistency_ls$Errors != 0)) {
-              addError(AttrConsistency_ls$Errors)
-            }
-            rm(DstoreAttr_, AttrConsistency_ls)
-          }
-          rm(Dstore_df, DatasetInDstore)
-          if (!DatasetFound & !isOptional(Spec_ls)) {
-            Msg <-
-              paste0("Module '", Module,
-                     "' has a 'Get' specification for dataset '", Name,
-                     "' in table '", Table,
-                     "' that will not be present in the working datastore or ",
-                     "any referenced datastores when it is needed.")
-            addError(Msg)
-            stop("CheckError")
-          }
-        }
-      }
-
-      #Add 'Set' table references to the working datastore inventory
-      #-------------------------------------------------------------
-      if (!is.null(ModuleSpecs_ls$NewSetTable)) {
-        for (j in 1:length(ModuleSpecs_ls$NewSetTable)) {
-          Spec_ls <- ModuleSpecs_ls$NewSetTable[[j]]
-          Spec_ls$MODULE <- Module
-          if (Spec_ls[["GROUP"]] == "Global") {
-            RefGroup <- "Global"
-          } else {
-            RefGroup <- Year
-          }
-          #Get the datastore inventory for the group
-          Dstore_df <- Dstores_ls[[RefGroup]]
-          #Add the table reference and check for table add error
-          Dstores_ls[[RefGroup]] <-
-            addTableRef(Dstore_df, Spec_ls, Year == BaseYear, "Set")
-          rm(Spec_ls, RefGroup, Dstore_df)
-        }
-      }
-
-      #Add 'Set' dataset references to the working datastore inventory
-      #---------------------------------------------------------------
-      if (!is.null(ModuleSpecs_ls$Set)) {
-        for (j in 1:length(ModuleSpecs_ls$Set)) {
-          Spec_ls <- ModuleSpecs_ls$Set[[j]]
-          Spec_ls$MODULE <- Module
-          if (Spec_ls[["GROUP"]] == "Global") {
-            Group <- "Global"
-          } else {
-            Group <- Year
-          }
-          #Get the datastore inventory for the group
-          Dstore_df <- Dstores_ls[[Group]]
-          Dstores_ls[[Group]] <-
-            addDatasetRef(Dstore_df, Spec_ls, Year == BaseYear)
-          rm(Spec_ls, Group, Dstore_df)
-        }
-      }
-
-      rm(Module, Package, ModuleSpecs_ls)
-    } #End for loop through module calls
-  } #End for loop through years
-
-  writeLog("Simulating model run.",Level="warn")
-  if (length(Warnings_) != 0) {
-    Msg <-
-      paste0("Model run simulation had one or more warnings. ",
-             "Datasets will be be overwritten when the model runs. ",
-             "Check that this is what it intended. ")
-    writeLog(Msg,Level="warn")
-    writeLog(Warnings_,Level="warn")
-  }
-  if (length(Errors_) == 0) {
-    writeLog("Model run simulation completed without identifying any errors.",Level="warn")
-  } else {
-    Msg <-
-      paste0("Model run simulation has found one or more errors. ",
-             "The following errors must be corrected before the model may be run.")
-    writeLog(Msg,Level="error")
-    writeLog(Errors_,Level="error")
-    stop(Msg, " Check log for details.")
   }
 }

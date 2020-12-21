@@ -519,11 +519,11 @@ server <- function(input, output, session) {
 
         #call the first few methods so can find out log file value and get the ModelState_ls global
         setwd(scriptInfo_ls$fileDirectory)
-        debugConsole("getScriptInfo: calling visioneval::initModelStateFile() and visioneval::initLog()")
+        debugConsole("getScriptInfo: calling visioneval::initModelState() and visioneval::initLog()")
 
-        visioneval::initModelStateFile()
+        visioneval::initModelState()
         visioneval::initLog()
-        visioneval::writeLog("VEGUI called visioneval::initModelStateFile() and visioneval::initLog()")
+        visioneval::writeLog("VEGUI called visioneval::initModelState() and visioneval::initLog()")
 
         #From now on we will get the current ModelState by reading the object stored on disk
         reactiveFilePaths_rv[[MODEL_STATE_FILE]] <- file.path(scriptInfo_ls$fileDirectory, "ModelState.Rda")

@@ -1682,9 +1682,28 @@ processModuleInputs <-
 
     #ORGANIZE THE SPECIFICATIONS BY INPUT FILE AND NAME
     SortSpec_ls <- list()
+    FilePath_ <- character(0)
     for (i in 1:length(InpSpec_ls)) {
       Spec_ls <- InpSpec_ls[[i]]
       File <- basename(Spec_ls$FILE)
+      Spec_ls$FILEPATH <- file.path(Spec_ls$INPUTDIR,File)
+      if ( is.na( FilePath_[File] ) ) {
+        pos <- length(FilePath_)+1
+        FilePath_[pos] <- Spec_ls$FILEPATH
+        names(FilePath_)[pos] <- File
+      } else if ( Spec_ls$FILEPATH != FilePath_[File] ) {
+        # All the field specs for this FILE need to have the same INPUTDIR
+        stop(
+          writeLog(
+            c(
+              paste("Multiple locations for File",File,"are not resolved:"),
+              paste(FilePath_[File],Spec_ls$FILEPATH,sep=",")
+            ),
+            Level="error"
+          ),
+          call.=FALSE
+        )
+      }
       Name <- Spec_ls$NAME
       if (is.null(SortSpec_ls[[File]])) {
         SortSpec_ls[[File]] <- list()
@@ -1705,22 +1724,19 @@ processModuleInputs <-
       FileWarn_ <- character(0)
       #Extract the specifications
       Spec_ls <- SortSpec_ls[[File]]
-      #Check that file exists (INPUTDIR is added in doProcessInpSpec,
-      #INPUTDIR is NA if file does not exist
       #We defer error handling to here so we can report on all missing files at once.
-      FilePath <- file.path(Spec_ls$INPUTDIR,Spec_ls$FILE)
-      if ( is.na(Spec_ls$INPUTDIR) ) { # it's either a length-1 character vector or NA
+      if ( ! file.exists(FilePath_[File]) ) {
         Msg <-
           paste(
             "Input file error.", "File '", File, "' required by '",
-            ModuleName, "' is not present in any 'inputs' directory."
+            ModuleName, "' is not present in",FilePath_[File]
           )
         FileErr_ <- c(FileErr_, Msg)
         FileErr_ls <- c(FileErr_ls, FileErr_)
         next()
       }
       #Read in the data file and check that it is properly formatted
-      Data_df <- try(read.csv(FilePath, as.is = TRUE), silent = TRUE)
+      Data_df <- try(read.csv(FilePath_[File], as.is = TRUE), silent = TRUE)
       if (class(Data_df) == "try-error") {
         Msg <-
           paste0(

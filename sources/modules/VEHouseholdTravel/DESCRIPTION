@@ -17,6 +17,7 @@ Depends: R (>= 3.6.0)
 Imports:
     visioneval,
     VE2001NHTS,
+    filesstrings,
     data.table,
     pscl
 Suggests:
