@@ -185,6 +185,10 @@ Components:
     Type: model
     Path: sources/models
     Test: { Script: Test1/run_model.R, Group: 5 }    
+  VERSPM_TTR:
+    Type: model
+    Path: sources/models
+    Test: { Script: Test1/run_model.R, Group: 5 }    
 #   VERSPM-VehAdj:
 #     Type: model
 #     Path: sources/models
