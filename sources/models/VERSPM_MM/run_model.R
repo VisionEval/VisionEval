@@ -3,12 +3,11 @@
 #===========
 
 #This script demonstrates the VisionEval framework for the RSPM model.
-cat('run_model.R: script entered\n')
 #Load libraries
 #--------------
 library(visioneval)
+writeLog('run_model.R: script entered\n')
 #devtools::load_all('C:/Users/matt.landis/Git/VisionEval/sources/framework/visioneval/')
-cat('run_model.R: library visioneval loaded\n')
 
 #Initialize model
 #----------------
@@ -22,7 +21,7 @@ initializeModel(
   DatastoreName = NULL,
   SaveDatastore = TRUE
 )  
-cat('run_model.R: initializeModel completed\n')
+
 #Run all demo module for all years
 #---------------------------------
 requirePackage("VETravelDemandMM")
@@ -68,4 +67,4 @@ for(Year in getYears()) {
   runModule("CalculateSafetyMeasures",           "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   
 }
-cat('run_model.R: run complete.\n')
+writeLog('run_model.R: run complete.\n')

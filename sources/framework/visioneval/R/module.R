@@ -1355,15 +1355,13 @@ expandSpec <- function(SpecToExpand_ls, ComponentName) {
 #' returns a list of all the Inp specifications that meet these criteria.
 #'
 #' @param InpSpecs_ls A standard specifications list for Inp specifications.
-#' @param InputDir A vector of paths in which to seek input files;
-#'   the first path containing the named file will be used.
 #' @return A list containing the Inp specification components that meet the
 #'   criteria of being optional and present or being not optional. If
 #'   the file is not optional and not present, throw an error and stop.
 #'   The FILE element will be expanded to file.path(InputDir,$FILE) in
 #'   the spec that is returned.
 #' @export
-doProcessInpSpec <- function(InpSpecs_ls, InputDir) {
+doProcessInpSpec <- function(InpSpecs_ls) {
   #Define function to check an individual specification
   #Return TRUE if missing file is not an error
   checkOptional <- function(SpecToCheck_ls) {
@@ -1378,18 +1376,15 @@ doProcessInpSpec <- function(InpSpecs_ls, InputDir) {
   #Return all input specifications that must be processed
   Out_ls <- list()
   j <- 1
+  G <- getModelState() # To resolve InputPath
   for (i in 1:length(InpSpecs_ls)) {
     Spec_ls <- InpSpecs_ls[[i]]
-    File <- file.path(InputDir, Spec_ls$FILE) # might be a vector
-    FileExists <- file.exists(File)
-    if ( ! any(FileExists) ) {
-      if ( checkOptional(Spec_ls) ) {
-        next # Do not add to Out_ls; continue to next InpSpec
-      } else {
-        Spec_ls$INPUTDIR <- NA # Required, but missing; trap later
-      }
+    File <- findRuntimeInputFile(Spec_ls$FILE,Dir="InputDir",DefaultDir="inputs",Param_ls<-G$RunParam_ls,StopOnError=FALSE)
+    if ( is.na(File) ) {
+      if ( checkOptional(Spec_ls) ) next # Optional but missing; just skip
+      Spec_ls$INPUTDIR <- NA # Required, but missing; trap later
     } else {
-      Spec_ls$INPUTDIR <- InputDir[FileExists][1]
+      Spec_ls$INPUTDIR <- dirname(normalizePath(File,winslash="/"))
     }
     Out_ls[[j]] <- Spec_ls
     j <- j + 1
@@ -1423,7 +1418,6 @@ doProcessInpSpec <- function(InpSpecs_ls, InputDir) {
 #' specifications.
 #' @export
 processModuleSpecs <- function(Spec_ls) {
-  G <- getModelState()
   #Define a function to process a component of a specifications list
   processComponent <- function(Component_ls, ComponentName) {
     Result_ls <- list()
@@ -1443,12 +1437,7 @@ processModuleSpecs <- function(Spec_ls) {
     Out_ls$NewSetTable <- Spec_ls$NewSetTable
   }
   if (!is.null(Spec_ls$Inp)) {
-    InputDir <- if ( "InputDir" %in% names(G$RunParam_ls) ) {
-      (G$RunParam_ls$InputDir)  # May be a vector; first matching file will be used
-    } else { # backward compatible
-      normalizePath("inputs",winslash="/",mustWork=FALSE)
-    }
-    FilteredInpSpec_ls <- doProcessInpSpec(Spec_ls$Inp, InputDir)
+    FilteredInpSpec_ls <- doProcessInpSpec(Spec_ls$Inp)
     if (length(FilteredInpSpec_ls) > 0) {
       Out_ls$Inp <- processComponent(FilteredInpSpec_ls, "Inp")
     }

@@ -6,9 +6,8 @@
 
 #Load libraries
 #--------------
-cat('run_model.R: script entered\n')
 library(visioneval)
-cat('run_model.R: libraries loaded\n')
+writeLog('run_model.R: script entered\n')
 
 #Initialize model
 #----------------
@@ -125,4 +124,4 @@ for(Year in getYears()) {
     RunFor = "NotBaseYear",
     RunYear = Year)
 }
-cat('run_model.R: run complete.\n')
+writeLog('run_model.R: run complete.\n')

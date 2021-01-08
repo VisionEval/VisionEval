@@ -1685,7 +1685,7 @@ processModuleInputs <-
     FilePath_ <- character(0)
     for (i in 1:length(InpSpec_ls)) {
       Spec_ls <- InpSpec_ls[[i]]
-      File <- basename(Spec_ls$FILE)
+      File <- basename(Spec_ls$FILE) # should already be a base name
       Spec_ls$FILEPATH <- file.path(Spec_ls$INPUTDIR,File)
       if ( is.na( FilePath_[File] ) ) {
         pos <- length(FilePath_)+1
@@ -1751,6 +1751,10 @@ processModuleInputs <-
         next()
       }
 
+      # TODO: Do a "try"/"recover" loop to check for encoding and use
+      # it if available; if the BOM is not found, re-try with plain
+      # UTF-8 encoding.
+      #
       # Remove the Byte order mark that sometimes appears in the beginning of
       # UTF-8 files on Windows.  Byte Order Mark can't be saved in this
       # windows encoded text file so I include it as raw

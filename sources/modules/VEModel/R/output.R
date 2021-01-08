@@ -61,7 +61,7 @@ ve.output.index <- function() {
   # message("Processing model stages...")
   Index <- data.frame()
   Inputs <- data.frame()
-  # TODO: load the model state from self$path
+
   ms <- private$ModelState
   if ( length(ms)==0 ) {
     return(list())

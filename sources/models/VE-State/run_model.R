@@ -2,12 +2,13 @@
 #run_model.R
 #===========
 
+library(visioneval)
+
 #This script demonstrates the VisionEval framework for the VE-State model.
-cat('run_model.R: script entered\n')
+writeLog('run_model.R: script entered\n')
 #Load libraries
 #--------------
-library(visioneval)
-cat('run_model.R: library visioneval loaded\n')
+writeLog('run_model.R: library visioneval loaded\n')
 
 #Initialize model
 #----------------
@@ -21,7 +22,7 @@ initializeModel(
   DatastoreName = NULL,
   SaveDatastore = TRUE
   )  
-cat('run_model.R: initializeModel completed\n')
+
 #Run all demo module for all years
 #---------------------------------
 for(Year in getYears()) {
@@ -64,5 +65,5 @@ for(Year in getYears()) {
   runModule("CalculateComEnergyAndEmissions",   "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   runModule("CalculatePtranEnergyAndEmissions", "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
 }
-cat('run_model.R: run complete.\n')
+writeLog('run_model.R: run complete.\n')
 

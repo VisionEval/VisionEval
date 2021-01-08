@@ -1,3 +1,5 @@
+This script shows the four stages in one file.
+It will NOT work as a run_model.R
 #===================
 #STAGE 1 run_model.R
 #===================

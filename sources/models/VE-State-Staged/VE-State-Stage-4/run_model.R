@@ -3,17 +3,16 @@
 #===================
 # This run_model.R script runs all of the VE modules to model a travel performance scenario (e.g. pricing)
 
-cat('run_model.R: Stage 4 script entered\n')
-
 #Load libraries
 #--------------
 library(visioneval)
+writeLog('run_model.R: Stage 4 script entered\n')
 
 #Initialize model
 #----------------
 initializeModel(
   ModelScriptFile = "run_model.R",
-  ParamDir = "../VE-State-stage-4/defs",
+  ParamDir = "defs",
   RunParamFile = "run_parameters.json",
   GeoFile = "geo.csv",
   ModelParamFile = "model_parameters.json",
@@ -37,5 +36,4 @@ for(Year in getYears()) {
   runModule("CalculateComEnergyAndEmissions",   "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   runModule("CalculatePtranEnergyAndEmissions", "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
 }
-
-cat('run_model.R: Stage 4 script complete\n')
+writeLog('run_model.R: Stage 4 script complete\n')

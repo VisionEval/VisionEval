@@ -133,7 +133,7 @@ PredictWorkersSpecifications <- list(
               "Ratio of workers to persons age 30 to 54 in model year vs. in estimation data year",
               "Ratio of workers to persons age 55 to 64 in model year vs. in estimation data year",
               "Ratio of workers to persons age 65 or older in model year vs. in estimation data year"),
-      OPTIONAL = TRUE
+      OPTIONAL = TRUE # It turns out it's not really optional.
     )
   ),
   #Specify data to be loaded from data store

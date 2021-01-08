@@ -520,9 +520,16 @@ SimulateHousing <- function(L) {
         fringe = L$Year$Azone$PropGQPopFringe[IsAz])
       #Determine whether can be used
       UseAtProps <- FALSE
-      if (!is.null(GQProps_)) {
+      if (!is.null(GQProps_)) { # they will be null if OPTIONAL file is not present
         if (!any(is.na(GQProps_))) {
           UseAtProps <- TRUE
+        } else {
+          writeLog(
+            c(
+              "Not Using GQ Proportions: input contains NA values.",
+              "Remove 'inputs/azone_gq_pop-prop_by_area-type.csv' to suppress this warning."
+            ),
+            Level="warn")
         }
       }
       #Allocate GQ population to SimBzones if there are area type proportions

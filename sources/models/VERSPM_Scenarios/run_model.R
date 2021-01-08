@@ -6,9 +6,8 @@
 
 #Load libraries
 #--------------
-cat('run_model.R: script entered\n')
 library(visioneval)
-cat('run_model.R: libraries loaded\n')
+writeLog('run_model.R: script entered\n')
 
 planType <- 'callr'
 
@@ -55,6 +54,6 @@ for(Year in getYears()) {
     RunYear = Year
   )
 }
-cat('run_model.R: run complete.\n')
+writeLog('run_model.R: run complete.\n')
 
 proc.time() - ptm

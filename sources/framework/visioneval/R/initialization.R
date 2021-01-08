@@ -41,7 +41,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
   # Other RunParam_ls elements will be placed in ModelState_ls$RunParam_ls
   RequiredParam_ <- c(
     "Model", "Scenario", "Description", "Region", "BaseYear", "Years",
-    "DatastoreName", "Seed"
+    "DatastoreName", "DatastoreType", "Seed"
   )
   ParamExists_ <- RequiredParam_ %in% names(Param_ls)
   if (any(!ParamExists_)) {
@@ -76,7 +76,6 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
   GeoFile <- getRunParameter("GeoFile",Default="geo.csv",Param_ls=Param_ls)
   GeoFilePath <- findRuntimeInputFile(GeoFile,Dir="ParamDir",DefaultDir="defs",Param_ls=Param_ls)
   Geo_df <- read.csv(GeoFilePath, colClasses="character")
-  attr(Geo_df,"file") <- GeoFilePath
   CheckResults_ls <- checkGeography(Geo_df)
   Messages_ <- CheckResults_ls$Messages
   if (length(Messages_) > 0) {
@@ -235,25 +234,22 @@ getModelState <- function(...) {
 #' ModelState to its file (otherwise only ModelState_ls in ve.model environment is updated)
 #' @return always TRUE
 #' @export
-setModelState <-
-function(ChangeState_ls=list(), FileName = getModelStateFileName(), Save=TRUE) {
-  # Get current ModelState (providing FileName will force a "Read")
-  changeModelState_ls <- readModelState(FileName=FileName)
+setModelState <- function(ChangeState_ls=list(), FileName = NULL, Save=TRUE) {
+  # Get current ModelState
   ve.model=modelEnvironment()
+  currentModelState_ls <- readModelState(FileName=FileName)
 
   # Make requested changes, if any
   # (pass an empty list just to Save existing ModelState_Ls)
   if ( length(ChangeState_ls) > 0 ) {
-    changeModelState_ls[ names(ChangeState_ls) ] <- ChangeState_ls
-    changeModelState_ls$LastChanged <- Sys.time()
-    if ( "ModelState_ls" %in% ls(ve.model) ) {
-      ve.model$ModelState_ls <- changeModelState_ls
-    } else {
-      stop(writeLog("No ModelState_ls in model environment",Level="error"),call.=FALSE)
-    }
+    # Replace names in currentModelState_ls with corresponding names in ChangeState_ls
+    currentModelState_ls[ names(ChangeState_ls) ] <- ChangeState_ls
+    currentModelState_ls$LastChanged <- Sys.time()
+    ve.model$ModelState_ls <- currentModelState_ls
   }
 
   if ( Save ) {
+    if ( is.null(FileName) ) FileName <- getModelStateFileName()
     result <- try(save("ModelState_ls",envir=ve.model,file=FileName))
     if ( class(result) == 'try-error' ) {
       Msg <- paste('Could not write ModelState:', FileName)
@@ -281,7 +277,7 @@ function(ChangeState_ls=list(), FileName = getModelStateFileName(), Save=TRUE) {
 #' @export
 getModelStateFileName <- function(Param_ls=NULL) {
   # We'll look in envir$RunParam_ls for name and path information
-  return(basename(getRunParameter("ModelStateName", Default="ModelState.Rda")))
+  return(basename(getRunParameter("ModelStateFileName", Default="ModelState.Rda",Param_ls=Param_ls)))
 }
 
 #READ MODEL STATE FILE
@@ -305,12 +301,9 @@ getModelStateFileName <- function(Param_ls=NULL) {
 readModelState <- function(Names_ = "All", FileName=NULL, envir=NULL) {
   # Establish environment
   if ( is.null(envir) ) envir <- modelEnvironment()
-  # Load from FileName if we explicitly provide it, or if we do not already
-  # have a ModelState_ls in the environment
-  if ( !is.null(FileName) || ! exists("ModelState_ls",envir=envir,inherits=FALSE) ) {
-    if ( is.null(FileName) ) FileName <- getModelStateFileName()
+  if ( !is.null(FileName) ) {
     if ( ! loadModelState(FileName,envir) ) {
-      Msg <- paste("Could not load ModelState from",FileName,"in",getwd())
+      Msg <- paste("Could not load ModelState from",FileName)
       writeLog(Msg,Level="error")
       stop(Msg,call.=FALSE)
     }
@@ -1495,12 +1488,12 @@ loadModelParameters <- function(FlagChanges=FALSE) {
     )
   }
   writeLog("Loading model parameters file.",Level="info")
-  ParamFile <- file.path(RunParam_ls$ParamDir, RunParam_ls$ModelParamFile)
-  if (!file.exists(ParamFile)) {
-    # Not Found: Try again looking this time in InputPath
-    InputPath <- getRunParameter("InputPath",Default=getwd(),Param_ls=RunParam_ls)
-    ParamFile <- file.path(RunParam_ls$InputPath, RunParam_ls$ModelParamFile)
-    if (!any(file.exists(ParamFile))) {
+  ModelParamFile <- getRunParameter("ModelParamFile",Default="model_parameters.json",Param_ls=RunParam_ls)
+  ParamFile <- findRuntimeInputFile(ModelParamFile,"ParamDir",DefaultDir="defs",Param_ls=RunParam_ls,StopOnError=FALSE)
+  if ( is.na(ParamFile) ) {
+    # Not Found: Try again looking this time in InputDir (element of input path)
+    ParamFile <- findRuntimeInputFile(ModelParamFile,"InputDir",DefaultDir="inputs",Param_ls=RunParam_ls,StopOnError=FALSE)
+    if ( is.na(ParamFile) ) {
       # Still Not Found: Throw an error
       ErrorMsg <- paste0(
         "Model parameters file (",
