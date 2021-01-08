@@ -1,21 +1,59 @@
 # Output.R
 self=private=NULL
 
-ve.init.output <- function(ModelState,model) { # parameters yet to come - hook to model
-  self$model <- model
-  private$ModelState <- ModelState
+# TODO: get rid of the "Stage" element of tables, fields, groups, etc.
+# The output itself is bound to a specific model stage (usually the last one)
+# Then check that the functionality is working.
+
+# Output just wraps a ModelState and Datastore for one stage
+# It maintains everything we need for a QueryPrep_ls structure for queries
+# Plus it can export slices of the Datastore into .csv or data.frame
+ve.init.output <- function(OutputPath) { # parameters yet to come - hook to model
+  # OutputPath is the normalized path to a directory containing the model results
+  #  typically from the last model stage. Expect to find a ModelState.Rda file
+  #  and a Datastore in that folder.
+  self$path <- OutputPath
   private$index()
+  return(self$valid())
 }
 
 ve.output.valid <- function() {
-  return( !is.null(private$modelIndex) && length(private$modelIndex)>0 &&
-          !is.null(private$modelInputs) && length(private$modelInputs)>0 )
+  return(
+    dir.exists(self$path) &&
+    !is.null(private$modelIndex) && length(private$modelIndex)>0 &&
+    !is.null(private$modelInputs) && length(private$modelInputs)>0
+  )
 }
 
+# Check if a specified attribute belongs to the Datastore row
+attributeExist <- function(variable, attr_name){
+  if(is.list(variable)){
+    if(!is.na(variable[[1]])){
+      attr_value <- variable[[attr_name]]
+      if(!is.null(attr_value)) return(TRUE)
+    }
+  }
+  return(FALSE)
+}
+
+# Get a specified attribute for a Datastore row
+attributeGet <- function(variable, attr_name){
+  if(is.list(variable)){
+    if(!is.na(variable[[1]])){
+      attr_value <- variable[[attr_name]]
+      if(!is.null(attr_value)) return(attr_value)
+    }
+  }
+  return(NA)
+}
+
+# Simplify - we're only going to look at the results of one stage at a time.
 ve.output.index <- function() {
-  # Check that there is a model state
+  # Load model state from self$path
+  # If no path, or no model state, or no Datastore, just abort
+    
   # message("indexing model stages...")
-  if ( length(private$ModelState)==0 || ! any(unlist(lapply(private$ModelState,length))>0) ) {
+  if ( no.output ) {
     message("Model does not appear to have been run yet.")
     return(list())
   }
@@ -23,103 +61,106 @@ ve.output.index <- function() {
   # message("Processing model stages...")
   Index <- data.frame()
   Inputs <- data.frame()
-  for ( stage in length(private$ModelState) ) {
-    ms <- private$ModelState[[stage]]
-    if ( length(ms)==0 ) next
-    if ( ! "Datastore" %in% names(ms) ) {
-      message("Datastore not defined in ModelState: ",paste(names(ms),collapse=","))
-      message("Clear model results and try again.")
-      return(list())
-    } else if ( ! is.list(ms$Datastore) ) {
-      message("Datastore is incomplete: ",class(ms$Datastore)," ",length(ms$Datastore))
-      message("Clear model results and try again.")
-      return(list())
-    }
-      
-    ds <- (ms$Datastore)
-    model.path <- file.path(basename(dirname(self$model$modelPath[stage])),basename(self$model$modelPath[stage]))
-
-    # message("Processing ",basename(self$model$modelPath[stage]))
-    # NOTE: Datastore element ds of ModelState is a data.frame.
-    #       The attributes column contains a list for each row
-    # Datastore elements with a "FILE" attribute are inputs; we want the outputs
-    # the non-FILE elements are creations living in the Datastore (i.e. not inputs => outputs)
-    InputIndex <- sapply(ds$attributes, attributeExist, "FILE")
-    Description <- sapply(ds$attributes, attributeGet, "DESCRIPTION",simplify=TRUE) # should yield a character vector
-    Module <- sapply(ds$attributes, attributeGet, "MODULE",simplify=TRUE) # should yield a character vector
-    Units <- sapply(ds$attributes, attributeGet, "UNITS",simplify=TRUE) # should yield a character vector
-
-    # Build parallel data.frame for Inputs
-    # message("Input data frame...")
-    File <- sapply(ds$attributes, attributeGet, "FILE",simplify=TRUE) # should yield a character vector
-    inputs <- data.frame(
-      Module = Module[InputIndex],
-      Name = ds$name[InputIndex],
-      File = File[InputIndex],
-      Description = Description[InputIndex],
-      Units = Units[InputIndex],
-      Stage = rep(as.character(stage),length(which(InputIndex))),
-      Path = model.path
-    )
-    Inputs <- rbind(Inputs,inputs)
-    # message("Length of inputs:",nrow(inputs))
-
-    # message("Output data frame...")
-    Description <- Description[!InputIndex]
-    Module <- Module[!InputIndex]
-    Units <- Units[!InputIndex]
-    splitGroupTableName <- strsplit(ds[!InputIndex, "groupname"], "/")
-    if ( length(Description) != length(splitGroupTableName) ) stop("Inconsistent table<->description correspondence")
-    # message("Length of outputs:",length(splitGroupTableName))
-
-    maxLength <- max(unlist(lapply(splitGroupTableName, length)))
-    if ( maxLength != 3 ) {
-      warning("Model state ",self$model$modelPath[stage],"is incomplete (",maxLength,")")
-      next
-    }
-    splitGroupTableName <- lapply(splitGroupTableName , function(x) c(x, rep(NA, maxLength-length(x))))
-
-    # Add modelPath and Description to Index row
-    # message("Adding Description and modelPath")
-    PathGroupTableName <- list()
-    for ( i in 1:length(splitGroupTableName) ) {
-      PathGroupTableName[[i]] <- c(
-        splitGroupTableName[[i]],
-        Description[i],
-        Units[i],
-        Module[i],
-        as.character(stage),
-        model.path
-      )
-    }
-    if ( any((cls<-lapply(PathGroupTableName,class))!="character") ) {
-      bad.class <- which(cls!="character")
-      print( PathGroupTableName[[bad.class[1]]] )
-      print( length(bad.class) )
-      stop("Non-character vector in Datastore index row")
-    }
-
-    # Using 'do.call' turns each element of the splitGroupTableName list into one argument for rbind.data.frame
-    # By contrast, calling rbind.data.frame(splitGroupTableName) simply converts the list (a single argument) into a
-    # data.frame (so each element becomes one column) Explanation:
-    # https://www.stat.berkeley.edu/~s133/Docall.html
-    # message("Adding to output data.frame")
-    GroupTableName <- data.frame()
-    GroupTableName <- do.call(rbind.data.frame, PathGroupTableName)
-    colnames(GroupTableName) <- c("Group", "Table", "Name","Description", "Units","Module","Stage","Path")
-    # message("length of output data:",nrow(GroupTableName))
-
-    # GroupTableName is now a data.frame with five columns
-    # complete.cases blows away the rows that have any NA values
-    # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each
-    # column)
-    # message("Adding inputs to Inputs data.frame")
-    ccases <- stats::complete.cases(GroupTableName)
-    GroupTableName <- GroupTableName[ccases,]
-    # message("Length of complete.cases:",nrow(GroupTableName))
-    Index <- rbind(Index,GroupTableName)
-    # message("length of Index:",nrow(Index))
+  # TODO: load the model state from self$path
+  ms <- private$ModelState
+  if ( length(ms)==0 ) {
+    return(list())
   }
+  if ( ! "Datastore" %in% names(ms) ) {
+    message("Datastore not defined in ModelState: ",paste(names(ms),collapse=","))
+    message("Clear model results and try again.")
+    return(list())
+  } else if ( ! is.list(ms$Datastore) ) {
+    message("Datastore is incomplete: ",class(ms$Datastore)," ",length(ms$Datastore))
+    message("Clear model results and try again.")
+    return(list())
+  }
+
+  # TODO: update to current results dir approach: the Output just examines one output path.
+  ds <- (ms$Datastore)
+  model.path <- file.path(basename(dirname(self$model$modelPath[stage])),basename(self$model$modelPath[stage]))
+
+  # message("Processing ",basename(self$model$modelPath[stage]))
+  # NOTE: Datastore element ds of ModelState is a data.frame.
+  #       The attributes column contains a list for each row
+  # Datastore elements with a "FILE" attribute are inputs; we want the outputs
+  # the non-FILE elements are creations living in the Datastore (i.e. not inputs => outputs)
+  InputIndex <- sapply(ds$attributes, attributeExist, "FILE")
+  Description <- sapply(ds$attributes, attributeGet, "DESCRIPTION",simplify=TRUE) # should yield a character vector
+  Module <- sapply(ds$attributes, attributeGet, "MODULE",simplify=TRUE) # should yield a character vector
+  Units <- sapply(ds$attributes, attributeGet, "UNITS",simplify=TRUE) # should yield a character vector
+
+  # Build parallel data.frame for Inputs
+  # message("Input data frame...")
+  File <- sapply(ds$attributes, attributeGet, "FILE",simplify=TRUE) # should yield a character vector
+  inputs <- data.frame(
+    Module = Module[InputIndex],
+    Name = ds$name[InputIndex],
+    File = File[InputIndex],
+    Description = Description[InputIndex],
+    Units = Units[InputIndex],
+    Stage = rep(as.character(stage),length(which(InputIndex))),
+    Path = model.path
+  )
+  Inputs <- rbind(Inputs,inputs)
+  # message("Length of inputs:",nrow(inputs))
+
+  # message("Output data frame...")
+  Description <- Description[!InputIndex]
+  Module <- Module[!InputIndex]
+  Units <- Units[!InputIndex]
+  splitGroupTableName <- strsplit(ds[!InputIndex, "groupname"], "/")
+  if ( length(Description) != length(splitGroupTableName) ) stop("Inconsistent table<->description correspondence")
+  # message("Length of outputs:",length(splitGroupTableName))
+
+  maxLength <- max(unlist(lapply(splitGroupTableName, length)))
+  if ( maxLength != 3 ) {
+    warning("Model state ",self$model$modelPath[stage],"is incomplete (",maxLength,")")
+    return(list())
+  }
+  splitGroupTableName <- lapply(splitGroupTableName , function(x) c(x, rep(NA, maxLength-length(x))))
+
+  # Add modelPath and Description to Index row
+  # message("Adding Description and modelPath")
+  PathGroupTableName <- list()
+  for ( i in 1:length(splitGroupTableName) ) {
+    PathGroupTableName[[i]] <- c(
+      splitGroupTableName[[i]],
+      Description[i],
+      Units[i],
+      Module[i],
+      as.character(stage),
+      model.path
+    )
+  }
+  if ( any((cls<-lapply(PathGroupTableName,class))!="character") ) {
+    bad.class <- which(cls!="character")
+    print( PathGroupTableName[[bad.class[1]]] )
+    print( length(bad.class) )
+    stop("Non-character vector in Datastore index row")
+  }
+
+  # Using 'do.call' turns each element of the splitGroupTableName list into one argument for rbind.data.frame
+  # By contrast, calling rbind.data.frame(splitGroupTableName) simply converts the list (a single argument) into a
+  # data.frame (so each element becomes one column) Explanation:
+  # https://www.stat.berkeley.edu/~s133/Docall.html
+  # message("Adding to output data.frame")
+  GroupTableName <- data.frame()
+  GroupTableName <- do.call(rbind.data.frame, PathGroupTableName)
+  colnames(GroupTableName) <- c("Group", "Table", "Name","Description", "Units","Module","Stage","Path")
+  # message("length of output data:",nrow(GroupTableName))
+
+  # GroupTableName is now a data.frame with five columns
+  # complete.cases blows away the rows that have any NA values
+  # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each
+  # column)
+  # message("Adding inputs to Inputs data.frame")
+  ccases <- stats::complete.cases(GroupTableName)
+  GroupTableName <- GroupTableName[ccases,]
+  # message("Length of complete.cases:",nrow(GroupTableName))
+  Index <- rbind(Index,GroupTableName)
+  # message("length of Index:",nrow(Index))
+
   # message("Attaching ve.inputs attribute to Index")
   private$modelIndex <- Index
   private$modelInputs <- Inputs
@@ -128,7 +169,7 @@ ve.output.index <- function() {
 
 # TODO: change this so the fields are always sought within the
 # Selected groups and tables (so with no tables selected, we'll
-# get all group/table/field combinations).
+# get all group/table/field combinations for the selecte group).
 ve.output.select <- function( what, details=FALSE ) {
   # interactive utility to select groups, tables or fields
   # 'what' can be "groups","tables" or "fields" (either as strings or names without quotes)
@@ -319,7 +360,6 @@ ve.output.units <- function() {
 
 # Build data.frames based on selected groups, tables and dataset names
 ve.output.extract <- function(
-  stage=NULL,
   saveTo="output",
   overwrite=FALSE,
   quiet=FALSE
@@ -327,7 +367,6 @@ ve.output.extract <- function(
   if ( ! all(file.exists(file.path(self$model$modelPath,"ModelState.Rda"))) ) {
     stop("Model has not been run yet.")
   }
-  if ( is.null(stage) ) stage <- length(self$model$modelPath) # Last one should have everything
   saving <- is.character(saveTo) && nzchar(saveTo)[1]
   
   visioneval::assignDatastoreFunctions(private$ModelState$DatastoreType)
@@ -412,13 +451,13 @@ ve.output.query <- function(...) {
 }
 
 # Here is the VEOutput R6 class
-# One of these is constructed by VEModel$output
+# One of these is constructed by VEModel$output()
 
 VEOutput <- R6::R6Class(
   "VEOutput",
   public = list(
     initialize=ve.init.output,
-    model=NULL,                     # Back-reference to the VEModel for this output
+    path=NULL,                      # Back-reference to the VEModel for this output
     valid=ve.output.valid,          # has the model been run, etc.
     select=ve.output.select,
     extract=ve.output.extract,

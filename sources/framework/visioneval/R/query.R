@@ -289,9 +289,6 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
 #' missing in each table.
 #' @export
 readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
-  #TODO: reassess the need for this function - does the use case
-  #      exist? Was it ever properly implemented?
-
   #Extract the datastore reading functions
   readFromTable <- QueryPrep_ls$Functions$readFromTable
   listDatastore <- QueryPrep_ls$Functions$listDatastore

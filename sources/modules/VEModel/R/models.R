@@ -1,5 +1,11 @@
 # Author: Jeremy Raw
 
+# TODO: get the dir() and clear() functions working on multi-stage models
+# Should take a stage parameter on any of those. Shows all the "Results"
+# subdirectories for the stages, and all relevant files inside those
+# (Datastore, model state).  Also show the outputs folder (if it exists)
+# and allow clearing that too.
+
 # VEModel Package Code
 
 # R6 Class documentation example:
@@ -292,7 +298,7 @@ ve.model.copy <- function(newName=NULL,newPath=NULL) {
     dir.create(copy.to,showWarnings=FALSE)
     file.copy(copy.from,copy.to,recursive=TRUE)
   }
-    
+
   return( openModel(newModelPath) )
 }
 
@@ -311,29 +317,35 @@ ve.model.loadModelState <- function(log="error") {
     Param_ls$ResultsDir <- file.path(ResultsDir,stagePath)
     setwd(file.path(self$modelPath,Param_ls$ResultsDir))
     modelState <- normalizePath(ModelStateFileName,winslash="/",mustWork=FALSE)
+    visioneval::initLog(Save=FALSE,Threshold=log)
+    initMsg <- paste("Loading Model",self$modelName)
+    if ( length(self$stagePaths)>1 ) {
+      visioneval::writeLog(paste(initMsg,"Stage",stage,": ",stagePath),Level="info")
+    } else {
+      visioneval::writeLog(initMsg,Level="info")
+    }
     if ( visioneval::loadModelState(modelState, ( ms.env <- new.env() )) ) {
       private$ModelState[[ basename(stagePath) ]] <- ms.env$ModelState_ls
     } else {
       scriptFile <- self$stageScripts[stage]
       modelScriptFile <- normalizePath(file.path(stageInput,scriptFile),winslash="/")
-      visioneval::initLog(Save=FALSE,Threshold=log)
       ve.model <- visioneval::modelEnvironment()
       ve.model$RunModel <- FALSE
       ve.model$RunStatus <- "Not Run"
       ve.model$ModelStateStages <- private$ModelState; # previously loaded model states
       Param_ls$InputPath <- c(stageInput,BaseInputPath)
       parsedScript <- visioneval::parseModelScript(modelScriptFile)
-      # TODO: extract initialization parameters from model script
-      visioneval::initializeModel(
-        Param_ls=Param_ls,
-        ModelScriptFile=modelScriptFile,
-        ParsedModelScript=parsedScript, # Could also have done Param_ls$ParsedModelScript <- parsedScript
-        LogLevel=log
-      )
-      private$ModelState[[ basename(stagePath) ]] <- ve.model$ModelState_ls
-      browser()
-      rm(list=ls(ve.model),envir=ve.model)
-      rm(ve.model)
+
+      # Execute the initializeModel function from the model script
+      initArgs                   <- parsedScript$InitParams_ls; # includes LoadDatastore etc.
+      initArgs$Param_ls          <- Param_ls;  # Naming explicit arguments makes them higher priority than Param_ls
+      initArgs$ModelScriptFile   <- modelScriptFile
+      initArgs$ParsedModelScript <- parsedScript
+      initArgs$LogLevel          <- log
+      do.call(visioneval::initializeModel,args=initArgs)
+
+      # Keep the model state so later stages can refer to it
+      private$ModelState[[ toupper(basename(stagePath)) ]] <- ve.model$ModelState_ls
     }
   }
   if ( length(private$ModelState)!=length(self$stagePaths) ) {
@@ -402,10 +414,6 @@ ve.model.init <- function(modelPath=NULL,verbose=TRUE,log="error") {
   self$status <- self$runStatus[length(self$runStatus)]
 }
 
-ve.model.stages <- function(stage=NULL,stageScript=NULL) {
-  NULL
-}
-
 # Run the modelPath (through its stages)
 # Find the runModel script
 # Work in the Results directory - need to relay locations from here to initializeModel
@@ -434,7 +442,22 @@ ve.model.run <- function(stage=NULL,lastStage=NULL,stageScript=NULL,lastScript=N
 
   pathLength <- length(self$stagePaths)
 
-  stageStart <- if ( ! is.null(stage) ) stage else 1
+  if ( is.null(stage) ) {
+    stageStart <- 1
+    if ( is.null(lastStage) ) {
+      lastStage <- self$stageCount
+    } else if ( lastStage < stageStart ) {
+      lastStage <- stageStart
+    }
+  } else {
+    stageStart <- stage
+    if ( is.null(lastStage) ) {
+      lastStage <- stageStart
+    } else if ( lastStage < stageStart ) {
+      lastStage <- stageStart
+    }
+  }
+    
   if ( is.null(lastStage) || lastStage < stageStart ) {
     lastStage <- stageStart
   } else if ( lastStage==0 ) {
@@ -551,7 +574,7 @@ ve.model.dir <- function(pattern=NULL,recursive=FALSE,shorten="",stage=NULL,stag
 }
 
 # outputOnly will just report the extraction results
-# (not the model run)
+# (not the model run results)
 ve.artifacts <- function(stage=NULL,outputOnly=FALSE) {
   if ( ! outputOnly ) {
     mstates <- self$dir(pattern=".*(Previous)*ModelState\\.Rda",stage=stage)
@@ -580,7 +603,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,stage=NULL) {
     if ( interactive() ) {
       choices <- to.delete
       preselect <- if (force || outputOnly ) to.delete else character(0)
-      to.delete <- utils::select.list(choices=choices,preselect=preselect,multiple=TRUE,title="Delete Select Outputs")
+      to.delete <- utils::select.list(choices=choices,preselect=preselect,multiple=TRUE,title="Delete Selected Outputs")
       force <- length(to.delete)>0
     } else {
       force <- ( force || length(to.delete)>0 )
@@ -614,28 +637,6 @@ stripPathPrefix <- function(x) {
     } else {
       return(substr(x[1],1,pfx))
     }
-}
-
-# Check if a specified attribute belongs to the Datastore row
-attributeExist <- function(variable, attr_name){
-  if(is.list(variable)){
-    if(!is.na(variable[[1]])){
-      attr_value <- variable[[attr_name]]
-      if(!is.null(attr_value)) return(TRUE)
-    }
-  }
-  return(FALSE)
-}
-
-# Get a specified attribute for a Datastore row
-attributeGet <- function(variable, attr_name){
-  if(is.list(variable)){
-    if(!is.na(variable[[1]])){
-      attr_value <- variable[[attr_name]]
-      if(!is.null(attr_value)) return(attr_value)
-    }
-  }
-  return(NA)
 }
 
 ve.model.print <- function() {
@@ -677,29 +678,23 @@ prepSelect <- function(self,what,details=FALSE) {
   return( list(choices=choices,selected=selected,names=names) )
 }
 
-# Create an output object from the model output
-ve.model.output <- function(pattern=NULL,regex=FALSE) {
-  # if pattern is given (a "regex" pattern if regex is TRUE, else a "glob" pattern)
-  # NULL pattern will get the most recent output
-  # empty character string pattern ("") will allow selection (or report list) of available outputs
-  # If the pattern yields no match, treat pattern as NULL (with message)
-  # If the pattern yields more than one match, list that subset (with message) so user can refine
-
-  # TODO: look up available outputs in ResultsDir
-
-  if ( is.null(private$outputObject) ) {
-    output <- VEOutput$new(private$ModelState,self) # parameters TBD
-    if ( output$valid() ) {
-      private$outputObject <- output
+ve.model.output <- function(stage) {
+  # Create an output object wrapping the directory that contains the model
+  # results for the given stage (or last stage if not given)
+  if ( missing(stage) || !is.numeric(stage) ) {
+    stage <- length(self$stagePaths)
+  }
+  output <- VEOutput$new(private$ModelState,self,stage) # parameters TBD
+  if ( output$valid() ) {
+    return(output)
+  } else {
+    if (stage!=length(self$stagePaths)) {
+      warning("There is no output for stage ",stage," of this model yet.")
     } else {
-      private$outputObject <- NULL
+      warning("There is no output for this model yet.")
     }
   }
-  if ( is.null(private$outputObject) ) {
-    invisible(private$outputObject)
-  } else {
-    return(private$outputObject)
-  }
+  return(output)
 }
 
 # Here is the VEModel R6 class
@@ -716,11 +711,10 @@ VEModel <- R6::R6Class(
     stageCount=NULL,
     RunParam_ls=NULL,
     runStatus=NULL,
-    status="Uninitialized",                 # used to be a function
+    status="Uninitialized",
 
     # Methods
     initialize=ve.model.init,               # initialize a VEModel obje ct
-    stages=ve.model.stages,                 # read-only - report model stages
     run=ve.model.run,                       # run a model (or just a subset of stages)
     print=ve.model.print,                   # provides generic print functionality
     dir=ve.model.dir,                       # list model elements (output, scripts, etc.)
@@ -732,7 +726,6 @@ VEModel <- R6::R6Class(
     # Private Members
     runError=NULL,
     artifacts = ve.artifacts,               # Function may interrogate an existing Output
-    outputObject=NULL,                      # VEOutput object for this model
     ModelState=NULL,                        # ModelState placeholder
     # Private Methods
     loadModelState=ve.model.loadModelState  # Function to load a model state file

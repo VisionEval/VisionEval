@@ -206,6 +206,8 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
       for ( pDir in ParamDir ) { # Might be more than one, depending on InputPath
         ParamFilePath <- unique(file.path(ParamDir,ParamFile))
         ParamFileExists <- file.exists(ParamFilePath)
+        ParamFilePath <- ParamFilePath[ParamFileExists] # Pick the first one
+        ParamFileExists <- any(ParamFileExists)         # Reduce to testable condition
         if ( length(ParamFilePath)>1 ) {
           for ( i in 1:length(ParamFilePath) ) {
             writeLog(
@@ -547,10 +549,11 @@ findRuntimeInputFile <- function(File,Dir="InputDir",DefaultDir="inputs",Param_l
 #' @param Prefix A character string appended to the file name for the log file. For example, if the
 #' Prefix is 'CreateHouseholds', the log file is named 'Log_CreateHouseholds_<date>_<time>.txt'. The
 #' default value is NULL in which case the Prefix is the date and time.
+#' @param Quiet a logical (default=TRUE); if FALSE, write initialization parameters as a log message
 #' @return A list containing the name of the constructed log file and the time stamp
 #' @import futile.logger
 #' @export
-initLog <- function(TimeStamp = NULL, Threshold="info", Save=TRUE, Prefix = NULL) {
+initLog <- function(TimeStamp = NULL, Threshold="info", Save=TRUE, Prefix = NULL, Quiet=TRUE) {
 
   if (is.null(TimeStamp)) {
     TimeStamp <- as.character(Sys.time())
@@ -592,8 +595,10 @@ initLog <- function(TimeStamp = NULL, Threshold="info", Save=TRUE, Prefix = NULL
     futile.logger::flog.appender(futile.logger::appender.console(),name="stderr")
   }
 
-  startMsg <- paste("Logging started at",TimeStamp,"for",toupper(Threshold),"to",LogFile)
-  writeLogMessage(startMsg)
+  if ( ! Quiet && interactive() ) {
+    startMsg <- paste("Logging started at",TimeStamp,"for",toupper(Threshold),"to",LogFile)
+    writeLogMessage(startMsg)
+  }
 
   invisible(list(LogFile=LogFile,ModelStart=TimeStamp))
 }
@@ -658,16 +663,24 @@ log.function <- list(
 #'
 #' @param Msg A character vector, whose first element must not be empty.
 #' @param Logger A string indicating the name of the logger ("ve.logger" or "stderr")
+#' @param Level If provided, write the log message to Logger with this Level; otherwise use FATAL,
+#'   which doesn't stop anything - it just forces the message out in all cases.
 #' @return TRUE if the message is written to the log successfully ("as-is")
 #' @export
-writeLogMessage <- function(Msg = "", Logger="ve.logger") {
+writeLogMessage <- function(Msg = "", Logger="ve.logger", Level="") {
   if ( missing(Msg) || length(Msg)==0 || ! nzchar(Msg) ) {
     message(
       "writeLogMessage(Msg): No message supplied\n",
     )
   } else {
     futile.logger::flog.layout( log.layout.message, name=Logger )
-    futile.logger::flog.fatal( Msg, name=Logger ) # "fatals" always get out...
+    if ( nzchar(Level) ) {
+      # This message won't get out if Level is below the Logger threshold
+      visioneval::writeLog(Msg,Level=Level,Logger=Logger)
+    } else {
+      # Otherwise, the message always gets out into the system log
+      futile.logger::flog.fatal( Msg, name=Logger ) # "fatals" always get out...
+    }
     futile.logger::flog.layout( log.layout.visioneval, name=Logger )
   }
   invisible(Msg)

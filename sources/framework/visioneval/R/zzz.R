@@ -12,7 +12,7 @@
 }
 
 .onAttach <- function(libname, pkgname) {
-  packageStartupMessage("Welcome to VisionEval!")
+  packageStartupMessage("Welcome to the new VisionEval!")
 }
 
 .onDetach <- function(libpath) {

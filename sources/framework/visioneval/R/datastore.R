@@ -764,12 +764,7 @@ readFromTableH5 <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, 
   } else {
     G <- readModelState(FileName = file.path(DstoreDir, getModelStateFileName()),envir=new.env())
   }
-  #If DstoreLoc is NULL get the name of the datastore from the model
-  #state
-  # JRaw TODO: Model state should save path of Datastore
-  # TODO: Keep rethinking how we track the Datastore location
-  # (relative/absolute). Need the ModelState to work relative to the
-  # Datastore if we copy all of them to a different absolute location.
+  #If DstoreLoc is NULL get the name of the datastore from the model state
   if (is.null(DstoreLoc)) DstoreLoc <- G$DatastoreName
   #Check that dataset exists to read from
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
@@ -815,7 +810,6 @@ readFromTableH5 <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, 
     as.vector(Data_)
   }
 }
-
 
 #WRITE TO TABLE
 #==============

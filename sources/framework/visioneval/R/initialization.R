@@ -66,21 +66,104 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
   DeflatorFile <- getRunParameter("DeflatorFile",Default="deflators.csv",Param_ls=Param_ls)
   DeflatorFilePath <- findRuntimeInputFile(DeflatorFile,Dir="ParamDir",DefaultDir="defs",Param_ls=Param_ls)
   newModelState_ls$Deflators <- read.csv(DeflatorFilePath, as.is = TRUE)
+  # NOTE: no error-checking on deflators
 
   UnitsFile <- getRunParameter("UnitsFile",Default="units.csv",Param_ls=Param_ls)
   UnitsFilePath <- findRuntimeInputFile(UnitsFile,Dir="ParamDir",Param_ls=Param_ls)
   newModelState_ls$Units <- read.csv(UnitsFilePath, as.is = TRUE)
+  # NOTE: no error-checking on units
+
+  GeoFile <- getRunParameter("GeoFile",Default="geo.csv",Param_ls=Param_ls)
+  GeoFilePath <- findRuntimeInputFile(GeoFile,Dir="ParamDir",DefaultDir="defs",Param_ls=Param_ls)
+  Geo_df <- read.csv(GeoFilePath, colClasses="character")
+  attr(Geo_df,"file") <- GeoFilePath
+  CheckResults_ls <- checkGeography(Geo_df)
+  Messages_ <- CheckResults_ls$Messages
+  if (length(Messages_) > 0) {
+    writeLog(Messages_,Level="error")
+    stop(paste0("One or more errors in ", GeoFilePath, ". See log for details."))
+  } else {
+    writeLog("Geographical indices successfully read.",Level="info")
+  }
+  newModelState_ls[ names(CheckResults_ls$Update) ] <- CheckResults_ls$Update;
 
   # Establish the ModelState in model.env (and optionally the ModelStateFilePath)
+  newModelState_ls$FirstCreated <- Sys.time() # Timestamp
   model.env$ModelState_ls <- newModelState_ls
   model.env$RunParam_ls <- Param_ls; # Includes all the run Parameters, including "required"
-  # Note that the ModelStateFileName is always saved in getwd() - we need to be running
-  # where the state will be saved.
+
+  # Note that the ModelState is always saved in the working directory
+  # Model is expected to run in the directory that will receive its output.
+  #   ModelState.Rda is the model description for this run
+  #   Datastore are the model results for this run
   if ( Save) save(ModelState_ls, envir=model.env, file = getModelStateFileName(Param_ls))
 
   return(Save) 
 }
 #initModelState(ParamDir = "tests/defs")
+
+#ARCHIVE MODEL STATE
+#===================
+#  Probably do not need to export
+#' Move an existing model state into a different time-stamped file
+#'
+#' @param currentModelStatePath the path to the model state that is being archived (moved)
+#' @param SaveParameters a named list of parameters, containing at a minimum previousTimestamp.
+#' @return a copy of SaveParameters with name of the archived model state (archivedModelStateName)
+#'   the updated previousTimestamp, and an updated flag savedPrevousModelState (TRUE if the
+#'   previous model state was successfully archived).
+#' @export
+archiveModelState <- function(currentModelStatePath,SaveParameters) {
+
+  # Get time stamp information from the previous model state if available
+  previousModelState <- readModelState(FileName=currentModelStatePath,envir=new.env())
+
+  # Get timestamp from previous ModelState
+  # Use the current time if the ModelState was "blank"
+  Timestamp <- if ( "FirstCreated" %in% previousModelState ) {
+    previousModelState$FirstCreated
+  } else if ( "LastChanged" %in% previousModelState ) {
+    previousModelState$LastChanged
+  } else {
+    Timestamp <- NULL
+  }
+  if ( ! is.null(Timestamp) ) {
+    SaveParameters$previousTimestamp <- gsub(":","-",gsub(" ", "_",Timestamp))
+  }
+
+  # Move the previous model state out of the way, but keep track of it
+  #  as it may be resurrected later if we are re-loading a previous (possibly partial) model run
+  SaveParameters$archivedModelStateName <- paste0("ModelState_",SaveParameters$previousTimestamp,".Rda")
+  SaveParameters$savedPreviousModelState <- file.rename(currentModelStatePath, SaveParameters$archivedModelStateName)
+  return(SaveParameters)
+}
+
+#ARCHIVE DATASTORE
+#=================
+#  Probably do not need to export
+#' Move an existing model state into a different time-stamped file
+#'
+#' @param RunDstoreName the name of the Datastore (file/folder) in the working directory
+#' @param SaveParameters a named list of parameters, containing at a minimum previousModelStateName
+#'   and previousTimestamp
+#' @return TRUE if all files were copied successfully, otherwise FALSE
+#' @export
+archiveDatastore <- function(RunDstoreName,SaveParameters) {
+  # A previous model state should be associated with this Datastore, created by
+  #   archiveModelState
+  # Create a directory in which to save the datastore
+  # Working directory is target of archive
+  ArchiveDstoreName <- paste(RunDstoreName, SaveParameters$previousTimestamp, sep = "_")
+  dir.create(ArchiveDstoreName)
+  # Copy the datastore into the directory
+  # Inside the archive folder, the Datastore itself and its model state
+  #  have their original names, not timestamped names
+  copy.datastore <- file.copy(RunDstoreName, ArchiveDstoreName, recursive = TRUE)
+  #Copy the previous model state file into the directory as well
+  copy.modelstate <- file.copy(SaveParameters$previousModelStateName,
+    file.path(ArchiveDstoreName, getModelStateFileName()))
+  invisible(!all(c(copy.datastore,copy.modelstate)))
+}
 
 #LOAD MODEL STATE
 #================
@@ -156,31 +239,31 @@ setModelState <-
 function(ChangeState_ls=list(), FileName = getModelStateFileName(), Save=TRUE) {
   # Get current ModelState (providing FileName will force a "Read")
   changeModelState_ls <- readModelState(FileName=FileName)
-  envir=modelEnvironment()
+  ve.model=modelEnvironment()
 
   # Make requested changes, if any
   # (pass an empty list just to Save existing ModelState_Ls)
-  if ( (changes <- length(ChangeState_ls)) > 0 ) {
-    changeNames <- names(ChangeState_ls)
-    for (i in 1:changes) {
-      changeModelState_ls[[changeNames[i]]] <- ChangeState_ls[[i]]
-    }
+  if ( length(ChangeState_ls) > 0 ) {
+    changeModelState_ls[ names(ChangeState_ls) ] <- ChangeState_ls
     changeModelState_ls$LastChanged <- Sys.time()
-    if ( "ModelState_ls" %in% ls(envir) ) {
-      envir$ModelState_ls <- changeModelState_ls
+    if ( "ModelState_ls" %in% ls(ve.model) ) {
+      ve.model$ModelState_ls <- changeModelState_ls
     } else {
       stop(writeLog("No ModelState_ls in model environment",Level="error"),call.=FALSE)
     }
   }
 
   if ( Save ) {
-    result <- try(save("ModelState_ls",envir=envir,file=FileName))
+    result <- try(save("ModelState_ls",envir=ve.model,file=FileName))
     if ( class(result) == 'try-error' ) {
       Msg <- paste('Could not write ModelState:', FileName)
       writeLog(Msg,Level="error")
       writeLog(result,Level="error")
       stop(Msg,call.=FALSE)
     }
+  } else if ( length(ChangeState_ls)==0 ) {
+    writeLog("I'm just sitting here watching the wheels go round and round...",Level="trace")
+    writeLogMessage(traceback(1),Level="trace")
   }
   invisible(TRUE)
 }
@@ -227,7 +310,7 @@ readModelState <- function(Names_ = "All", FileName=NULL, envir=NULL) {
   if ( !is.null(FileName) || ! exists("ModelState_ls",envir=envir,inherits=FALSE) ) {
     if ( is.null(FileName) ) FileName <- getModelStateFileName()
     if ( ! loadModelState(FileName,envir) ) {
-      Msg <- paste0("Could not load ModelState from",FileName,"in",getwd())
+      Msg <- paste("Could not load ModelState from",FileName,"in",getwd())
       writeLog(Msg,Level="error")
       stop(Msg,call.=FALSE)
     }
@@ -318,7 +401,7 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized, RequiredPackag
   explicitRequired_ <- unique(RequiredPackages)
   if ( any( not.in.umc <- ! (explicitRequired_ %in% umc) ) ) {
     for ( p in explicitRequired_[not.in.umc] ) {
-      writeLog(paste("Package",p,"is required"),Level="warn")
+      writeLog(paste("Package",p,"is required"),Level="info")
     }
   }
   RequiredPackages <- c(umc,explicitRequired_)
@@ -1061,28 +1144,30 @@ documentModule <- function(ModuleName){
 #==============================
 #' Read geographic specifications.
 #'
-#' \code{readGeography} a visioneval framework control function that reads the
+#' \code{readGeography} a visioneval framework model developer function that reads the
 #' geographic specifications file for the model.
 #'
-#' This function manages the reading and error checking of geographic
-#' specifications for the model. It calls the checkGeography function to check
-#' for errors in the specifications. The checkGeography function reads in the
-#' file and checks for errors. It returns a list of any errors that are found
-#' and a data frame containing the geographic specifications. If errors are
-#' found, the functions writes the errors to a log file and stops model
-#' execution. If there are no errors, the function adds the geographic in the
-#' geographic specifications file, the errors are written to the log file and
-#' execution stops. If no errors are found, the geographic specifications are
-#' added to the model state file.
+#' This function is not used when running a model: it is only intended for debugging geographic
+#' file specifications during model development. See initModelState for identical code that
+#' loads the geography along with units and deflators
+#'
+#' This function manages the reading and error checking of geographic specifications for the model.
+#' It calls the checkGeography function to check for errors in the specifications. The
+#' checkGeography function reads in the file and checks for errors. That function returns a list of
+#' any errors that are found and a data frame containing the geographic specifications. If errors
+#' are found, write the errors to a log file and stops model execution. If there are no errors, the
+#' function adds the geography in the geographic specifications file, the errors are written to the
+#' log file and execution stops. If no errors are found, the geographic specifications are added to
+#' the model state file.
 #'
 #' @param Save A logical (default=TRUE) indicating whether the model state
 #'   should be saved to the model state file, or just updated in ve.model environment
-#' @return The value TRUE is returned if the function is successful at reading
 #' @param Param_ls a list of parameters
 #'   the file and the specifications are consistent. It stops if there are any
 #'   errors in the specifications. All of the identified errors are written to
 #'   the run log. A data frame containing the file entries is added to the
 #'   model state file as Geo_df'.
+#' @return The value TRUE is returned if the function is successful at reading
 #' @export
 readGeography <- function(Save=TRUE,Param_ls=NULL) {
   #Check for errors in the geographic definitions file
@@ -1384,12 +1469,16 @@ initDatastoreGeography <- function(GroupNames = NULL) {
 #' area parameters that may be used by any module. Parameters are specified by
 #' name, value, and data type. The function creates a 'Model' group in the
 #' 'Global' group and stores the values of the appropriate type in the 'Model'
-#' group.
+#' group. If FlagChanges is TRUE, don't do the creation - just report consistency.
 #'
+#' @param FlagChanges logical (default=FALSE); if TRUE, inspect the model parameters
+#'   and see if what is in the Datastore is consistent.
 #' @return The function returns TRUE if the model parameters file exists and
-#' its values are sucessfully written to the datastore.
+#' its values are sucessfully written to the datastore. If FlagChanges, do
+#' not write to the Datastore but instead return FALSE if they are different in some
+#' way.
 #' @export
-loadModelParameters <- function() {
+loadModelParameters <- function(FlagChanges=FALSE) {
   G <- getModelState()
   RunParam_ls <- G$RunParam_ls
   ModelParamInfo <- c("ParamDir","ModelParamFile")
@@ -1426,32 +1515,79 @@ loadModelParameters <- function() {
   }
 
   Param_df <- jsonlite::fromJSON(ParamFile)
-  Group <- "Global"
-  initTable(Table = "Model", Group = "Global", Length = 1)
-  for (i in 1:nrow(Param_df)) {
-    Type <- Param_df$TYPE[i]
-    if (Type == "character") {
-      Value <- Param_df$VALUE[i]
-    } else {
-      Value <- as.numeric(Param_df$VALUE[i])
+  if ( ! FlagChanges ) {
+    Group <- "Global"
+    initTable(Table = "Model", Group = "Global", Length = 1)
+    for (i in 1:nrow(Param_df)) {
+      Type <- Param_df$TYPE[i]
+      if (Type == "character") {
+        Value <- Param_df$VALUE[i]
+      } else {
+        Value <- as.numeric(Param_df$VALUE[i])
+      }
+      Spec_ls <-
+      list(
+        NAME    = Param_df$NAME[i],
+        TABLE   = "Model",
+        TYPE    = Type,
+        UNITS   = Param_df$UNITS[i],
+        NAVALUE = ifelse(Param_df$TYPE[i] == "character", "NA", -9999),
+        SIZE    = ifelse(
+          Param_df$TYPE[i] == "character",
+          nchar(Param_df$VALUE[i]),
+          0
+        ),
+        LENGTH  = 1,
+        MODULE  = G$Model
+      )
+      result <- writeToTable(Value, Spec_ls, Group = "Global", Index = NULL)
     }
-    Spec_ls <-
-    list(
-      NAME    = Param_df$NAME[i],
-      TABLE   = "Model",
-      TYPE    = Type,
-      UNITS   = Param_df$UNITS[i],
-      NAVALUE = ifelse(Param_df$TYPE[i] == "character", "NA", -9999),
-      SIZE    = ifelse(
-        Param_df$TYPE[i] == "character",
-        nchar(Param_df$VALUE[i]),
-        0
-      ),
-      LENGTH  = 1,
-      MODULE  = G$Model
-    )
-    writeToTable(Value, Spec_ls, Group = "Global", Index = NULL)
+  } else {
+    Warnings_ <- character(0)
+    for (i in 1:nrow(Param_df)) {
+      name <- Param_df$NAME[i]
+      item <- try (
+        # readFromTable stops if name not found
+        # we'll turn that into a warning
+        readFromTable(name,Table="Model",Group="Global"),
+        silent = TRUE
+      )
+      if ( class(item)=="try-error" ) {
+        Warnings_ <- c(
+          Warnings_,
+          paste("Previous model parameter",name,"failed to load"),
+          as.character(item)
+        )
+        next
+      }
+      atts <- attributes(item)
+      Type <- Param_df$TYPE[i]
+      if ( atts$TYPE != Type ) {
+        Warnings_ <- c(Warnings_,
+          paste("Model parameter",name," has inconsistent TYPE."),
+          paste("Datastore:",atts$TYPE,"versus this model:",Type)
+        )
+      }
+      Value <- if (Type == "character") Param_df$VALUE[i] else as.numeric(Param_df$VALUE[i])
+      if ( item != Value ) {
+        Warnings_ <- c(Warnings_,
+          paste("Model parameter",name," has inconsistent VALUE."),
+          paste("Datastore:",Value,"versus this model:",item)
+        )
+      }
+      if ( atts$UNITS != Param_df$UNITS[i] ) {
+        Warnings_ <- c(Warnings_,
+          paste("Model parameter",name," has inconsistent UNITS."),
+          paste("Datastore:",atts$UNITS,"versus this model:",Param_df$UNITS[i])
+        )
+      }
+    }
+    if (length(Warnings_) != 0) {
+      writeLog(Warnings_,Level="warn")
+      result <- FALSE
+    } else result <- TRUE
   }
+  return(result)
 }
 
 #PARSE MODEL SCRIPT
