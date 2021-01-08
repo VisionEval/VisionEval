@@ -131,6 +131,12 @@ if ( havePackages() ) {
   if ( up.to.date ) {
     cat("VE dependency repository up to date with BioConductor\n")
   }
+  if ( up.to.date ) {
+    cat("Updating CRAN dependency packages...\n")
+    miniCRAN::updatePackages(path=ve.dependencies, repos=CRAN.mirror, type=ve.build.type, ask=FALSE)
+    cat("Updating BioConductor dependency packages...\n")
+    ignore <- miniCRAN::updatePackages(path=ve.dependencies, repos=bioc, type=ve.build.type, ask=FALSE)
+  }
 } else {
   cat("Building VE repository from scratch from CRAN packages\n")
   miniCRAN::makeRepo(pkgs.CRAN.lst, path=ve.dependencies, repos=CRAN.mirror, type=ve.build.type)

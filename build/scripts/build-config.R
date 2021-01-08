@@ -52,6 +52,9 @@ evalq(
   # r-versions.yml will override based on R version for visioneval packages themselves
   if ( ! suppressWarnings(require("yaml",quietly=TRUE)) ) {
     install.packages("yaml", lib=dev.lib, repos="https://cloud.r-project.org", dependencies=NA, type=.Platform$pkgType )
+  } else {
+    cat("Attempting to update ALL development packages\n")
+    update.packages(lib=dev.lib,repos="https://cloud.r-project.org",type=.Platform$pkgType,ask=FALSE)
   }
 
   # Get VisionEval release version (used in installer file.names
