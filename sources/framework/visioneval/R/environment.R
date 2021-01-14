@@ -5,6 +5,9 @@
 #This script defines functions used to establish the model
 #environment and configuration parameters.
 
+# Experimental approach to "ve.model" environment
+ve.model <- new.env()
+
 #CREATE R ENVIRONMENT FOR MODEL
 #==============================
 #' Attach an R environment to the search path for the active model
@@ -12,24 +15,39 @@
 #' \code{modelEnvironment} a visioneval framework control function that locates
 #' the environment for elements of the active model, creating it and placing it
 #' on the search path if necessary. That environment contains the ModelState,
-#' the Datastore access function aliases and related information. If create is
-#' \code{FALSE}, throw an error instead of creating a new environment
-#' if it does not already exist. The environment should be emptied and
-#' recreated whenever a new model is initialized, either to load or run
-#' it.
+#' the Datastore access function aliases and related information. If Clear is
+#' provided as a character string, clear the environment and set the environment
+#' owner. If an empty string, clear the environment if no Owner, otherwise
+#' just clear the Owner. Call modelEnvironment with Clear whenever starting
+#' a new model.
 #'
-#' @param Create a logical indicating whether a missing model environment
-#' should be created.
+#' @param Clear if supplied as a non-empty character string, sets the
+#'   environment owner and clears the model environment. If an empty string
+#'   and no Owner, clear the environment, and if Owner just clear the Owner.
 #' @return an R environment attached to "ve.model" on the search path.
 #' @export
-modelEnvironment <- function(Create=TRUE) {
+modelEnvironment <- function(Clear=NULL) {
   # export this function since it can be useful in the VEModel
   # package
-  if ( ! "ve.model" %in% search() ) {
-    if ( ! Create ) stop("Missing ve.model environment.")
-    ve.model <- attach(NULL,name="ve.model")
-  } else {
-    ve.model <- as.environment("ve.model")
+#   if ( ! "ve.model" %in% search() ) {
+#     if ( ! Create ) stop("Missing ve.model environment.")
+#     ve.model <- attach(NULL,name="ve.model")
+#   } else {
+#     ve.model <- as.environment("ve.model")
+#   }
+  if ( is.character(Clear) ) {
+    if ( nzchar(Clear) ) { # optionally set owner flag
+      rm(list=ls(ve.model),envir=ve.model)
+      ve.model$Owner <- Clear
+    } else {
+      # suppress ve.model initialization if "owned"
+      if ( is.null(ve.model$Owner) ) { # probably called initializeModel from "source"
+        rm(list=ls(ve.model),envir=ve.model)
+      } else {
+        writeLog(paste0("ve.model NOT cleared due to Owner: ",ve.model$Owner),Level="debug")
+        rm("Owner",envir=ve.model) # Owner protection is now over.
+      }
+    }
   }
   return(ve.model)
 }
@@ -44,16 +62,16 @@ modelEnvironment <- function(Create=TRUE) {
 #' @return TRUE if ve.model$RunModel is TRUE, otherwise FALSE
 #' @export
 modelRunning <- function() {
-  if ( ! "ve.model" %in% search() ) { # have not performed initializeModel
-    return(FALSE)
-  } else {
-    ve.model <- as.environment("ve.model")
+#   if ( ! "ve.model" %in% search() ) { # have not performed initializeModel
+#     return(FALSE)
+#   } else {
+#     ve.model <- as.environment("ve.model")
     if ( "RunModel" %in% ls(ve.model) ) { # VEModel will set during "open" or "run" model
       return(ve.model$RunModel)
     } else { # The model is running in backward-compatible mode
       return(ve.model$RunModel <- TRUE)
     }
-  }
+#   }
 }
 
 #GET VISIONEVAL RUN PARAMETER
@@ -88,15 +106,17 @@ modelRunning <- function() {
 #' @export
 getRunParameter <- function(Parameter,Default=NA,Param_ls=NULL,logSource=FALSE) {
   param.source <- NULL
+  defaultParams_ls <- list()
+  defaultMissing <- missing(Default)
+  ve.model <- modelEnvironment()
+  defaultParams_ls <- if ( ! is.null(ve.model$VERuntimeDefaults) ) {
+    ve.model$VERuntimeDefaults
+  } else {
+    ve.model$VERuntimeDefaults <- defaultVERunParameters(defaultParams_ls)
+  }
   if ( ! is.list(Param_ls) ) { # look only there
-    envir <- if ( "ve.model" %in% search() ) {
-      param.source <- "ve.model$RunParam_ls"
-      as.environment("ve.model")
-    } else {
-      param.source <- paste("Calling environment:",as.character(.traceback(2)),collapse=", ")
-      parent.frame()
-    }
-    Param_ls <- get0("RunParam_ls",envir=envir,ifnotfound=list())
+    param.source <- "ve.model$RunParam_ls"
+    Param_ls <- get0("RunParam_ls",envir=ve.model,ifnotfound=list())
   }
   if ( is.null(attr(Param_ls,"source")) ) {
     if ( is.null(param.source) ) {
@@ -107,8 +127,11 @@ getRunParameter <- function(Parameter,Default=NA,Param_ls=NULL,logSource=FALSE) 
   if ( length(Param_ls)==0 || ! Parameter %in% names(Param_ls) ) {
     if ( logSource ) writeLog(
       paste(Parameter,"using Default, called from:",as.character(.traceback(2)),collapse=", "),
-      Level="info"
+      Level="debug"
     )
+    if ( defaultMissing && Parameter %in% names(defaultParams_ls) ) {
+      Default <- defaultParams_ls[[Parameter]]
+    }
     return( Default )
   } else {
     if ( logSource ) {
@@ -116,17 +139,79 @@ getRunParameter <- function(Parameter,Default=NA,Param_ls=NULL,logSource=FALSE) 
       if ( is.null(sources) ) {
         writeLog(
           paste("Unknown source for",Parameter,"at",as.character(.traceback(2)),collapse=", "),
-          Level="info"
+          Level="debug"
         )
       } else {
         writeLog(
           paste("Source for",Parameter,":",sources[Parameter,"Source"]),
-          Level="info"
+          Level="debug"
         )
       }
     }
     return( Param_ls[[Parameter]] )
   }
+}
+
+# These are default parameters used by the framework functions
+# e.g. in intializeModel or initModelSTate.
+default.parameters.table = list(
+  Seed = 1,
+  LogLevel = "error",
+  DatastoreName = "Datastore",
+  ModelDir = ".", # directory containing run_model.R
+  ModelScriptFile = "run_model.R",
+  ModelStateFileName = "ModelState.Rda",
+  InputPath = ".", # should default to same directory as ModelDir
+  RunParamFile = "run_parameters.json",
+  GeoFile = "geo.csv",
+  UnitsFile = "units.csv",
+  DeflatorsFile = "deflators.csv",
+  ModelParamFile = "model_parameters.json",
+  InputDir = "inputs",
+  ParamDir = "defs",
+  ResultsDir = "results",
+  OutputDIr = "output",
+  QueryDir = "queries",
+  DatastoreType = "RD",
+  SaveDatastore = FALSE
+)
+
+#GET DEFAULT PARAMETERS
+#======================
+#' Report useful default values for key parameters
+#'
+#' \code{defaultVERuntimeParameters} is a visioneval model developer function takes an (optional,
+#' default empty) list of RunParams and reports the default values for any parameter not already in
+#' that list. It will look in attached VisionEval packages (names starting with
+#' \code{"package:VE..."} for an exported defaultVERunParameters function, and those will be given
+#' priority when loading (with the most recently loaded packages having the highest priority).
+#' \code{getRunParameter} handles that seamlessly if no inline default is provided.
+#'
+#' @param Param_ls a list (possibly empty) of already-defined parameters
+#' @return a named list for parameters not present in Param_ls containing default values for those
+#'   parameters
+#' @export
+defaultVERunParameters <- function(Param_ls=list()) {
+  defaultParams_ls <- list()
+  otherVEDefaults <- grep("^package:VE",find("VEPackageRunParameters",mode="function"),value=TRUE)
+  if ( length(otherVEDefaults)>0 ) {
+    for ( defs in otherVEDefaults[length(otherVEDefaults):1] ) {
+      # process in reverse order so most recently loaded packages "win" any collisions
+      packageParams_ls <- as.environment(defs)$VEPackageRunParameters(Param_ls)
+      defaultParams_ls <- mergeParameters(defaultParams_ls,packageParams_ls)
+    }
+  }
+  Param_ls <- visioneval::mergeParameters(defaultParams_ls,Param_ls)
+  
+  # Now add the framework defaults (packages take precedence)
+  tableParams_ls <- default.parameters.table[
+    which( ! names(default.parameters.table) %in% names(Param_ls) )
+  ]
+  if ( length(tableParams_ls)>0 ) {
+    tableParams_ls <- visioneval::addParameterSource(tableParams_ls,"VisionEval Framework Default")
+    Param_ls <- visioneval::mergeParameters(tableParams_ls,Param_ls)
+  }
+  return(Param_ls)
 }
 
 #READ CONFIGURATION FILE
@@ -506,17 +591,19 @@ loadConfiguration <- function( # if all arguments are defaulted, return an empty
 #'
 #' @param File The name of the file to seek (NOT a run parameter)
 #' @param Dir The name of a run parameter specifying a directory relative to getwd()
-#' @param DefaultDir The default value for the run parameter directory
 #' @param Param_ls The run parameters in which to seek InputPath and Dir (default
 #'   is the one in ve.model environment)
 #' @param StopOnError logical, if TRUE stop if no existing file is found, else return NA
 #' @return the path of a file existing on InputDir/Dir/File or NA if not found
 #' @export
-findRuntimeInputFile <- function(File,Dir="InputDir",DefaultDir="inputs",Param_ls=NULL,StopOnError=TRUE) {
-  inputPath <- getRunParameter("InputPath",Default=".",Param_ls=Param_ls)
+findRuntimeInputFile <- function(File,Dir="InputDir",Param_ls=NULL,StopOnError=TRUE) {
+  inputPath <- getRunParameter("InputPath",Param_ls=Param_ls)
   writeLog(paste("Input path raw:",inputPath,collapse=":"),Level="trace")
-  searchDir <- getRunParameter(Dir,Default=NA,Param_ls=Param_ls)
+  searchDir <- getRunParameter(Dir,Param_ls=Param_ls)
   searchInDir <- file.path(inputPath,searchDir) # might yield more than one
+  searchInDir <- unique(
+    normalizePath(searchInDir,winslash="/",mustWork=FALSE)
+  )
   candidates <- character(0)
   if ( any(!is.na(searchInDir)) && !is.na(File) )  {
     searchInDir <- searchInDir[!is.na(searchInDir)]

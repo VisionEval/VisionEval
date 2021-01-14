@@ -303,7 +303,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
     Out_ls[[tb]] <- list()
     Ds <- names(Tables_ls[[tb]])
     for (Loc in DstoreLocs_) {
-      assign("ModelState_ls", QueryPrep_ls$Listing[[Loc]], envir=modelEnvironment(Create=FALSE))
+      assign("ModelState_ls", QueryPrep_ls$Listing[[Loc]], envir=modelEnvironment())
       HasTable <- checkTableExistence(tb, Group, ModelState_ls$Datastore)
       if (HasTable) {
         for (ds in Ds) {

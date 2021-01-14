@@ -1,24 +1,26 @@
 # Output.R
 self=private=NULL
 
-# TODO: get rid of the "Stage" element of tables, fields, groups, etc.
-# The output itself is bound to a specific model stage (usually the last one)
-# Then check that the functionality is working.
-
 # Output just wraps a ModelState and Datastore for one stage
 # It maintains everything we need for a QueryPrep_ls structure for queries
 # Plus it can export slices of the Datastore into .csv or data.frame
-ve.init.output <- function(OutputPath) { # parameters yet to come - hook to model
+ve.init.output <- function(OutputPath,Param_ls=NULL) {
   # OutputPath is the normalized path to a directory containing the model results
   #  typically from the last model stage. Expect to find a ModelState.Rda file
   #  and a Datastore in that folder.
+  # Param_ls is the list of Run Parameters used by the model
+  # We will reload the model state (rather than rely on the cached one in the model)
+  #  so there is always the option of just creating an output object from folder
+  #  directly.
   self$path <- OutputPath
+  private$RunParam_ls <- Param_ls
   private$index()
   return(self$valid())
 }
 
 ve.output.valid <- function() {
   return(
+    !is.null(private$RunParam_ls) &&
     dir.exists(self$path) &&
     !is.null(private$modelIndex) && length(private$modelIndex)>0 &&
     !is.null(private$modelInputs) && length(private$modelInputs)>0
@@ -47,22 +49,32 @@ attributeGet <- function(variable, attr_name){
   return(NA)
 }
 
-# Simplify - we're only going to look at the results of one stage at a time.
 ve.output.index <- function() {
   # Load model state from self$path
-  # If no path, or no model state, or no Datastore, just abort
+  ve.model <- new.env()
+  FileName=file.path(self$path,visioneval::getModelStateFileName(Param_ls=self$RunParam_ls))
+  # TODO: Make this work with archived ModelState (if it has a timestamp in its name)
+  ms <- private$ModelState <- try(visioneval::readModelState(FileName=FileName))
+  if ( ! is.list(private$ModelState) ) {
+    private$ModelState <- NULL
+    visioneval::writeLog(Level="error",paste("Cannot load ModelState from:",FileName))
+    return(list())
+  }
+  if ( is.null(self$RunParam_ls) && is.list(private$ModelState ) ) {
+    self$RunParam_ls <-private$ModelState$RunParam_ls
+  }
+  owd <- setwd(self$path)
+  on.exit(setwd(owd))
     
-  # message("indexing model stages...")
-  if ( no.output ) {
-    message("Model does not appear to have been run yet.")
+  # TODO: sort out the "Load" DatastoreName parameter and the "Run" DatastoreName
+  if ( ! file.exists( ms$DatastoreName ) ) {
+    message("Datastore for this model is not available. Has it run successfully?")
     return(list())
   }
 
-  # message("Processing model stages...")
   Index <- data.frame()
   Inputs <- data.frame()
 
-  ms <- private$ModelState
   if ( length(ms)==0 ) {
     return(list())
   }
@@ -75,16 +87,8 @@ ve.output.index <- function() {
     message("Clear model results and try again.")
     return(list())
   }
-
-  # TODO: update to current results dir approach: the Output just examines one output path.
   ds <- (ms$Datastore)
-  model.path <- file.path(basename(dirname(self$model$modelPath[stage])),basename(self$model$modelPath[stage]))
 
-  # message("Processing ",basename(self$model$modelPath[stage]))
-  # NOTE: Datastore element ds of ModelState is a data.frame.
-  #       The attributes column contains a list for each row
-  # Datastore elements with a "FILE" attribute are inputs; we want the outputs
-  # the non-FILE elements are creations living in the Datastore (i.e. not inputs => outputs)
   InputIndex <- sapply(ds$attributes, attributeExist, "FILE")
   Description <- sapply(ds$attributes, attributeGet, "DESCRIPTION",simplify=TRUE) # should yield a character vector
   Module <- sapply(ds$attributes, attributeGet, "MODULE",simplify=TRUE) # should yield a character vector
@@ -94,34 +98,30 @@ ve.output.index <- function() {
   # message("Input data frame...")
   File <- sapply(ds$attributes, attributeGet, "FILE",simplify=TRUE) # should yield a character vector
   inputs <- data.frame(
-    Module = Module[InputIndex],
-    Name = ds$name[InputIndex],
-    File = File[InputIndex],
+    Module      = Module[InputIndex],
+    Name        = ds$name[InputIndex],
+    File        = File[InputIndex],
     Description = Description[InputIndex],
-    Units = Units[InputIndex],
-    Stage = rep(as.character(stage),length(which(InputIndex))),
-    Path = model.path
+    Units       = Units[InputIndex],
+    Scenario    = visioneval::getRunParameter("Scenario",Default="Unknown Scenario",Param_ls=self$RunParam_ls),
+    Path        = self$path
   )
   Inputs <- rbind(Inputs,inputs)
-  # message("Length of inputs:",nrow(inputs))
 
-  # message("Output data frame...")
   Description <- Description[!InputIndex]
   Module <- Module[!InputIndex]
   Units <- Units[!InputIndex]
   splitGroupTableName <- strsplit(ds[!InputIndex, "groupname"], "/")
   if ( length(Description) != length(splitGroupTableName) ) stop("Inconsistent table<->description correspondence")
-  # message("Length of outputs:",length(splitGroupTableName))
 
   maxLength <- max(unlist(lapply(splitGroupTableName, length)))
   if ( maxLength != 3 ) {
-    warning("Model state ",self$model$modelPath[stage],"is incomplete (",maxLength,")")
+    visioneval::writeLog(Level="warn",paste0("Model state at ",self$path," is incomplete (",maxLength,")"))
     return(list())
   }
   splitGroupTableName <- lapply(splitGroupTableName , function(x) c(x, rep(NA, maxLength-length(x))))
 
-  # Add modelPath and Description to Index row
-  # message("Adding Description and modelPath")
+  # Add modelPath and Scenario Description to Index row
   PathGroupTableName <- list()
   for ( i in 1:length(splitGroupTableName) ) {
     PathGroupTableName[[i]] <- c(
@@ -129,8 +129,8 @@ ve.output.index <- function() {
       Description[i],
       Units[i],
       Module[i],
-      as.character(stage),
-      model.path
+      self$path,
+      visioneval::getRunParameter("Scenario",Default="Unknown Scenario",Param_ls=self$RunParam_ls)
     )
   }
   if ( any((cls<-lapply(PathGroupTableName,class))!="character") ) {
@@ -144,24 +144,17 @@ ve.output.index <- function() {
   # By contrast, calling rbind.data.frame(splitGroupTableName) simply converts the list (a single argument) into a
   # data.frame (so each element becomes one column) Explanation:
   # https://www.stat.berkeley.edu/~s133/Docall.html
-  # message("Adding to output data.frame")
   GroupTableName <- data.frame()
   GroupTableName <- do.call(rbind.data.frame, PathGroupTableName)
-  colnames(GroupTableName) <- c("Group", "Table", "Name","Description", "Units","Module","Stage","Path")
-  # message("length of output data:",nrow(GroupTableName))
+  colnames(GroupTableName) <- c("Group", "Table", "Name","Description", "Units","Module","Scenario","Path")
 
   # GroupTableName is now a data.frame with five columns
   # complete.cases blows away the rows that have any NA values
-  # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each
-  # column)
-  # message("Adding inputs to Inputs data.frame")
+  # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each column)
   ccases <- stats::complete.cases(GroupTableName)
   GroupTableName <- GroupTableName[ccases,]
-  # message("Length of complete.cases:",nrow(GroupTableName))
   Index <- rbind(Index,GroupTableName)
-  # message("length of Index:",nrow(Index))
 
-  # message("Attaching ve.inputs attribute to Index")
   private$modelIndex <- Index
   private$modelInputs <- Inputs
   invisible(list(Index=private$modelIndex,Inputs=private$modelInputs))
@@ -213,7 +206,7 @@ ve.output.groups <- function(groups) {
   if ( ! all(file.exists(file.path(self$model$modelPath,"ModelState.Rda"))) ) {
     stop("Model has not been run yet.")
   }
-  idxGroups <- unique(private$modelIndex[,c("Group","Stage")])
+  idxGroups <- unique(private$modelIndex[,c("Group")])
   row.names(idxGroups) <- NULL
   if ( ! missing(groups) ) {
     years <- ( tolower(groups) %in% c("years","year") ) # magic shortcut
@@ -243,7 +236,7 @@ ve.output.tables <- function(tables) {
   if ( ! all(file.exists(file.path(self$model$modelPath,"ModelState.Rda"))) ) {
     stop("Model has not been run yet.")
   }
-  idxTables <- unique(private$modelIndex[,c("Group","Table","Stage")])
+  idxTables <- unique(private$modelIndex[,c("Group","Table")])
   row.names(idxTables) <- NULL
   if ( ! missing(tables) ) {
     if ( is.character(tables) && length(tables)>0 ) {
@@ -275,7 +268,7 @@ ve.output.fields <- function(fields) {
   if ( ! all(file.exists(file.path(self$model$modelPath,"ModelState.Rda"))) ) {
     stop("Model has not been run yet.")
   }
-  idxFields <- private$modelIndex[,c("Group","Table","Name","Stage")]
+  idxFields <- private$modelIndex[,c("Group","Table","Name")]
   row.names(idxFields) <- NULL
   if ( ! missing(fields) ) {
     if ( is.character(fields) && length(fields)>0 ) {
@@ -328,7 +321,7 @@ ve.output.list <- function(selected=TRUE, pattern="", details=FALSE) {
     ret.fields <- names(private$modelIndex)
   }
   ret.value <- private$modelIndex[ filter, ret.fields, drop=TRUE ]
-  if ( class(ret.value)!='character' ) ret.value <- ret.value[order(ret.value$Stage, ret.value$Group, ret.value$Name),]
+  if ( class(ret.value)!='character' ) ret.value <- ret.value[order(ret.value$Group, ret.value$Name),]
   return(unique(ret.value))
 }
 
@@ -337,9 +330,9 @@ ve.output.inputs <- function( fields=FALSE, module="", filename="" ) {
     stop("Model has not been run yet.")
   }
   if ( ! missing(fields) && fields ) {
-    ret.fields <- c("File","Name","Description","Units","Module","Stage","Path")
+    ret.fields <- c("File","Name","Description","Units","Module","Scenario","Path")
   } else {
-    ret.fields <- c("Module","File","Stage","Path")
+    ret.fields <- c("Module","File","Sceneario","Path")
   }
 
   filter <- rep(TRUE,nrow(private$modelInputs))
@@ -351,7 +344,7 @@ ve.output.inputs <- function( fields=FALSE, module="", filename="" ) {
   }
 
   ret.value <- unique(private$modelInputs[ filter, ret.fields ])
-  return( ret.value[order(ret.value$Stage,ret.value$File),] )
+  return( ret.value[order(ret.value$Scenario,ret.value$File),] )
 }
 
 ve.output.units <- function() {
@@ -360,27 +353,27 @@ ve.output.units <- function() {
 
 # Build data.frames based on selected groups, tables and dataset names
 ve.output.extract <- function(
-  saveTo="output",
+  saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
   overwrite=FALSE,
   quiet=FALSE
 ) {
-  if ( ! all(file.exists(file.path(self$model$modelPath,"ModelState.Rda"))) ) {
-    stop("Model has not been run yet.")
+  if ( ! self$valid() ) {
+    stop("Model State contains no results.")
   }
   saving <- is.character(saveTo) && nzchar(saveTo)[1]
+
+  ms <- private$ModelState
   
-  visioneval::assignDatastoreFunctions(private$ModelState$DatastoreType)
+  visioneval::assignDatastoreFunctions(ms$DatastoreType)
   fields <- ( self$fields )
 
-  extract <- fields[ ( fields$Selected=="Yes" & fields$Stage==stage ) ,c("Name","Table","Group","Stage")]
+  extract <- fields[ ( fields$Selected=="Yes" ) ,c("Name","Table","Group")]
 
-  tables <- split( extract$Name, list(extract$Table,extract$Group,extract$Stage) )
+  tables <- split( extract$Name, list(extract$Table,extract$Group) )
   tables <- tables[which(sapply(tables,length)!=0)]
   DataSpecs <- lapply( names(tables), function(T.G.S) {
         TGS <- unlist(strsplit(T.G.S,"\\."))
-        stage <- as.integer(TGS[3])
-        mp <- self$model$modelPath[stage]
-        ms <- private$ModelState[[stage]]
+        mp <- self$path
         dstoreloc <- file.path(mp,ms$DatastoreName)
         df <- data.frame(
           Name  = tables[[T.G.S]],
@@ -390,8 +383,7 @@ ve.output.extract <- function(
         )
         list(
           Data=df,
-          File=paste0(paste(gsub("\\.","_",T.G.S),format(ms$LastChanged,"%Y-%m-%d_%H%M%S"),sep="_"),".csv"),
-          Stage=stage
+          File=paste0(paste(gsub("\\.","_",T.G.S),format(ms$LastChanged,"%Y-%m-%d_%H%M%S"),sep="_"),".csv")
         )
       }
     )
@@ -399,7 +391,6 @@ ve.output.extract <- function(
   results <- lapply(DataSpecs, function(d) {
         if (!quiet && saving ) message("Extracting data for Table ",d$Data$Table[1]," in Group ",d$Data$Group[1])
         # Do this in a for-loop rather than faster "apply" to avoid dimension and class/type problems.
-        # TODO: make sure this works for earlier stages where not all fields will be defined...
         ds.ext <- list()
         for ( fld in 1:nrow(d$Data) ) {
           dt <- d$Data[fld,]
@@ -409,15 +400,13 @@ ve.output.extract <- function(
       }
     )
   files <- sapply(DataSpecs, function(x) x$File)
-  stages <- sapply(DataSpecs, function(x) x$Stage)
   names(results) <- files
   if ( saving ) {
-    mapply(
+    sapply(
       names(results),
-      stages,
-      FUN=function(f,s) {
+      FUN=function(f) {
         data <- results[[f]]
-        out.path <- file.path(self$model$modelPath[s],saveTo)
+        out.path <- file.path(self$path,saveTo)
         if ( ! dir.exists(out.path) ) dir.create(out.path,recursive=TRUE)
         fn <- file.path(out.path,f)
         utils::write.csv(data,file=fn)
@@ -434,20 +423,9 @@ ve.output.extract <- function(
 
 ve.output.print <- function() {
   # Update for output
-  cat("VEOutput object:\n")
-  print(basename(self$model$modelPath))
-}
-
-ve.output.query <- function(...) {
-  if ( is.null(private$queryObject) ) {
-    query <- VEQuery$new(...) # parameters TBD
-    if ( query$check() ) {
-      private$queryObject <- query
-    } else {
-      private$queryObject <- NULL
-    }
-  }
-  return(private$queryObject)
+  cat("VEOutput object for these results:\n")
+  print(basename(self$path))
+  cat("Output is valid:",self$valid(),"\n")
 }
 
 # Here is the VEOutput R6 class
@@ -465,8 +443,7 @@ VEOutput <- R6::R6Class(
     search=ve.output.list,
     inputs=ve.output.inputs,
     print=ve.output.print,
-    units=ve.output.units,          # Set units on field list (modifies private$modelIndex)
-    query=ve.output.query           # Create a VEQuery object from named query file, or menu
+    units=ve.output.units           # Set units on field list (modifies private$modelIndex)
   ),
   active = list(
     groups=ve.output.groups,
@@ -479,6 +456,7 @@ VEOutput <- R6::R6Class(
     modelInputs=NULL,
     modelIndex=NULL,
     ModelState=NULL,
+    RunParam_ls=NULL,
     groupsSelected=character(0),
     tablesSelected=character(0),
     fieldsSelected=character(0),

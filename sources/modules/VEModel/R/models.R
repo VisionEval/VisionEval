@@ -43,7 +43,7 @@ getModelRoots <- function(Param_ls,get.root=0) {
   #    getwd()/ModelRoot (if exists)
   #    ve.runtime
   #    getwd()
-  modelRoot <- file.path(roots,visioneval::getRunParameter("ModelRoot","models",Param_ls))
+  modelRoot <- file.path(roots,visioneval::getRunParameter("ModelRoot",Param_ls))
   if ( length(modelRoot)>0 ) {
     if ( isAbsolutePath(modelRoot[1]) ) {
       modelRoot <- modelRoot[1]
@@ -136,10 +136,10 @@ findModel <- function( modelPath, Param_ls ) {
   # VisionEval.R startup will set ModelScript from site configuration file
   #   located in runtime root (first of .visioneval, VisionEval.ini, VisionEval.cnf)
   #   with same default as here ("run_model.R")
-  searchScript <- visioneval::getRunParameter("ModelScript",Default=NA,Param_ls=Param_ls)
+  searchScript <- visioneval::getRunParameter("ModelScript",Param_ls=Param_ls)
   searchExact <- is.na(searchScript)
   if ( searchExact ) {
-    searchScript <- visioneval::getRunParameter("ModelScriptFile",Default="run_model.R",Param_ls=Param_ls)
+    searchScript <- visioneval::getRunParameter("ModelScriptFile",Param_ls=Param_ls)
   }
 
   # check if modelPath contains a runModelName
@@ -305,9 +305,9 @@ ve.model.copy <- function(newName=NULL,newPath=NULL) {
 
 ve.model.loadModelState <- function(log="error") {
   # Load all the ModelStates for the model stages, using initializeModel with RunModel=FALSE
-  ResultsDir <- visioneval::getRunParameter("ResultsDir",Default=".",Param_ls=self$RunParam_ls)
-  ModelStateFileName <- visioneval::getRunParameter("ModelStateFileName",Default="ModelState.Rda",Param_ls=self$RunParam_ls)
-  BaseInputPath <- visioneval::getRunParameter("InputPath",Default=self$modelPath,Param_ls=self$RunParam_ls)
+  ResultsDir <- visioneval::getRunParameter("ResultsDir",Param_ls=self$RunParam_ls)
+  ModelStateFileName <- visioneval::getRunParameter("ModelStateFileName",Param_ls=self$RunParam_ls)
+  BaseInputPath <- visioneval::getRunParameter("InputPath",Param_ls=self$RunParam_ls)
   private$ModelState <- list()
   owd <- setwd(file.path(self$modelPath,ResultsDir))
   on.exit(setwd(owd))
@@ -336,7 +336,7 @@ ve.model.loadModelState <- function(log="error") {
       self$runStatus[stage] <- "Not Run"
       scriptFile <- self$stageScripts[stage]
       modelScriptFile <- normalizePath(file.path(stageInput,scriptFile),winslash="/")
-      ve.model <- visioneval::modelEnvironment()
+      ve.model <- visioneval::modelEnvironment(Clear="VEModel::loadModelState")
       ve.model$RunModel <- FALSE
       ve.model$ModelStateStages <- private$ModelState; # previously loaded model states
       Param_ls$InputPath <- c(stageInput,BaseInputPath)
@@ -349,10 +349,10 @@ ve.model.loadModelState <- function(log="error") {
       initArgs$ModelScriptFile   <- modelScriptFile
       initArgs$ParsedModelScript <- parsedScript
       initArgs$LogLevel          <- log
-      do.call(visioneval::initializeModel,args=initArgs)
-
+      private$ModelState[[ toupper(basename(stagePath)) ]] <- do.call(visioneval::initializeModel,args=initArgs)
+      
       # Keep the model state so later stages can refer to it
-      private$ModelState[[ toupper(basename(stagePath)) ]] <- ve.model$ModelState_ls
+#      private$ModelState[[ toupper(basename(stagePath)) ]] <- ve.model$ModelState_ls
     }
   }
   if ( length(private$ModelState)!=length(self$stagePaths) ) {
@@ -406,6 +406,37 @@ ve.model.init <- function(modelPath=NULL,verbose=TRUE,log="error") {
   self$status <- self$runStatus[length(self$runStatus)]
 }
 
+default.parameters.table = list(
+  ModelRoot       = "models",
+  ModelScript     = "run_model\\.R",
+  ModelScriptFile = "run_model.R"
+)
+
+#GET DEFAULT PARAMETERS
+#======================
+#' Report useful default values for key parameters
+#'
+#' \code{defaultVERuntimeParameters} extends \code{visioneval::defaultVERuntimeParameters} to
+#' provide additional Parameters and Defaults for VEModel functions that can be accessed '
+#' seamlessly. You can call this function directly (e.g. to see what parameters are defined and '
+#' defaulted in VEModel). Internally VEModel uses \code{visioneval::defaultVERuntimeParameters},
+#' so it doesn't have to remember the place specific defaults are defined.
+#'
+#' @param Param_ls a list (possibly empty) of already-defined parameters
+#' @return a named list for parameters not present in Param_ls containing default values for those
+#'   parameters
+#' @export
+VEPackageRunParameters <- function(Param_ls=list()) {
+  defaultParams_ls <- default.parameters.table[
+    which( ! names(default.parameters.table) %in% names(Param_ls) )
+  ]
+  if ( length(defaultParams_ls)>0 ) {
+    defaultParams_ls <- visioneval::addParameterSource(defaultParams_ls,"Package VEModel Default")
+    Param_ls <- visioneval::mergeParameters(defaultParams_ls,Param_ls)
+  }
+  return(Param_ls)
+}
+
 # Run the modelPath (through its stages)
 # Find the runModel script
 # Work in the Results directory - need to relay locations from here to initializeModel
@@ -417,9 +448,9 @@ ve.model.run <- function(stage=NULL,lastStage=NULL,log="ERROR",verbose=TRUE) {
   #   also provided (in which case stageScript is the exterior stage, and stage is the interior)
   # TODO: implement for interior scripts
 
-  resultsDir <- file.path(self$modelPath,visioneval::getRunParameter("ResultsDir",Default=".",Param_ls=self$RunParam_ls))
-  modelStateName <- visioneval::getRunParameter("modelStateFileName",Default="ModelState.Rda",Param_ls=self$RunParam_ls)
-  BaseInputPath <- visioneval::getRunParameter("InputPath",Default=self$modelPath,Param_ls=self$RunParam_ls)
+  resultsDir <- file.path(self$modelPath,visioneval::getRunParameter("ResultsDir",Param_ls=self$RunParam_ls))
+  modelStateName <- visioneval::getRunParameter("ModelStateFileName",Param_ls=self$RunParam_ls)
+  BaseInputPath <- visioneval::getRunParameter("InputPath",Param_ls=self$RunParam_ls)
 
   # TODO: look up stages by name/identifier
   # Name will match the "stagePath" basename if we have "exterior" stages
@@ -458,7 +489,7 @@ ve.model.run <- function(stage=NULL,lastStage=NULL,log="ERROR",verbose=TRUE) {
   if ( is.null(lastStage) ) lastStage <- self$stageCount;
 
   # Set up the model runtime environment
-  ve.model <- visioneval::modelEnvironment()
+  ve.model <- visioneval::modelEnvironment(Clear="VEModel::run")
 
   for ( ms in stageStart:lastStage ) {
     stagePath <- self$stagePaths[ms]
@@ -497,8 +528,8 @@ ve.model.run <- function(stage=NULL,lastStage=NULL,log="ERROR",verbose=TRUE) {
           ve.model$RunParam_ls,
           visioneval::addParameterSource(modelRunParam_ls,"VEModel$run constructed")
         )
-        ModelDir <- visioneval::getRunParameter("ModelDir",Default=ModelDir,Param_ls=ve.model$RunParam_ls)
-        ModelScriptFile <- visioneval::getRunParameter("ModelScriptFile",Default=runModel,Param_ls=ve.model$RunParam_ls)
+        ModelDir <- visioneval::getRunParameter("ModelDir",Param_ls=ve.model$RunParam_ls)
+        ModelScriptFile <- visioneval::getRunParameter("ModelScriptFile",Param_ls=ve.model$RunParam_ls)
 
         sys.source(ModelScriptFile,envir=ve.model)
 
@@ -579,7 +610,7 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
   if ( inputs ) {
     inputPath <- file.path(
       self$modelPath,c(
-        (InputDir <- getRunParameter("InputDir",Default="inputs",Param_ls=self$RunParam_ls)),
+        (InputDir <- visioneval::getRunParameter("InputDir",Param_ls=self$RunParam_ls)),
         file.path(self$stagePaths[stage],InputDir)
       )
     )
@@ -596,7 +627,7 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
   if ( outputs ) {
     outputPath <- file.path(
       self$modelPath,c(
-        (OutputDir <- getRunParameter("OutputDir",Default="output",Param_ls=self$RunParam_ls)),
+        (OutputDir <- visioneval::getRunParameter("OutputDir",Param_ls=self$RunParam_ls)),
         file.path(self$stagePaths[stage],OutputDir)
       )
     )
@@ -604,7 +635,7 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
     outputFiles <- outputFiles[ ! dir.exists(outputFiles) ] # keep only the files, not subdirectories
   } else outputFiles <- character(0)
   ResultsDir <- normalizePath(
-    file.path(self$modelPath,getRunParameter("ResultsDir",Default=".",Param_ls=self$RunParam_ls)),
+    file.path(self$modelPath,visioneval::getRunParameter("ResultsDir",Param_ls=self$RunParam_ls)),
     winslash="/",mustWork=FALSE
   )
   ResultsInRoot <- ( root && ResultsDir==self$modelPath )
@@ -664,8 +695,8 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,stage=NULL,show=10) {
     on.exit(setwd(owd))
   }
 
-  force <- ( force || ( interactive() && length(to.delete)>0 ) )
-  if ( force ) {
+  force <- ( force || ! ( interactive() && length(to.delete)>0 ) )
+  if ( ! force && length(to.delete)>0 ) {
     action = "h"
     start = 1
     stop <- min(start+show-1,length(to.delete))
@@ -865,7 +896,7 @@ openModel <- function(modelPath="",log="error") {
     } else {
       ve.runtime <- getwd()
     }
-    return(dir(file.path(ve.runtime,visioneval::getRunParameter("ModelRoot",Default="models",Param_ls=Param_ls))))
+    return(dir(file.path(ve.runtime,visioneval::getRunParameter("ModelRoot",Param_ls=Param_ls))))
   } else {
     return( VEModel$new(modelPath = modelPath,log=log) )
   }

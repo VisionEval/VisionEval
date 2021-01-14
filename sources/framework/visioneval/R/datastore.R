@@ -17,11 +17,7 @@
 #Here is what each of these generic functions does:
 #
 #initDatastore
-#   TODO: implement "parent Datastore" to implicitly include
-#   compatible groups, tables, names from another Datastore location
-#   The index of this Datastore includes the other Datastore, but
-#   we add a path to the structure indicating which physical
-#   Datastore holds the most current version of each Dataset.
+#   Prepares a new Datastore
 #
 #initTable
 #   Make a Table space for a Dataset.
@@ -32,13 +28,10 @@
 #   to export it)
 #
 #readFromTable
-#   TODO: map through Datastore index to the physical location
-#   of the Table/Dataset.
+#   Reads a dataset from a table.
 #
 #writeToTable
-#   TODO: write always to the immediate Datastore, but treat it as
-#   missing and rebuild entirely if we write to a Dataset that is not
-#   physically located in the current Datastore.
+#   Writes a dataset to a table
 #
 #listDatastore
 #  This function is principally used internally, but may be called at
@@ -46,7 +39,148 @@
 #  ModelState. In the RD version, it also builds a file with the
 #  Datastore table of contents in it. In the H5 version, the H5
 #  Datastore furnishes its own index.
-#  TODO: manage indexing parent Datastores
+
+# GENERIC DATASTORE ACCESS FUNCTIONS
+#-----------------------------------
+#' Initialize Datastore
+#'
+#' initDatastore creates a datastore with starting structure.
+#'
+#' This function creates a new datastore for the model run. Alternately, if the value of the
+#' AppendGroups parameter is not NULL the function will add the group or groups identified by this
+#' parameter to an existing datastore.
+#'
+#' @param AppendGroups a character string identifying the names of groups to add to an existing
+#'   datastore. The default value is NULL. If the value is NULL, a new datastore will be created. If
+#'   an existing datastore has the same name as that defined for the model run, it will be deleted.
+#'   The datastore will have a 'Global' group established in it as well as a group for each year
+#'   identified in the model run years. If append is a character vector of group names, the groups
+#'   identified in the character string will be added to the datastore.
+#' @return TRUE if datastore initialization is successful. Calls the listDatastore function which
+#'   adds a listing of the datastore contents to the model state file.
+#' @export
+initDatastore <- function(AppendGroups=NULL) ve.model$initDatastore(AppendGroups)
+
+#' Initialize Table
+#'
+#' This function initializes a table in the datastore.
+#'
+#' @param Table a string identifying the name of the table to initialize.
+#' @param Group a string representation of the name of the top-level
+#' subdirectory the table is to be created in (i.e. either 'Global' or the name
+#' of the year).
+#' @param Length a number identifying the table length.
+#' @return The value TRUE is returned if the function is successful at creating
+#'   the table. In addition, the listDatastore function is run to update the
+#'   inventory in the model state file. The function stops if the group in which
+#'   the table is to be placed does not exist in the datastore and a message is
+#'   written to the log.
+#' @export
+initTable <- function(Table, Group, Length) ve.model$initTable(Table, Group, Length)
+
+#' Initialize dataset.
+#'
+#' This function initializes a dataset.
+#'
+#' @param Spec_ls a list containing the standard module specifications
+#'   described in the model system design documentation.
+#' @param Group a string representation of the name of the top-level
+#' subdirectory the table is to be created in (i.e. either 'Global' or the name
+#' of the year).
+#' @return TRUE if dataset is successfully initialized. If the identified table
+#' does not exist, the function throws an error.
+#' @export
+initDataset <- function(Spec_ls, Group) ve.model$initDataset(Spec_ls, Group)
+
+#' Read from datastore table.
+#'
+#' This function reads a dataset from a datastore table.
+#'
+#' @param Name A string identifying the name of the dataset to be read from.
+#' @param Table A string identifying the complete name of the table where the
+#' dataset is located.
+#' @param Group a string representation of the name of the datastore group the
+#' data is to be read from.
+#' @param DstoreLoc a string representation of the file path of the datastore.
+#' NULL if the datastore is the current directory.
+#' @param Index A numeric vector identifying the positions the data is to be
+#' written to. NULL if the entire dataset is to be read.
+#' @param ReadAttr A logical identifying whether to return the attributes of
+#' the stored dataset. The default value is FALSE.
+#' @return A vector of the same type stored in the datastore and specified in
+#' the TYPE attribute.
+#' @export
+readFromTable <- function(Name, Table, Group, DstoreLoc = NULL, Index = NULL, ReadAttr = TRUE) {
+  ve.model$readFromTable(Name, Table, Group, DstoreLoc, Index, ReadAttr)
+}
+
+#' Write to a datastore table.
+#'
+#' Writes data to an RData (RD) type datastore table and initializes
+#' dataset if needed.
+#'
+#' This function writes a dataset file. It initializes the dataset if the dataset does not exist.
+#' Enables data to be written to specific location indexes in the dataset.
+#'
+#' @param Data_ A vector of data to be written.
+#' @param Spec_ls a list containing the standard module 'Set' specifications
+#'   described in the model system design documentation.
+#' @param Group a string representation of the name of the datastore group the
+#' data is to be written to.
+#' @param Index A numeric vector identifying the positions the data is to be
+#'   written to.
+#' @return TRUE if data is sucessfully written.
+#' @export
+writeToTable  <- function(Data_, Spec_ls, Group, Index = NULL) {
+  ve.model$writeToTable(Data_, Spec_ls, Group, Index)
+}
+
+#' List datastore contents.
+#'
+#' Lists the contents of a datastore.
+#'
+#' @return TRUE if the listing is successfully read from the datastore.
+#' @export
+listDatastore <- function() {
+  ve.model$listDatastore()
+}
+
+#ASSIGN DATASTORE INTERACTION FUNCTIONS
+#======================================
+#' Assign datastore interaction functions
+#'
+#' \code{assignDatastoreFunctions} a visioneval framework control function that
+#' assigns the values of the functions for interacting with the datastore to the
+#' functions for the declared datastore type.
+#'
+#' The visioneval framework can work with different types of datastores. For
+#' example a datastore which stores datasets in an HDF5 file or a datastore
+#' which stores datasets as RData files in a directory hierarchy. This function
+#' reads the 'DatastoreType' parameter from the model state file and then
+#' assigns the common datastore interaction functions the values of the
+#' functions for the declared datastore type.
+#'
+#' @param DstoreType A string identifying the datastore type.
+#' @return None. The function assigns datastore interactions functions to the
+#' first position of the search path.
+#' @export
+assignDatastoreFunctions <- function(DstoreType) {
+  AllowedDstoreTypes_ <- c("RD", "H5")
+  DstoreNames_ <-
+    c("initDatastore", "initTable", "initDataset", "readFromTable",
+      "writeToTable", "listDatastore")
+  if (DstoreType %in% AllowedDstoreTypes_) {
+    DstoreFuncs_ <- lapply(paste0(DstoreNames_,DstoreType),function(x) get(x) ) # make a list of function objects
+    names(DstoreFuncs_) <- DstoreNames_
+    lapply(DstoreNames_,function(n) assign(n,DstoreFuncs_[[n]],envir=modelEnvironment()))
+  } else {
+    Msg <-
+      paste0("Unknown 'DatastoreType' in 'run_parameters.json' - ",
+             DstoreType,"\nRecognized Types:",
+             paste(AllowedDstoreTypes_, collapse = ", "))
+    stop(writeLog(Msg,Level="error"))
+  }
+}
 
 ###############################################################################
 #                                                                             #
@@ -134,7 +268,6 @@ listDatastoreRD <- function(DataListing_ls = NULL) {
 #' @return TRUE if datastore initialization is successful. Calls the
 #' listDatastore function which adds a listing of the datastore contents to the
 #' model state file.
-#' @export
 #' @import stats utils
 initDatastoreRD <- function(AppendGroups = NULL) {
   G <- getModelState()
@@ -271,9 +404,9 @@ initTableRD <- function(Table, Group, Length) {
 #' @param Spec_ls a list containing the standard module specifications
 #'   described in the model system design documentation.
 #' @param Group a string representation of the name of the top-level
-#' subdirectory the table is to be created in (i.e. either 'Global' or the name
+#' subdirectory the dataset is to be created in (i.e. either 'Global' or the name
 #' of the year).
-#' @return TRUE if dataset is successfully initialized. If the identified table
+#' @return TRUE if dataset is successfully initialized. If the identified group or table
 #' does not exist, the function throws an error.
 #' @export
 initDatasetRD <- function(Spec_ls, Group) {
@@ -864,50 +997,11 @@ writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL) {
   TRUE
 }
 
-
 ###############################################################################
 #                                                                             #
 #                 COMMON DATASTORE INTERACTION FUNCTIONS                      #
 #                                                                             #
 ###############################################################################
-
-#ASSIGN DATASTORE INTERACTION FUNCTIONS
-#======================================
-#' Assign datastore interaction functions
-#'
-#' \code{assignDatastoreFunctions} a visioneval framework control function that
-#' assigns the values of the functions for interacting with the datastore to the
-#' functions for the declared datastore type.
-#'
-#' The visioneval framework can work with different types of datastores. For
-#' example a datastore which stores datasets in an HDF5 file or a datastore
-#' which stores datasets as RData files in a directory hierarchy. This function
-#' reads the 'DatastoreType' parameter from the model state file and then
-#' assigns the common datastore interaction functions the values of the
-#' functions for the declared datastore type.
-#'
-#' @param DstoreType A string identifying the datastore type.
-#' @return None. The function assigns datastore interactions functions to the
-#' first position of the search path.
-#' @export
-assignDatastoreFunctions <- function(DstoreType) {
-  AllowedDstoreTypes_ <- c("RD", "H5")
-  DstoreNames_ <-
-    c("initDatastore", "initTable", "initDataset", "readFromTable",
-      "writeToTable", "listDatastore")
-  if (DstoreType %in% AllowedDstoreTypes_) {
-    DstoreFuncs_ <- lapply(paste0(DstoreNames_,DstoreType),function(x) get(x) ) # make a list of function objects
-    names(DstoreFuncs_) <- DstoreNames_
-    lapply(DstoreNames_,function(n) assign(n,DstoreFuncs_[[n]],envir=modelEnvironment()))
-  } else {
-    Msg <-
-      paste0("Unknown 'DatastoreType' in 'run_parameters.json' - ",
-             DstoreType,"\nRecognized Types:",
-             paste(AllowedDstoreTypes_, collapse = ", "))
-    stop(writeLog(Msg,Level="error"))
-  }
-}
-
 
 #CREATE A DATASTORE INDEX LIST
 #=============================

@@ -63,18 +63,18 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
   newModelState_ls$LastChanged <- Sys.time()
 
   # Also load the complete deflators and units files, which will be accessed later via ModelState_ls
-  DeflatorFile <- getRunParameter("DeflatorFile",Default="deflators.csv",Param_ls=Param_ls)
-  DeflatorFilePath <- findRuntimeInputFile(DeflatorFile,Dir="ParamDir",DefaultDir="defs",Param_ls=Param_ls)
-  newModelState_ls$Deflators <- read.csv(DeflatorFilePath, as.is = TRUE)
+  DeflatorsFile <- getRunParameter("DeflatorsFile",Param_ls=Param_ls)
+  DeflatorsFilePath <- findRuntimeInputFile(DeflatorsFile,Dir="ParamDir",Param_ls=Param_ls)
+  newModelState_ls$Deflators <- read.csv(DeflatorsFilePath, as.is = TRUE)
   # NOTE: no error-checking on deflators
 
-  UnitsFile <- getRunParameter("UnitsFile",Default="units.csv",Param_ls=Param_ls)
+  UnitsFile <- getRunParameter("UnitsFile",Param_ls=Param_ls)
   UnitsFilePath <- findRuntimeInputFile(UnitsFile,Dir="ParamDir",Param_ls=Param_ls)
   newModelState_ls$Units <- read.csv(UnitsFilePath, as.is = TRUE)
   # NOTE: no error-checking on units
 
-  GeoFile <- getRunParameter("GeoFile",Default="geo.csv",Param_ls=Param_ls)
-  GeoFilePath <- findRuntimeInputFile(GeoFile,Dir="ParamDir",DefaultDir="defs",Param_ls=Param_ls)
+  GeoFile <- getRunParameter("GeoFile",Param_ls=Param_ls)
+  GeoFilePath <- findRuntimeInputFile(GeoFile,Dir="ParamDir",Param_ls=Param_ls)
   Geo_df <- read.csv(GeoFilePath, colClasses="character")
   CheckResults_ls <- checkGeography(Geo_df)
   Messages_ <- CheckResults_ls$Messages
@@ -277,7 +277,7 @@ setModelState <- function(ChangeState_ls=list(), FileName = NULL, Save=TRUE) {
 #' @export
 getModelStateFileName <- function(Param_ls=NULL) {
   # We'll look in envir$RunParam_ls for name and path information
-  return(basename(getRunParameter("ModelStateFileName", Default="ModelState.Rda",Param_ls=Param_ls)))
+  return(basename(getRunParameter("ModelStateFileName", Param_ls=Param_ls)))
 }
 
 #READ MODEL STATE FILE
@@ -1173,8 +1173,8 @@ readGeography <- function(Save=TRUE,Param_ls=NULL) {
 
   #Read in geographic definitions if file exists, otherwise error
   #--------------------------------------------------------------
-  GeoFile <- getRunParameter("GeoFile",Default="geo.csv",Param_ls=Param_ls)
-  GeoFilePath <- findRuntimeInputFile(GeoFile,Dir="ParamDir",DefaultDir="defs",Param_ls=Param_ls)
+  GeoFile <- getRunParameter("GeoFile",Param_ls=Param_ls)
+  GeoFilePath <- findRuntimeInputFile(GeoFile,Dir="ParamDir",Param_ls=Param_ls)
   Geo_df <- read.csv(GeoFilePath, colClasses="character")
   attr(Geo_df,"file") <- GeoFilePath
   CheckResults_ls <- checkGeography(Geo_df)
@@ -1488,11 +1488,11 @@ loadModelParameters <- function(FlagChanges=FALSE) {
     )
   }
   writeLog("Loading model parameters file.",Level="info")
-  ModelParamFile <- getRunParameter("ModelParamFile",Default="model_parameters.json",Param_ls=RunParam_ls)
-  ParamFile <- findRuntimeInputFile(ModelParamFile,"ParamDir",DefaultDir="defs",Param_ls=RunParam_ls,StopOnError=FALSE)
+  ModelParamFile <- getRunParameter("ModelParamFile",Param_ls=RunParam_ls)
+  ParamFile <- findRuntimeInputFile(ModelParamFile,"ParamDir",Param_ls=RunParam_ls,StopOnError=FALSE)
   if ( is.na(ParamFile) ) {
     # Not Found: Try again looking this time in InputDir (element of input path)
-    ParamFile <- findRuntimeInputFile(ModelParamFile,"InputDir",DefaultDir="inputs",Param_ls=RunParam_ls,StopOnError=FALSE)
+    ParamFile <- findRuntimeInputFile(ModelParamFile,"InputDir",Param_ls=RunParam_ls,StopOnError=FALSE)
     if ( is.na(ParamFile) ) {
       # Still Not Found: Throw an error
       ErrorMsg <- paste0(
