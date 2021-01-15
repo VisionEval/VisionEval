@@ -57,7 +57,7 @@ evalq(
       flags=character(0), # flags for VE_CONFIG or VE_EXPRESS will override the direct flag 
       use.git=FALSE
     ) {
-      owd<-setwd(file.path(ve.root,"build"))
+      owd <- setwd(file.path(ve.root,"build"))
       r.home <- Sys.getenv("R_HOME")
       tryCatch(
         { 
@@ -78,7 +78,7 @@ evalq(
             Sys.unsetenv("VE_EXPRESS")
           }
           # Force our own version of VE_BRANCH
-          Sys.setenv(VE_BRANCH=getLocalBranch(ve.root,use.git))
+          Sys.setenv(VE_BRANCH = getLocalBranch(ve.root, use.git))
           make.me <- paste("make",paste(flags,collapse=" "),paste(targets,collapse=" "))
           if ( invisible(status <- system(make.me)) ) stop("Build exited with status: ",status,call.=FALSE)
         },
