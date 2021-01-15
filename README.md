@@ -16,12 +16,11 @@ Please submit issues, bugs, or feature requests about VisionEval on the [VisionE
 
 Please submit issues or content change requests about the VisionEval.org website on the [VisionEval.org issues page](https://github.com/VisionEval/VisionEval.org/issues).
 
-
-## For Developers: Building 
+# For Developers: Building 
 
 To modify and rebuild the VisionEval system, clone the [VisionEval repository](https://github.com/VisionEval/VisionEval). 
 
-If you intend to submit changes back to 
+If you intend to submit changes back to the VisionEval project, please clone the [VisionEval-Dev repository, development branch](https://github.com/VisionEval/VisionEval-Dev/tree/development). Pull requests to this branch are welcomed.
 
 Pre-built binary installers of recently released versions (the "master" branch) are available at
 [https://visioneval.org](https://visioneval.org).
@@ -29,7 +28,7 @@ Pre-built binary installers of recently released versions (the "master" branch) 
 You can install directly from a copy (.zip) or clone of this VisionEval repository branch, using the
 instructions in the `build/Building.md` file on a VisionEval code branch.
 
-### VisionEval Repositories
+# VisionEval Repositories
 
 There are four repositories to serve different purposes:
  - **[VisionEval](https://github.com/VisionEval/VisionEval)**: Public release version of VisionEval. There is one master branch only. This wiki is associated with the VisionEval repository. If you have a bug report or other issue, create an issue instead in the VisionEval-Dev repository ([here](https://github.com/VisionEval/VisionEval-Dev/issues)).
@@ -41,17 +40,4 @@ There are four repositories to serve different purposes:
  - **[VisionEval-Docs](https://github.com/VisionEval/VisionEval-Docs)**: Documentation respository. 
 
 See the [Repository Structure page](https://github.com/VisionEval/VisionEval/wiki/Repository-Structure) in the wiki for more details.
-
-### Documentation
-
-Instructions for running VisionEval once it is built or installed from a .zip installer can be found
-in `sources/Getting-Started.md`.
-
-After you have built VisionEval docs (by running `ve.build("docs")`, a full set of PDF-format
-documentation is available in the `docs` folder. Because some of the documentation is generated when
-VisionEval code is built, building the documentation implies building the complete runtime system.
-
-The default location for the built docs is `built/visioneval/docs`, or if you make a binary
-installer you will find `docs` in the runtime folder.
-
 
