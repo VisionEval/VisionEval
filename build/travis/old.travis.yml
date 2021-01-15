@@ -1,3 +1,7 @@
+# This script is obsolete since it hasn't worked for a while
+# Still need to relaunch a CI process for testing
+#  and probably need to redo the entire testing architecture
+
 language: r
 r: 3.6
 # "release" (4.0) version of R has broken rgdal, 2020-08-05
