@@ -1220,7 +1220,7 @@ Modules in this package:
 -   The resulting number of drivers in the age group is then tabulated by household.
 
 ## 6.2. AssignVehicleOwnership Module
-[Documentation](https://github.com/visioneval/VisionEval/blob/master/sources/modules/VEHouseholdVehicles/inst/module_docs/AdjustVehicleOwnership.md)
+[Documentation](https://github.com/visioneval/VisionEval/blob/master/sources/modules/VEHouseholdVehicles/inst/module_docs/AssignVehicleOwnership.md)
 
 ### What the Module Does
 
