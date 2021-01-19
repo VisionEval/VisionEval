@@ -96,15 +96,15 @@ modelRunning <- function() {
 #' readConfigurationFile for more information on the "source" attribute of run parameters.
 #'
 #' @param Parameter character vector (length one) naming Parameter to retrieve
-#' @param Default is the value to provide if Parameter is not found in RunParam_ls
 #' @param Param_ls a list of run parameters to look within (otherwise RunParam_ls from
 #' "ve.model" environment if it exists, and if not then in and above
 #' \code{parent.frame()})
+#' @param Default is the value to provide if Parameter is not found in RunParam_ls
 #' @param logSource a logical (default=FALSE); if TRUE, write an info-level log message reporting the
 #' source for the parameter value
 #' @return A parameter value or its default if not set
 #' @export
-getRunParameter <- function(Parameter,Default=NA,Param_ls=NULL,logSource=FALSE) {
+getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,logSource=FALSE) {
   param.source <- NULL
   defaultParams_ls <- list()
   defaultMissing <- missing(Default)
@@ -158,7 +158,7 @@ default.parameters.table = list(
   Seed = 1,
   LogLevel = "error",
   DatastoreName = "Datastore",
-  ModelDir = ".", # directory containing run_model.R
+  ModelDir = ".", # subdirectory containing run_model.R (e.g. "script")
   ModelScriptFile = "run_model.R",
   ModelStateFileName = "ModelState.Rda",
   InputPath = ".", # should default to same directory as ModelDir
@@ -201,15 +201,15 @@ defaultVERunParameters <- function(Param_ls=list()) {
       defaultParams_ls <- mergeParameters(defaultParams_ls,packageParams_ls)
     }
   }
-  Param_ls <- visioneval::mergeParameters(defaultParams_ls,Param_ls)
+  Param_ls <- mergeParameters(defaultParams_ls,Param_ls)
   
   # Now add the framework defaults (packages take precedence)
   tableParams_ls <- default.parameters.table[
     which( ! names(default.parameters.table) %in% names(Param_ls) )
   ]
   if ( length(tableParams_ls)>0 ) {
-    tableParams_ls <- visioneval::addParameterSource(tableParams_ls,"VisionEval Framework Default")
-    Param_ls <- visioneval::mergeParameters(tableParams_ls,Param_ls)
+    tableParams_ls <- addParameterSource(tableParams_ls,"VisionEval Framework Default")
+    Param_ls <- mergeParameters(tableParams_ls,Param_ls)
   }
   return(Param_ls)
 }
@@ -301,15 +301,15 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
     if ( ! is.null(ParamFile) ) {
       ParamFilePath <- unique(file.path(ParamDir,ParamFile))
       ParamFileExists <- file.exists(ParamFilePath)
+    } else {
+      ParamFilePath <- ParamDir
     }
-    formatErrors <- character(0)
-    formatWarnings <- character(0)
 
     if ( ! ParamFileExists ) {
       if ( mustWork ) {
         stop(
           writeLog(
-            paste("Missing required parameter file:",ParamFilePath),
+            paste("Could not locate Parameter File:",ParamFilePath),
             Level="error"
           )
         )
@@ -317,52 +317,55 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
       # else fall through with ParamFile_ls an empty list
     } else {
       ParamFile_ls <- withRestarts(
-        json = function(path,yaml.msg) {
+        json = function(path) {
           tryCatch(
             {
+              writeLog(c("Trying JSON parameters from",path),Level="info")
               jsonlite::fromJSON(path)
             },
             error = function(e) {
-              formatErrors <- c(formatErrors,yaml.msg,paste("JSON:",conditionMessage(e)))
-              list()
+              writeLog("Failed to read JSON file",Level="info")
+              writeLog(paste("JSON:",conditionMessage(e)),Level="info")
+              return(list())
             },
             warning = function(w) {
-              formatWarnings <- c(formatWarnings,paste("JSON:",conditionMessage(w)))
+              formatWarnings <- writeLog(c("Warning reading JSON:",conditionMessage(w)),Level="info")
             }
           )
         },
         tryCatch(
           {
+            writeLog(c("Trying YAML parameters from",ParamFilePath),Level="info")
             yaml::yaml.load_file(ParamFilePath)
           },
-          error = function(e) formatErrors <- {
-            invokeRestart("json",ParamFilePath,paste("YAML:",conditionMessage(e)))
+          error = function(e) {
+            writeLog("Failed to read YAML file; retrying as JSON...",Level="info")
+            writeLog(paste("YAML:",conditionMessage(e)),Level="info")
+            invokeRestart("json",ParamFilePath)
           },
-          warning = function(w) formatWarnings <- c(formatWarnings,paste("YAML:",conditionMessage(w)))
+          warning = function(w) {
+            formatWarnings <- writeLog(c("Warning reading YAML:",conditionMessage(w)),Level="info")
+          }
         )
       )
-      if ( length(formatWarnings)>0 ) {
-        writeLog(paste("Warning reading run parameters from ",ParamFilePath))
-        writeLog(formatWarnings,Level="warn")
-      }
-      if ( length(formatErrors)>0 ) {
-        stop(
-          "\nError reading run parameters from ",ParamFilePath,"\n",
-          paste(collapse="\n",writeLog(formatErrors,Level="error"))
-        )
+      if ( length(ParamFile_ls)==0 ) {
+        writeLog(c("No parameters in loaded file:",ParamFilePath),Level="warn")
+        writeLog("Make another attempt with log Level='info' for details",Level="warn")
       }
     }
-  } else writeLog(paste("No parameter file found in",ParamDir),Level="debug")
-  if ( length(ParamFile_ls)>0 && ! all(nzchar(names(ParamFile_ls))) ) {
-    stop( paste(
-      collapse="\n",
-      writeLog( c(
-        paste("Parsing run parameters did not yield a named R list ( class",class(ParamFile_ls),")"),
-        paste("Parameter file:",ParamFilePath),
-        Level="error"
+    if ( length(ParamFile_ls)>0 && ! all(nzchar(names(ParamFile_ls))) ) {
+      stop( paste(
+        collapse="\n",
+        writeLog( c(
+          paste("Parsing run parameters did not yield a named R list ( class",class(ParamFile_ls),")"),
+          paste("Parameter file:",ParamFilePath),
+          Level="error"
+        ) )
       ) )
-    ) )
-  }
+    } else {
+      writeLog(paste("Successfully read parameters from", ParamFilePath),Level="info")
+    }
+  } else writeLog(paste("No parameter file found in",ParamDir),Level="debug") # Just return an empty list
         
   ParamFile_ls <- addParameterSource(ParamFile_ls,paste("File:",ParamFilePath))
   return(ParamFile_ls)
@@ -382,12 +385,12 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
 #' @return Param_ls, with a "source" data.frame attached (if possible)
 #' @export
 addParameterSource <- function(Param_ls,Source="Manually added") {
-  if (
-    is.list(Param_ls) &&
+  if ( # Param_ls should be a named list of parameters in it
+    is.list(Param_ls) && # must be a list
     (
-      length(Param_ls)==0 ||
+      length(Param_ls)==0 || # Okay for it to be an empty list
       (
-        !is.null(names(Param_ls)) &&
+        !is.null(names(Param_ls)) && # But if not empty, everything needs a name
         all(nzchar(names(Param_ls)))
       )
     )
@@ -400,6 +403,7 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
     }
     attr(Param_ls,"source") <- src.df
   } else {
+    # Invalid Param_ls
     writeLog(
       c(
         "Warning: Attempted to add source to invalid parameter list",
@@ -440,6 +444,7 @@ mergeParameters <- function(Param_ls,Keep_ls) {
         any(is.na(names(Param_ls)))
       )
     ) ||
+    ! is.list(Keep_ls) ||
     ( length(Keep_ls)>0 &&
       (
         is.null(attr(Keep_ls,"source")) ||
@@ -449,14 +454,15 @@ mergeParameters <- function(Param_ls,Keep_ls) {
     )
   ) {
     stop(
-    "\n",
-    paste( collapse="\n",
-      writeLog(
-        c("mergeParameters has invalid arguments.",
-          "Call Stack:",
-          as.character(.traceback(2)) # show calls above call to mergeParameters
-        ), Level="error")
-    ) )
+      "\n",
+      paste( collapse="\n",
+        writeLog(
+          c("mergeParameters has invalid arguments."),
+          deparse(.traceback(1)[[1]]),
+          Level="error"
+        )
+      )
+    )
   }
 
   if ( length(Keep_ls)>0 ) {

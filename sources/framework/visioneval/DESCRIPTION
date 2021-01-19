@@ -1,7 +1,7 @@
 Package: visioneval
 Type: Package
 Title: Software Framework for VisionEval Model System
-Version: 2.0.0
+Version: 2.1.0
 Date: 2020-08-14
 Author: Brian Gregor <gregorb@or-analytics.com>["aut", "cre"]
 Maintainer: Brian Gregor <gregorb@or-analytics.com>,

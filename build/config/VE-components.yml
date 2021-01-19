@@ -22,6 +22,7 @@ Components:
     CRAN: 
       - knitr
       - jsonlite
+      - yaml
       - stringr
       - futile.logger
     BioC:
@@ -35,11 +36,17 @@ Components:
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
     CRAN:
+      - futile.logger
+      - httpuv
       - jsonlite
+      - mime
+      - R.utils
       - R6
+      - stringi
       - stringr
       - tryCatchLog
-      - futile.logger
+    Github:
+      - anders-biostat/jrc
   VEScenario:
     Type: module
     Path: sources/modules
@@ -188,10 +195,10 @@ Components:
 #   VERPAT_Scenarios:
 #     Type: model
 #     Path: sources/models
-#   VERSPM:
-#     Type: model
-#     Path: sources/models
-#     Test: { Script: Test1/run_model.R, Group: 5 }
+  VERSPM:
+    Type: model
+    Path: sources/models
+    Test: { Script: Test1/run_model.R, Group: 5 }
 #   VERSPM_MM:
 #     Type: model
 #     Path: sources/models

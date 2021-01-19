@@ -124,8 +124,8 @@
 
   // Parameters that can be either global or set at runtime
   "DatastoreType"    : "RD",       // can redefine this model-by-model if desired
-  "SaveDatastore"    : TRUE,       // often overridden at runtime
-  "Seed"             : 1,          // Default is 1 if not overridden at runtime
+  "SaveDatastore"    : true,       // often overridden at runtime
+  "Seed"             : 1           // Default is 1 if not overridden at runtime
 
   // Parameters that must be set in run_parameters.json for the model
   // "Region"           : "RVMPO",             // Could also set at model root

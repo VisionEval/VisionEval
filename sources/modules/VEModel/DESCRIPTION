@@ -2,7 +2,7 @@ Package: VEModel
 Type: Package
 Title: Utilities for Managing VisionEval Models and Samples
 Version: 1.0.0
-Date: 2020-10-13
+Date: 2021-01-19
 Author: Jeremy Raw [aut, cre]
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: None

@@ -55,9 +55,6 @@
 #' SaveDatastore A logical identifying whether if an existing datastore
 #' should be renamed rather than removed.
 #'
-#' @param Param_ls A list of run parameters from the environment. These will
-#' be overridden by anything in ... (first) or in ParamDir/RunParamFile
-#' (highest priority).
 #' @param LoadDatastore A logical identifying whether an existing datastore
 #' should be loaded.
 #' @param DatastoreName A string identifying the full path name of a datastore
@@ -73,7 +70,6 @@
 #' @export
 initializeModel <-
 function(
-  Param_ls = NULL,
   LoadDatastore = FALSE,
   DatastoreName = NULL, # WARNING: different from "DatastoreName" loaded as a run parameter
   SimulateRun = FALSE,
@@ -105,39 +101,39 @@ function(
   RunModel <- modelRunning()
 
   # Check for pre-existing elements in ve.model environment (e.g. from VEModel$run) and RunParam_ls found there
-  if ( is.null(Param_ls) ) {
-    Param_ls <- addParameterSource(
-      get0( "RunParam_ls", envir=ve.model, ifnotfound=list() ),
-      "RunParam_ls in modelEnvironment()"
-   ) 
-  } else {
-    Param_ls <- addParameterSource(Param_ls, "initializeModel(Param_ls=)")
-  }
+  Param_ls <- addParameterSource(
+    get0( "RunParam_ls", envir=ve.model, ifnotfound=list() ),
+    "RunParam_ls in modelEnvironment()"
+  ) 
 
-  # Dots will override anything passed from the environment or loaded up from the current directory
+  ModelDir <- getRunParameter("ModelDir",Param_ls=Param_ls)
+
+  # External environment will override dots (which are vestigial)
   DotParam_ls <- addParameterSource(list(...),"initializeModel(...)")
   if ( is.character(DatastoreName) ) { # the function parameter, not the Run Parameter
     DotParam_ls[["LoadDatastoreName"]] <- DatastoreName
   }
-  RunParam_ls <- loadConfiguration(ParamDir=getwd(),keep=DotParam_ls,override=Param_ls)
+  if ( "Param_ls" %in% DotParam_ls ) {
+    DotParam_ls[ names(Param_ls) ] <- Param_ls; # Elevate parameters passed as an argument
+  }
+  RunParam_ls <- loadConfiguration(ParamDir=ModelDir,keep=Param_ls,override=DotParam_ls)
 
   # Look for defs along InputPath, and run_parameters.json. Fail if file not found.
+  # Note that we can't change parameters listed in run_parameters.json
+  # Those represent model setup invariants (e.g. inputs, defs locations)
   ParamPath <- findRuntimeInputFile("run_parameters.json","ParamDir",Param_ls=RunParam_ls)
   RunParam_ls <- loadConfiguration(ParamPath=ParamPath,override=RunParam_ls)
 
-  # ModelScriptFile is the absolute path to the run_model.R script (which could be in a
-  # subdirectory of ModelDir).
-  # Default is to look for run_model.R in the current directory.
-  # Process configuration files in relevant places
-  # ModelDir is the absolute path to the directory holind the ModelScriptFile
-  # getwd() is a subdirectory of that (ResultsDir or ResultsDir/stagePath for a staged model)
+  # ModelScriptFile needs to be the absolute path to the model script
   ModelScriptFile <- getRunParameter("ModelScriptFile",Param_ls=RunParam_ls)
 
+  # If the RunParam version of ModelScriptFile is relative, normalize it
+  # to ModelDir (which defaults to the current directory for backward compatibility)
   if ( ! any(grepl("^([[:alpha:]]:[\\/]|[\\/])",ModelScriptFile)) ) {
-    # if relative path, normalize relative to ModelDir (defaulting to ".")
+    # if relative path, normalize relative to ModelDir (which is probably ".")
     ModelScriptFile <- normalizePath(
       file.path(
-        getRunParameter("ModelDir",Param_ls=Param_ls),
+        ModelDir,
         ModelScriptFile
       ), winslash="/"
     )
@@ -399,7 +395,7 @@ function(
       )
       SaveDatastore <- FALSE
     }
-  
+
     # Verify that there is a Datastore to load
     if ( LoadDatastore && !file.exists(LoadDstoreName) ) {
       DstoreConflicts <- c(DstoreConflicts,
