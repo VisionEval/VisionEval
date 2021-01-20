@@ -304,7 +304,8 @@ readModelState <- function(Names_ = "All", FileName=NULL, envir=NULL) {
   if ( !is.null(FileName) ) {
     if ( ! loadModelState(FileName,envir) ) {
       Msg <- paste("Could not load ModelState from",FileName)
-      writeLog(Msg,Level="error")
+      writeLog(c(Msg,getwd()),Level="error")
+      writeLogMessage(.traceback(2))
       stop(Msg,call.=FALSE)
     }
   }

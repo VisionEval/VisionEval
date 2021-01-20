@@ -96,6 +96,9 @@ function(
   # ESTABLISH MODEL ENVIRONMENT AND RUNTIME PARAMETERS
   #===========================================================================
 
+  #### IMPORTANT: The working directory must be the place we want to write the ModelState file and
+  ####            create the Datastore. The "ResultsDir" (plus scenario or stage)
+
   # Access the model environment and check for RunModel condition
   ve.model <- modelEnvironment(Clear="") # clear ve.model environment
   RunModel <- modelRunning()

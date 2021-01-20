@@ -338,8 +338,7 @@ ve.model.loadModelState <- function(log="error") {
   # If ModelState exists from a prior run, load that rather than rebuild
   ResultsDir <- visioneval::getRunParameter("ResultsDir",Param_ls=self$RunParam_ls)
   if ( ! dir.exists(ResultsDir) ) {
-    # Use current directory for ResultsDir if it's not out there yet
-    ResultsDir <- "."
+    dir.create(ResultsDir,showWarnings=FALSE)
   }
   ModelStateFileName <- visioneval::getRunParameter("ModelStateFileName",Param_ls=self$RunParam_ls)
   BaseInputPath <- visioneval::getRunParameter("InputPath",Param_ls=self$RunParam_ls)
@@ -393,7 +392,6 @@ ve.model.loadModelState <- function(log="error") {
       )
 
       # Parse the model script
-      # setwd(file.path(self$modelPath,ve.model$RunParam_ls$ResultsDir)) # why do we need this?
       parsedScript <- visioneval::parseModelScript(Param_ls$ModelScriptFile)
 
       # Execute the initializeModel function from the model script
@@ -587,6 +585,11 @@ ve.model.run <- function(stage=NULL,lastStage=NULL,log="info") {
             )
 
             visioneval::writeLog(c("Executing Script File:",Param_ls$ModelScriptFile),Level="info")
+
+            RunDir <- normalizePath(file.path(self$modelPath,Param_ls$ResultsDir),winslash="/",mustWork=FALSE)
+            if ( ! dir.exists(RunDir) ) dir.create(RunDir,showWarnings=FALSE,recursive=TRUE)
+            setwd(RunDir) # Set working directory each time through each loop
+            # Model needs to run in "ResultsDir" (where ModelState and Datastore are written)
             sys.source(Param_ls$ModelScriptFile,envir=new.env())
 
             visioneval::writeLog(paste0("Model stage ",stagePath," complete"),Level="info")
