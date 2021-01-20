@@ -85,6 +85,12 @@ if( length(new.pkgs) > 0 ) {
       type=ve.build.type
   )
   cat("---Finished installing---\n")
-} else {
-  cat("All dependencies accounted for in ve-lib (",ve.lib,")\n",sep="")
 }
+# Check for updated packages in the miniCRAN
+available <- old.packages(lib.loc=ve.lib,repos=ve.deps.url,type=ve.build.type)
+if ( !is.null(available) && nrow(available) > 0 ) {
+  cat("---Installing updated dependencies---\n")
+  update.packages(lib.loc=ve.lib,repos=ve.deps.url,oldPkgs=available,type=ve.build.type,ask=FALSE)
+  cat("---Updating is complete---\n")
+}
+cat("All dependencies accounted for in ve-lib (",ve.lib,")\n",sep="")
