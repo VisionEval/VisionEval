@@ -105,8 +105,8 @@ function(ModuleName,Param_ls=NULL,...) {
   #Initialize model state and log files
   #------------------------------------
   Msg <- paste0("Testing ", ModuleName, ".")
+  initLog(Save=TRUE,Threshold="info")
   initModelState(Save=TRUE,Param_ls=NULL)
-  initLog(ModuleName)
   writeLog(Msg,Level="warn")
   rm(Msg)
 

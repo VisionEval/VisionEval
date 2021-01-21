@@ -27,5 +27,5 @@ VignetteBuilder: knitr
 RoxygenNote: 7.1.1
 Collate: 
     'models.R'
-    'output.R'
+    'results.R'
     'query.R'

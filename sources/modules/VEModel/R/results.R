@@ -1,30 +1,28 @@
-# Output.R
+# Results.R
 self=private=NULL
 
 # Output just wraps a ModelState and Datastore for one stage
 # It maintains everything we need for a QueryPrep_ls structure for queries
 # Plus it can export slices of the Datastore into .csv or data.frame
-ve.init.output <- function(OutputPath,Param_ls=NULL) {
+ve.results.init <- function(OutputPath,Param_ls=NULL) {
   # OutputPath is the normalized path to a directory containing the model results
   #  typically from the last model stage. Expect to find a ModelState.Rda file
   #  and a Datastore in that folder.
   # Param_ls is the list of Run Parameters used by the model
-  # We will reload the model state (rather than rely on the cached one in the model)
-  #  so there is always the option of just creating an output object from folder
-  #  directly.
   self$path <- OutputPath
   private$RunParam_ls <- Param_ls
   private$index()
   return(self$valid())
 }
 
-ve.output.valid <- function() {
-  return(
-    !is.null(private$RunParam_ls) &&
-    dir.exists(self$path) &&
-    !is.null(private$modelIndex) && length(private$modelIndex)>0 &&
-    !is.null(private$modelInputs) && length(private$modelInputs)>0
-  )
+ve.results.valid <- function() {
+  valid <- ! is.null(private$RunParam_ls) &&
+           dir.exists(self$path) &&
+           !is.null(private$modelIndex) && length(private$modelIndex)>0 &&
+           !is.null(private$modelInputs) && length(private$modelInputs)>0
+  modelStateFile <- file.path(self$path,visioneval::getRunParameter("ModelStateFileName",Param_ls=private$RunParam_ls))
+  valid <- valid && all(file.exists(modelStateFile))
+  return(valid)
 }
 
 # Check if a specified attribute belongs to the Datastore row
@@ -49,10 +47,10 @@ attributeGet <- function(variable, attr_name){
   return(NA)
 }
 
-ve.output.index <- function() {
+ve.results.index <- function() {
   # Load model state from self$path
   ve.model <- new.env()
-  FileName=file.path(self$path,visioneval::getModelStateFileName(Param_ls=self$RunParam_ls))
+  FileName=file.path(self$path,visioneval::getModelStateFileName(Param_ls=private$RunParam_ls))
   # TODO: Make this work with archived ModelState (if it has a timestamp in its name)
   ms <- private$ModelState <- try(visioneval::readModelState(FileName=FileName))
   if ( ! is.list(private$ModelState) ) {
@@ -60,8 +58,8 @@ ve.output.index <- function() {
     visioneval::writeLog(Level="error",paste("Cannot load ModelState from:",FileName))
     return(list())
   }
-  if ( is.null(self$RunParam_ls) && is.list(private$ModelState ) ) {
-    self$RunParam_ls <-private$ModelState$RunParam_ls
+  if ( is.null(private$RunParam_ls) && is.list(private$ModelState ) ) {
+    private$RunParam_ls <-private$ModelState$RunParam_ls
   }
   owd <- setwd(self$path)
   on.exit(setwd(owd))
@@ -103,7 +101,7 @@ ve.output.index <- function() {
     File        = File[InputIndex],
     Description = Description[InputIndex],
     Units       = Units[InputIndex],
-    Scenario    = visioneval::getRunParameter("Scenario",Default="Unknown Scenario",Param_ls=self$RunParam_ls),
+    Scenario    = visioneval::getRunParameter("Scenario",Default="Unknown Scenario",Param_ls=private$RunParam_ls),
     Path        = self$path
   )
   Inputs <- rbind(Inputs,inputs)
@@ -129,8 +127,8 @@ ve.output.index <- function() {
       Description[i],
       Units[i],
       Module[i],
-      self$path,
-      visioneval::getRunParameter("Scenario",Default="Unknown Scenario",Param_ls=self$RunParam_ls)
+      visioneval::getRunParameter("Scenario",Default="Unknown Scenario",Param_ls=private$RunParam_ls),
+      self$path
     )
   }
   if ( any((cls<-lapply(PathGroupTableName,class))!="character") ) {
@@ -160,17 +158,14 @@ ve.output.index <- function() {
   invisible(list(Index=private$modelIndex,Inputs=private$modelInputs))
 }
 
-# TODO: change this so the fields are always sought within the
-# Selected groups and tables (so with no tables selected, we'll
-# get all group/table/field combinations for the selecte group).
-ve.output.select <- function( what, details=FALSE ) {
+ve.results.select <- function( what, details=FALSE ) {
   # interactive utility to select groups, tables or fields
   # 'what' can be "groups","tables" or "fields" (either as strings or names without quotes)
   # 'details' = FALSE (default) will present just the item name
   # 'details' = TRUE will present all items details
   # Interactive dialog will pre-select whatever is already selected (everything if
   #   nothing has been selected yet (either by assignment or earlier
-  #   invocation of ve.output.select)
+  #   invocation of ve.results.select)
   sub.what <- substitute(what)
   if ( class(sub.what) == "name" ) {
     what <- deparse(sub.what)
@@ -202,11 +197,10 @@ ve.output.select <- function( what, details=FALSE ) {
   invisible(self[[what]]) # print result to see what actually got selected.
 }
 
-ve.output.groups <- function(groups) {
-  if ( ! all(file.exists(file.path(self$model$modelPath,"ModelState.Rda"))) ) {
-    stop("Model has not been run yet.")
-  }
-  idxGroups <- unique(private$modelIndex[,c("Group")])
+ve.results.groups <- function(groups) {
+  if ( ! self$valid() ) stop("Model has not been run yet.")
+
+  idxGroups <- unique(private$modelIndex[,c("Group"),drop=FALSE])
   row.names(idxGroups) <- NULL
   if ( ! missing(groups) ) {
     years <- ( tolower(groups) %in% c("years","year") ) # magic shortcut
@@ -232,10 +226,9 @@ ve.group.selected <- function(test.group,groups) {
   return( test.group %in% groups$Group[groups$Selected=="Yes"] )
 }
 
-ve.output.tables <- function(tables) {
-  if ( ! all(file.exists(file.path(self$model$modelPath,"ModelState.Rda"))) ) {
-    stop("Model has not been run yet.")
-  }
+ve.results.tables <- function(tables) {
+  if ( ! self$valid() ) stop("Model has not been run yet.")
+
   idxTables <- unique(private$modelIndex[,c("Group","Table")])
   row.names(idxTables) <- NULL
   if ( ! missing(tables) ) {
@@ -263,11 +256,10 @@ ve.table.selected <- function(test.table,tables) {
   return ( test.table %in% tables$Table[tables$Selected=="Yes"] )
 }
 
-ve.output.fields <- function(fields) {
+ve.results.fields <- function(fields) {
   # extract fields from the index where groups and tables are selected
-  if ( ! all(file.exists(file.path(self$model$modelPath,"ModelState.Rda"))) ) {
-    stop("Model has not been run yet.")
-  }
+  if ( ! self$valid() ) stop("Model has not been run yet.")
+
   idxFields <- private$modelIndex[,c("Group","Table","Name")]
   row.names(idxFields) <- NULL
   if ( ! missing(fields) ) {
@@ -297,18 +289,18 @@ ve.field.selected <- function(test.field,fields) {
   return ( test.field %in% fields$Name[fields$Selected=="Yes"] )
 }
 
-ve.output.list <- function(selected=TRUE, pattern="", details=FALSE) {
+ve.results.list <- function(pattern="", details=FALSE, selected=TRUE, ...) {
   # Show details about model fields
   # selected = TRUE shows just the selected fields
   # selected = FALSE shows all fields (not just unselected)
   # pattern matches (case-insensitive regexp) some portion of field name
   # details = TRUE returns a data.frame private$modelIndex (units, description)
   # detail = FALSE returns just the "Name" vector from private$modelIndex
-  if ( ! all(file.exists(file.path(self$model$modelPath,"ModelState.Rda"))) ) {
-    stop("Model has not been run yet.")
-  }
+  
+  if ( ! self$valid() ) stop("Model has not been run yet.")
+
   filter <- if ( missing(selected) || selected ) {
-    private$fields$Selected=="Yes"
+    self$fields$Selected=="Yes"
   } else {
     rep(TRUE,nrow(private$modelIndex))
   }
@@ -325,10 +317,9 @@ ve.output.list <- function(selected=TRUE, pattern="", details=FALSE) {
   return(unique(ret.value))
 }
 
-ve.output.inputs <- function( fields=FALSE, module="", filename="" ) {
-  if ( ! all(file.exists(file.path(self$model$modelPath,"ModelState.Rda"))) ) {
-    stop("Model has not been run yet.")
-  }
+ve.results.inputs <- function( fields=FALSE, module="", filename="" ) {
+  if ( ! self$valid() ) stop("Model has not been run yet.")
+
   if ( ! missing(fields) && fields ) {
     ret.fields <- c("File","Name","Description","Units","Module","Scenario","Path")
   } else {
@@ -347,19 +338,18 @@ ve.output.inputs <- function( fields=FALSE, module="", filename="" ) {
   return( ret.value[order(ret.value$Scenario,ret.value$File),] )
 }
 
-ve.output.units <- function() {
+ve.results.units <- function() {
   NULL
 }
 
 # Build data.frames based on selected groups, tables and dataset names
-ve.output.extract <- function(
+ve.results.extract <- function(
   saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
   overwrite=FALSE,
   quiet=FALSE
 ) {
-  if ( ! self$valid() ) {
-    stop("Model State contains no results.")
-  }
+  if ( ! self$valid() ) stop("Model State contains no results.")
+
   saving <- is.character(saveTo) && nzchar(saveTo)[1]
 
   ms <- private$ModelState
@@ -421,34 +411,34 @@ ve.output.extract <- function(
   invisible(results)
 }
 
-ve.output.print <- function() {
+ve.results.print <- function() {
   # Update for output
-  cat("VEOutput object for these results:\n")
+  cat("VEResults object for these results:\n")
   print(basename(self$path))
   cat("Output is valid:",self$valid(),"\n")
 }
 
-# Here is the VEOutput R6 class
+# Here is the VEResults R6 class
 # One of these is constructed by VEModel$output()
 
-VEOutput <- R6::R6Class(
-  "VEOutput",
+VEResults <- R6::R6Class(
+  "VEResults",
   public = list(
-    initialize=ve.init.output,
-    path=NULL,                      # Back-reference to the VEModel for this output
-    valid=ve.output.valid,          # has the model been run, etc.
-    select=ve.output.select,
-    extract=ve.output.extract,
-    list=ve.output.list,
-    search=ve.output.list,
-    inputs=ve.output.inputs,
-    print=ve.output.print,
-    units=ve.output.units           # Set units on field list (modifies private$modelIndex)
+    initialize=ve.results.init,
+    path=NULL,
+    valid=ve.results.valid,          # has the model been run, etc.
+    select=ve.results.select,
+    extract=ve.results.extract,
+    list=ve.results.list,
+    search=ve.results.list,
+    inputs=ve.results.inputs,
+    print=ve.results.print,
+    units=ve.results.units           # Set units on field list (modifies private$modelIndex)
   ),
   active = list(
-    groups=ve.output.groups,
-    tables=ve.output.tables,
-    fields=ve.output.fields
+    groups=ve.results.groups,
+    tables=ve.results.tables,
+    fields=ve.results.fields
   ),
   private = list(
     queryObject=NULL,               # object to manage queries for this output
@@ -460,6 +450,35 @@ VEOutput <- R6::R6Class(
     groupsSelected=character(0),
     tablesSelected=character(0),
     fieldsSelected=character(0),
-    index=ve.output.index
+    index=ve.results.index
   )
 )
+
+#' Open VisionEval results from a directory
+#'
+#' @description
+#' `openResults` opens a directory containing VisionEval model run results and
+#'    returns a VEObject instance that can be used to extract the results or
+#'    to perform queries.
+#'
+#' @details
+#' See `vignette(package='VEModel')` for available help and reference materials.
+#'   The basic use of `openModel` is also described in the VisionEval Getting-Started
+#'   document on the VisionEval website (also in the VisionEval installer).
+#'
+#' The path provided as a parameterneeds to contain ModelState.Rda and Datastore, using the
+#'   names for those elements in the VisionEval run parameters ModelStateFileName and
+#'   DatastoreName respectively. Generally, it is most reliable to open an output using
+#'   the model object returned by VEModel::openModel, since that will ensure that the same
+#'   run environment is used to find the result files as when those results were created.
+#'   The openResults file does not load any configurations.
+#'
+#' @param path A relative or absolute path to a directory (default is the working directory)
+#'   in which VisionEval results can be found for a single model run, stage or scenario
+#'   combination.
+#' @return A VEResults object giving access to the VisionEval results in `path`
+#' @export
+openResults <- function(path=NULL) {
+  if ( ! dir.exists(path) ) path <- getwd()
+  return(VEResults$new(path))
+}

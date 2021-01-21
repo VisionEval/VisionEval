@@ -130,6 +130,9 @@ function(
   # ModelScriptFile needs to be the absolute path to the model script
   ModelScriptFile <- getRunParameter("ModelScriptFile",Param_ls=RunParam_ls)
 
+  # If ResultsDir is not present in RunParam_ls, set it to the current directory
+  if ( ! "ResultsDir" %in% RunParam_ls ) RunParam_ls[["ResultsDir"]] <- "."
+
   # If the RunParam version of ModelScriptFile is relative, normalize it
   # to ModelDir (which defaults to the current directory for backward compatibility)
   if ( ! any(grepl("^([[:alpha:]]:[\\/]|[\\/])",ModelScriptFile)) ) {
@@ -168,6 +171,8 @@ function(
   #   trace, debug, info, warn, error, fatal
   LogLevel <- getRunParameter("LogLevel",Param_ls=RunParam_ls)
   logState <- initLog(Timestamp,Threshold=LogLevel,Save=RunModel) # start/reset the model run logger
+  # Save logState parameters later to ModelState after it is created
+  # Includes log file name for later cross-checks
 
   # Get status of current model state
   # Expect that getwd() contains (or will contain) the ModelState.Rda we're working on

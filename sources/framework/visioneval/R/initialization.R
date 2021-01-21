@@ -59,7 +59,6 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
   newModelState_ls <- Param_ls[RequiredParam_]
   # ModelState version of Param_ls now also includes the required parameters
   # Formerly: newModelState_ls$RunParam_ls <- RunParam_ls[ ! (names(RunParam_ls) %in% RequiredParam_) ]
-  newModelState_ls$RunParam_ls <- Param_ls
   newModelState_ls$LastChanged <- Sys.time()
 
   # Also load the complete deflators and units files, which will be accessed later via ModelState_ls
@@ -88,6 +87,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
 
   # Establish the ModelState in model.env (and optionally the ModelStateFilePath)
   newModelState_ls$FirstCreated <- Sys.time() # Timestamp
+  newModelState_ls$RunParam_ls <- Param_ls
   model.env$ModelState_ls <- newModelState_ls
   model.env$RunParam_ls <- Param_ls; # Includes all the run Parameters, including "required"
 
@@ -1610,7 +1610,10 @@ loadModelParameters <- function(FlagChanges=FALSE) {
 parseModelScript <- function(FilePath) {
   writeLog("Parsing model script",Level="info")
   if (!file.exists(FilePath)) {
-    Msg <- paste0("Specified model script file (", FilePath, ") does not exist.")
+    Msg <- c(
+      paste0("Specified model script file does not exist."),
+      FilePath
+    )
     stop( writeLog(Msg,Level="error") )
   }
 
@@ -1729,146 +1732,6 @@ extractModelElements <- function(test.expr,depth=0) {
     }
   }
   return(parsed.calls)
-}
-
-
-parseModelScriptOld <-
-function(FilePath = "Run_Model.R") {
-  writeLog("Parsing model script",Level="info")
-  if (!file.exists(FilePath)) {
-    Msg <-
-    paste0("Specified model script file (", FilePath, ") does not exist.")
-    writeLog(Msg,Level="error")
-    stop(Msg)
-  }
-  rawScript <- readLines(FilePath) # so we can extract requirePackage calls (see below)
-
-  # remove commented lines from run_model script file (possibly entire lines).
-  rawScript <- gsub("^[:space:]*#.*","",rawScript)
-
-  # get required packages
-  requirePackages_ <- "requirePackage"
-  RequiredVEPackages <- grep(requirePackages_,rawScript,value=TRUE)
-  RequiredVEPackages <- sub("[^(]*\\([ \"']*([^\"')]+)[ \"']*\\).*","\\1",RequiredVEPackages)
-
-  Script <- paste(rawScript, collapse = " ")
-  RunModuleCalls_ <- unlist(strsplit(Script, "runModule"))[-1]
-  if (length(RunModuleCalls_) == 0) {
-    Msg <- "Specified script contains no 'runModule' function calls."
-    stop(Msg)
-  }
-  Errors_ <- character(0)
-  addError <- function(Error) {
-    Errors_ <<- c(Errors_, Error)
-  }
-  #Utility function to remove spaces from string
-  removeSpaces <- function(String) {
-    gsub(" ", "", String)
-  }
-  #Utility function to clean up string
-  cleanString <- function(String) {
-    ToRemove = c(" ", "\\(", ")", '\\\"')
-    for (SubString in ToRemove) {
-      String <- gsub(SubString, "", String)
-    }
-    String
-  }
-  #Utility function to extract the arguments part of a function call
-  extractArgsString <- function(String) {
-    substring(String,
-      regexpr("\\(", String),
-        regexpr("\\)", String))
-  }
-  #Utility function to extract the value of a named argument
-  getNamedArgumentValue <-
-  function(ArgString, ArgName) {
-    CommaPos <- regexpr(",", ArgString)
-    if (CommaPos > 0) {
-      ArgValue <-
-      substring(ArgString,
-        regexpr("=", ArgString) + 1,
-        CommaPos - 1)
-    } else {
-      ArgValue <-
-      substring(ArgString,
-        regexpr("=", ArgString) + 1,
-        nchar(ArgString))
-    }
-    cleanString(ArgValue)
-  }
-  #Utility function to extract the value of an unnamed argument
-  getUnnamedArgumentValue <-
-  function(ArgString) {
-    ArgStringTrim <-
-    substring(ArgString,
-      regexpr("\\\"", ArgString) + 1,
-      nchar(ArgString))
-    cleanString(substring(ArgStringTrim,
-      1,
-      regexpr("\\\"", ArgStringTrim)))
-  }
-  #Function to extract the name and value of an argument from a string
-  getArg <-
-  function(ArgsString, ArgPos) {
-    ArgString <- removeSpaces(ArgsString[ArgPos])
-    #Define standard argument names
-    ArgNames_ <-
-    c("ModuleName", "PackageName", "RunFor", "Year")
-    #Check whether any of the argument names is in the ArgString
-    ArgNameCheck_ <-
-    sapply(ArgNames_, function(x) {
-      ArgName <- paste0(x, "=")
-      regexpr(ArgName, ArgString)
-    }) > 0
-    if (any(ArgNameCheck_)) {
-      ArgName <- names(ArgNameCheck_)[ArgNameCheck_]
-      ArgValue <- getNamedArgumentValue(ArgString, ArgName)
-    } else {
-      ArgName <- ArgNames_[ArgPos]
-      ArgValue <- getUnnamedArgumentValue(ArgString)
-    }
-    list(ArgName = ArgName, ArgValue = ArgValue)
-  }
-  #Function to extract all the arguments of runModule function call
-  getArgs <-
-  function(String) {
-    PrelimArgs_ <- unlist(strsplit(extractArgsString(String), ","))
-    Args_ls <-
-    list(ModuleName = NULL,
-      PackageName = NULL,
-      RunFor = NULL)
-    for (i in 1:length(PrelimArgs_)) {
-      Arg_ls <- getArg(PrelimArgs_, i)
-      Args_ls[[Arg_ls$ArgName]] <- Arg_ls$ArgValue
-    }
-    unlist(Args_ls)
-  }
-  #Iterate through RunModuleCalls_ and extract the arguments
-  Args_ls <- list()
-  for (i in 1:length(RunModuleCalls_)) {
-    Args_ <- getArgs(RunModuleCalls_[i])
-    #Error if not all mandatory arguments are matched
-    if (length(Args_) != 4) {
-      Msg <- paste0("runModule call #",
-        i,
-        " has improperly specified arguments.")
-      addError(Msg)
-    }
-    #Add to list
-    Args_ls[[i]] <- Args_
-  }
-  #If there are any errors, print error message
-  if (length(Errors_) != 0) {
-    writeLog("One or more 'runModule' function calls have errors as follows:",Level="error")
-    writeLog(Errors_,Level="error")
-    stop(
-      "One or more errors in model run script. Must fix before model initialization can be completed."
-    )
-  }
-  ModuleCalls_df <-
-  data.frame(do.call(rbind, Args_ls), stringsAsFactors = FALSE)
-  writeLog("Success parsing model script",Level="info")
-  return(list(ModuleCalls_df = ModuleCalls_df, RequiredVEPackages = RequiredVEPackages))
 }
 
 #PROCESS INPUT FILES

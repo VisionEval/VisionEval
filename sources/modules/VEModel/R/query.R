@@ -1,5 +1,5 @@
 # Query.R
-#' @include output.R
+#' @include results.R
 self=private=NULL
 
 ve.init.query <- function() { # parameters yet to come - hook to model
@@ -654,8 +654,8 @@ ve.query.copy <- function(newName=NULL,newPath=NULL) {
   NULL
 }
 
-# S3 classes and generic functions to support them (used by VEOutput)
-# These wrap a data.frame (subset from VEOutput$modelIndex)
+# S3 classes and generic functions to support them (used by VEResults)
+# These wrap a data.frame (subset from VEResults$modelIndex)
 # VEfields
 # VEgroups
 # VEtables
@@ -666,7 +666,7 @@ ve.query.copy <- function(newName=NULL,newPath=NULL) {
 # VEQuerySpec
 
 # Here is the emerging VEQuery R6 class
-# One of these is constructed by VEOutput$query
+# One of these is constructed by VEResults$query
 # Perhaps have some S3 generic functions defined...
 
 VEQuery <- R6::R6Class(
@@ -696,6 +696,6 @@ VEQuery <- R6::R6Class(
     querySpec=list(),               # access via active specs
     queryPrep=NULL,                 # structure for running with summarizeDatasets code
     queryRunSpec=NULL,              # specs after filtering for validity against geography, etc.
-    outputObject=NULL               # VEOutput object, passed through "$new"
+    outputObject=NULL               # VEResults object, passed through "$new"
   )
 )

@@ -108,6 +108,8 @@ getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,logSource=FALSE) 
   param.source <- NULL
   defaultParams_ls <- list()
   defaultMissing <- missing(Default)
+
+  # We're going to use ve.model to cach the default parameters
   ve.model <- modelEnvironment()
   defaultParams_ls <- if ( ! is.null(ve.model$VERuntimeDefaults) ) {
     ve.model$VERuntimeDefaults
@@ -170,7 +172,7 @@ default.parameters.table = list(
   InputDir = "inputs",
   ParamDir = "defs",
   ResultsDir = "results",
-  OutputDIr = "output",
+  OutputDir = "output",
   QueryDir = "queries",
   DatastoreType = "RD",
   SaveDatastore = FALSE
@@ -653,7 +655,7 @@ findRuntimeInputFile <- function(File,Dir="InputDir",Param_ls=NULL,StopOnError=T
 #' @return A list containing the name of the constructed log file and the time stamp
 #' @import futile.logger
 #' @export
-initLog <- function(TimeStamp = NULL, Threshold="info", Save=TRUE, Prefix = NULL, Quiet=TRUE) {
+initLog <- function(TimeStamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL, Quiet=TRUE) {
 
   if (is.null(TimeStamp)) {
     TimeStamp <- as.character(Sys.time())
@@ -721,22 +723,22 @@ prepare_arg <- function(x) {
 log.layout.message <- function(level,msg,...) return(paste(msg,...,"\n",sep=""))
 
 log.layout.simple <- function(level, msg, id='', ... ) {
-  log.layout.visioneval(level,msg,id,wantLevel=FALSE,...)
+  if (length(list(...)) > 0) {
+    parsed <- lapply(list(...), prepare_arg)
+    msg <- do.call(sprintf, c(msg, parsed))
+  }
+  return( sprintf("%s\n", msg) )
 }
 
-log.layout.visioneval <- function(level, msg, id='', wantLevel=TRUE, ...) {
+log.layout.visioneval <- function(level, msg, id='', ...) {
   the.time <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   if (length(list(...)) > 0) {
     parsed <- lapply(list(...), prepare_arg)
     msg <- do.call(sprintf, c(msg, parsed))
   }
-  if ( wantLevel ) {
-    level <- names(level)[1]
-    level <- paste(substring(level, 1, 1), tolower(substring(level, 2)), sep = "")
-    log.msg <- sprintf("%s [%s]: %s\n", the.time, level, msg)
-  } else {
-    log.msg <- sprintf("%s : %s\n", the.time, msg)
-  }
+  level <- names(level)[1]
+  level <- paste(substring(level, 1, 1), tolower(substring(level, 2)), sep = "")
+  log.msg <- sprintf("%s [%s]: %s\n", the.time, level, msg)
   return( log.msg )
 }
 
