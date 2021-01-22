@@ -7,13 +7,15 @@ You'll be most interested in the Makefile Build Targets section below.
 
 ### Makefile Environment
 
-The first part of the Makefile sets up necessary environment variables.  Here is the list of key
-environment configuration variables, all of which have useful defaults. The
+The first part of the Makefile sets up necessary environment variables. Here is the list
+of key environment configuration variables, all of which have useful defaults. The
 Makefile will do error checking to see if a suitable R version is installed. The
-configuration variables VE_CONFIG and VE_RUNTESTS work in their default
-form, but you can override them by doing something like
+configuration variables VE_CONFIG, VE_EXPRESS and VE_RUNTESTS work in their default form,
+but you can override them by doing something like
+
 `Sys.setenv(VE_CONFIG="config/VE-config-release.yml")`.
-(VE_R_VERSION is set up by something like `ve.build(r.version='3.6.1')`).
+
+(Inside R Studio, VE_R_VERSION is set up by something like `ve.build(r.version='3.6.1')`).
 
 <dl>
     <dt>VE_CONFIG</dt>
@@ -25,6 +27,19 @@ form, but you can override them by doing something like
        environment variable or putting a flag into ve.build (it would
        say `ve.build(flags="VE_CONFIG=/path/to/my/VE-config.yml".</dd>
        See the "config" folder for documentation of the config format.
+    <dt>VE_RUNTESTS</dt>
+    <dd>Generally, just leave this as "Default".  If TRUE, tests will
+       be run when the VE modules are built. If FALSE tests will be
+       skipped.  The default is pulled from VE-Config.yml, but may be
+       overridden by setting an environment variable, or by specifying it
+       on the make command line. **Warning: Nobody has tried the tests recently
+       because it is easier to just run test models, so this may not build
+       successfully. Re-doing the tests is already in the issues list.**</dd>
+    <dt>VE_EXPRESS</dt>
+    <dd>If set to YES, skip the R CMD CHECK operations in build-modules, and do not
+       rebuild data files if they already exist. If you are developing packages that
+       change their `/data` directory, you should set VE_EXPRESS to anything other
+       than `YES`.
     <dt>VE_BRANCH</dt>
     <dd>This defaults to "visioneval". If you're checking out different
        branches, you can set this to the currently checked out branch (or
@@ -32,43 +47,58 @@ form, but you can override them by doing something like
        ve.build() from within RStudio, there is a flag ("use.git") which you
        can set to true to use the Git branch; otherwise it will still use
        "visioneval".</dd>
-    <dt>VE_RUNTESTS</dt>
-    <dd>Generally, just leave this as "Default".  If TRUE, tests will
-       be run when the VE modules are built. If FALSE tests will be
-       skipped.  The default is pulled from VE-Config.yml, but may be
-       overridden by setting an environment variable, or by specifying it
-       on the make command line.</dd>
     <dt>VE_R_VERSION</dt>
-    <dd>The R Version for which to build VisionEval. On Linux, this
-       variable is forced to match whatever R is installed.  On
+    <dd>The R Version for which to build VisionEval. On Linux or the Mac,
+       this variable is forced to match whatever R is installed.  On
        Windows, it uses a helper batch file to find (and optionally
        install) the requested version of R.  This must be one of the
        versions identifed in r-versions.yml in the build directory
-       (though that file is easy to extend yourself if needed).</dd>
+       (that file is easy to extend yourself if needed - just open it
+       and make a similar entry with the numbers adjusted).</dd>
+    <dt>VE_DELETE</dt>
+    <dd>See the rm-module target below. If you set this environment variable
+       to the name of a module, rm-module will remove every trace of that
+       module (only) so it gets completely rebuilt the next time. Usually you
+       won't need it; it crept into the Makefile while we were debugging a
+       failure of package data to rebuild. Generally, it will be enough to
+       set VE_EXPRESS=NO, or to use VE_ONLY_BUILD.</dd>
+    <dt>VE_ONLY_BUILD</dt>
+    <dd>This environment variable is used in the build-modules.R script, and does
+       not appear in the Makefile, but it can be useful.  You can set it to a
+       comma-separated list (**no spaces**), and the named modules will be
+       cleared (similar to using rm-module with VE_DELETE) and rebuilt from
+       scratch. But modules that you do not name will **not** be rebuilt, even
+       if they are out of date. Do something like this:
+       ```
+       VE_ONLY_BUILD=VEHouseholdVehicles,VETravelPerformance make modules
+       ```
+</dd>
+</dl>
+
+There are some variables in the Makefile that are set automatically, and you won't
+want to change them. They are documented here so you won't worry.
+
+<dl>
     <dt>VE_LOGS, VE_RUNTIME_CONFIG, VE_MAKEVARS</dt>
     <dd>These are file names constructed automatically during the build
        to keep track of information passed from one step to another.
        VE_LOGS is used to record log and status information on the build.
        VE_RUNTIME_CONFIG is used to keep R variables describing what
        is being built, dependencies, build locations, etc.
-       VE_MAKEVARS contains additional variables used in this make
+       VE_MAKEVARS names a file containing additional variables used in this make
        process that are generated from VE-Config.yml.</dd>
-    <dt>VE_BOILERPLATE</dt>
-    <dd>Contains the path to the boilerplate configuration file;
-       used to keep from recopying the boilerplate if it is already up
-       to date</dd>
 </dl>
 
 ~~~
-# You can override VE_CONFIG, VE_BRANCH, VE_LOGS, VE_RUNTESTS and
-# VE_R_VERSION
+# You can override VE_CONFIG, VE_RUNTESTS, VE_EXPRESS, VE_BRANCH and VE_R_VERSION
 # on the command line or export them from your environment
 # ve.build() handles useful defaults
 VE_CONFIG?=config/VE-config.yml
 VE_RUNTESTS?=Default
+VE_EXPRESS?=YES # should be NO, or unset, for standard use
 VE_BRANCH?=$(shell git branch --show-current 2>/dev/null || echo visioneval)
 ifeq ($(OS),Windows_NT)
-  VE_R_VERSION?=4.0.1
+  VE_R_VERSION?=4.0.3
   RTERM:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
   WINDOWS=TRUE
 else
@@ -97,8 +127,6 @@ export VE_R_VERSION VE_CONFIG VE_RUNTESTS RSCRIPT
 # automaticall when the VE_MAKEVARS file gets built
 VE_MAKEVARS?=ve-output-$(VE_BRANCH)-$(VE_R_VERSION).make
 export VE_BRANCH VE_MAKEVARS
-
-VE_BOILERPLATE:=$(wildcard boilerplate/boilerplate*.lst)
 ~~~
 
 The "include" directive forces the file identified by VE_MAKEVARS to
@@ -116,9 +144,10 @@ include $(VE_MAKEVARS)
 export VE_RUNTIME_CONFIG
 ~~~
 
-.PHONY make targets are things you can ask to build that do not
-directly generate a file.  They will always get "built", but make
-won't bother to see if there's an up-to-date target.
+.PHONY make targets are things you can ask to build that do not directly generate a file.
+They will always get "built", but make won't bother to see if there's an up-to-date target
+(though if they depend on other things that _do_ build targets, those will only get built
+if they are out of date).
 
 ~~~
 .PHONY: list-targets help show-defaults\
@@ -136,12 +165,11 @@ won't bother to see if there's an up-to-date target.
 	installer-reset installer-bin-reset installer-full-reset
 ~~~
 
-all is a target that builds the basic runtime by building each of the
-steps (or verifying that they are up to date).  See the subsequent
-targets for configure, repository, binary, modules and runtime
+all is a target that builds the basic runtime by building each of the steps (or verifying
+that they are up to date). See the subsequent targets to understand what happens
 
 ~~~
-all build dev: reset configure-build repository-build lib-build modules-build runtime-build # docs - need that for installer, but not for local runtime
+all build dev: reset configure-build repository-build lib-build modules-build runtime-build
 	@echo Build complete
 ~~~
 Use `list-targets` to dump the summary of targets you can use. Use `make show-defaults` to dump some of make's key variables. Use to
@@ -189,9 +217,9 @@ show-defaults: $(VE_MAKEVARS)
 	: VE_PKGS      $(VE_PKGS)       # Location of runtime packages (for installer/docker)
 ~~~
 
-The following 'reset' targets will force the build process to re-evaluate
-the adequacy of the targets. Usually you will want to do that before you
-update a build (and the default targets will call them).
+The following 'reset' targets will force the build process to re-evaluate the adequacy of
+the targets. Usually you will want to do that before you update a build (and the default
+targets will call them).
 
 ~~~
 # reset targets to force a "visit" by the builder script for that element.
@@ -219,13 +247,10 @@ installer-reset installer-bin-reset installer-full-reset:
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
 ~~~
 
-The following 'clean' targets will blow away various artifacts of
-previous builds and force make to start again. In general, the only
-one of these you'll need is `build-clean`.
+The following 'clean' targets will blow away various artifacts of previous builds and
+force make to start again. In general, the only one of these you'll need is `build-clean`.
 
 ~~~
-# clean targets to remove built artifacts, triggering full rebuild
-
 # clean targets perform a reset and remove built artifacts, triggering full rebuild
 
 configure-clean build-clean: build-reset # Resets the built status of all the targets (but doesn't touch outputs)
@@ -233,6 +258,7 @@ configure-clean build-clean: build-reset # Resets the built status of all the ta
 modules-clean: $(VE_MAKEVARS) modules-reset # Reset all VE modules for complete rebuild
 	[[ -n "$(VE_REPOS)" ]] && rm -rf $(VE_REPOS)/*
 	[[ -n "$(VE_SRC)" ]] && rm -rf $(VE_SRC)/*
+	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/VE* $(VE_LIB)/visioneval
 
 lib-clean: $(VE_MAKEVARS) lib-reset # Reset installed package library for complete rebuild
 	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/*
@@ -248,7 +274,7 @@ installer-clean: $(VE_MAKEVARS) installer-reset # remove the installers for rebu
 	[[ -n "$(VE_ZIPOUT)" ]] && rm -f $(VE_ZIPOUT)/*.zip
 	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
 
-repository-clean: clean # Reset the CRAN, BioConductor and Github dependency packages for fresh download
+repository-clean: # Reset the CRAN, BioConductor and Github dependency packages for fresh download
 	[[ -n "$(VE_DEPS)" ]] && rm -rf $(VE_DEPS)/*
 
 dev-clean: $(VE_MAKEVARS) build-reset # Reset the developer packages for VE-Installer itself
@@ -259,6 +285,10 @@ clean all-clean: $(VE_MAKEVARS) build-clean docs-clean # Reset everything except
 
 clean-clean: all-clean dev-clean # Scorched earth: reset all installer artifacts
 
+rm-module:
+# By default,VE_DELETE is not set, and this target will just print a message
+# Use 'VE_DELETE=VEHouseholdVehicles make rm-module' to delete all traces of VEHouseholdVehicles
+	$(RSCRIPT) scripts/clean-module.R --args $(VE_DELETE)
 ~~~
 
 Finally, we get down to the targets that do real work:
@@ -271,13 +301,22 @@ Finally, we get down to the targets that do real work:
    <dt>lib</dt><dd>Installs dependencies into the local library,
       ve-lib </dd>
    <dt>modules</dt><dd>Builds source and binary packages from the VE
-      modules and installs them into the local library, ve-lib</dd>
-   <dt>docs</dt><dd>Builds PDF documentation from configured locations</dd>
+      frameowrk modules and installs them into the local library, ve-lib</dd>
    <dt>runtime</dt><dd>Copies non-package modules into the runtime -
       the startup scripts will locate ve-lib to complete the
       local installation.</dd>
-   <dt>installer</dt><dd>Builds a binary installer
-      for the development machine architecture (typically Windows)</dd>
+   <dt>docs</dt><dd>Builds PDF documentation from configured locations</dd>
+   <dt>installer</dt><dd>Builds a binary installer for the development
+      machine architecture. On Windows, the installer includes installed
+      versions of the packages (which just become an R library). On a Mac,
+      the installer includes installable packages - we can't pre-install
+      a library due to Mac security constraints. On Linux, the installer
+      is identical to the "full" installer and includes source packages,
+      which means the installation will be _slow_ as everything needs to
+      get recompiled from the ground up. We may one day create installable
+      packages for common Linux variants (`.deb`, `.rpm`, etc.) and different
+      architectures, but we're not bothering yet since the market is still so
+      small for Linux.</dd>
    <dt>installer-full</dt><dd>Buils a source installer that will work
       on any architecture with R and a development environment. This
       is only needed if the system does not have RStudio and a graphic

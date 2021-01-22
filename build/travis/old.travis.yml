@@ -1,0 +1,85 @@
+# This script is obsolete since it hasn't worked for a while
+# Still need to relaunch a CI process for testing
+#  and probably need to redo the entire testing architecture
+
+language: r
+r: 3.6
+# "release" (4.0) version of R has broken rgdal, 2020-08-05
+dist: xenial
+cache:
+    - packages
+    - directories:
+        - $TRAVIS_BUILD_DIR/ve-lib
+
+# Could make this smaller if we don't rewrite history...
+git:
+  depth: 20
+  
+# Be less strict when checking our package
+warnings_are_errors: false
+
+# Need some additional libraries under ubuntu
+addons:
+  apt:
+    packages:
+    - libudunits2-dev
+    - libgdal-dev
+
+# Set up the pair of cache areas
+install:
+  - mkdir -p $TRAVIS_BUILD_DIR/ve-lib
+  - export VE_COMPONENTS=build/config/VE-components.yml; Rscript --vanilla --slave build/travis/install-deps.R
+
+# https://docs.travis-ci.com/user/build-stages#warming-up-a-cache-with-expensive-dependencies
+
+# Master library location for built VE modules so they don't confuse the package cache
+env:
+    global: VE_LIBRARY=$TRAVIS_BUILD_DIR/ve-lib
+
+# Set up job stage processing to incrementally build and test VE
+# packages.  No individual job runs for over 30 minutes, total run time
+# 1:40 to 2:10 (the latter if R package cached needs to be built).
+
+jobs:
+    include:
+        - stage: Build cache
+          script: true
+        - stage: VisionEval
+          script: bash build/travis/make-module.sh sources/framework/visioneval
+        - stage: Group 1 Modules
+          script:
+            - bash build/travis/make-module.sh sources/modules/VE2001NHTS
+            - bash build/travis/make-module.sh sources/modules/VEScenario
+            - bash build/travis/make-module.sh sources/modules/VESimHouseholds
+            - bash build/travis/make-module.sh sources/modules/VESimLandUseData
+            - bash build/travis/make-module.sh sources/modules/VESyntheticFirms
+            - bash build/travis/make-module.sh sources/modules/VETransportSupply
+            - bash build/travis/make-module.sh sources/modules/VETransportSupplyUse
+        - stage: Group 2 Modules
+          script:
+            - bash build/travis/make-module.sh sources/modules/VEHouseholdTravel
+            - bash build/travis/make-module.sh sources/modules/VEHouseholdVehicles
+            - bash build/travis/make-module.sh sources/modules/VELandUse
+        - stage: Group 3 Modules
+          script:
+            - bash build/travis/make-module.sh sources/modules/VEPowertrainsAndFuels
+            - bash build/travis/make-module.sh sources/modules/VEReports
+            - bash build/travis/make-module.sh sources/modules/VESimLandUse
+        - stage: Group 4 Modules
+          script:
+            - bash build/travis/make-module.sh sources/modules/VESimTransportSupply
+            - bash build/travis/make-module.sh sources/modules/VETravelPerformance
+            - bash build/travis/make-module.sh sources/modules/VETravelDemandMM
+        - stage: Models (RPAT, RSPM, VE-State Part 1)
+          script: bash build/travis/run-model.sh sources/models/VERPAT
+        - script: bash build/travis/run-model.sh sources/models/VERSPM
+        - script: bash build/travis/run-model.sh sources/models/VERSPM_MM
+        - script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-1
+        - stage: Models (VE-State, Part 2)
+          script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-2
+        - stage: Models (VE-State, Part 3)
+          script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-3
+        - stage: Models (VE-State, Part 4)
+          script: bash build/travis/run-model.sh sources/models/VE-State-Staged/VE-State-Stage-4
+        - stage: Cleanup
+          script: rm -rf $VE_LIBRARY/*

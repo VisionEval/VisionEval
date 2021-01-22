@@ -331,7 +331,7 @@ BalanceRoadCostsAndRevenues <- function(L) {
   #Compare road costs per mile to road revenue per mile and export difference
   #--------------------------------------------------------------------------
   #Calculate the average tax rate paid
-  AveTaxRate <- with(L$Year$Household, sum(AveRoadUseTaxPM * Dvmt) / sum(Dvmt))
+  AveTaxRate <- with(L$Year$Household, sum(AveRoadUseTaxPM * Dvmt,na.rm=TRUE) / sum(Dvmt))
   #Calculate the difference with road cost but set to zero if negative
   ExtraVmtTax <- max((RoadCostPerVehMi - AveTaxRate), 0)
 

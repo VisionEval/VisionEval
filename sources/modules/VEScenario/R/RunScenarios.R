@@ -424,7 +424,7 @@ RunScenarios <- function(L){
   if ( exists('planType') && planType == 'callr'){
     NWorkers <- L$Global$Model$NWorkers
     NWorkers <- min(max(availableCores()-1, 1), NWorkers)
-    plan(callr, workers = NWorkers, gc=TRUE)
+    plan(callr, workers = NWorkers)
     message("Executing with ", NWorkers, " processors\n")
   } else {
     plan(sequential)

@@ -290,7 +290,7 @@ visioneval::savePackageDataset(CalculateSafetyMeasuresSpecifications, overwrite 
 #' @return A list containing data produced by the function consistent with the
 #' module specifications.
 #' @name CalculateSafetyMeasures
-#' @import visioneval 
+#' @import visioneval utils
 #' @export
 CalculateSafetyMeasures <- function(L) {
   

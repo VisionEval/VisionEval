@@ -484,6 +484,7 @@ VERSPMResults <- function(L){
   close(File)
 
   # Write the output configuration file
+  VERSPMOutputConfig <- VEScenario::VERSPMOutputConfig
   JSON <- paste("var outputcfg = ", VERSPMOutputConfig$VERSPM, ";", sep="")
   File <- file(file.path(ModelPath, L$Global$Model$ScenarioOutputFolder, "output-cfg.js"), "w")
   writeLines(JSON, con=File)

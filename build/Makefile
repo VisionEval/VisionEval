@@ -1,5 +1,4 @@
-# You can override VE_CONFIG, VE_BRANCH, VE_LOGS, VE_RUNTESTS and
-# VE_R_VERSION
+# You can override VE_CONFIG, VE_RUNTESTS, VE_EXPRESS, VE_BRANCH and VE_R_VERSION
 # on the command line or export them from your environment
 # ve.build() handles useful defaults
 VE_CONFIG?=config/VE-config.yml
@@ -7,7 +6,7 @@ VE_RUNTESTS?=Default
 VE_EXPRESS?=YES # should be NO, or unset, for standard use
 VE_BRANCH?=$(shell git branch --show-current 2>/dev/null || echo visioneval)
 ifeq ($(OS),Windows_NT)
-  VE_R_VERSION?=4.0.2
+  VE_R_VERSION?=4.0.3
   RTERM:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
   WINDOWS=TRUE
 else
@@ -37,8 +36,6 @@ export VE_R_VERSION VE_CONFIG VE_RUNTESTS RSCRIPT
 VE_MAKEVARS?=ve-output-$(VE_BRANCH)-$(VE_R_VERSION).make
 export VE_BRANCH VE_MAKEVARS
 
-VE_BOILERPLATE:=$(wildcard boilerplate/boilerplate*.lst)
-
 include $(VE_MAKEVARS)
 # $(VE_MAKEVARS) gets rebuilt (see below) if it is out of date, using build-config.R
 # Make then auto-restarts to read:
@@ -60,7 +57,7 @@ export VE_RUNTIME_CONFIG
 	reset build-reset all-reset dev-reset clean-reset docs-reset\
 	installer-reset installer-bin-reset installer-full-reset
 
-all build dev: reset configure-build repository-build lib-build modules-build runtime-build # docs - need that for installer, but not for local runtime
+all build dev: reset configure-build repository-build lib-build modules-build runtime-build
 	@echo Build complete
 
 list-targets help:
@@ -163,7 +160,7 @@ clean all-clean: $(VE_MAKEVARS) build-clean docs-clean # Reset everything except
 clean-clean: all-clean dev-clean # Scorched earth: reset all installer artifacts
 
 rm-module:
-# By default,VE_DELETE is not set, and this will just print a message
+# By default,VE_DELETE is not set, and this target will just print a message
 # Use 'VE_DELETE=VEHouseholdVehicles make rm-module' to delete all traces of VEHouseholdVehicles
 	$(RSCRIPT) scripts/clean-module.R --args $(VE_DELETE)
 
