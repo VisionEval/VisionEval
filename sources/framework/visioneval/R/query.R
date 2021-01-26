@@ -26,7 +26,7 @@
 #'
 #' @param DstoreLocs_ a string vector identifying the paths to all of the
 #' datastores to extract the datasets from. Each entry must be the full relative
-#' path to a datastore (e.g. 'tests/Datastore').
+#' path to a datastore (e.g. 'tests/Datastore')
 #' @param DstoreType a string identifying the type of datastore
 #' (e.g. 'RD', 'H5').
 #' @return A named list having three components. The 'Dir' component is a

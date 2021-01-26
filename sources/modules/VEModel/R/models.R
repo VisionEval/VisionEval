@@ -2,6 +2,9 @@
 
 # VEModel Package Code
 
+#' @include defaults.R
+NULL
+
 # R6 Class documentation example:
 # https://github.com/r-lib/R6/issues/3#issuecomment-173855054
 # https://github.com/r-lib/processx/blob/bc7483237b0fbe723390cbb74951221968fdb963/R/process.R#L2
@@ -604,37 +607,6 @@ ve.model.init <- function(modelPath=NULL,log="error") {
   visioneval::writeLogMessage(self$modelPath)
   visioneval::writeLog("Model Load Complete.",Level="info")
   invisible(self$status)
-}
-
-default.parameters.table = list(
-  ModelRoot       = "models",
-  ModelScript     = "run_model\\.R",
-  ModelScriptFile = "run_model.R"
-)
-
-#GET DEFAULT PARAMETERS
-#======================
-#' Report useful default values for key parameters
-#'
-#' \code{defaultVERuntimeParameters} extends \code{visioneval::defaultVERuntimeParameters} to
-#' provide additional Parameters and Defaults for VEModel functions that can be accessed '
-#' seamlessly. You can call this function directly (e.g. to see what parameters are defined and '
-#' defaulted in VEModel). Internally VEModel uses \code{visioneval::defaultVERuntimeParameters},
-#' so it doesn't have to remember the place specific defaults are defined.
-#'
-#' @param Param_ls a list (possibly empty) of already-defined parameters
-#' @return a named list for parameters not present in Param_ls containing default values for those
-#'   parameters
-#' @export
-VEPackageRunParameters <- function(Param_ls=list()) {
-  defaultParams_ls <- default.parameters.table[
-    which( ! names(default.parameters.table) %in% names(Param_ls) )
-  ]
-  if ( length(defaultParams_ls)>0 ) {
-    defaultParams_ls <- visioneval::addParameterSource(defaultParams_ls,"Package VEModel Default")
-    Param_ls <- visioneval::mergeParameters(defaultParams_ls,Param_ls) # Param_ls will override
-  }
-  return(Param_ls)
 }
 
 # Run the modelPath (through its stages)

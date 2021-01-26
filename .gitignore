@@ -3,6 +3,7 @@
 .Rhistory
 .RData
 .Ruserdata
+*.R-text
 *.bak
 .DS_Store
 built/

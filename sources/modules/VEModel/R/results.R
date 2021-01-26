@@ -1,4 +1,5 @@
 # Results.R
+#' @include defaults.R
 self=private=NULL
 
 # Output just wraps a ModelState and Datastore for one stage
@@ -10,6 +11,7 @@ ve.results.init <- function(OutputPath,Param_ls=NULL) {
   #  and a Datastore in that folder.
   # Param_ls is the list of Run Parameters used by the model
   self$path <- OutputPath
+  self$Name <- basename(OutputPath)
   private$RunParam_ls <- Param_ls
   private$index()
   return(self$valid())
@@ -424,6 +426,10 @@ ve.results.print <- function() {
 VEResults <- R6::R6Class(
   "VEResults",
   public = list(
+    # public data
+    Name = NULL,
+
+    # methods
     initialize=ve.results.init,
     path=NULL,
     valid=ve.results.valid,          # has the model been run, etc.
@@ -466,12 +472,12 @@ VEResults <- R6::R6Class(
 #'   The basic use of `openModel` is also described in the VisionEval Getting-Started
 #'   document on the VisionEval website (also in the VisionEval installer).
 #'
-#' The path provided as a parameterneeds to contain ModelState.Rda and Datastore, using the
-#'   names for those elements in the VisionEval run parameters ModelStateFileName and
-#'   DatastoreName respectively. Generally, it is most reliable to open an output using
-#'   the model object returned by VEModel::openModel, since that will ensure that the same
-#'   run environment is used to find the result files as when those results were created.
-#'   The openResults file does not load any configurations.
+#' The path provided as a parameter needs to contain ModelState.Rda and Datastore, using the names
+#'   for those elements in the VisionEval run parameters ModelStateFileName and DatastoreName
+#'   respectively. Generally, it is most reliable to open an output using the model object returned
+#'   by VEModel::openModel, since that will ensure that the same run environment is used to find the
+#'   result files as when those results were created. The openResults file does not load any
+#'   configurations.
 #'
 #' @param path A relative or absolute path to a directory (default is the working directory)
 #'   in which VisionEval results can be found for a single model run, stage or scenario
