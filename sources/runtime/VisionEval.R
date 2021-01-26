@@ -10,10 +10,10 @@
 require(utils,quietly=TRUE) # For install package
 
 # Establish visioneval R environment on the R search path
-env.loc <- grep("^ve.env$",search(),value=TRUE)
-if ( length(env.loc)==0 ) {
-  env.loc <- "ve.env"
-  attach(NULL,name=env.loc)
+env.loc <- if ( ! "ve.env" %in% search() ) {
+  attach(NULL,name="ve.env")
+} else {
+  as.environment("ve.env")
 }
 
 # Check the R version (redundant on Windows, but saves having to
@@ -39,7 +39,9 @@ local({
   }
 
   for ( i in 1:nrow(ve.vars) ) {
-    assign(ve.vars[i,1],ve.vars[i,2],pos=env.loc)
+    # Expect ve.vars[i,1] == "that.R"
+    # Expect ve.vars[i,2] == R version like what comes from system R.version
+    assign(ve.vars[i,1],ve.vars[i,2],envir=env.loc)
   }
 
   if ( ! exists("that.R") || ! nzchar(that.R[1]) ) {
@@ -55,7 +57,7 @@ local({
 
 # Set the runtime directory (could be overridden from development environment)
 if ( ! exists("ve.runtime") ) {
-  assign("ve.runtime",getwd(),pos=env.loc)
+  assign("ve.runtime",getwd(),envir=env.loc)
 } else {
   setwd(ve.runtime)
 }
@@ -65,7 +67,30 @@ if ( ! exists("ve.runtime") ) {
 install.success <- exists("ve.lib") && length(grep("^visioneval",dir(ve.lib)))>0
 
 local( {
-  ve.install <- if ( ! install.success ) {
+
+  # Load tools (helper functions) from their subdirectory
+  env.loc$load.helpers <- function() {
+    ve.tools <- file.path(ve.runtime,"tools",fsep="/")
+    tool.files <- file.path(ve.tools,dir(ve.tools,pattern="\\.R$"),fsep="/")
+    if ( length(tool.files)>0 ) {
+      tools <- character(0)
+      for ( tf in tool.files ) {
+        # Add error checking for tool.contents not present
+        try(
+          silent=TRUE,
+          eval(parse(text=paste0("import::here(tool.contents,.from='",tf,"')")))
+        )
+        if ( ! exists("tool.contents") ) next
+        tools <- c(tools,tool.contents)
+        eval(parse(text=paste0("import::into(.into='ve.env',",paste(tool.contents,collapse=","),",.from='",tf,"')")))
+        rm(tool.contents)
+      }
+      rm(tf,tools)
+    }
+    rm(tool.files,ve.tools)
+  }
+
+  env.loc$ve.install <- if ( ! install.success ) {
 
     function() {
 
@@ -89,7 +114,7 @@ local( {
             message("Using pre-established environment.")
           } else {
             # Look for source or mac.binary packages to install
-            message("Installing from ve-pkg.")
+            message("ve-lib not found. Installing from ve-pkg...")
             if ( ! exists("ve.pkg.name") ) ve.pkg.name <- "ve-pkg"
             ve.lib <- ve.lib.base
             ve.pkg <- file.path(ve.runtime,ve.pkg.name)
@@ -126,63 +151,43 @@ local( {
                 lib=ve.lib,
                 repos=paste0("file:",ve.pkg),
                 dependencies=c("Depends", "Imports", "LinkingTo"),
-                type=ve.pkg.type
+                type=ve.pkg.type,
+                INSTALL_opts="--no-test-load"
             )
             message("Done installing")
           }
         }
       }
 
-      # Set .libPaths()
-      .libPaths(c(ve.lib,.libPaths()))
-
       install.success <- exists("ve.lib") && length(grep("^visioneval",dir(ve.lib)))>0
+
       if ( install.success ) {
-        message("Welcome to VisionEval!")
+        # Set .libPaths()
+        .libPaths(c(ve.lib,.libPaths()))
+        load.helpers() # defined from environment creating this function
+        require("visioneval",quietly=TRUE)
         invisible(TRUE)
       } else {
+        message("Installation failed.")
         invisible(FALSE)
       }
     }
   } else {
     function() {
-      message("Welcome to VisionEval!")
+      # Set .libPaths()
+      .libPaths(c(ve.lib,.libPaths()))
+      load.helpers()
+      require("visioneval",quietly=TRUE)
       invisible(TRUE)
     }
   }
-  assign("ve.install",ve.install,pos=env.loc)
 })
 
-# Construct "VisionEval.Rdata" from the following objects
-# Something to "double-click" in windows for a rapid happy start in RGui...
-
 if ( .Platform$OS.type == 'windows' || install.success ) {
-  install.success <- ve.install()
+  if ( ve.install() ) message("Welcome to VisionEval!")
 } else {
   message("Please run ve.install() to complete installation.")
 }
 
-# Load tools (helper functions) from their subdirectory
-if ( install.success ) {
-  ve.tools <- file.path(ve.runtime,"tools",fsep="/")
-  tool.files <- file.path(ve.tools,dir(ve.tools,pattern="\\.R$"),fsep="/")
-  if ( length(tool.files)>0 ) {
-    tools <- character(0)
-    for ( tf in tool.files ) {
-      # Add error checking for tool.contents not present
-      try(
-        silent=TRUE,
-        eval(parse(text=paste0("import::here(tool.contents,.from='",tf,"')")))
-      )
-      if ( ! exists("tool.contents") ) next
-      tools <- c(tools,tool.contents)
-      eval(parse(text=paste0("import::into(.into='",env.loc,"',",paste(tool.contents,collapse=","),",.from='",tf,"')")))
-      rm(tool.contents)
-    }
-    rm(tf,tools)
-  }
-  rm(tool.files,ve.tools)
-  require("visioneval",quietly=TRUE)
-}
 if ( exists("ve.lib",inherits=FALSE) ) rm(ve.lib)
 rm(env.loc,install.success)

@@ -107,55 +107,55 @@ show-defaults: $(VE_MAKEVARS)
 reset: build-reset
 
 configure-reset build-reset all-reset dev-reset clean-reset repository-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -rf $(VE_LOGS)/*
-	rm -f $(VE_MAKEVARS)
+	[[ -n "$(VE_LOGS)" ]] && rm -rf "$(VE_LOGS)"/*
+	rm -f "$(VE_MAKEVARS)"
 
 lib-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/velib.built
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)/velib.built"
 
 modules-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/modules.built
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/modules.built
 
 runtime-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/runtime.built
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/runtime.built
 
 docs-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/docs.built
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/docs.built
 
 installer-reset installer-bin-reset installer-full-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/installer*.built
 
 # clean targets perform a reset and remove built artifacts, triggering full rebuild
 
 configure-clean build-clean: build-reset # Resets the built status of all the targets (but doesn't touch outputs)
 
 modules-clean: $(VE_MAKEVARS) modules-reset # Reset all VE modules for complete rebuild
-	[[ -n "$(VE_REPOS)" ]] && rm -rf $(VE_REPOS)/*
-	[[ -n "$(VE_SRC)" ]] && rm -rf $(VE_SRC)/*
-	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/VE* $(VE_LIB)/visioneval
+	[[ -n "$(VE_REPOS)" ]] && rm -rf "$(VE_REPOS)"/*
+	[[ -n "$(VE_SRC)" ]] && rm -rf "$(VE_SRC)"/*
+	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/VE* "$(VE_LIB)"/visioneval
 
 lib-clean: $(VE_MAKEVARS) lib-reset # Reset installed package library for complete rebuild
-	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/*
+	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/*
 
 runtime-clean: $(VE_MAKEVARS) runtime-reset # Reset all models and scripts for complete rebuild
-	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/* && rm -rf $(VE_RUNTIME)/.Rprofile $(VE_RUNTIME)/.Rprof.user
+	[[ -n "$(VE_RUNTIME)" ]] && rm -rf "$(VE_RUNTIME)"/* && rm -rf "$(VE_RUNTIME)"/.Rprofile "$(VE_RUNTIME)"/.Rprof.user
 
 docs-clean: $(VE_MAKEVARS) docs-reset # Clear the docs
-	[[ -n "$(VE_DOCS)" ]] && rm -rf $(VE_DOCS)/*
+	[[ -n "$(VE_DOCS)" ]] && rm -rf "$(VE_DOCS)"/*
 
 installer-clean: $(VE_MAKEVARS) installer-reset # remove the installers for rebuild (installers always imply "clean")
 	# installers have the R version coded in their .zip name
-	[[ -n "$(VE_ZIPOUT)" ]] && rm -f $(VE_ZIPOUT)/*.zip
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
+	[[ -n "$(VE_ZIPOUT)" ]] && rm -f "$(VE_ZIPOUT)"/*.zip
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/installer*.built
 
 repository-clean: # Reset the CRAN, BioConductor and Github dependency packages for fresh download
-	[[ -n "$(VE_DEPS)" ]] && rm -rf $(VE_DEPS)/*
+	[[ -n "$(VE_DEPS)" ]] && rm -rf "$(VE_DEPS)"/*
 
 dev-clean: $(VE_MAKEVARS) build-reset # Reset the developer packages for VE-Installer itself
-	[[ -n "$(VE_DEVLIB)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_DEVLIB)/*
+	[[ -n "$(VE_DEVLIB)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf "$(VE_DEVLIB)"/*
 
 clean all-clean: $(VE_MAKEVARS) build-clean docs-clean # Reset everything except developer packages
-	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_BRANCH)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_OUTPUT)/$(VE_BRANCH)/$(VE_R_VERSION)
+	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_BRANCH)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf "$(VE_OUTPUT)/$(VE_BRANCH)/$(VE_R_VERSION)"
 
 clean-clean: all-clean dev-clean # Scorched earth: reset all installer artifacts
 
