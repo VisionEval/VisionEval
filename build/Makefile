@@ -45,20 +45,20 @@ include $(VE_MAKEVARS)
 export VE_RUNTIME_CONFIG
 
 .PHONY: list-targets help show-defaults\
-	configure repository lib modules runtime docs\
+	configure repository lib framework modules runtime docs\
 	build all dev\
 	installer installers installer-bin installer-full\
-	configure-build repository-build lib-build modules-build runtime-build docs-build\
+	configure-build repository-build lib-build framework-build modules-build runtime-build docs-build\
 	clean build-build all-build dev-build clean-build\
 	installer-build installer-bin-build installer-full-build\
-	configure-clean repository-clean lib-clean modules-clean runtime-clean docs-clean\
+	configure-clean repository-clean lib-clean framework-clean modules-clean runtime-clean docs-clean\
 	clean build-clean all-clean dev-clean clean-clean\
 	installer-clean installer-bin-clean installer-full-clean\
-	configure-reset repository-reset lib-reset modules-reset runtime-reset docs-reset\
+	configure-reset repository-reset lib-reset framework-reset modules-reset runtime-reset docs-reset\
 	reset build-reset all-reset dev-reset clean-reset docs-reset\
 	installer-reset installer-bin-reset installer-full-reset
 
-all build dev: reset configure-build repository-build lib-build modules-build runtime-build
+all build dev: reset configure-build repository-build lib-build framework-build modules-build runtime-build
 	@echo Build complete
 
 list-targets help:
@@ -71,7 +71,8 @@ list-targets help:
 	@echo '     configure = parse the configuration file and set up output directories'
 	@echo '    repository = download the required runtime package dependencies'
 	@echo '           lib = create runtime package library and install the dependencies'
-	@echo '       modules = build the VisionEval framework and module packages'
+	@echo '     framework = build the VisionEval framework'
+	@echo '       modules = build the VisionEval module packages'
 	@echo '       runtime = set up static files in the runtime directory'
 	@echo 'docs           = build the documentation'
 	@echo 'installer      = binary installer for the current machine architecture'
@@ -114,6 +115,9 @@ configure-reset build-reset all-reset dev-reset clean-reset repository-reset:
 lib-reset:
 	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)/velib.built"
 
+framework-reset:
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/framework.built
+
 modules-reset:
 	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/modules.built
 
@@ -132,8 +136,12 @@ configure-clean build-clean: build-reset # Resets the built status of all the ta
 
 modules-clean: $(VE_MAKEVARS) modules-reset # Reset all VE modules for complete rebuild
 	[[ -n "$(VE_REPOS)" ]] && rm -rf "$(VE_REPOS)"/*
-	[[ -n "$(VE_SRC)" ]] && rm -rf "$(VE_SRC)"/*
-	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/VE* "$(VE_LIB)"/visioneval
+	[[ -n "$(VE_SRC)" ]] && rm -rf "$(VE_SRC)"/VE*
+	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/VE*
+
+framework-clean: $(VE_MAKEVARS) modules-reset # Reset all framework for complete rebuild
+	[[ -n "$(VE_SRC)" ]] && rm -rf "$(VE_SRC)"/visioneval
+	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/visioneval
 
 lib-clean: $(VE_MAKEVARS) lib-reset # Reset installed package library for complete rebuild
 	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/*
@@ -210,11 +218,18 @@ modules: modules-reset modules-build
 
 modules-build: $(VE_LOGS)/modules.built
 
-$(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
-        scripts/build-modules.R scripts/build-framework.R
-	$(RSCRIPT) scripts/build-framework.R
+$(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built $(VE_LOGS)/framework.built\
+        scripts/build-modules.R
 	$(RSCRIPT) scripts/build-modules.R
 	@touch $(VE_LOGS)/modules.built
+
+framework: framework-reset framework-build
+
+framework-build: $(VE_LOGS)/framework.built 
+
+$(VE_LOGS)/framework.built: scripts/build-framework.R
+	$(RSCRIPT) scripts/build-framework.R
+	@touch $(VE_LOGS)/framework.built
 
 # This rule and the following one will (re-)copy out of date scripts and models to the runtime
 # We'll almost always "build" the runtime, but only out-of-date stuff gets built
@@ -232,7 +247,7 @@ docs: docs-reset docs-build
 
 docs-build: $(VE_LOGS)/docs.built
 
-$(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/runtime.built\
+$(VE_LOGS)/docs.built: $(VE_LOGS)/framework.built $(VE_LOGS)/modules.built $(VE_LOGS)/runtime.built\
 	$(VE_LOGS)/velib.built scripts/build-docs.R scripts/build-inventory.R
 	$(RSCRIPT) scripts/build-docs-framework.R
 	$(RSCRIPT) scripts/build-docs-visual.R
