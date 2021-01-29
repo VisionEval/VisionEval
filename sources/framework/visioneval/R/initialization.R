@@ -806,7 +806,7 @@ documentModule <- function(ModuleName){
   #Functions to assist in loading and processing module specifications
   #-------------------------------------------------------------------
   #Define function to process specifications
-  processModuleSpecs <- function(Spec_ls) {
+  processModuleSpecs_local <- function(Spec_ls) {
     #Define a function to expand a specification having multiple NAMEs
     expandSpec <- function(SpecToExpand_ls, ComponentName) {
       Names_ <- unlist(SpecToExpand_ls$NAME)
@@ -865,7 +865,7 @@ documentModule <- function(ModuleName){
   }
   #Define function to creates a data frame from specifications Inp, Get, or Set
   makeSpecsTable <- function(ModuleName, Component, SpecNames_) {
-    Specs_ls <- processModuleSpecs(loadSpecs(ModuleName))[[Component]]
+    Specs_ls <- processModuleSpecs_local(loadSpecs(ModuleName))[[Component]]
     if (Component == "Inp") {
       Specs_ls <- lapply(Specs_ls, function(x) {
         if (!("OPTIONAL" %in% names(x))) {

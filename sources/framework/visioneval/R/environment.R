@@ -8,33 +8,22 @@
 # Experimental approach to "ve.model" environment
 ve.model <- new.env()
 
-#CREATE R ENVIRONMENT FOR MODEL
-#==============================
-#' Attach an R environment to the search path for the active model
+#ACCESS R ENVIRONMENT FOR MODEL RUN
+#==================================
+#' Access an R environment for the active model
 #'
-#' \code{modelEnvironment} a visioneval framework control function that locates
-#' the environment for elements of the active model, creating it and placing it
-#' on the search path if necessary. That environment contains the ModelState,
-#' the Datastore access function aliases and related information. If Clear is
-#' provided as a character string, clear the environment and set the environment
-#' owner. If an empty string, clear the environment if no Owner, otherwise
-#' just clear the Owner. Call modelEnvironment with Clear whenever starting
-#' a new model.
+#' \code{modelEnvironment} a visioneval framework control function that locates the environment for
+#' elements of the active model. That environment contains the ModelState_ls structure plus other
+#' components needed to keep track of a running model.
 #'
-#' @param Clear if supplied as a non-empty character string, sets the
-#'   environment owner and clears the model environment. If an empty string
-#'   and no Owner, clear the environment, and if Owner just clear the Owner.
-#' @return an R environment attached to "ve.model" on the search path.
+#' @param Clear if supplied as a non-empty character string, sets the environment owner and clears
+#'   the model environment. If an empty string and no Owner, clear the environment, and if Owner
+#'   just clear the Owner.
+#' @return an R environment for "ve.model"
 #' @export
 modelEnvironment <- function(Clear=NULL) {
   # export this function since it can be useful in the VEModel
   # package
-#   if ( ! "ve.model" %in% search() ) {
-#     if ( ! Create ) stop("Missing ve.model environment.")
-#     ve.model <- attach(NULL,name="ve.model")
-#   } else {
-#     ve.model <- as.environment("ve.model")
-#   }
   if ( is.character(Clear) ) {
     if ( nzchar(Clear) ) { # optionally set owner flag
       rm(list=ls(ve.model),envir=ve.model)
@@ -97,8 +86,7 @@ modelRunning <- function() {
 #'
 #' @param Parameter character vector (length one) naming Parameter to retrieve
 #' @param Param_ls a list of run parameters to look within (otherwise RunParam_ls from
-#' "ve.model" environment if it exists, and if not then in and above
-#' \code{parent.frame()})
+#' "ve.model" environment if it exists, and if not just an empty list.
 #' @param Default is the value to provide if Parameter is not found in RunParam_ls
 #' @param logSource a logical (default=FALSE); if TRUE, write an info-level log message reporting the
 #' source for the parameter value
@@ -109,7 +97,7 @@ getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,logSource=FALSE) 
   defaultParams_ls <- list()
   defaultMissing <- missing(Default)
 
-  # We're going to use ve.model to cach the default parameters
+  # We're going to use ve.model to cache the default parameters
   ve.model <- modelEnvironment()
   defaultParams_ls <- if ( ! is.null(ve.model$VERuntimeDefaults) ) {
     ve.model$VERuntimeDefaults

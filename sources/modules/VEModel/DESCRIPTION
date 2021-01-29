@@ -21,11 +21,14 @@ Imports:
     tryCatchLog,
     futile.logger
 Suggests:
-    knitr
+    knitr,
+    pkgload
 Encoding: UTF-8
 VignetteBuilder: knitr
 RoxygenNote: 7.1.1
 Collate: 
+    'environment.R'
     'models.R'
     'results.R'
     'query.R'
+    'zzz.R'

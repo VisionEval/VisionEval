@@ -2,7 +2,7 @@
 
 # VEModel Package Code
 
-#' @include defaults.R
+#' @include environment.R
 NULL
 
 # R6 Class documentation example:
@@ -11,22 +11,23 @@ NULL
 # https://www.tidyverse.org/blog/2019/11/roxygen2-7-0-0/#r6-documentation
 # https://roxygen2.r-lib.org/articles/rd.html#r6
 
-#####################
-# DOCUMENTATION BLOCK
-#####################
+##############################################
+# VisionEval Model Manager Class and Functions
+##############################################
 #' VisionEval model manager class and functions
 #'
 #' The VisionEval model manager (VEModel) provides a simple way to run VisionEval models, and to
 #' access the model results. The framework itself contains full support for running a model, so
-#' if you have a model, you can still change into its directory and do
-#' \code{source('run_model.R')}.
+#' if you have a model, you can still just change into its directory and do
+#' \code{source('run_model.R')}. VEModel (and its helpers, VEResult and VEQuery) provide a
+#' convenient interface for running a model and exploring its structure and results.
 #'
 #' Creating a model is still a manual process, so you're usually better off duplicating one of the
 #' standard models The VEModel manager makes that very easy! See \code{vignette('VEModel')} for full
 #' instructions. A simple introduction is found on the VisionEval wiki, in the Getting-Started
-#' document.
+#' document (and that document is also included in runtime installations of VisionEval).
 #'
-#' Here are the details the VEModel manager.
+#' Here are the details of the VEModel manager.
 #'
 #' @section Usage:
 #' \preformatted{model <- VEModel$new(modelName,log="error")
@@ -149,7 +150,7 @@ isAbsolutePath <- function(modelPath) {
 
 ## Helper
 #  Model roots: ve.runtime/models, getwd()/models, ve.runtime, getwd()
-getModelRoots <- function(Param_ls,get.root=0) {
+getModelRoots <- function(get.root=0) {
   roots <- c( getwd() )
   if ( exists("ve.runtime") ) {
     ve.runtime <- get("ve.runtime")
@@ -160,7 +161,7 @@ getModelRoots <- function(Param_ls,get.root=0) {
   #    getwd()/ModelRoot (if exists)
   #    ve.runtime
   #    getwd()
-  modelRoot <- file.path(roots,visioneval::getRunParameter("ModelRoot",Param_ls=Param_ls))
+  modelRoot <- file.path(roots,visioneval::getRunParameter("ModelRoot"))
   if ( length(modelRoot)>0 ) {
     if ( isAbsolutePath(modelRoot[1]) ) {
       modelRoot <- modelRoot[1]
@@ -253,10 +254,10 @@ findModel <- function( modelPath, Param_ls ) {
   # VisionEval.R startup will set ModelScript from site configuration file
   #   located in runtime root (first of .visioneval, VisionEval.ini, VisionEval.cnf)
   #   with same default as here ("run_model.R")
-  searchScript <- visioneval::getRunParameter("ModelScript",Param_ls=Param_ls)
+  searchScript <- visioneval::getRunParameter("ModelScript")
   searchExact <- is.na(searchScript)
   if ( searchExact ) {
-    searchScript <- visioneval::getRunParameter("ModelScriptFile",Param_ls=Param_ls)
+    searchScript <- visioneval::getRunParameter("ModelScriptFile")
   }
 
   # check if modelPath contains a runModelName
@@ -274,7 +275,7 @@ findModel <- function( modelPath, Param_ls ) {
 
   # if modelPath is not an absolute path, search for it amongst the "roots"
   if ( ! isAbsolutePath(modelPath) ) {
-    roots<-getModelRoots(Param_ls)
+    roots<-getModelRoots()
     possiblePaths <- file.path(roots,modelPath)
     existing <- dir.exists(possiblePaths)
     if ( ! any(existing) ) {
@@ -339,15 +340,14 @@ findStandardModel <- function( model ) {
   return(model) # absolute path to standard model matching name
 }
 
-## install a standard model either as a template (skeleton==TRUE) or
-## a sample (skeleton==FALSE)
+## install a standard model with data identified by "skeleton"
 #  We're still expecting to distribute with standard models pre-installed
 #  Called automatically from findModel, where modelPath must be a bare model name
 #  Can install from other locations by calling this function with a more elaborate modelPath
 
-SampleModelDataFormat <- c( templ="Template",samp="Sample" )
+SampleModelDataFormat <- c( sample="samp",template="tpl",test="mini" )
 
-installStandardModel <- function( modelName, modelPath, confirm, skeleton, Param_ls=NULL, log="error" ) {
+installStandardModel <- function( modelName, modelPath, confirm, skeleton=c("sample","template","test"), Param_ls=NULL, log="error" ) {
   # Locate and install standard modelName into modelPath
   #   If modelPath is NULL or empty string, create conflict-resolved modelName in first available standard root
   #   If modelPath is an existing directory, put modelName into it (conflict-resolved name)
@@ -364,7 +364,7 @@ installStandardModel <- function( modelName, modelPath, confirm, skeleton, Param
 
   # Set up destination modelPath
   if ( ! is.list(Param_ls) ) Param_ls <- list()
-  root <- getModelRoots(Param_ls,1)
+  root <- getModelRoots(1)
   if ( missing(modelPath) || is.null(modelPath) ) modelPath <- modelName
   if ( ! isAbsolutePath(modelPath) ) {
     installPath <- normalizePath(file.path(root,modelPath),winslash="/",mustWork=FALSE)
@@ -375,7 +375,13 @@ installStandardModel <- function( modelName, modelPath, confirm, skeleton, Param
 
   # Confirm installation if requested
   install <- TRUE
-  skeleton <- if ( skeleton ) "templ" else "samp"
+  skeleton <- if ( ! is.character(skeleton) ) {
+    "sample"
+  } else if ( ! skeleton %in% names(SampleModelDataFormat) ) {
+    "sample"
+  } else {
+    skeleton[1]
+  }
   if ( confirm && interactive() ) {
     msg <- paste0("Install standard model '",modelName,"' (",SampleModelDataFormat[skeleton],") in ",installPath,"?\n")
     install <- confirmDialog(msg)
@@ -436,36 +442,6 @@ ve.model.copy <- function(newName=NULL,newPath=NULL) {
     }
   }
   return( openModel(newModelPath) )
-}
-
-# Create a separate function for this purpose to keep consistency between
-# loading ModelState files and running Models
-ve.model.setupRunEnvironment <- function(
-  Owner,
-  PreviousState=list(),
-  Param_ls=list(),
-  RunModel=FALSE,
-  ModelDir=getwd(),
-  ResultsDir=".",       # Should be relative to ModelDir
-  InputPath=".",        # Should be relative to ModelDir
-  ModelScriptFile=NULL,
-  LogLevel="warn"
-) {
-  # Set up ve.model environment
-  ve.model <- visioneval::modelEnvironment(Clear=Owner)
-  ve.model$RunModel <- RunModel
-  ve.model$ModelStateStages <- PreviousState; # previously loaded model states
-  addParams_ls <- list(
-    ResultsDir      = ResultsDir,
-    ModelDir        = ModelDir,
-    InputPath       = InputPath,
-    ModelScriptFile = ModelScriptFile,
-    LogLevel        = LogLevel
-  )
-  addParams_ls <- visioneval::addParameterSource(addParams_ls,paste0("Set up RunParam_ls for ",Owner))
-  ve.model$RunParam_ls <- visioneval::mergeParameters(Param_ls=Param_ls,addParams_ls) # addParams_ls will override
-
-  invisible(ve.model$RunParam_ls)
 }
 
 ve.model.loadModelState <- function(log="error") {
@@ -557,26 +533,13 @@ ve.model.loadModelState <- function(log="error") {
   invisible(self$ModelState)
 }
 
-getRuntimeConfig <- function(ParamDir=NULL) {
-  # Function loads configuration from ParamDir/VisionEval.cnf
-  # ParamDir defaults to ve.runtime if defined, else getwd()
-  # override is a list whose elements may be replaced by this configuration
-  # keep is a list whose elements will take precedence over this configuration
-  if ( ! is.character(ParamDir) ) {
-    ParamDir <- get0("ve.runtime",ifnotfound=getwd())
-  }
-  return(
-    visioneval::loadConfiguration(ParamDir=ParamDir)
-  )
-}
-
 # Initialize a VEModel from modelPath
 ve.model.init <- function(modelPath=NULL,log="error") {
-  # Load system and user model configuration
+  # Load system model configuration
   # Opportunity to override names of ModelState, run_model.R, Datastore, etc.
-  # Also to ejstablish standard model directory structure (inputs, results)
+  # Also to establish standard model directory structure (inputs, results)
   visioneval::initLog(Save=FALSE,Threshold=log)
-  self$RunParam_ls <- getRuntimeConfig()
+  self$RunParam_ls <- getRuntimeParameters() # load defined defaults from System
 
   # Identify the run_model.R root location(s)
   modelPaths <- findModel(modelPath,self$RunParam_ls)
@@ -911,9 +874,11 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,stage=NULL,show=10) {
       if ( grepl("^[0-9:, ]+$",response) ) {
         response <- try ( eval(parse(text=paste("c(",response,")"))) )
         # Look for character command
-        candidates <- to.delete[start:stop]
-        unlink(candidates[response],recursive=TRUE)
-        cat("Deleted:\n",paste(candidates[response],collapse="\n"),"\n")
+        if ( is.numeric(response) ) {
+          candidates <- to.delete[start:stop]
+          unlink(candidates[response],recursive=TRUE)
+          cat("Deleted:\n",paste(candidates[response],collapse="\n"),"\n")
+        }
         to.delete <- self$dir(outputs=TRUE)
         if ( ! isTRUE(outputOnly) ) to.delete <- c(to.delete,self$dir(results=TRUE))
         if ( length(to.delete) > 0 ) {
@@ -1009,9 +974,9 @@ ve.model.results <- function(stage) {
   if ( ! results$valid() ) {
     private$lastResults <- list()
     if (stage!=self$stageCount) {
-      warning("There are no results for stage ",stage," of this model yet.")
+      visioneval::writeLog("There are no results for stage ",stage," of this model yet.",Level="warn")
     } else {
-      warning("There are no results for this model yet.")
+      visioneval::writeLog("There are no results for this model yet.",Leven="warn")
     }
   } else {
     private$lastResults <- list(
@@ -1019,8 +984,23 @@ ve.model.results <- function(stage) {
       stage=stage
     )
   }
-    
   return(results)
+}
+
+ve.model.query <- function(QueryName=NULL,FileName=NULL,new=FALSE) {
+  # Get the Query directory for the model
+  QueryDir <- visioneval::getRunParameter("QueryDir",Param_ls=self$RunParam_ls)
+  QueryDir <- file.path(self$modelPath,QueryDir)
+  if ( ! is.null(QueryName) && is.null(FileName) ) {
+    FileName <- paste0(QueryName,".VEqry")
+  }
+  if ( new ) {
+    return(VEQuery$new(QueryName=QueryName,FileName=FileName,QueryDir=QueryDir,Param_ls=self$RunParam_ls))
+  } else if ( all(is.null(c(QueryName,FileName,))) ) {
+    cat("Available Queries:\n")
+    print(dir(QueryDir))
+    return(NULL)
+  }
 }
 
 # Here is the VEModel R6 class
@@ -1047,7 +1027,8 @@ VEModel <- R6::R6Class(
     dir=ve.model.dir,                       # list model elements (output, scripts, etc.)
     clear=ve.model.clear,                   # delete results or outputs (current or past)
     copy=ve.model.copy,                     # copy a self$modelPath to another path (ignore results/outputs)
-    results=ve.model.results                # Create a VEResults object (if model is run); option to open a past result
+    results=ve.model.results,               # Create a VEResults object (if model is run); option to open a past result
+    query=ve.model.query                    # Create a VEQuery object (or show a list of queries).
   ),
   private = list(
     # Private Members
@@ -1105,7 +1086,7 @@ openModel <- function(modelPath="",log="error") {
     } else {
       ve.runtime <- getwd()
     }
-    return(dir(file.path(ve.runtime,visioneval::getRunParameter("ModelRoot",Param_ls=Param_ls))))
+    return(dir(file.path(ve.runtime,visioneval::getRunParameter("ModelRoot"))))
   } else {
     return( VEModel$new(modelPath = modelPath,log=log) )
   }
@@ -1133,14 +1114,16 @@ openModel <- function(modelPath="",log="error") {
 #'   ve.runtime/models. If directory does not exist, create it and copy the modelName into it.
 #'   If directory does exist, create a unique variant of modelName adjacent to it. If it is NULL
 #'   create a unique variant of modelName in ve.runtime/models.
-#' @param skeleton if TRUE (default), install just skeleton files for the model; otherwise
-#'   install the sample model.
+#' @param skeleton A character string identifying the sample data to install. Options are "sample",
+#'   which is a small real-world model, "template" which installs data files containing only their
+#'   header row, or "test" which installs a miniature model with just enough data and years to
+#'   run the model script (used for testing framework functions).
 #' @param confirm if TRUE (default) and running interactively, prompt user to confirm, otherwise
 #'   just do it.
 #' @param log a string describing the minimum level to display
 #' @return A VEModel object of the model that was just installed
 #' @export
-installModel <- function(modelName=NULL, modelPath=NULL, skeleton=FALSE, confirm=!skeleton, log="error") {
+installModel <- function(modelName=NULL, modelPath=NULL, skeleton=c("sample","template","test"), confirm=!skeleton, log="error") {
   model <- installStandardModel(modelName, modelPath, confirm, skeleton, log=log)
   if ( is.list(model) ) {
     return( VEModel$new( modelPath=model$modelPath, log=log ) )

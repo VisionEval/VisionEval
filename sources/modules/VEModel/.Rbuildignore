@@ -1,3 +1,6 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^.*workflow.*R-text
+tests/runtime*
+tests/
+launch.bat

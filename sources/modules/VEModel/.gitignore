@@ -5,4 +5,7 @@
 VEModel.Rproj
 ^NAMESPACE$
 man/
+tests/runtime*
+launch.bat
+
 

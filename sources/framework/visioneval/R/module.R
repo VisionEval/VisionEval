@@ -899,7 +899,7 @@ writeVENameRegistry <-
     }
 
     #Define function to process module specifications
-    processModuleSpecs <- function(Spec_ls) {
+    processModuleSpecs_local <- function(Spec_ls) {
       #Define a function to expand a specification having multiple NAMEs
       expandSpec <- function(SpecToExpand_ls, ComponentName) {
         Names_ <- unlist(SpecToExpand_ls$NAME)
@@ -947,7 +947,7 @@ writeVENameRegistry <-
     }
     #Process the Inp and Set specifications
     ModuleSpecs_ls <-
-      processModuleSpecs(getModuleSpecs(ModuleName, PackageName))
+      processModuleSpecs_local(getModuleSpecs(ModuleName, PackageName))
     Inp_ls <-
       lapply(ModuleSpecs_ls$Inp, function(x) {
         x$PACKAGE <- PackageName
