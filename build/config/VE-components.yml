@@ -223,7 +223,7 @@ Components:
 
   runtime:
     Type: runtime
-    Path: sources # copies sources/runtime/* to ve.runtime
+    Path: sources # copies sources/runtime/* to ve.runtime recursively
 
 # "Type: script" components are copied to the runtime root under their name
   LICENSE:

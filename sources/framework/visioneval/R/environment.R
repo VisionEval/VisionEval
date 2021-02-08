@@ -353,7 +353,7 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
         ) )
       ) )
     } else {
-      writeLog(paste("Successfully read parameters from", ParamFilePath),Level="info")
+      writeLog(paste("Successfully read parameters from", ParamFilePath),Level="debug")
     }
   } else writeLog(paste("No parameter file found in",ParamDir),Level="debug") # Just return an empty list
         

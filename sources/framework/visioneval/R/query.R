@@ -404,7 +404,7 @@ isDatasetPresent <- function(Dataset, Table, Group, QueryPrep_ls) {
 
 #----------------------------
 # Query Specification Helpers
-#Identify whether symbol is an operator
+# Identify whether symbol is an operator
 isOperator <- function(Symbol) {
   Operators_ <- c("+", "-", "*", "/")
   deparse(Symbol) %in% Operators_
@@ -417,14 +417,14 @@ isOperand <- function(Symbol) {
   NonOperands_ <- c(Functions_, Operators_, Comparators_, Group_)
   !(deparse(Symbol) %in% NonOperands_) & !is.character(Symbol) & !is.numeric(Symbol) & !is.logical(Symbol)
 }
-#Identify whether symbol is a function
+# Identify whether symbol is a function
 isFunction <- function(Symbol) {
   Functions_ <- c("sum", "count", "mean", "wtmean", "max", "min", "median")
   deparse(Symbol) %in% Functions_
 }
 
-#Identify whether symbol is an operand
-#Recursive function to get the operands in an expression
+# Identify whether symbol is an operand
+# Recursive function to get the operands in an expression
 getOperands <- function(AST) {
   if (length(AST) == 1) {
     if (isOperand(AST)) deparse(AST)
@@ -432,7 +432,7 @@ getOperands <- function(AST) {
     unlist(lapply(AST, function(x) Recall(x)))
   }
 }
-#Recursive function to get functions in an expression
+# Recursive function to get functions in an expression
 getFunctions <- function(AST) {
   if (length(AST) == 1) {
     if (isFunction(AST)) deparse(AST)
@@ -440,7 +440,7 @@ getFunctions <- function(AST) {
     unlist(lapply(AST, function(x) Recall(x)))
   }
 }
-#Recursive function to get operators in an expression
+# Recursive function to get operators in an expression
 getOperators <- function(AST) {
   if (length(AST) == 1) {
     if (isOperator(AST)) deparse(AST)
@@ -527,9 +527,9 @@ getOperators <- function(AST) {
 #'   can be used to compose and check a Query Specification based on an existing
 #'   and presumably working specification simply by replacing some of its elements.
 #' @return A list of three components: "QuerySpec" which contains the assembled Query
-#' Specification, "Errors" which is a character vector of reported errors (or a vector of length
-#' one containing an empty string), and "Compiled" which contains everything needed to process the
-#' Query Specification against a Datastore.
+#'   Specification, "Errors" which is a character vector of reported errors (or a vector of length
+#'   one containing an empty string), and "Compiled" which contains everything needed to process the
+#'   Query Specification against a Datastore.
 #' @export
 checkQuerySpec <- function(
     Expr = NULL,
@@ -617,11 +617,11 @@ checkQuerySpec <- function(
               paste(DupNames_, collapse = ", "),
               "Duplicate names will cause problems with the 'By' argument",
               "Change the 'Table' argument so there is only one instance of each name."
-              #'           "This error may have occurred because you listed the",
-              #'           "names of datasets that are to be used as keys for joining the",
-              #'           "datasets from different tables.",
-              #'           "Key datasets must not be listed in the 'Table' argument.",
-              #'           "They are listed in the 'Key' argument instead."
+              # "This error may have occurred because you listed the",
+              # "names of datasets that are to be used as keys for joining the",
+              # "datasets from different tables.",
+              # "Key datasets must not be listed in the 'Table' argument.",
+              # "They are listed in the 'Key' argument instead."
             )
             break
           }

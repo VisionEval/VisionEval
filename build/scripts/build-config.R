@@ -365,16 +365,6 @@ evalq(
   for ( loc in locs.lst ) dir.create( get(loc), recursive=TRUE, showWarnings=FALSE )
   ve.zipout <- dirname(ve.runtime) # Installer zip files always go next to ve.runtime
 
-  # Determine whether build should include tests
-  # Look at environment (possibly from Makefile) then at ve.cfg
-  # Result is TRUE (run tests) or FALSE (skip tests)
-  ve.runtests <- switch(
-    tolower(Sys.getenv("VE_RUNTESTS",unset="Default")),
-    false=FALSE,
-    true=TRUE,
-    ! is.null(ve.cfg[["RunTests"]]) && all(ve.cfg[["RunTests"]])
-    )
-
   # Create the .Renviron file in ve.output so dev-lib is included
   # That way we can have things like miniCRAN that are not needed by the runtime
   if ( ! exists("ve.lib") ) {
@@ -409,7 +399,6 @@ evalq(
     ,VE_RUNTIME        = ve.runtime
     ,VE_SRC            = ve.src
     ,VE_DOCS           = ve.docs
-    ,VE_RUNTESTS       = ve.runtests
     ,VE_DEPS           = ve.dependencies
     ,VE_ROOT           = ve.root
   )
@@ -628,7 +617,6 @@ evalq(
     , "ve.platform"
     , "ve.build.type"
     , "ve.binary.build"
-    , "ve.runtests"
     , "ve.all.dependencies"
     , "CRAN.mirror"
     , "BioC.mirror"

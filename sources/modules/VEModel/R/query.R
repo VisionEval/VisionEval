@@ -31,7 +31,6 @@ ve.query.init <- function(
   } # load sets QueryName   
 
   self$QueryDir <- QueryDir;
-  self$OutputDir <- OutputDir;      # Where to write an output file
 
   if ( length(self$checkResults)>0 ) {
     visioneval::writeLogMessage("Query specification contains errors")
@@ -74,20 +73,20 @@ ve.query.load <- function(FileName=NULL,QueryName=NULL,QueryDir=NULL,QuerySpec=N
   }
 
   self$QueryFile <- normalizePath(FileName,winslash="/",mustWork=FALSE)
-  if ( ! file.exists(sourceFile) ) {
+  if ( ! file.exists(self$QueryFile) ) {
     self$QueryFile <- normalizePath(file.path(self$QueryDir,FileName),winslash="/",mustWork=FALSE)
   }
   if ( is.null(QueryName) ) {
     QueryName <- sub("\\.[^.]*$","",basename(self$QueryFile))
   }
-  self$QueryName <- QueryName;    # Do not overwrite if self$QueryName already assigned
+  self$QueryName <- QueryName;
 
-  if ( ! file.exists(sourceFile) ) {
+  if ( ! file.exists(self$QueryFile) ) {
     visioneval::writeLogMessage("New Query:",self$QueryName)
   } else {
     # Load the query from sourceFile
     ve.model <- visioneval::modelEnvironment() # Don't need to clear ve.model
-    sys.source(sourceFile,envir=ve.model)
+    sys.source(self$QueryFile,envir=ve.model)
     private$QuerySpec <- ve.model$QuerySpec
   }
   return( self$check() )
@@ -203,13 +202,13 @@ ve.query.update <- function(obj) {
     visioneval::writeLogMessage(qry$checkResults)
     stop(msg)
   }
-  q.names <- names(qry.getlist())
+  q.names <- names(qry$getlist())
   s.names <- names(private$QuerySpec)
   extra.names <- ! q.names %in% s.names
   if ( any( extra.names ) ) {
     visioneval::writeLogMessage("Warning","Names not in qry (use '$add'):",paste(q.names[extra.names],collapse=", "))
   }
-  private$QuerySpec[ q.names ] <- qry.getlist() # replace list items in current spec
+  private$QuerySpec[ q.names ] <- qry$getlist() # replace list items in current spec
   self$check()
   return(self)
 }
@@ -232,7 +231,7 @@ asQueryList <- function(obj) {
 
 ve.query.remove <- function(SpecToRemove) {
   # like subset, but remove the elements that match and return them
-  extract <- private$QuerySpec[SpecToExtract]
+  extract <- private$QuerySpec[SpecToRemove]
   nm.ext <- names(extract)
   if ( any(is.na(nm.ext) | is.null(nm.ext) | !nzchar(names(extract))) ) {
     stop(visioneval::writeLogMessage("VEQuery specification list has unnamed elements."))
@@ -249,8 +248,8 @@ ve.query.remove <- function(SpecToRemove) {
 ve.query.assign <- function(obj) {
   # replace the query spec with the other object's query spec
   qry <- asQueryList(obj)
-  if ( qry.valid() ) {
-    private$QuerySpec <- qry.getlist() # just replace what's there
+  if ( qry$valid() ) {
+    private$QuerySpec <- qry$getlist() # just replace what's there
   } else {
     msg <- "Cannot assign invalid query"
     visioneval::writeLogMessage( c(msg,qry$checkResults) )
@@ -521,7 +520,7 @@ ve.spec.check <- function(Names=NULL, Clean=TRUE) {
       self$checkResults <- c(self$checkResults,paste(self$Name,"Specification"))
     }
     if ( Clean ) {
-      self$QuerySpec[ ! nm.test.spec %in% ve.spec.overal.elements] <- NULL
+      self$QuerySpec[ ! nm.test.spec %in% ve.spec.overall.elements] <- NULL
     } else {
       have.names <- nm.test.spec %in% ve.spec.overall.elements
       spec.valid <- length(have.names)>0 && all(have.names)
@@ -543,7 +542,7 @@ ve.spec.check <- function(Names=NULL, Clean=TRUE) {
         if ( ! spec.valid ) {
           self$checkResults <- c(
             self$checkResults,
-            Paste("Unrecognized Specification Elements:",paste(nm.test.spec[!have.names],collapse=","))
+            paste("Unrecognized Specification Elements:",paste(nm.test.spec[!have.names],collapse=","))
           )
         }
       }
@@ -559,7 +558,7 @@ ve.spec.check <- function(Names=NULL, Clean=TRUE) {
     } else if ( "Function" %in% names(self$QuerySpec) ) {
       if ( is.character(Names) ) {
         # unparse the Function for all symbol types
-        Symbols <- unique(getSymbols(str2lang(self$QuerySpec$Function)))
+        Symbols <- unique(getNames(str2lang(self$QuerySpec$Function)))
         Symbols <- Symbols [ ! Symbols %in% Names ]
         Symbols <- Symbols [ ! sapply(Symbols,exists,envir=parent.frame()) ]
         if ( length(Symbols)>0 ) {
@@ -584,7 +583,7 @@ ve.spec.valid <- function() {
 }
 
 ve.spec.copy <- function() {
-  return ( VEQuerySpec(self) )
+  return ( VEQuerySpec$new(self) )
 }
 
 cleanSpecNames <- function(self)
@@ -675,7 +674,7 @@ ve.spec.setgeo <- function(Geography=NULL) {
       # Region: remove Marea or Azone from "By" and "Units", if present
       if ( "By" %in% names(test.sum) ) {
         test.by <- test.sum[["By"]]
-        any.geo <- ( test.by %in% small.geo )
+        any.geo <- ( test.by %in% ve.small.geo )
         if ( any ( ! any.geo ) ) { # By includes tables other than geography
           # remove geography but leave the rest
           # cat( "In ",test.spec[["Name"]],"By from:",test.by,"to",test.by[!any.geo],"\n" )
@@ -687,7 +686,7 @@ ve.spec.setgeo <- function(Geography=NULL) {
       }
       if ( "Units" %in% names(test.sum) ) {
         test.units <- test.sum[["Units"]]
-        any.geo <- ( names(test.units) %in% small.geo )
+        any.geo <- ( names(test.units) %in% ve.small.geo )
         if ( any ( ! any.geo ) ) {
           # remove geography
           test.sum[["Units"]] <- test.units[!any.geo]
@@ -700,10 +699,10 @@ ve.spec.setgeo <- function(Geography=NULL) {
       # TODO: If "Table" is the same as "By" and not GeographyType, skip that specification
       # with a message (or we could use Require). So any dip into the Marea table or the
       # Azone table only gets processed if we are running for that GeographyType.
-      if ( ! Geography["Type"] %in% small.geo ) {
+      if ( ! Geography["Type"] %in% ve.small.geo ) {
         self$checkResults <- paste0("Invalid Geography Type for query specification: ",Geography["Type"])
       }
-      geotest <- ( test.sum[["Table"]] %in% small.geo ) # Which Table elements are the small geography
+      geotest <- ( test.sum[["Table"]] %in% ve.small.geo ) # Which Table elements are the small geography
       # Write the following in case more than one Table element is a small geography
       # Mostly, that would probably be a logic error in the query specification
       if ( any( geotest) && any(test.sum[["Table"]][geotest] != Geography["Type"]) ) {
@@ -712,46 +711,46 @@ ve.spec.setgeo <- function(Geography=NULL) {
           " due to Table mismatch: ",
           Geography["Type"]," vs. Table ",paste(test.sum[["Table"]][geotest],collapse=", ")
         )
-        next  # Skip thist test.spec
-      }
-      # If Table is not a conflicting small.geo,
-      # swap small geography in spec with Geography["Type"]
-      if ( Geography["Type"] == "Marea" ) {
-        geo.from <- "Azone"
-        geo.to <- "Marea"
-      } else if ( Geography["Type"] == "Azone" ) {
-        geo.from <- "Marea"
-        geo.to <- "Azone"
-      }
-      # Check that "By" and "Units" include geo.from
-      # If geo.from BUT NOT geo.to in "By" and "Units", change geo.from to geo.to
-      #   if we have both in the spec, don't touch geo.from or geo.to
-      # If geo.to not in "By" and "Units", add geo.to to By and geo.to = '' to "Units"
-      test.sum.by <- test.sum[["By"]]
-      azb <- ( test.sum.by %in% geo.from )
-      if ( ! ( geo.to %in% test.sum.by ) ) {
-        if ( any(azb) ) {
-          test.sum.by[azb] <- geo.to
-        } else {
-          test.sum.by <- c(test.sum.by,geo.to)
+      } else {
+        # If Table is not a conflicting ve.small.geo,
+        # swap small geography in spec with Geography["Type"]
+        if ( Geography["Type"] == "Marea" ) {
+          geo.from <- "Azone"
+          geo.to <- "Marea"
+        } else if ( Geography["Type"] == "Azone" ) {
+          geo.from <- "Marea"
+          geo.to <- "Azone"
         }
-        test.sum[["By"]] <- test.sum.by
-      }
-      test.sum.units <- test.sum[["Units"]]
-      # cat("Spec name:",test.spec[["Name"]],"\n")
-      # cat("Units before:",paste(names(test.sum.units),collapse=","),"\n")
-      azb <- test.sum.units %in% geo.from
-      if ( ! (geo.to %in% names(test.sum.units)) ) {
-        if ( any(azb) ) {
-          names(test.sum.units)[azb] <- geo.to
-        } else {
-          test.sum.units[geo.to] <- ""
+        # Check that "By" and "Units" include geo.from
+        # If geo.from BUT NOT geo.to in "By" and "Units", change geo.from to geo.to
+        #   if we have both in the spec, don't touch geo.from or geo.to
+        # If geo.to not in "By" and "Units", add geo.to to By and geo.to = '' to "Units"
+        test.sum.by <- test.sum[["By"]]
+        azb <- ( test.sum.by %in% geo.from )
+        if ( ! ( geo.to %in% test.sum.by ) ) {
+          if ( any(azb) ) {
+            test.sum.by[azb] <- geo.to
+          } else {
+            test.sum.by <- c(test.sum.by,geo.to)
+          }
+          test.sum[["By"]] <- test.sum.by
         }
-        test.sum[["Units"]] <- test.sum.units
+        test.sum.units <- test.sum[["Units"]]
+        # cat("Spec name:",test.spec[["Name"]],"\n")
+        # cat("Units before:",paste(names(test.sum.units),collapse=","),"\n")
+        azb <- test.sum.units %in% geo.from
+        if ( ! (geo.to %in% names(test.sum.units)) ) {
+          if ( any(azb) ) {
+            names(test.sum.units)[azb] <- geo.to
+          } else {
+            test.sum.units[geo.to] <- ""
+          }
+          test.sum[["Units"]] <- test.sum.units
+        }
+        # cat("Units after:",paste(names(test.sum.units),collapse=","),"\n")
       }
-      # cat("Units after:",paste(names(test.sum.units),collapse=","),"\n")
+      test.spec$QuerySpec[["Summarize"]] <- test.sum
     }
-    test.spec$QuerySpec[["Summarize"]] <- test.sum
   }
   test.spec$valid()
   return(test.spec)
@@ -931,7 +930,7 @@ doQuery <- function (
   Geography,
   Specifications,
   OutputDir,
-  outputFile,
+  OutputFile,
   save,
   log=""
 )
@@ -940,7 +939,7 @@ doQuery <- function (
     missing(Results) ||
     missing(Geography) ||
     missing(Specifications) ||
-    missing(outputFile)
+    missing(OutputFile)
   ) {
     visioneval::writeLogMessage("Invalid Setup for doQuery function")
     return(character(0))
@@ -963,12 +962,12 @@ doQuery <- function (
 
   if ( ! is.logical(save) ) save <- TRUE
   if ( ! save ) {
-    outputFiles <- list() # will return list of data.frames
+    OutputFiles <- list() # will return list of data.frames
   } else {
-    outputFiles <- character(0) # will return vector of file names
+    OutputFiles <- character(0) # will return vector of file names
   }
   # Put the Specifications where we can review them against the outputs
-  attr(outputFiles,"Specifications") <- Specifications
+  attr(OutputFiles,"Specifications") <- Specifications
 
   old.wd <- getwd()
 
@@ -981,7 +980,7 @@ doQuery <- function (
         # Move to scenario directory
         setwd(scenario$path)
 
-        # Scenario Name for reporting / outputFile
+        # Scenario Name for reporting / OutputFile
         scenarioName <- scenario$Name;
 
         # Confirm what we're working on
@@ -1003,14 +1002,14 @@ doQuery <- function (
           "Geography:",catGeography,"\n"
         )
 
-        # Build the outputFile name using the just reported specifications
-        outputFileToWrite <- stringr::str_replace(OutputFile,"%scenario%",scenarioName)
-        outputFileToWrite <- stringr::str_replace(outputFileToWrite,"%years%",catYears)
-        outputFileToWrite <- stringr::str_replace(outputFileToWrite,"%geography%",stringr::str_remove_all(catGeography,"[ ']"))
+        # Build the OutputFile name using the just reported specifications
+        OutputFileToWrite <- stringr::str_replace(OutputFile,"%scenario%",scenarioName)
+        OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%years%",catYears)
+        OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%geography%",stringr::str_remove_all(catGeography,"[ ']"))
         if ( save ) {
-          outputFileToWrite <- normalizePath(file.path(OutputDir,outputFileToWrite),mustWork=FALSE)
+          OutputFileToWrite <- normalizePath(file.path(OutputDir,OutputFileToWrite),mustWork=FALSE)
         } else {
-          outputFileToWrite <- sub("\\.[^.]+$","",outputFileToWrite) # use this as data.frame name (dropping any file extension)
+          OutputFileToWrite <- sub("\\.[^.]+$","",OutputFileToWrite) # use this as data.frame name (dropping any file extension)
         }
 
         # Prepare for datastore queries
@@ -1046,12 +1045,12 @@ doQuery <- function (
 
         # Add the measures to the output list
         if ( save ) {
-          cat("Saving measures in",basename(dirname(outputFileToWrite)),"as",basename(outputFileToWrite),"...")
-          utils::write.csv(Measures_df, row.names = FALSE, file = outputFileToWrite)
+          cat("Saving measures in",basename(dirname(OutputFileToWrite)),"as",basename(OutputFileToWrite),"...")
+          utils::write.csv(Measures_df, row.names = FALSE, file = OutputFileToWrite)
           cat("Saved\n")
-          outputFiles <- c(outputFiles,outputFileToWrite) # Saving: return list of file names
+          OutputFiles <- c(OutputFiles,OutputFileToWrite) # Saving: return list of file names
         } else {
-          outputFiles[outputFileToWrite] <- (Measures_df) # Not Saving: return list of data.frames
+          OutputFiles[OutputFileToWrite] <- (Measures_df) # Not Saving: return list of data.frames
         }
       }
     },
@@ -1060,5 +1059,5 @@ doQuery <- function (
     },
     finally=setwd(old.wd)
   )
-  return(outputFiles)
+  return(OutputFiles)
 }

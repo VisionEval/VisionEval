@@ -75,7 +75,10 @@ test_model <- function() {
   if ( dir.exists("models/JRSPM") ) {
     message("Clearing runtime environment")
     unlink("models/JRSPM",recursive=TRUE)
+  }
   rs <- installModel("VERSPM","JRSPM")
   rs$run()
   return(rs)
 }
+
+print(ls())

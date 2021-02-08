@@ -1,7 +1,6 @@
 Title: VisionEval
 Date: 2019-04-26
 Description: A minimal VE-config.yml
-RunTests: FALSE
 Roots:                          # Require ve.root and ve.output at a minimum
     ve.root: ..                 # relative to "build" folder (should be git root for VisionEval-dev)
     ve.output: ../built         # default ("built" adjacent to "build")

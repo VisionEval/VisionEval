@@ -55,29 +55,9 @@ NULL
 #'   \item{modelName}{The path or basename of a directory containing a VisionEval model setup; if
 #'   it's a relatie path, the model will be sought in the current directory plus standard places
 #'   like ve.runtime/models}
-
-#'   \item{command}{Character scalar, the command to run. It will be
-#'     escaped via \code{\link[base]{shQuote}}.}
-#'   \item{args}{Character vector, arguments to the command. The will be
-#'     escaped via \code{\link[base]{shQuote}}.}
-#'   \item{commandline}{A character scalar, a full command line.
-#'     No escaping will be performed on it.}
-#'   \item{stdout}{What to do with the standard output. Possible values:
-#'     \code{FALSE}: discard it; a string, redirect it to this file,
-#'     \code{TRUE}: redirect it to a temporary file.}
-#'   \item{stdout}{What to do with the standard error. Possible values:
-#'     \code{FALSE}: discard it; a string, redirect it to this file,
-#'     \code{TRUE}: redirect it to a temporary file.}
-#'   \item{grace}{Grace pediod between the TERM and KILL signals, in
-#'     seconds.}
-#'   \item{...}{Extra arguments are passed to the
-#'     \code{\link[base]{readLines}} function.}
 #' }
 #'
 #' @section Details:
-#' \code{$new()} starts a new process, it uses \code{\link[base]{pipe}}.
-#' R does \emph{not} wait for the process to finish, but returns
-#' immediately.
 #'
 #' \code{$is_alive()} checks if the process is alive. Returns a logical
 #' scalar.
@@ -996,7 +976,7 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,new=FALSE) {
   }
   if ( new ) {
     return(VEQuery$new(QueryName=QueryName,FileName=FileName,QueryDir=QueryDir,Param_ls=self$RunParam_ls))
-  } else if ( all(is.null(c(QueryName,FileName,))) ) {
+  } else if ( all(is.null(c(QueryName,FileName))) ) {
     cat("Available Queries:\n")
     print(dir(QueryDir))
     return(NULL)
@@ -1080,13 +1060,14 @@ VEModel <- R6::R6Class(
 #' @export
 openModel <- function(modelPath="",log="error") {
   if ( missing(modelPath) || !nzchar(modelPath) ) {
-    Param_ls <- getRuntimeConfig()
-    if ( exists("ve.runtime") ) {
-      ve.runtime <- get("ve.runtime")
-    } else {
-      ve.runtime <- getwd()
-    }
-    return(dir(file.path(ve.runtime,visioneval::getRunParameter("ModelRoot"))))
+    return(
+      dir(
+        file.path(
+          getRuntimeDirectory(),
+          visioneval::getRunParameter("ModelRoot")
+        )
+      )
+    )
   } else {
     return( VEModel$new(modelPath = modelPath,log=log) )
   }

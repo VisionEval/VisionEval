@@ -23,7 +23,7 @@ ve.env$RunParam_ls <- list()
 #'
 #' @return an R environment "ve.env"
 #' @export
-runtimeEnvironment <- function() { ve.env }
+runtimeEnvironment <- function() ve.env
 
 # Set up package defaults for VE getRunParameter
 
@@ -70,7 +70,7 @@ VEPackageRunParameters <- function(Param_ls=list()) {
 #' runtime paramters list (so call it after changing the configuration file to bring the in-memory
 #' version up to date). See \code{visioneval::loadConfiguration} for more details.
 #'
-#' @param ParamDir is the directoyr in whicn to seek visioneval.cnf
+#' @param ParamDir is the directory in which to seek visioneval.cnf
 #' @param ParamFile is a specific file to seek (rather than looking for one of the default file
 #'   names). Note that an error will be raised if that file is specified but does not exist.
 #' @return The updated runtime parameters list (which is also modified in place)
@@ -127,6 +127,18 @@ setRuntimeDirectory <- function(Directory=NULL) {
     setwd(Directory)
   }
   return( ve.env$ve.runtime <- getwd() )
+}
+
+# Get the runtime directory (ve.runtime)
+#' Return the runtime directory established when VEModel package is loaded or by a later call to
+#'   \code{setRuntimeEnvironment}. If the runtime directory has not yet been set, set it to the
+#'   working directory.
+#' @return The ve.runtime directory from the package environment, ve.env
+#' @export
+getRuntimeDirectory <- function() {
+  Directory <- ve.env$ve.runtime
+  if ( is.null(Directory) ) Directory <- setRuntimeDirectory()
+  return(Directory)
 }
 
 # INTERNAL FUNCTION TO SET BASIC RUN PARAMETERS

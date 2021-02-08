@@ -1,15 +1,15 @@
 Add disaggregate functions to Makefile:
 
-VE_MODBUILD (replaces VE_ONLY_BUILD)
+VE_MBUILD (replaces VE_ONLY_BUILD)
 
 If unset, build all modules, otherwise only those with names matching a comma-separated list.
 
 VE_MCLEAR
 
-This is processed before anything afterwsrds in the build
+This is processed before anything afterwards in the build
 
-Remove module files prior to building. Must have one of these values (or it is ignored), or a
-comma-separated subset:
+Remove module files (src folder) prior to building. Must have one of these values (or it is
+ignored), or a comma-separated subset:
 
 "all"  - same as make modules-clean, but only for VE_MODBUILD (and ignored if no VE_MODBUILD set)
 "docs" - clear the module_docs and regular man folders
@@ -24,7 +24,7 @@ during estimation, Local data/ is used when we want to retrieve built data files
 version of system.file() that can get us data/ and extdata/ consistently (so we get the right file
 when the R scripts are being run during check, build, etc.)
 
-VE_MINIT
+VE_MDOCS
 
 Mutually exclusive options (strip everything from a comma on)
 
@@ -39,6 +39,7 @@ Can have different values. If not set, do not do R CMD check at all, and no test
 "chk" - run R CMD check but --no-tests
 "pkg" - do package tests (run R CMD check with tests enabled) (unit testing)
 "run" - do runtime tests (is it working?) after the package has been built (good for developers)
+"none"- do no tests (VE_EXPRESS sets that)
 
 Should be able to do the "run" tests from a pkgload installation. Also should have an
 incremental set of data in a Datastore (with a ModelState) that can be used for the local

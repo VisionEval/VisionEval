@@ -32,8 +32,7 @@ if ( ! suppressWarnings(requireNamespace("withr",quietly=TRUE)) ) {
 
 message("========== BUILD MODULES ==========")
 
-# Reach for ve.lib first when seeking packages used by the ones we're
-# building
+# Reach for ve.lib first when seeking packages used by the ones we're building
 .libPaths( c(ve.lib, .libPaths()) ) # push runtime library onto path stack
 
 built.path.src <- contrib.url(ve.repository, type="source")
@@ -47,24 +46,80 @@ if ( ve.binary.build ) {
   built.path.binary <- NULL
 }
 
-# Where to find the module package sources (in the VisionEval repository)
-ve.packages  <- pkgs.db[pkgs.module,]
+# Configure the build process
 
-package.names <- ve.packages$Package
-ve.only.build <- Sys.getenv("VE_ONLY_BUILD","")
+# Start by grabbing the runtime environment variables (from Make or elsewhere)
+# NOTE: for now, VE_MDOCS is ignored - we'll build all documentation
+build.env <- Sys.getenv(
+  c( "VE_DEBUG_LEVEL", "VE_EXPRESS", "VE_MBUILD", "VE_MTEST", "VE_MCLEAR", "VE_MDOCS" ),
+  unset="" # Don't care about difference between "unset" and "blank string"
+)
+ve.only.build <- build.env["VE_MBUILD"] # need to preserve case on this; empty string says build all
+
+build.env <- tolower(build.env) # don't nitpick upper/lower case for remaining options
+build.defaults <- c(
+  VE_DEBUG_LEVEL = 0,  # 0: no debug, 1: lightweight, 2: full details
+  VE_EXPRESS = "no",   # If "NO" skip all tests and checks
+  VE_MTEST = "chk",    # Options are "chk","pkg","run","all" or "none", which can be combined by ","
+  VE_MCLEAR = "no",    # Remove source folder before rebuild
+  VE_MDOCS = "docs"    # Options are "init" and (all) "docs" for roxygen
+)
+set.defaults <- names(build.env)[ ! nzchar(build.env) ] # names of those with blank values
+build.env[ set.defaults ] <- build.defaults[ set.defaults ]
+
+# Now partition those out to variables
+debug         <- suppressWarnings(as.integer( build.env["VE_DEBUG_LEVEL"]))
+if ( length(debug)==0 || is.na(debug) || is.null(debug) ) debug <- 0
+
+if ( build.env["VE_EXPRESS"] != "no" ) {
+  ve.clear    <- FALSE
+  ve.runtests <- "none"
+  ve.wantdocs <- FALSE
+} else {
+  ve.clear    <- build.env["VE_MCLEAR"] != "no"
+  ve.runtests <- build.env["VE_MTEST"]
+  ve.wantdocs <- build.env["VE_MDOCS"] != "init"
+}
+
+# Determine which, if any, tests to run
+ve.test.modes <- c("chk","pkg","run","all","none")
+ve.test.chk <- ve.test.pkg <- ve.test.run <- FALSE
+
+ve.runtests <- unlist(strsplit(ve.runtests,"[[:blank:]]*,[[:blank:]]*"))
+ve.runtests <- intersect(ve.test.modes,ve.runtests)
+
+ve.test.chk <- ve.test.pkg <- ve.test.run <- FALSE
+if ( length(ve.runtests)>0 && ! "none" %in% ve.runtests ) {
+  if ( "all" %in% ve.runtests ) {
+    ve.test.chk <- ve.test.pkg <- ve.test.run <- TRUE
+  } else {
+    ve.test.pkg <- "pkg" %in% ve.runtests
+    ve.test.chk <- "chk" %in% ve.runtests || ve.test.pkg; # if not "pkg", check does not do tests
+    ve.test.run <- "run" %in% ve.runtests
+  }
+}
+ve.runtests <- any(c(ve.test.chk,ve.test.pkg,ve.test.run))
+
+# Set up framework and modules to build
+# pkgs.framework and pkgs.module are vectors of numeric indices into pkgs.db
+ve.packages <- pkgs.db[c(pkgs.framework,pkgs.module),]
+package.names <- ve.packages$Package 
+
 if ( nzchar(ve.only.build[1]) ) { # will always have at least one "exclusion" but it may be empty
-  ve.only.build <- unlist(strsplit(ve.only.build," *, *"))
+  ve.only.build <- unlist(strsplit(ve.only.build,"[[:blank:]]*,[[:blank:]]*"))
   package.names <- intersect(package.names,ve.only.build) # only (re)build certain packages
-  cat("++++++++++ Only building:",paste0(ve.only.build,collapese=", "),"\n")
+  cat("++++++++++ Only building:",paste0(ve.only.build,collapse=", "),"\n")
+  ve.packages <- ve.packages[ve.packages$Package %in% package.names,]
 } else {
   ve.only.build <- character(0)
 }
+
 if ( length(package.names) == 0 ) {
   cat("++++++++++ Nothing to build due to VE_ONLY_BUILD:",paste0(ve.only.build,collapese=", "),"\n")
   quit(status=0)
 }
 
-package.paths <- file.path(ve.packages[,"Root"], ve.packages[,"Path"], package.names)
+package.paths <- file.path( ve.packages[,"Root"], ve.packages[,"Path"], ve.packages[,"Package"] )
 # Want to assert that all of these eventually have the same length!
 # cat("Number of names:",length(package.names),"\n")
 # cat("Number of paths:",length(package.paths),"\n")
@@ -76,9 +131,6 @@ package.paths <- file.path(ve.packages[,"Root"], ve.packages[,"Path"], package.n
 # We do "build" for Windows or Mac so we can get the .zip package file into the binary pkg-repository
 # On platforms other than Windows or Mac, simply installing will do the necessary build
 
-debug <- as.integer(Sys.getenv("VE_DEBUG_LEVEL",0)) # 0: no debug, 1: lightweight, 2: full details
-if ( is.na(debug) ) debug <- 0 # in case VE_INST_DEBUG
-
 # Locate modules to build in source repository (always build from source package)
 source.modules <- unlist(sapply(package.names,
                   FUN=function(x) file.path(built.path.src,modulePath(x,built.path.src))))
@@ -88,11 +140,8 @@ if ( debug>1 ) {
   print(paste(package.names,source.modules[package.names],file.exists(source.modules[package.names]),sep=":"))
 }
 
-# Oonfigure the build process
-ve.express <- ( length(ve.only.build)==0 && Sys.getenv("VE_EXPRESS","NO") != "NO" )
-
-# Copy test elements from components, if requested in configuration
-if (ve.runtests && ! ve.express) {
+# Copy test elements from components, if requested
+if (ve.test.run) {
   # Copy any additional test folders to ve.src
   # Mostly for "Test_Data", but any set of stuff needed for all tests
   ve.src.files <- pkgs.db[pkgs.test,]
@@ -182,10 +231,10 @@ for ( module in seq_along(package.names) ) {
     }
   }
 
-  # Step 2: Determine package status (built, installed).
+  # Step 2: Determine package status (built, installed)
   # Force to "unbuilt" if package is in VE_ONLY_BUILD
   build.dir <- file.path(ve.src,package.names[module])
-  if ( length(ve.only.build)>0 && nzchar(ve.only.build[1]) ) {
+  if ( ve.clear || ( length(ve.only.build)>0 && nzchar(ve.only.build[1]) ) ) {
     cat("+++++++++++++REMOVING PREVIOUS BUILD FILES\n")
     local({
       pkg.src <- modulePath(package.names[module],built.path.src)
@@ -202,6 +251,7 @@ for ( module in seq_along(package.names) ) {
     if ( dir.exists( build.dir) ) { unlink(build.dir,recursive=TRUE); cat(build.dir,"\n") } else cat("No Build Directory.\n")
     cat("++++++++++++ Done removing previous files\n")
   }
+
   check.dir <- file.path(build.dir,paste0(package.names[module],".Rcheck"))
   if ( debug ) cat( build.dir,"exists:",dir.exists(build.dir),"\n")
   if ( ve.binary.build ) {
@@ -215,7 +265,7 @@ for ( module in seq_along(package.names) ) {
     package.built <- (me <- moduleExists(package.names[module], built.path.binary)) &&
                      (sc <- moduleExists(package.names[module], built.path.src)) &&
                      (de <- ( dir.exists(build.dir) && ! newerThan(package.paths[module],build.dir,quiet=(!debug))) ) &&
-                     (ck <- ( ve.express || dir.exists(check.dir) ) ) &&
+                     (ck <- ( ve.clear || dir.exists(check.dir) ) ) &&
                      (nt <- ! newerThan( quiet=(debug<2),
                               src.module,
                               file.path(built.path.binary,
@@ -258,12 +308,13 @@ for ( module in seq_along(package.names) ) {
     if ( debug>1 ) {
       # Dump list of package source files if debugging
       pkg.files <- file.path(package.paths[module],dir(package.paths[module],recursive=TRUE,all.files=TRUE))
-      if ( ! any(grepl("Rbuildignore",pkg.files)) ) stop("No .Rbuildignore for package ",package.names[module])
+      if ( ! any(grepl("Rbuildignore",pkg.files)) ) warning("No .Rbuildignore for package ",package.names[module])
       cat(paste("Copying",pkg.files,"to",build.dir,"\n",sep=" "),sep="")
     } else {
       cat("++++++++++ Copying module source",package.paths[module],"to build/test environment...\n")
     }
-    if ( ! ve.express ) {
+    if ( is.null(ve.clear) ) ve.clear <- TRUE
+    if ( ve.clear ) {
       if ( dir.exists(build.dir) || file.exists(build.dir) )
         unlink(build.dir,recursive=TRUE) # Get rid of the build directory and start fresh
     }
@@ -278,7 +329,12 @@ for ( module in seq_along(package.names) ) {
     if ( length(dot.files)>0 ) {
       pkg.files <- c(pkg.files,dot.files)
     } else {
-      message("No .Rbuildignore found in",package.paths[module],"\n")
+      message("No .Rbuildignore found in ",package.paths[module])
+      print(dir(package.paths[module],recursive=TRUE,all.files=FALSE))
+      message("dot.files")
+      print(dot.files)
+      message("pkg.files")
+      print(pkg.files)
     }
     pkg.dirs <- c(dirname(pkg.files),"data")
     lapply( grep("^\\.$",invert=TRUE,value=TRUE,unique(file.path(build.dir,pkg.dirs))),
@@ -290,6 +346,12 @@ for ( module in seq_along(package.names) ) {
         overwrite=TRUE, recursive=FALSE
       )
     )
+    if ( ! dir.exists(build.dir) ) {
+      stop("Failed to create build/test environment:",build.dir)
+    }
+    if ( newerThan(package.paths[module],build.dir,quiet=(!debug)) ) {
+      stop("After copying, build/test environment is still older than package.paths")
+    }
 
     ###### HACK ALERT
     # Code above prevents the build from looking at the Github 'data' directory, since it is too
@@ -318,20 +380,29 @@ for ( module in seq_along(package.names) ) {
 
   # Step 4: Run devtools::document() separately to rebuild the /data directory
   if ( ! package.built ) {
-    cat("++++++++++ Pre-build / Document ",package.names[module],"\nin ",build.dir,"\n",sep="")
-    if ( ve.express ) {
+    cat("++++++++++ Pre-build / Document ",package.names[module],"\n",build.dir,"\n",sep="")
+    if ( ! ve.wantdocs ) {
+      # Skip building the .Rd documentation
       withr::with_dir(build.dir,roxygen2::roxygenise(roclets=c("collate","namespace")))
     } else {
       withr::with_dir(build.dir,roxygen2::roxygenise())
     }
-    if ( ! ve.express ) {
-      cat("++++++++++ Checking and pre-processing ",package.names[module],"\nin ",build.dir,"\n",sep="")
+    if ( ve.test.chk ) {
+      ve.testing <- if ( ve.test.pkg ) ", testing" else NULL
+      cat("++++++++++ Checking",ve.testing," and pre-processing ",package.names[module],"\nin ",build.dir,"\n",sep="")
       # Run the module check (prior to building anything)
-      # Run Roxygen with load='source' option in package DESCRIPTION
-      # Requires us to set the working directory outside devtools:check, otherwise it gets very
-      # confused about where to put the generated /data elements.
+      # Set working directory outside devtools:check, or it gets very confused about where to put generated /data elements.
       # Need to set "check.dir" location explicitly to "check_dir=build.dir" (otherwise lost in space)
-      check.results <- withr::with_dir(build.dir,devtools::check(".",check_dir=build.dir,document=FALSE,error_on="error"))
+      chk.args <- if ( ! ve.test.pkg ) "--no-tests" else ""
+      check.results <- withr::with_dir(  build.dir,
+        devtools::check(
+          ".",
+          check_dir=build.dir,
+          document=FALSE,
+          args=chk.args,
+          error_on="error"
+        )
+      )
       cat("++++++++++ Check results\n")
       print(check.results)
     }
@@ -344,23 +415,11 @@ for ( module in seq_along(package.names) ) {
       print(search())
     }
 
-    # TO TEST: Might be able to move/copy tmp.build source package to built.path.src instead of deleting
-    # it; then build binary and install from that version.
-    # Also get rid of the temporary (and possibly obsolete) source package that is left behind
+    # Then get rid of the temporary (and possibly obsolete) source package that is left behind
     # Must build again rather than use that built package, because the results of devtools::check
     #   updates (but does not include) any files in /data
     tmp.build <- file.path(build.dir,modulePath(package.names[module],build.dir))
     if ( length(tmp.build)>0 && file.exists(tmp.build) ) unlink(tmp.build)
-
-    # Run the tests on build.dir if requested
-    if ( ve.runtests && ! ve.express ) {
-      test.script <- file.path(build.dir,ve.packages$Test[module])
-      message("Executing tests from ",test.script,"\n")
-      callr::rscript(script=test.script,wd=build.dir,libpath=.libPaths(),fail_on_status=FALSE)
-      message("Completed test script.")
-    } else {
-      cat("\nNot running tests.\n\n")
-    }
   }
 
   # If not built, rebuild the source module from build.dir (this time, with updated /data)
@@ -369,13 +428,11 @@ for ( module in seq_along(package.names) ) {
     obsolete <- dir(built.path.src,pattern=paste0(package.names[module],"*_"))
     if ( length(obsolete)>0 ) cat("obsolete:",obsolete,"\n")
     unlink( file.path(built.path.src,obsolete) )
-# TO TEST: do we need to rebuild here? Could use results of "check" for source package
     src.module <- devtools::build(build.dir, path=built.path.src)
     num.src <- num.src + 1
   }
 
   # Step 6: Build the binary package (Windows or Mac) and install the package
-
   tryCatch(
     {
       # VE_BUILD_PHASE="BUILD" says remove package datasets from R/ space (see visioneval/R/module.R)
@@ -428,6 +485,21 @@ for ( module in seq_along(package.names) ) {
     finally = Sys.unsetenv("VE_BUILD_PHASE")
   )
 }
+
+# Run the tests on build.dir if requested
+if ( ve.test.run ) {
+  # Run test script is listed in configuration
+  test.script <- file.path(build.dir,ve.packages$Test[module])
+  if ( file.exists(test.script) ) {
+    message("Executing tests from ",test.script,"\n")
+    # Do the run tests in a fresh environment
+    callr::rscript(script=test.script,wd=build.dir,libpath=.libPaths(),fail_on_status=FALSE)
+    message("Completed test script.")
+  }
+} else {
+  cat("\nRun tests not requested.\n\n")
+}
+
 
 # Update the repository PACKAGES files (source and binary) if we rebuilt any
 # of the packages.
