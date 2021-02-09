@@ -54,6 +54,10 @@ evalq(
     install.packages("yaml", lib=dev.lib, repos="https://cloud.r-project.org", dependencies=NA, type=.Platform$pkgType )
   }
 
+  # Get VisionEval release version (used in installer file.names
+  ve.version <- Sys.getenv("VE_VERSION","2.0")
+  cat("Building VisionEval version",ve.version,"\n")
+
   # Specify dependency repositories for known R versions
   rversions <- yaml::yaml.load_file(file.path(ve.build.dir,"R-versions.yml"))
 
@@ -387,6 +391,7 @@ evalq(
   )
   make.variables <- c(
      VE_R_VERSION      = this.R
+    ,VE_VERSION        = ve.version
     ,VE_LOGS           = ve.logs
     ,VE_DEVLIB         = dev.lib
     ,VE_BRANCH         = ve.branch
@@ -616,6 +621,7 @@ evalq(
     , "ve.logs"
     , "ve.installer"
     , "ve.zipout"
+    , "ve.version"
     , "ve.platform"
     , "ve.build.type"
     , "ve.binary.build"

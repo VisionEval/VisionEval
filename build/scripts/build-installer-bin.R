@@ -17,12 +17,12 @@ request.build = "binary"
 # Need the ".zip" extension?
 build.date <- Sys.Date()
 
-installer.base   <- paste0(file.path(ve.zipout,paste0("VE-Runtime-R",this.R,"_",build.date)),".zip")
+installer.base   <- paste0(file.path(ve.zipout,paste0("VE-",ve.version,"-Runtime-R",this.R,"_",build.date)),".zip")
 if ( ! file.exists(installer.base) ) {
   stop("Must run installer-base build first for base elements",call.=FALSE)
 }
-installer.binary <- paste0(file.path(ve.zipout,paste0("VE-Installer-",ve.platform,"-R",this.R,"_",build.date)),".zip")
-installer.source <- paste0(file.path(ve.zipout,paste0("VE-PackageSources-R",this.R,"_",build.date)),".zip")
+installer.binary <- paste0(file.path(ve.zipout,paste0("VE-",ve.version,"-Installer-",ve.platform,"-R",this.R,"_",build.date)),".zip")
+installer.source <- paste0(file.path(ve.zipout,paste0("VE-",ve.version,"-PackageSources-R",this.R,"_",build.date)),".zip")
 
 if ( length(grep("^mac",ve.build.type))>0 ) {
   installer.pkg  <- installer.binary    # On Mac, the standard binary installer uses ve.pkgs

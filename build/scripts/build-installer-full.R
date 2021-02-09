@@ -16,11 +16,11 @@ ve.build.type = "source"
 # Need the ".zip" extension?
 build.date <- Sys.Date()
 
-installer.base   <- paste0(file.path(ve.zipout,paste0("VE-Runtime-R",this.R,"_",build.date)),".zip")
+installer.base   <- paste0(file.path(ve.zipout,paste0("VE-",ve.version,"-Runtime-R",this.R,"_",build.date)),".zip")
 if ( ! file.exists(installer.base) ) {
   stop("Must run installer-base build first for base elements",call.=FALSE)
 }
-installer.pkg  <- paste0(file.path(ve.zipout,paste0("VE-Installer-Full-R",this.R,"_",build.date)),".zip")
+installer.pkg  <- paste0(file.path(ve.zipout,paste0("VE-",ve.version,"-Installer-Full-R",this.R,"_",build.date)),".zip")
 
 owd <- getwd()
 

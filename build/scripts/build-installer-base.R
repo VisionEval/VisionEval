@@ -15,7 +15,7 @@ message("========== BUILD INSTALLER BASE (.zip files) ==========")
 build.date <- Sys.Date()
 
 ve.zipout <- dirname(ve.runtime)
-installer.base   <- paste0(file.path(ve.zipout,paste0("VE-Runtime-R",this.R,"_",build.date)),".zip")
+installer.base   <- paste0(file.path(ve.zipout,paste0("VE-",ve.version,"-Runtime-R",this.R,"_",build.date)),".zip")
 cat("Building base installer...")
 
 owd <- getwd()
