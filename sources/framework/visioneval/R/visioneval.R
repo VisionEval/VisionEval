@@ -100,14 +100,14 @@ function(
   ####            create the Datastore. The "ResultsDir" (plus scenario or stage)
 
   # Access the model environment and check for RunModel condition
-  ve.model <- modelEnvironment(Clear="") # clear ve.model environment
+  ve.model <- modelEnvironment(Clear="") # clear ve.model environment (but don't destroy pre-existing RunParam_ls)
   RunModel <- modelRunning()
 
   # Check for pre-existing elements in ve.model environment (e.g. from VEModel$run) and RunParam_ls found there
   Param_ls <- addParameterSource(
     get0( "RunParam_ls", envir=ve.model, ifnotfound=list() ),
     "RunParam_ls in modelEnvironment()"
-  ) 
+  )
 
   ModelDir <- getRunParameter("ModelDir",Param_ls=Param_ls)
 
@@ -131,7 +131,7 @@ function(
   ModelScriptFile <- getRunParameter("ModelScriptFile",Param_ls=RunParam_ls)
 
   # If ResultsDir is not present in RunParam_ls, set it to the current directory
-  if ( ! "ResultsDir" %in% RunParam_ls ) RunParam_ls[["ResultsDir"]] <- "."
+  if ( ! "ResultsDir" %in% names(RunParam_ls) ) RunParam_ls[["ResultsDir"]] <- "."
 
   # If the RunParam version of ModelScriptFile is relative, normalize it
   # to ModelDir (which defaults to the current directory for backward compatibility)

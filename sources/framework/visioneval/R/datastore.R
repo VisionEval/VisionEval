@@ -538,7 +538,6 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, M
       unlist(G$Datastore$attributes[G$Datastore$groupname == file.path(Group, Table)])
     AllowedLength <- TableAttr_["LENGTH"]
     if (any(Index > AllowedLength)) {
-      browser()
       Message <-
         c(
           paste0(
@@ -1195,34 +1194,19 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
     Type <- Spec_ls$TYPE
     #Identify datastore files and groups to get data from
     if (Group == "Global") {
-      # JRaw TODO: get this to support "Loaded" Datastores that have
-      # not been copied.
       DstoreGroup <- "Global"
-## Unsupported:
-#       if (!is.null(G$DatastoreReferences$Global)) {
-#         Files_ <- c(G$DatastoreName, G$DatastoreReferences$Global)
-#       } else {
-        Files_ <- G$DatastoreName;
-#       }
     }
     if (Group == "BaseYear") {
       DstoreGroup <- G$BaseYear;
       if (G$BaseYear %in% G$Years) {
         Files_ <- G$DatastoreName
       } else {
-## Unsupported:
-#         Files_ <- G$DatastoreReferences[[G$BaseYear]]
-      stop( writeLog("BaseYear not in Datastore Years",Level="error") )
+        stop( writeLog("BaseYear not in Datastore Years",Level="error") )
       }
     }
     if (Group == "Year") {
       DstoreGroup <- RunYear;
-## Unsupported
-#       if (!is.null(G$DatastoreReferences[[RunYear]])) {
-#         Files_ <- c(G$DatastoreName, G$DatastoreReferences[[RunYear]])
-#       } else {
-        Files_ <- G$DatastoreName;
-#       }
+      Files_ <- G$DatastoreName;
     }
     #Add table component to list if does not exist
     if (is.null(L[[Group]][[Table]])) {
@@ -1232,62 +1216,47 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
     }
     #Make an index to the data
     DoCreateIndex <-
-      !is.null(Geo) &
-      !(Group == "Global" & !(Table %in% c("Marea", "Azone", "Bzone", "Czone")))
+    !is.null(Geo) &
+    !(Group == "Global" & !(Table %in% c("Marea", "Azone", "Bzone", "Czone")))
     if (DoCreateIndex) {
       Index <-
-        createGeoIndex(Table, DstoreGroup, ModuleSpec_ls$RunBy, Geo, GeoIndex_ls)
+      createGeoIndex(Table, DstoreGroup, ModuleSpec_ls$RunBy, Geo, GeoIndex_ls)
     } else {
       Index <- NULL
     }
-## Unsupported:
-#     #Fetch the data and add to the input list
-#     getModelListing <- function(DstoreRef) {
-#       ModelStateFile <- paste(dirname(DstoreRef), getModelStateFileName(), sep = "/")
-#       return( readModelState(FileName = ModelStateFile, envir=new.env()) )
-#     }
-#     if ( length(Files_)>1 || Files_ != "Datastore" ) {
-#       stop( writeLog("Unsupported in getFromDatastore (1245): list of Datastores to read",level="error") )
-#     }
-## Unsupported:   for (File in Files_) {
-      DstoreListing_ls <- G$Datastore
-      DatasetExists <- checkDataset(Name, Table, DstoreGroup, DstoreListing_ls)
-      if (DatasetExists) {
-        Data_ <- readFromTable(Name, Table, DstoreGroup, Index)
-        #Convert currency
-        if (Type == "currency") {
-          FromYear <- G$BaseYear
-          ToYear <- Spec_ls$YEAR
-          if (FromYear != ToYear) {
-            Data_ <- deflateCurrency(Data_, FromYear, ToYear)
-            rm(FromYear, ToYear)
-          }
+    DstoreListing_ls <- G$Datastore
+    DatasetExists <- checkDataset(Name, Table, DstoreGroup, DstoreListing_ls)
+    if (DatasetExists) {
+      Data_ <- readFromTable(Name, Table, DstoreGroup, Index)
+      #Convert currency
+      if (Type == "currency") {
+        FromYear <- G$BaseYear
+        ToYear <- Spec_ls$YEAR
+        if (FromYear != ToYear) {
+          Data_ <- deflateCurrency(Data_, FromYear, ToYear)
         }
-        #Convert units
-        SimpleTypes_ <- c("integer", "double", "character", "logical")
-        ComplexTypes_ <- names(Types())[!(names(Types()) %in% SimpleTypes_)]
-        if (Type %in% ComplexTypes_) {
-          AttrGroup <- switch(
-            Group,
-            Year = RunYear,
-            BaseYear = G$BaseYear,
-            Global = "Global"
-          )
-          Conversion_ls <-
-          convertUnits(Data_, Type,
-                       getDatasetAttr(Name, Table, AttrGroup, DstoreListing_ls)$UNITS,
-                       Spec_ls$UNITS)
-          Data_ <- Conversion_ls$Values
-          rm(AttrGroup, Conversion_ls)
-        }
-        rm(SimpleTypes_, ComplexTypes_)
-        #Convert magnitude
-        Data_ <- convertMagnitude(Data_, 1, Spec_ls$MULTIPLIER)
-        #Add data to list
-        L[[Group]][[Table]][[Name]] <- Data_
       }
-## Unsupported:    }
-    rm(Spec_ls, Group, Table, Name, Type, DstoreGroup, Files_)
+      #Convert units
+      SimpleTypes_ <- c("integer", "double", "character", "logical")
+      ComplexTypes_ <- names(Types())[!(names(Types()) %in% SimpleTypes_)]
+      if (Type %in% ComplexTypes_) {
+        AttrGroup <- switch(
+          Group,
+          Year = RunYear,
+          BaseYear = G$BaseYear,
+          Global = "Global"
+        )
+        Conversion_ls <-
+        convertUnits(Data_, Type,
+          getDatasetAttr(Name, Table, AttrGroup, DstoreListing_ls)$UNITS,
+          Spec_ls$UNITS)
+        Data_ <- Conversion_ls$Values
+      }
+      #Convert magnitude
+      Data_ <- convertMagnitude(Data_, 1, Spec_ls$MULTIPLIER)
+      #Add data to list
+      L[[Group]][[Table]][[Name]] <- Data_
+    }
   }
   #Return the list
   return( L )

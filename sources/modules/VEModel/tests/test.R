@@ -71,14 +71,30 @@ cleanup <- function() {
   if ( length(runtimes)>0 && isTRUE(askYesNo("Remove runtimes?")) ) unlink(runtimes,recursive=TRUE)
 }
 
-test_model <- function() {
-  if ( dir.exists("models/JRSPM") ) {
-    message("Clearing runtime environment")
-    unlink("models/JRSPM",recursive=TRUE)
-  }
-  rs <- installModel("VERSPM","JRSPM")
-  rs$run()
-  return(rs)
+test_model <- function(log="warn") {
+  owd <- getwd()
+  tryCatch(
+    {
+      if ( dir.exists("models/JRSPM") ) {
+        message("Clearing runtime environment")
+        unlink("models/JRSPM",recursive=TRUE)
+      }
+      rs <- installModel("VERSPM","JRSPM",log=log)
+      rs$run(log=log)
+      return(rs)
+    },
+    error=function(e) { cat(conditionMessage(e),"\n"); takedown(); stop(e) },
+    finally=setwd(owd)
+  )
+  return("Failed to run.")
 }
 
-print(ls())
+test_results <- function (log="warn") {
+  model <- openModel("JRSPM")
+  rs <- model$results()
+  # do things to the results, including exporting them
+  # also test unit reporting / conversions
+  # create a report of what was extracted (including target units)
+  # include units in exported file? Create a metadata file - that
+  # would be good (with name, description, units storted, units exported
+}
