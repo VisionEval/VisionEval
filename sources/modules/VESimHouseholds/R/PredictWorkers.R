@@ -360,7 +360,7 @@ PredictWorkers <- function(L) {
           MaxVal <- TotPrsn / sum(NumPrsn_ * Probs_)
           Msg <- paste0(
             "Error during run of PredictWorkers module! ",
-            "The value of ", Re[i], " for Azone ", az, " in Year ", Year,
+            "The value of ", Re[i], " for Azone ", az,
             " will result in more workers than people in that age category. ",
             "The maximum value of ", Re[i], " must be less than ",
             round(MaxVal, 2), ".")
