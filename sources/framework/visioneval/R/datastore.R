@@ -495,6 +495,8 @@ initDatasetRD <- function(Spec_ls, Group) {
 #' dataset is located.
 #' @param Group a string representation of the name of the datastore group the
 #' data is to be read from.
+#' @param DstoreLoc Path to alternate Datastore location (default is DatastoreName from
+#'    ModelState_ls in the working directory)
 #' @param ModelState_ls an alternative ModelState_ls (for ad hoc retrieval of
 #'    a Dataset - getwd() must contain the Datastore)
 #' @param Index A numeric vector identifying the positions the data is to be
@@ -504,7 +506,7 @@ initDatasetRD <- function(Spec_ls, Group) {
 #' @return A vector of the same type stored in the datastore and specified in
 #' the TYPE attribute.
 #' @export
-readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, ModelState_ls = NULL) {
+readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, DstoreLoc=NULL, ModelState_ls = NULL) {
   #Expects to find the Datastore in the working directory
   #Load the model state file
   if ( is.null(ModelState_ls) ) {
@@ -513,7 +515,8 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, M
     G <- ModelState_ls
   }
   #If DstoreLoc is NULL get the name of the datastore from the model state
-  DstoreLoc <- G$DatastoreName;
+  if ( is.null(DstoreLoc) ) DstoreLoc <- G$DatastoreName; # presume it's in the working directory
+
   #Check that dataset exists to read from and if so get path to dataset
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if (DatasetExists) {
@@ -904,6 +907,8 @@ initDatasetH5 <- function(Spec_ls, Group) {
 #'   dataset is located.
 #' @param Group a string representation of the name of the datastore group the
 #' data is to be read from.
+#' @param DstoreLoc Path to alternate Datastore location (default is DatastoreName from
+#'    ModelState_ls in the working directory)
 #' @param ModelState_ls an alternative ModelState_ls (for ad hoc retrieval of
 #'    a Dataset - getwd() must contain the Datastore)
 #' @param Index A numeric vector identifying the positions the data is to be
@@ -914,7 +919,7 @@ initDatasetH5 <- function(Spec_ls, Group) {
 #'   the TYPE attribute.
 #' @export
 #' @import rhdf5
-readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, ModelState_ls = NULL) {
+readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, DstoreLoc = NULL, ModelState_ls = NULL) {
   #Expects to find the Datastore in the working directory
   #Load the model state file
   if ( is.null(ModelState_ls) ) {
@@ -923,7 +928,8 @@ readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, M
     G <- ModelState_ls
   }
   #If DstoreLoc is NULL get the name of the datastore from the model state
-  DstoreLoc <- G$DatastoreName
+  if ( is.null(DstoreLoc) ) DstoreLoc <- G$DatastoreName; # presume it's in the working directory
+
   #Check that dataset exists to read from
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if (DatasetExists) {

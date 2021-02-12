@@ -28,12 +28,14 @@ runtimeEnvironment <- function() ve.env
 # Set up package defaults for VE getRunParameter
 
 default.parameters.table = list(
-  ModelRoot           = "models",
-  ModelScript         = "run_model\\.R",
-  ModelScriptFile     = "run_model.R",
-  QueryFileName       = "New-Query.VEqry",
-  QueryDir            = "queries",
-  QueryOutputTemplate = "Measures_%scenario%_%years%_%geography%.csv"
+  ModelRoot            = "models",
+  ModelScript          = "run_model\\.R",
+  ModelScriptFile      = "run_model.R",
+  ConfigDir            = "",  # Holds display_units.csv (relative to ve.runtime)
+  DisplayUnitsFile     = "display_units.csv",
+  QueryFileName        = "New-Query.VEqry",
+  QueryDir             = "queries",
+  QueryOutputTemplate  = "Measures_%scenario%_%years%_%geography%.csv"
 )
 
 #GET DEFAULT PARAMETERS
@@ -110,6 +112,11 @@ getRuntimeParameters <- function(paramNames=NULL) {
 
 # Set the VE runtime directory; for now, only used internally on package startup
 # Could export to allow moving to a different runtime location
+#' Set the runtime direcdtory
+#'
+#' @param Directory a specific directory (relative to getwd()) to use as the runtime
+#' @return The directory that has been selected as the runtime
+#' @export
 setRuntimeDirectory <- function(Directory=NULL) {
   if ( is.null(Directory) ) {
     Directory <- if ( ! exists("ve.runtime",envir=ve.env,inherits=FALSE) ) {
@@ -130,8 +137,9 @@ setRuntimeDirectory <- function(Directory=NULL) {
 }
 
 # Get the runtime directory (ve.runtime)
+#' Get the runtime directory
 #' Return the runtime directory established when VEModel package is loaded or by a later call to
-#'   \code{setRuntimeEnvironment}. If the runtime directory has not yet been set, set it to the
+#'   \code{setRuntimeDirectory}. If the runtime directory has not yet been set, set it to the
 #'   working directory.
 #' @return The ve.runtime directory from the package environment, ve.env
 #' @export
@@ -175,3 +183,19 @@ ve.model.setupRunEnvironment <- function(
 
   invisible(ve.model$RunParam_ls)
 }
+
+# FUNCTION TO MAKE A UNIQUE FILE NAME
+#====================================
+#  Get unique file name based on newName in folder newPath
+#  NewPath is the directory it should go in, newName is the name to disambiguate
+getUniqueName <- function(newPath,newName) {
+  newModelPath <- file.path(newPath,newName)
+  tryName <- newName; try <- 1
+  while ( dir.exists(newModelPath) ) {
+    tryName <- paste0(newName,"(",try,")")
+    newModelPath <- file.path(newPath,tryName)
+    try <- try+1
+  }
+  return (newModelPath)
+}
+

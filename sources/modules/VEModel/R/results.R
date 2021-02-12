@@ -5,24 +5,33 @@ self=private=NULL
 # Output just wraps a ModelState and Datastore for one stage
 # It maintains everything we need for a QueryPrep_ls structure for queries
 # Plus it can export slices of the Datastore into .csv or data.frame
-ve.results.init <- function(OutputPath,Param_ls=NULL) {
+ve.results.init <- function(OutputPath,ModelDir=NULL,Param_ls=NULL) {
   # OutputPath is the normalized path to a directory containing the model results
   #  typically from the last model stage. Expect to find a ModelState.Rda file
   #  and a Datastore in that folder.
+  # mo
   # Param_ls is the list of Run Parameters used by the model
-  self$path <- OutputPath
+  self$resultsPath <- OutputPath
+  self$modelDir <- if ( ! is.null(ModelDir) ) ModelDir else getwd()
   self$Name <- basename(OutputPath)
-  private$RunParam_ls <- Param_ls
-  private$index()
+  private$RunParam_ls <- Param_ls;
+    # NULL Param_ls will use default from VEModel::ve.env
+    # In practice, if a VEResults object is created from an arbitrary path,
+    #   we'll use the system parameters (loading VisionEval.cnv from ve.runtime/local/config/VisonEval.cnf if
+    #   that path exists, otherwise looking in ve.runtime/VisionEval.cnf if that exists)
+    # If we're coming from a VEModel, we'll use its RunParam_ls, which will
+    #   read VisionEval.cnf from the path supplied to VEModel::new it it exists,
+    #   otherwise reading defs/VisionEval.cnf if that exists
+  self$index()
   self$selection <- VESelection$new(self)
   return(self$valid())
 }
 
 ve.results.valid <- function() {
   valid <- ! is.null(private$RunParam_ls) &&
-           dir.exists(self$path) &&
+           dir.exists(self$resultsPath) &&
            !is.null(self$modelIndex) && length(self$modelIndex)>0
-  modelStateFile <- file.path(self$path,visioneval::getRunParameter("ModelStateFileName",Param_ls=private$RunParam_ls))
+  modelStateFile <- file.path(self$resultsPath,visioneval::getRunParameter("ModelStateFileName",Param_ls=private$RunParam_ls))
   valid <- valid && all(file.exists(modelStateFile))
   return(valid)
 }
@@ -50,22 +59,22 @@ attributeGet <- function(variable, attr_name){
 }
 
 ve.results.index <- function() {
-  # Load model state from self$path
+  # Load model state from self$resultsPath
   ve.model <- new.env()
   FileName=normalizePath( file.path(
-    self$path, # Should already include ResultsDir
+    self$resultsPath, # Should already include ResultsDir
     visioneval::getModelStateFileName(Param_ls=private$RunParam_ls)
   ), winslash="/", mustWork=FALSE)
   ms <- self$ModelState <- try(visioneval::readModelState(FileName=FileName))
-  if ( ! is.list(self$ModelState) ) {
-    self$ModelState <- NULL
+  if ( ! is.list(ms) ) {
+    ms <- self$ModelState <- NULL
     visioneval::writeLog(Level="error",paste("Cannot load ModelState from:",FileName))
     return(list())
   }
-  if ( is.null(private$RunParam_ls) && is.list(self$ModelState ) ) {
-    private$RunParam_ls <-self$ModelState$RunParam_ls
+  if ( is.null(private$RunParam_ls) && is.list( ms ) ) {
+    private$RunParam_ls <-ms$RunParam_ls
   }
-  owd <- setwd(self$path)
+  owd <- setwd(self$resultsPath)
   on.exit(setwd(owd))
 
   if ( ! file.exists( ms$DatastoreName ) ) {
@@ -90,87 +99,50 @@ ve.results.index <- function() {
   }
   ds <- (ms$Datastore)
 
-  InputIndex <- sapply(ds$attributes, attributeExist, "FILE")
   Description <- sapply(ds$attributes, attributeGet, "DESCRIPTION",simplify=TRUE) # should yield a character vector
   Module <- sapply(ds$attributes, attributeGet, "MODULE",simplify=TRUE) # should yield a character vector
   Units <- sapply(ds$attributes, attributeGet, "UNITS",simplify=TRUE) # should yield a character vector
   InputDir <- sapply(ds$attributes, attributeGet, "INPUTDIR",simplify=TRUE) # should yield a character vector
+  InputDir[ is.na(InputDir) ] <- ""
+  File <- sapply(ds$attributes, attributeGet, "FILE",simplify=TRUE) # should yield a character vector
+  File[ is.na(File) ] <- ""
   scenario <- visioneval::getRunParameter("Scenario",Default="Unknown Scenario",Param_ls=private$RunParam_ls)
 
-  # TODO: do we want to keep the inputs in the same table as the other fields?
-  # In the specifications, inputs create columns in the datastore.
-  
   splitGroupTableName <- strsplit(ds$groupname, "/")
   if ( length(Description) != length(splitGroupTableName) ) stop("Inconsistent table<->description correspondence")
 
   maxLength <- max(unlist(lapply(splitGroupTableName, length)))
   if ( maxLength != 3 ) {
-    visioneval::writeLog(Level="warn",paste0("Model state at ",self$path," is incomplete (",maxLength,")"))
+    visioneval::writeLog(Level="warn",paste0("Model state at ",self$resultsPath," is incomplete (",maxLength,")"))
     return(list())
   }
   splitGroupTableName <- lapply(splitGroupTableName , function(x) c(x, rep(NA, maxLength-length(x))))
   # splitGroupTableName is a list of character vectors with Group, Table, Name components
 
-  inputGTN <- do.call(rbind.data.frame,splitGroupTableName)[InputIndex,]
-  names(inputGTN) <- c("Group","Table","Name")
+  fieldGTN <- do.call(rbind.data.frame,splitGroupTableName)
+  names(fieldGTN) <- c("Group","Table","Name")
 
-  # Build parallel data.frame for Inputs
+  # Build parallel data.frame for Inputs (including File parameter)
   # message("Input data frame...")
-  File <- sapply(ds$attributes, attributeGet, "FILE",simplify=TRUE) # should yield a character vector
-  inputs <- data.frame(
-    Group       = inputGTN$Group[InputIndex],
-    Table       = inputGTN$Table[InputIndex],
-    Name        = ds$name[InputIndex], # Should be identical to inputGTN$Name
-    Description = Description[InputIndex],
-    Units       = Units[InputIndex],
-    Module      = Module[InputIndex],
+  Index <- data.frame(
+    Group       = fieldGTN$Group,
+    Table       = fieldGTN$Table,
+    Name        = fieldGTN$Name, # Should be identical to ds$name
+    Description = Description,
+    Units       = Units,
+    Module      = Module,
     Scenario    = scenario,
-    File        = File[InputIndex],
-    InputDir    = InputDir[InputIndex]
+    File        = File,          # "" if not an Input
+    InputDir    = InputDir       # "" if not an Input
   )
-  Inputs <- rbind(Inputs,inputs)
 
-  Description <- Description[!InputIndex]
-  Module <- Module[!InputIndex]
-  Units <- Units[!InputIndex]
-  splitGroupTableName <- splitGroupTableName[!InputIndex]
-
-  # Add modelPath and Scenario Description to Index row
-  PathGroupTableName <- list()
-  for ( i in 1:length(splitGroupTableName) ) {
-    PathGroupTableName[[i]] <- c(
-      splitGroupTableName[[i]],
-      Description[i],
-      Units[i],
-      Module[i],
-      scenario,
-      "",         # File
-      ""          # InputDir
-    )
-  }
-  if ( any((cls<-lapply(PathGroupTableName,class))!="character") ) {
-    bad.class <- which(cls!="character")
-    print( PathGroupTableName[[bad.class[1]]] )
-    print( length(bad.class) )
-    stop("Non-character vector in Datastore index row")
-  }
-
-  # Using 'do.call' turns each element of the splitGroupTableName list into one argument for rbind.data.frame
-  # By contrast, calling rbind.data.frame(splitGroupTableName) simply converts the list (a single argument) into a
-  # data.frame (so each element becomes one column) Explanation:
-  # https://www.stat.berkeley.edu/~s133/Docall.html
-  GroupTableName <- data.frame()
-  GroupTableName <- do.call(rbind.data.frame, PathGroupTableName)
-  names(GroupTableName) <- c("Group", "Table", "Name","Description", "Units","Module","Scenario","File","InputDir")
-
-  # GroupTableName is now a data.frame with five columns
+  # GroupTableName is now a data.frame with nine columns
   # complete.cases blows away the rows that have any NA values
   # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each column)
-  ccases <- stats::complete.cases(GroupTableName)
-  GroupTableName <- GroupTableName[ccases,]
-  Index <- rbind(Index,GroupTableName)
-
-  self$modelIndex <- rbind(Index,Inputs)
+  ccases <- stats::complete.cases(Index[,c("Group","Table","Name")])
+  Index <- Index[ccases,]
+  row.names(Index) <- 1:nrow(Index)
+  self$modelIndex <- Index
   invisible(self$modelIndex)
 }
 
@@ -185,7 +157,7 @@ ve.results.list <- function(pattern="", details=FALSE, selected=TRUE, ...) {
   if ( ! self$valid() ) stop("Model has not been run yet.")
 
   filter <- if ( missing(selected) || selected ) {
-    self$selection$index
+    which( 1:nrow(self$modelIndex) %in% self$selection$selection )
   } else {
     rep(TRUE,nrow(self$modelIndex))
   }
@@ -193,20 +165,95 @@ ve.results.list <- function(pattern="", details=FALSE, selected=TRUE, ...) {
     filter <- filter & grepl(pattern,self$modelIndex$Name,ignore.case=TRUE )
   }
 
-  # TODO: return Group/Table/Name format, not bare name
   if ( missing(details) || ! details ) {
-    ret.fields <- c("Name")
+    ret.value <- with( self$modelIndex[ filter, ], paste(Group,Table,Name,sep="/") ) # generates a character vector
   } else {
-    ret.fields <- names(self$modelIndex)
+    ret.value <- self$modelIndex[ filter, ] # Generates a data.frame with all columns
   }
-  ret.value <- self$modelIndex[ filter, ret.fields, drop=TRUE ]
-  if ( class(ret.value)!='character' ) ret.value <- ret.value[order(ret.value$Group, ret.value$Name),]
   return(unique(ret.value))
 }
 
+# Helper function to attach DisplayUnits to a list of Group/Table/Name rows in a data.frame
+addDisplayUnits <- function(GTN_df,Param_ls) {
+  # GTN_df is a data.frame with "Group","Table","Name" rows for each Name/field for which display
+  #  units are sought. Always re-open the DisplayUnits file, as it may have changed since the last
+  #  run.
+  ConfigDir <- visioneval::getRunParameter("ConfigDir",Param_ls=Param_ls) # relative to ve.runtime
+  ParamDir <- visioneval::getRunParameter("ParamDir",Param_ls=Param_ls)   # relative to InputPath
+  InputPath <- visioneval::getRunParameter("InputPath",Param_ls=Param_ls)
+
+  DisplayUnitsFile <- visioneval::getRunParameter("DisplayUnitsFile",Param_ls=Param_ls)
+  DisplayUnitsFile <- c(
+    visioneval::findFileOnPath(
+      Root=getRuntimeDirectory(),
+      Dir=ConfigDir,
+      File=DisplayUnitsFile,onlyExists=FALSE
+    ),
+    visioneval::findFileOnPath(
+      Root=InputPath,
+      Dir=ParamDir,
+      File=DisplayUnitsFile,onlyExists=FALSE
+    )
+  )
+
+  existing <- file.exists(DisplayUnitsFile)
+  if ( ! any(existing) ) {
+    visioneval::writeLog( Level="info",
+      c("Specified DisplayUnits file does not exist (using default units):",paste(DisplayUnitsFile,collapse="; "))
+    )
+    return( cbind(GTN_df,DisplayUnits=NA,DisplayUnitsFile="None") )
+  } else {
+    DisplayUnitsFile <- DisplayUnitsFile[existing][1]
+  }
+  cat("DisplayUnitsFile:\n")
+  print(DisplayUnitsFile)
+  displayUnits <- try(utils::read.csv(DisplayUnitsFile),silent=TRUE)   # May fail for various reasons
+  if ( ! "data.frame" %in% class(displayUnits) ) {
+    visioneval::writeLog( Level="warn",
+      c(
+        "Error reading DisplayUnits file:",
+        DisplayUnitsFile,
+        paste("Error:",conditionMessage(attr(displayUnits,"condition")))
+      )
+    )
+    return( cbind(GTN_df,DisplayUnits=NA, DisplayUnitsFile="None") )
+  }
+  if ( ! all( c("Group","Table","Name","DisplayUnits") %in% names(displayUnits) ) ) {
+    visioneval::writeLog( Level="warn",
+      c("Specified DisplayUnits file does not have correct columns:",DisplayUnitsFile,
+        paste("Columns:",names(displayUnits),collapse=", ")
+      )
+    )
+    return( cbind(GTN_df,DisplayUnits=NA, DisplayUnitsFile="None") )
+  }
+  displayUnits$DisplayUnitsFile <- DisplayUnitsFile
+  displayUnits <- try( merge(GTN_df,displayUnits,by=c("Group","Table","Name"),all.x=TRUE), silent=TRUE )
+  if (
+    ! "data.frame" %in% class(displayUnits) ||
+    ! all( c("Group","Table","Name","DisplayUnits") %in% names(displayUnits) ) # it can have other fields, e.g. original Units
+  ) {
+    if ( "data.frame" %in% class(displayUnits) ) {
+      displayUnits <- paste("Bad Fields - ",names(displayUnits),collapse=", ")
+    } else {
+      displayUnits <- conditionMessage(attr(displayUnits,"condition"))
+    }
+    visioneval::writeLog( Level="warn",
+      c(
+        "Error reading DisplayUnits file:",
+        DisplayUnitsFile,
+        paste("Error:",displayUnits)
+      )
+    )
+    return( cbind(GTN_df,DisplayUnits=NA, DisplayUnitsFile="None") )
+  }
+  # get here with displayUnits being GTN_df, augmented by matching DisplayUnits
+  return(displayUnits) # Minimally includes Group, Table, Name, DisplayUnits, DisplayUnitsFile
+}
+  
+
 ve.results.inputs <- function( fields=FALSE, module="", filename="" ) {
-  # fields=TRUE, show all names of inputs
-  # fields=FALSE, just show the module, file, input directory
+  # fields=TRUE, show all Datasets that originated as file inputs (lists all columns within input files)
+  # fields=FALSE, just show the module, file, input directory (lists the input files)
   if ( ! self$valid() ) stop("Model has not been run yet.")
 
   if ( ! missing(fields) && fields ) {
@@ -227,16 +274,28 @@ ve.results.inputs <- function( fields=FALSE, module="", filename="" ) {
   return( ret.value[order(ret.value$InputDir,ret.value$File),] )
 }
 
-ve.results.units <- function() {
-  # Not implemented yet
-  NULL
+ve.results.units <- function(selected=TRUE) {
+  # selected == FALSE shows units for ALL fields, not just selected
+  # Transiently attaches DisplayUnits to field list (transient because user
+  #   may be editing the file in this session)
+  # Displays a data.frame for the selected (TRUE) or all (FALSE) fields with
+  #   Group, Table, Name, DisplayUnits, UnitsSource ("Datastore" or DisplayUnitsFilePath)
+  selected <- if ( selected ) self$selection$selection else 1:nrow(self$modelIndex)
+  Units_df <- self$modelIndex[ selected, c("Group","Table","Name","Units") ]
+  Units_df$Source <- "Datastore"
+  Units_df <- addDisplayUnits(Units_df,Param_ls=private$RunParam_ls)
+  displayUnits <- !is.na(Units_df$DisplayUnits)
+  Units_df$Units[ displayUnits ] <- Units_df$DisplayUnits[ displayUnits ]
+  Units_df$Source[ displayUnits ] <- Units_df$DisplayUnitsFile[ displayUnits ]
+  return( Units_df[,c("Group","Table","Name","Units","Source")] )
 }
 
 ve.results.extract <- function(
   saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
+  prefix = "",            # Label to further distinguish output files
   overwrite=FALSE,
-  quiet=FALSE,
-  select=NULL # replaces self$selection if provided
+  select=NULL,            # replaces self$selection if provided
+  convertUnits=TRUE       # will convert if display units are present; FALSE not to attempt any conversion
 ) {
   if ( ! self$valid() ) stop("Model State contains no results.")
   if ( is.null(select) ) select <- self$selection else self$selection <- select
@@ -245,60 +304,109 @@ ve.results.extract <- function(
   }
 
   saving <- is.character(saveTo) && nzchar(saveTo)[1]
-
-  ms <- self$ModelState
-  
-  visioneval::assignDatastoreFunctions(ms$DatastoreType)
-  extract <- self$modelIndex[ select$selection, c("Name","Table","Group") ]
-
-  tables <- split( extract$Name, list(extract$Table,extract$Group) )
-  tables <- tables[which(sapply(tables,length)!=0)]
-  DataSpecs <- lapply( names(tables), function(T.G.S) { # T.G.S : Table Group Split
-        TGS <- unlist(strsplit(T.G.S,"\\."))
-        mp <- self$path
-        dstoreloc <- file.path(mp,ms$DatastoreName)
-        df <- data.frame(
-          Name  = tables[[T.G.S]],
-          Table = TGS[1],
-          Group = TGS[2],
-          Loc   = dstoreloc
-        )
-        list(
-          Data=df,
-          File=paste0(paste(gsub("\\.","_",T.G.S),format(ms$LastChanged,"%Y-%m-%d_%H%M%S"),sep="_"),".csv")
-        )
-      }
-    )
-  model.env = visioneval::modelEnvironment() # holds assigned datastore functions
-  results <- lapply(DataSpecs, function(d) {
-        if (!quiet && saving ) message("Extracting data for Table ",d$Data$Table[1]," in Group ",d$Data$Group[1])
-        # Do this in a for-loop rather than faster "apply" to avoid dimension and class/type problems.
-        ds.ext <- list()
-        for ( fld in 1:nrow(d$Data) ) {
-          dt <- d$Data[fld,]
-          ds.ext[[dt$Name]] <- model.env$readFromTable(Name=dt$Name,Table=dt$Table,Group=dt$Group,DstoreLoc=dt$Loc,ReadAttr=FALSE)
-        }
-        return( data.frame(ds.ext) )
-      }
-    )
-  files <- sapply(DataSpecs, function(x) x$File)
-  names(results) <- files
   if ( saving ) {
-    sapply(
-      names(results),
-      FUN=function(f) {
-        data <- results[[f]]
-        out.path <- file.path(self$path,saveTo)
-        if ( ! dir.exists(out.path) ) dir.create(out.path,recursive=TRUE)
-        fn <- file.path(out.path,f)
-        utils::write.csv(data,file=fn)
-        if ( ! exists("ve.runtime") ) ve.runtime <- getwd()
-        if (!quiet) message("Write output file: ",gsub(get("ve.runtime"),"",fn))
-      }
-    )
+    saveTo <- saveTo[1]
+    outputPath <- if ( isAbsolutePath(saveTo) ) saveTo else file.path(self$modelDir,saveTo)
+    if ( ! dir.exists(saveTo) ) dir.create(saveTo,showWarnings=FALSE)
+    if ( ! dir.exists(saveTo) ) {
+      stop(
+        visioneval::writeLog( Level="error",
+          c( "Output directory not available:",saveTo )
+        )
+      )
+    }
+  }
+
+  metadata <- self$modelIndex[ select$selection, ]
+  if ( convertUnits ) {
+    metadata <- addDisplayUnits(metadata,Param_ls=private$RunParam_ls)
   } else {
-    names(results) <- sub("\\.[^.]*$","",names(results))
-    if (!quiet) message("Returning extracted data as invisible list of data.frames\n(quiet=TRUE to suppress this message)")
+    metadata$DisplayUnits <- NA
+  }
+  extract <- metadata[ , c("Name","Table","Group","DisplayUnits") ]
+
+  extractTables <- unique(extract[,c("Group","Table")])
+  extractGroups <- unique(extractTables$Group)
+
+  QueryPrep_ls <- self$queryprep()
+  outputList <- list()
+  results <- list()
+  for ( group in extractGroups ) {
+    # Build Tables_ls for readDatastoreTables
+    Tables_ls <- list()
+    Metadata_ls <- list() # list of data.frames with field metadata
+    tables <- extractTables$Table[ extractTables$Group == group ]
+    if ( length(tables)==0 ) next # should not happen given how we built extract
+    for ( table in tables ) {
+      meta <- extract[ extract$Group==group & extract$Table==table, ]
+      fields <- meta[ , c("Name","DisplayUnits") ]
+      dispUnits <- fields$DisplayUnits
+      names(dispUnits) <- fields$Name
+      Tables_ls[[table]] <- dispUnits
+      Metadata_ls[[table]] <- meta
+    }
+
+    # Get a list of data.frames, one for each Table configured in Tables_ls
+    Data_ls <- visioneval::readDatastoreTables(Tables_ls, group, QueryPrep_ls)
+
+    # Report errors from readDatastoreTables
+    HasMissing_ <- unlist(lapply(Data_ls$Missing, length)) != 0
+    if (any(HasMissing_)) {
+      WhichMissing_ <- which(HasMissing_)
+      Missing_ <- character(0)
+      for (i in WhichMissing_) {
+        Missing_ <- c(
+          Missing_,
+          paste0(
+            names(Data_ls$Missing)[i], " (",
+            paste(Data_ls$Missing[[i]], collapse = ", "), ")"
+          )
+        )
+      }
+      msg <- paste("Missing Tables (Datasets):",paste(Missing_, collapse = "\n"),sep="\n")
+      stop( writeLog( msg, Level="error" ) )
+    }
+
+    # Process the table data.frames into results
+    dataNames <- names(Data_ls$Data)
+    newTableNames <- paste(group,dataNames,sep=".")
+    if ( saving ) {
+      # Push each data.frame into a file, and accumulate a list of file names to return
+      # TODO: File name template is hard-coded; maybe we'll change that one day
+      #   (e.g. using an sprintf format or the glue package)
+
+      # Build file name template
+      lastChanged <- self$ModelState$LastChanged
+      timeWritten <- paste0("(",paste("Written",format(Sys.time(),"%Y-%m-%d_%H%M"),sep="_"),")")
+      if ( ! is.null(lastChanged) ) {
+        timeWritten <- paste(format(lastChanged,"%Y-%m-%d_%H%M"),timeWritten,sep="+")
+      }
+      # group and timeWritten must have one element, dataNames may have many
+      # Files will have length(dataNames)
+      Files <- paste0(paste(group,dataNames,timeWritten,sep="_"),".csv")
+      if ( ! overwrite ) {
+        existing <- file.exists(file.path(saveTo,Files))
+        for ( file in which(existing) ) {
+          Files[ file ] <- basename(getUniqueName(saveTo,Files[file]))
+        }
+      }
+      names(Files) <- dataNames;
+
+      # Write the files (data = .csv) and a metadata file (meta = .metadata.csv)
+      for ( table in dataNames ) {
+        fn <- file.path(saveTo,paste0(prefix,Files[table]))
+        utils::write.csv(Data_ls$Data[[table]],file=fn,row.names=FALSE)
+        utils::write.csv(Metadata_ls[[table]],file=sub("\\.csv$",".metadata.csv",fn),row.names=FALSE)
+      }
+
+      # Accumulate results list (names on list are "group.table")
+      names(Files) <- newTableNames
+      results[ names(Files) ] <- as.list(Files)
+    } else {
+      # Otherwise, if not saving, accumulate the list of data.frames (named as "group.table")
+      names(Data_ls$Data) <- newTableNames
+      results[ names(Data_ls$Data) ] <- Data_ls$Data
+    }
   }
   invisible(results)
 }
@@ -308,12 +416,12 @@ ve.results.select <- function(select=integer(0)) {  # integer(0) says select all
   if ( ! is.null(select) ) {
     self$selection <- VESelection$new(self,select=select)
   }
-  return(self$selection)
+  invisible(self$selection)
 }
 
 ve.results.queryprep <- function() {
   visioneval::prepareForDatastoreQuery(
-    DstoreLocs_ = file.path(self$path,self$ModelState$DatastoreName),
+    DstoreLocs_ = file.path(self$resultsPath,self$ModelState$DatastoreName),
     DstoreType  = self$ModelState$DatastoreType
   )
 }
@@ -321,11 +429,15 @@ ve.results.queryprep <- function() {
 ve.results.print <- function(details=FALSE) {
   # Update for output
   cat("VEResults object for these results:\n")
-  print(self$path)
+  print(self$resultsPath)
   cat("Output is valid:",self$valid(),"\n")
   if ( ! details ) {
-    cat("Selected",length(self$selection$selection),"out of",nrow(self$modelIndex),"fields.\n")
-    print(self$selection)
+    sel <- length(self$selection$selection)
+    all <- nrow(self$modelIndex)
+    if ( sel < all ) {
+      cat("Selected",sel,"out of",all,"fields.\n")
+      print(self$selection) # Just the field names
+    } else cat("Selected all fields.\n")
   } else {
     print(self$selection,details=TRUE)
   }
@@ -339,27 +451,28 @@ VEResults <- R6::R6Class(
   public = list(
     # public data
     Name = NULL,
-    path=NULL,
+    resultsPath=NULL,
+    modelDir=NULL,
     ModelState=NULL,
     modelIndex=NULL,
     selection=NULL,
 
     # methods
     initialize=ve.results.init,
+    index=ve.results.index,          # Index Datastore from ModelState (part of init)
     valid=ve.results.valid,          # has the model been run, etc.
-    select=ve.results.select,
-    extract=ve.results.extract,      # alias the extract/export function
-    export=ve.results.extract,
-    list=ve.results.list,
+    select=ve.results.select,        # return the object's selection object
+    extract=ve.results.extract,      # generate files or data.frames from model results
+    export=ve.results.extract,       # alias for 'extract'
+    list=ve.results.list,            # show the modelIndex
     queryprep=ve.results.queryprep,  # For query or other external access
-    print=ve.results.print,
+    print=ve.results.print,          # summary of model results (index)
     units=ve.results.units           # TODO: Set units on field list (modifies self$modelIndex)
   ),
   private = list(
     queryObject=NULL,               # object to manage queries for this output
     outputPath=NULL,                # root for extract
-    RunParam_ls=NULL,
-    index=ve.results.index
+    RunParam_ls=NULL
   )
 )
 
@@ -382,11 +495,13 @@ ve.select.initialize <- function( results, select=integer(0) ) {
   }
 }
 
+ve.select.copy <- function(select) VESelection$new(self$results,self$selection)
+
 ve.select.print <- function(details=FALSE) {
   # print the selected fields
-  if ( ! details ) {
+  if ( ! details ) {            # just the field names (see below)
     print( self$fields() )
-  } else {
+  } else {                      # full data frame of selected model results
     print( self$results$modelIndex[ self$selection, ] )
   }
 }
@@ -422,6 +537,7 @@ ve.select.fields <- function() {
   return(sort(paste(idxFields$Group,idxFields$Table,idxFields$Name,sep="/"))) # Group/Table/Name
 }
 
+# Internal helper function to make a selection vector out of various other types of objects
 ve.select.parse <- function(select) {
   # Though select can be a vector of field names, they need to be the full Group/Table/Name field names,
   #  so you should get them from ve.select.find, rather than manually construct them.
@@ -430,7 +546,7 @@ ve.select.parse <- function(select) {
   #   if it is the same model, just copy its selection
   #   if not the same model, get other selection's VEResults object and parse that
   if ( "VESelection" %in% class(select) ) {
-    if ( select$results$path != self$results$path ) {
+    if ( select$results$resultsPath != self$results$resultsPath ) {
       select <- select$fields()
       # fall through to parse the character strings
     } else {
@@ -442,7 +558,7 @@ ve.select.parse <- function(select) {
   #   then parse as a character vector
   #   if it is the same model, just copy its selection
   if ( "VEResults" %in% class(select) ) {
-    if ( select$path != self$results$path ) {
+    if ( select$resultsPath != self$results$resultsPath ) {
       select <- select$selection$fields()
     } else {
       return( select$selection$selection )
@@ -481,23 +597,30 @@ ve.select.parse <- function(select) {
   return( as.integer(NA) )
 }
 
-#' Assign new selection to VESelection
-#'
-#' @param x a VESelection object that will be added to
-#' @param select an object to be made into a VESelection and then assigned to this one
-#' @return the VESelection that was modified
-#' @export
-"<-.VESelection" <- function(select) self$select(select)
+# There's some quirk to completing documentation of this operator as written...
+#   We probably don't need it...
+# #' Assign new selection to VESelection
+# #'
+# #' @usage x <- value
+# #' @param x a VESelection object whose selected fields will be updated by value
+# #' @param value an object to be made into a VESelection and then assigned to this one
+# #' @return the VESelection that was modified
+# #' @export
+# `<-.VESelection` <- function(value) self$select(value)
 
+# Return a reference to this selection, changing its indices if an argument is provided
 ve.select.select <- function(select) {
   if ( ! missing(select) ) self$selection <- self$parse(select)
-  return(self)
+  invisible(self)
 }
 
+# Find does NOT alter the object it is called on.
+# It either produces a new VESelection from the matching elements of self$selection (as.object==TRUE)
+# OR it products a vector of matching element indices (as.object==FALSE)
 ve.select.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,as.object=TRUE) {
   # if pattern (regexp) given, find names matching pattern (only within the "fields" part)
   # if group or table not specified, look in any group or table
-  # return vector of indices for matching rows
+  # return vector of indices for matching rows or (as.object==TRUE) a new VESelection object
   searchGroup <- Group
   searchTable <- Table
   searchName  <- Name
@@ -529,66 +652,59 @@ ve.select.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,as.objec
   }
 }
 
+# Add another selection to self (add + assign)
+# Matching indices will be included
 ve.select.add <- function(select) {
   select <- self$parse(select)
-  select <- union(self$selection,select)
-  VESelection$new(self$results, select=select)
+  self$selection <- union(self$selection,select)
+  invisible(self)
 }
 
-#' Add items to VESelection
-#'
-#' @param x a VESelection object that will be added to
-#' @param y an object from which a new VESelection can be created; fields that it
-#'   references will be added to x
-#' @return parameter x, updated to also select items from y
-#' @export
-"+.VESelection" <- function(x,y) x$add(y)
-
+# Remove contents of another selection from self (remote + assign)
+# Matching indices in select will be removed
 ve.select.remove <- function(select) {
   select <- self$parse(select)
-  VESelection$new(self$results, select=setdiff(self$selection,select))
+  self$selection <- setdiff(self$selection,select)
+  invisible(self)
 }
 
-#' Remove items from VESelection
-#'
-#' @param x a VESelection object from which selections will be removed
-#' @param y an object from which a new VESelection can be created; fields that it
-#'   references will be removed from x if they are already selected
-#' @return parameter x, updated to also select items from y
-#' @export
-"-.VESelection" <- function(x,y) x$remove(y)
-
+# Keep only fields that are in both self and select (logical "and")
+# Indices in both will be kept, and those present in only one will be removed
 ve.select.and <- function(select) {
   select <- self$parse(select)
-  VESelection$new(self$results, select=intersect(self$selection,select))
+  self$selection <- intersect(self$selection,select)
+  invisible(self)
 }
 
+# 
 ve.select.all <- function() {
-  select <- 1:nrow(self$results$modelIndex)
-  VESelection$new(self$results, select=select)
+  self$selection <- 1:nrow(self$results$modelIndex)
+  invisible(self)
 }
 
 ve.select.none <- function() {
-  select <- integer(NA)
-  VESelection$new(self$results, select=select)
+  self$selection <- integer(NA)
+  invisible(self)
 }
 
 # Build data.frames based on selected groups, tables and dataset names
 ve.select.extract <- function(
   saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
+  prefix="",
   overwrite=FALSE,
-  quiet=FALSE
+  convertUnits=TRUE
 ) {
   # Delegates to the result object, setting its selection in the process
-  return( self$results$extract(saveTo,overwrite,quiet,select=self) )
+  invisible( self$results$extract(saveTo,prefix=prefix,overwrite,select=self,convertUnits=convertUnits) )
 }
 
-#' Conversion method to turn a VESelecton into a vector of selection indices
+#' Conversion method to turn a VESelection into a vector of selection indices
 #'
-#' @param select a VESelection object (or something that can be coerced to one)
+#' @param x a VESelection object (or something that can be coerced to one)
+#' @param ... Additional arguments to support generic signature
 #' @return an integer vector of selected fields
 #' @export
-as.integer.VESelection <- function(select) select$selection
+as.integer.VESelection <- function(x,...) x$selection
 
 # The VESelection R6 class
 # This interoperates with VEResult to keep track of what to print
@@ -601,18 +717,19 @@ VESelection <- R6::R6Class(
 
     # methods
     initialize=ve.select.initialize,
+    copy=ve.select.copy,          # Create a new selection object with the same results and indices
     print=ve.select.print,
     extract=ve.select.extract,
     export=ve.select.extract,
     find=ve.select.find,
     parse=ve.select.parse,
-    select=ve.select.select,      # assign: Also implements as "<-" operator
-    add=ve.select.add,            # "union": Also implements as "+" operator
-    remove=ve.select.remove,      # "setdiff": Also implements as "-" operator
-    and=ve.select.and,            # "intersection" operation
-    or=ve.select.add,             # Just does a "union" operation
-    all=ve.select.all,
-    none=ve.select.none,
+    select=ve.select.select,      # assign - set self to other selection value
+    add=ve.select.add,            # "union" - indices in either selection
+    remove=ve.select.remove,      # "setdiff" - indices not in other selection
+    and=ve.select.and,            # "intersection" - only indices in both selections
+    or=ve.select.add,             # alias for "add"
+    all=ve.select.all,            # select all indices
+    none=ve.select.none,          # select no indices (empty selection)
 
     # Field lists (read-only)
     groups=ve.select.groups,

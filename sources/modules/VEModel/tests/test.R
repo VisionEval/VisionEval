@@ -13,7 +13,7 @@ if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
   stop("Missing required package: 'pkgload'")
 }
 if ( ! requireNamespace("visioneval",quietly=TRUE) ) {
-  stop("Missing required package: 'pkgload'")
+  stop("Missing required package: 'visioneval'")
 }
 
 setup <- function(ve.runtime=NULL) {
@@ -90,11 +90,28 @@ test_model <- function(log="warn") {
 }
 
 test_results <- function (log="warn") {
-  model <- openModel("JRSPM")
-  rs <- model$results()
-  # do things to the results, including exporting them
-  # also test unit reporting / conversions
-  # create a report of what was extracted (including target units)
-  # include units in exported file? Create a metadata file - that
-  # would be good (with name, description, units storted, units exported
+  jr <- openModel("JRSPM")
+  sl <- jr$results()$select()
+
+  # Test display units, select speeds, create unit conversion
+  un <- rs$list(details=TRUE)[,c("Group","Table","Name","Units")]
+  spd <- un[ grepl("MI/",un$Units)&grepl("sp",un$Name,ignore.case=TRUE), ]
+  spd$DisplayUnits <- "MI/HR"
+  cat("Writing display_units.csv into ")
+  display_units_file <- file.path(
+      jr$modelPath,
+      visioneval::getRunParameter("ParamDir",Param_ls=jr$RunParam_ls),
+      visioneval::getRunParameter("DisplayUnitsFile",Param_ls=jr$RunParam_ls)
+    )
+  cat(display_units_file,"\n")
+  write.csv(spd,file=display_units_file)
+
+  sl$select( with(spd,paste(Group,Table,Name,sep="/")) )
+  sl$add( sl$find("^(Marea|Azone|Bzone)$",Group="Years",Table="Marea") )
+  cat("Exporting fields:\n")
+  print(sl$fields())
+  cat("Exporting speed fields using DISPLAY units\n")
+  sl$export(prefix="DisplayUnits")                 # Using DISPLAY units
+  cat("Exporting speed fields using DATASTORE units\n")
+  sl$export(prefix="Datastore",convertUnits=FALSE) # Using DATASTORE units
 }

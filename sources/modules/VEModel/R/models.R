@@ -30,83 +30,22 @@ NULL
 #' Here are the details of the VEModel manager.
 #'
 #' @section Usage:
-#' \preformatted{model <- VEModel$new(modelName,log="error")
-#'
-#' p$is_alive()
-#' p$kill(grace = 0.1)
-#' p$wait()
-#' p$get_exit_status()
-#' p$restart()
-#'
-#' p$read_output_lines(...)
-#' p$read_error_lines(...)
-#' p$can_read_output()
-#' p$can_read_error()
-#' p$is_eof_output()
-#' p$is_eof_error()
-#' p$get_output_connection()
-#' p$get_error_connection()
-#'
-#' print(p)
-#' }
+#' \preformatted{model <- VEModel$new(modelName,log="error")}
 #'
 #' @section Arguments:
 #' \describe{
 #'   \item{modelName}{The path or basename of a directory containing a VisionEval model setup; if
-#'   it's a relatie path, the model will be sought in the current directory plus standard places
+#'   it's a relative path, the model will be sought in the current directory plus standard places
 #'   like ve.runtime/models}
 #' }
 #'
 #' @section Details:
 #'
-#' \code{$is_alive()} checks if the process is alive. Returns a logical
+#' Details are yet to come.
 #' scalar.
 #'
-#' \code{$kill()} kills the process. It also kills all of its child
-#' processes. First it sends the child processes a \code{TERM} signal, and
-#' then after a grace period a \code{KILL} signal. Then it does the same
-#' for the process itself. A killed process can be restarted using the
-#' \code{restart} method. It returns the process itself.
-#'
-#' \code{$wait()} waits until the process finishes. Note that if the
-#' process never finishes, then R will never regain control. It returns
-#' the process itself.
-#'
-#' \code{$get_exit_code} returns the exit code of the process if it has
-#' finished and \code{wait} was called on it. Otherwise it will return
-#' \code{NULL}.
-#'
-#' \code{$restart()} restarts a process. It returns the process itself.
-#'
-#' \code{$read_output_lines()} reads from standard output of the process.
-#' If the standard output was not requested, then it returns an error.
-#' It uses a non-blocking text connection.
-#'
-#' \code{$read_error_lines()} is similar to \code{$read_output_lines}, but
-#' it reads from the standard error stream.
-#'
-#' \code{$can_read_output()} checks if there is any standard output
-#' immediately available.
-#'
-#' \code{$can_read_error()} checks if there is any standard error
-#' immediately available.
-#'
-#' \code{$is_eof_output()} checks if the standard output stream has
-#' ended. This means that the process is finished and all output has
-#' been processed.
-#'
-#' \code{$is_eof_error()} checks if the standard error stream has
-#' ended. This means that the process is finished and all output has
-#' been processed.
-#'
-#' \code{$get_output_connection()} returns a connection object, to the
-#' standard output stream of the process.
-#'
-#' \code{$get_error_conneciton()} returns a connection object, to the
-#' standard error stream of the process.
-#'
-#' \code{print(p)} or \code{p$print()} shows some information about the
-#' process on the screen, whether it is running and it's process id, etc.
+#' \code{$new()} creates a new VEModel object from a file path that
+#' locates a \code{run_model.R} script and an optional configuration file.
 #'
 #' @importFrom R6 R6Class
 #' @name VEModel
@@ -129,6 +68,7 @@ isAbsolutePath <- function(modelPath) {
 }
 
 ## Helper
+#  Generate a list of directories that might contain models
 #  Model roots: ve.runtime/models, getwd()/models, ve.runtime, getwd()
 getModelRoots <- function(get.root=0) {
   roots <- c( getwd() )
@@ -160,22 +100,12 @@ getModelRoots <- function(get.root=0) {
   if ( get.root>0 ) return(roots[get.root]) else return(roots)
 }
 
-## Helper
-#  Get unique file name based on newName in folder newPath
-#  NewPath is the directory it should go in, newName is the name to disambiguate
-getUniqueName <- function(newPath,newName) {
-  newModelPath <- file.path(newPath,newName)
-  tryName <- newName; try <- 1
-  while ( dir.exists(newModelPath) ) {
-    tryName <- paste0(newName,"(",try,")")
-    newModelPath <- file.path(newPath,tryName)
-    try <- try+1
-  }
-  return (newModelPath)
-}
-
 ## Helper function
 #  Look for run_model.R (any case) in root or subdirectories and return full paths
+#  modelPath is where to look (possibly more than one directory)
+#  searchScript is a name or pattern to search for (character string)
+#  searchExact is a boolean - if true, look for an exact match for searchScript, otherwise
+#  treat searchScript as an R regular expression.
 modelInRoot <- function(modelPath,searchScript,searchExact) {
   # Search initially just in modelPath, then in first-level subdirectories
   # Expect modelPath to be normalized
@@ -430,6 +360,10 @@ ve.model.copy <- function(newName=NULL,newPath=NULL) {
   return( openModel(newModelPath) )
 }
 
+# Helper function:
+#  Open an existing ModelState file, or create a fresh one in-memory
+#  Will eventually support interrogating the model script and structures (e.g. inputs and
+#  outputs) without actually running the model.
 ve.model.loadModelState <- function(log="error") {
   # Load all ModelStates for each model stage, using initializeModel with RunModel=FALSE
   # If ModelState exists from a prior run, load that rather than rebuild
@@ -521,6 +455,8 @@ ve.model.loadModelState <- function(log="error") {
 }
 
 # Initialize a VEModel from modelPath
+# modelPath may be a full path, and will be expanded into known model directories
+#  if it is a relative path.
 ve.model.init <- function(modelPath=NULL,log="error") {
   # Load system model configuration
   # Opportunity to override names of ModelState, run_model.R, Datastore, etc.
@@ -562,7 +498,9 @@ ve.model.init <- function(modelPath=NULL,log="error") {
 # Run the modelPath (through its stages)
 # Find the runModel script
 # Work in the Results directory - need to relay locations from here to initializeModel
-# Need to set Inputs directory
+# TODO: replace the "stages" subdirectories with the more flexible concept of a "BaseModel"
+#   which provides Datastore components previously computed (and possibly the entire run_model.R
+#   script).
 ve.model.run <- function(stage=NULL,lastStage=NULL,log="warn") {
   # stage and lastStage will run a sequence of *exterior* model stages (separate run_model.R in
   # subdirectories)
@@ -731,15 +669,33 @@ ve.model.run <- function(stage=NULL,lastStage=NULL,log="warn") {
   return(invisible(self$status))
 }
 
-ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,outputs=FALSE,inputs=FALSE,shorten) {
+# Provide a listing of key model components (respecting stages, BaseModel, etc.)
+# Collapse model results into a single model run entry (though there are typically three pieces:
+# the ModelState.Rda, the Datastore, and log*.txt). Find current results, as well as archived
+# results from past model runs.
+# "shorten" is a logical parameter - if true, strip off the "ve.runtime" part of any paths, so what
+#   is shown is relative to ve.runtime.
+# Parameters control elements of the display (if all are FALSE, make them all TRUE):
+#   root==TRUE   : show "root" elements (config, run_model.R)
+#   inputs=TRUE  : show files in "inputs" and "defs" locations for the model
+#   results=TRUE : show result sets
+#   outputs=TRUE : show "outputs" (extracts and query results)
+# all.files is a logical parameter indicating whether to print (TRUE) all file name (e.g. the 50-something
+#   input file names) or (FALSE) just the model directory(root), input directories
+#   (InputPath+InputDir) or date of data set (Current, Timestamp) for results, and for outputs,
+#   show how many independent files there are.
+# TODO: the all.files functionality is not implemented.
+ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,outputs=FALSE,inputs=FALSE,all.files=TRUE,shorten=TRUE) {
   # We're going to search up contents of these directories
-  #   self$modelPath
-  #   self$modelPath/ResultsDir
-  #   self$modelPath/ResultsDir/self$stagePaths[stage]
-  #   self$modelPath/InputDir
-  #   self$modelPath/self$stagePaths[stage]/InputDir
-  #   self$modelPath/OutputDir
-  #   self$modelPath/OutputDir/query
+  #   self$modelPath (root)
+  #   self$modelPath/ResultsDir (results)
+  #   self$modelPath/ResultsDir/self$stagePaths[stage] (results)
+  #   self$modelPath/InputDir (inputs)
+  #   self$modelPath/self$stagePaths[stage]/InputDir (inputs)
+  #   self$modelPath/ParamDir (inputs)
+  #   self$modelPath/self$stagePaths[stage]/ParamDir (inputs)
+  #   self$modelPath/OutputDir (outputs)
+  #   self$modelPath/OutputDir/query (outputs)
   # If none root/results/outputs/inputs is TRUE, then all are TRUE
   #   Otherwise, only report the ones actually asked for
   inputDetails <- if ( ! missing(inputs) ) inputs else FALSE
@@ -816,6 +772,7 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
   return(files)
 }
 
+# Function to interactively remove prior model runs or extracts
 ve.model.clear <- function(force=FALSE,outputOnly=NULL,stage=NULL,show=10) {
   # Remove outputs and/or results, either interactivel or in batch
   # 'show' controls maximum number of outputs to display
@@ -902,6 +859,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,stage=NULL,show=10) {
   return(invisible(force))
 }
 
+# Print a summary of the VEModel, including its run status
 ve.model.print <- function() {
   cat("Model:",self$modelName,"\n")
   cat("Path:\n")
@@ -911,36 +869,8 @@ ve.model.print <- function() {
   self$status
 }
 
-selectName <- c(fields="Name",tables="Table",groups="Group")
-selectOrder <- c("Name","Table","Group","Stage")
-prepSelect <- function(self,what,details=FALSE) {
-  # self is a VEModel object
-  # what is the character name of the thing we're selecting (groups,tables,fields)
-  # details if TRUE pastes all the fields, otherwise
-  df <- self[[what]]
-  name <- selectName[what]
-  if ( details ) {
-    show <- selectOrder[ selectOrder %in% names(df) ]
-    detail.fields <- show[-grep(name,show)]
-    if ( what=="fields" ) {
-      list.fields <- self[["list"]](details=TRUE,selected=FALSE)
-      df$Description <- substr(list.fields$Description,1,40)
-      detail.fields <- c(detail.fields,"Description")
-      show <- c(show,"Description")
-      }
-    detail.function <- function(x) {
-      paste(x[name],paste(paste(detail.fields,x[detail.fields],sep=": "),collapse=", "),sep=" | ")
-    }
-  } else {
-    show <- name
-    detail.function <- function(x) x
-  }
-  choices <- apply(df[,show,drop=FALSE], 1, detail.function)
-  selected <- choices[which(df$Selected=="Yes")]
-  names <- df[,name,drop=TRUE]
-  return( list(choices=choices,selected=selected,names=names) )
-}
-
+# create a VEResults object (possibly invalid/empty) based on the current model
+#   run or a particular model stage.
 ve.model.results <- function(stage) {
   # Create a results object wrapping the directory that contains the model
   # results for the given stage (or last stage if not given)
@@ -962,7 +892,7 @@ ve.model.results <- function(stage) {
     mustWork=FALSE
   );
   
-  results <- VEResults$new(resultsPath,Param_ls)
+  results <- VEResults$new(resultsPath,self$modelPath,Param_ls)
   if ( ! results$valid() ) {
     private$lastResults <- list()
     if (stage!=self$stageCount) {
@@ -979,20 +909,21 @@ ve.model.results <- function(stage) {
   return(results)
 }
 
+# open a Query object for the model from its QueryDir (or report a list
+#  of available queries if no QueryName is provided.
 ve.model.query <- function(QueryName=NULL,FileName=NULL,new=FALSE) {
   # Get the Query directory for the model
   QueryDir <- visioneval::getRunParameter("QueryDir",Param_ls=self$RunParam_ls)
   QueryDir <- file.path(self$modelPath,QueryDir)
-  if ( ! is.null(QueryName) && is.null(FileName) ) {
-    FileName <- paste0(QueryName,".VEqry")
-  }
-  if ( new ) {
-    return(VEQuery$new(QueryName=QueryName,FileName=FileName,QueryDir=QueryDir,Param_ls=self$RunParam_ls))
-  } else if ( all(is.null(c(QueryName,FileName))) ) {
+  if ( all(is.null(c(QueryName,FileName))) ) {
     cat("Available Queries:\n")
     print(dir(QueryDir))
     return(NULL)
+  } else if ( ! is.null(QueryName) && is.null(FileName) ) {
+    FileName <- paste0(QueryName,".VEqry")
   }
+  # attempt to open existing query (which may not exist)
+  return(VEQuery$new(QueryName=QueryName,FileName=FileName,QueryDir=QueryDir,Param_ls=self$RunParam_ls))
 }
 
 # Here is the VEModel R6 class
@@ -1031,6 +962,8 @@ VEModel <- R6::R6Class(
   )
 )
 
+## EXPORTED HELPER FUNCTIONS
+#===========================
 #' Open a VisionEval Model
 #'
 #' @description

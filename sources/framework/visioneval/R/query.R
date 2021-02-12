@@ -264,11 +264,11 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
 #' multiple scenarios. The function does not segregate datasets by datastore. Attempting
 #' to use this function to compare multiple scenarios could produce unpredictable results.
 #'
-#' @param Tables_ls a named list where the name of each component is the name of a table
-#' in a datastore group and the value is a named list where the names are the names of the
-#' datasets to be retrieved and the values strings specifying the units of measure to be
-#' used for the retrieved values or an empty string ("") if the values are to be retrieved
-#' in the units they are in in the datastore.
+#' @param Tables_ls a named list where the name of each component is the name of
+#' a table in a datastore group and the value is a named string vector where the
+#' names are the names of the datasets to be retrieved and the values are the
+#' units of measure to be used for the retrieved values or NULL (or NA) if the
+#' values are to be retrieved in the units they are in in the datastore.
 #' @param Group a string that is the name of the group to retrieve the table
 #' datasets from.
 #' @param QueryPrep_ls a list created by calling the prepareForDatastoreQuery
@@ -300,7 +300,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
   for (tb in Tb) {
     Out_ls[[tb]] <- list()
     Ds <- names(Tables_ls[[tb]])
-    for (Loc in DstoreLocs_) {
+    for (Loc in DstoreLocs_) { # Though written for a vector, currently only supporting one Datastore
       ModelState_ls <- QueryPrep_ls$Listing[[Loc]]
       HasTable <- checkTableExistence(tb, Group, ModelState_ls$Datastore)
       if (HasTable) {
@@ -311,10 +311,11 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
               setwd(dirname(Loc)) # Work in Datastore parent directory
               Dset_ <-
                 readFromTable(ds, tb, Group, ReadAttr = TRUE, ModelState_ls=ModelState_ls)
-              if (Tables_ls[[tb]][ds] != "") {
+              if ( !is.na(Tables_ls[[tb]][ds]) && Tables_ls[[tb]][ds] != "" ) { # NA or "" means use default units
                 DsetType <- attributes(Dset_)$TYPE
                 DsetUnits <- attributes(Dset_)$UNITS
                 ToUnits <- Tables_ls[[tb]][ds]
+                if ( !is.null(ToUnits) && is.na(ToUnits) ) ToUnits <- NULL # NULL and NA will mean the same
                 Dset_ <- convertUnits(Dset_, DsetType, DsetUnits, ToUnits)$Values
                 attributes(Dset_)$TYPE <- DsetType
                 attributes(Dset_)$UNITS <- ToUnits
