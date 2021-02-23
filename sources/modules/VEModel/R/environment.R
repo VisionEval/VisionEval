@@ -28,14 +28,17 @@ runtimeEnvironment <- function() ve.env
 # Set up package defaults for VE getRunParameter
 
 default.parameters.table = list(
-  ModelRoot            = "models",
-  ModelScript          = "run_model\\.R",
-  ModelScriptFile      = "run_model.R",
-  ConfigDir            = "",  # Holds display_units.csv (relative to ve.runtime)
-  DisplayUnitsFile     = "display_units.csv",
-  QueryFileName        = "New-Query.VEqry",
-  QueryDir             = "queries",
-  QueryOutputTemplate  = "Measures_%scenario%_%years%_%geography%.csv"
+  ModelRoot           = "models",
+  ModelScript         = "run_model\\.R",
+  ModelScriptFile     = "run_model.R",
+  ConfigDir           = "",  # Holds global display_units.csv (relative to ve.runtime)
+  ResultsDir          = "results",
+  OutputDir           = "output",
+  QueryDir            = "queries",
+  DisplayUnitsFile    = "display_units.csv",
+  QueryFileName       = "New-Query.VEqry",
+  QueryDir            = "queries",
+  QueryOutputTemplate = "Measures_%scenario%_%years%_%geography%.csv"
 )
 
 #GET DEFAULT PARAMETERS

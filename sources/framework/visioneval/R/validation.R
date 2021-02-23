@@ -34,7 +34,7 @@
 #' an attribute that is a string of the full path to where the dataset should be
 #' in the datastore.
 #' @export
-checkDataset <- function(Name, Table, Group, DstoreListing_df) {
+checkDataset <- function(Name, Table, Group, DstoreListing_df, DstoreLoc=NULL) {
   Name <- as.character(Name)
   Table <- as.character(Table)
   Group <- as.character(Group)

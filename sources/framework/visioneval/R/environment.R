@@ -159,16 +159,13 @@ default.parameters.table = list(
   ModelParamFile = "model_parameters.json",
   InputDir = "inputs",
   ParamDir = "defs",
-  ResultsDir = "results",
-  OutputDir = "output",
-  QueryDir = "queries",
   DatastoreType = "RD",
   SaveDatastore = FALSE
 )
 
 #GET DEFAULT PARAMETERS
 #======================
-#' Report useful default values for key parameters
+#' Report default values for key parameters
 #'
 #' \code{defaultVERuntimeParameters} is a visioneval model developer function takes an (optional,
 #' default empty) list of RunParams and reports the default values for any parameter not already in
@@ -176,6 +173,11 @@ default.parameters.table = list(
 #' \code{"package:VE..."} for an exported defaultVERunParameters function, and those will be given
 #' priority when loading (with the most recently loaded packages having the highest priority).
 #' \code{getRunParameter} handles that seamlessly if no inline default is provided.
+#'
+#' To get a list of all the defaults (by package - see the Param_ls attribute "Source" - call
+#' this function with an empty list or with no parameter at all. To pick out a default value,
+#' you can index the resulting list after it is returned,
+#' e.g. \code{defaultVERunParamters()[["ResultsDir"]]}
 #'
 #' @param Param_ls a list (possibly empty) of already-defined parameters
 #' @return a named list for parameters not present in Param_ls containing default values for those

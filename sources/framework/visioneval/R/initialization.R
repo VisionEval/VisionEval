@@ -5,9 +5,6 @@
 #This script defines functions used to set up and manage a model
 #run. These are helpers for finding the ModelState and running modules
 
-# Get rid of the global function references
-utils::globalVariables(c("initTable","writeToTable","ModelState_ls","listDatastore"))
-
 #INITIALIZE MODEL STATE
 #======================
 #' Initialize model state.
@@ -1386,7 +1383,7 @@ initDatastoreGeography <- function(GroupNames = NULL) {
       initTable(Table = "Czone", Group = GroupName, Length = length(Czones_))
     }
   }
-  rm(GroupName)
+
   #Add zone names to zone tables
   for (GroupName in GroupNames) {
     if (!G$BzoneSpecified & !G$CzoneSpecified) {

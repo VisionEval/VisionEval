@@ -234,15 +234,14 @@ assignDatastoreFunctions <- function(DstoreType,FunctionName=NULL,Package=NULL) 
 #' components are:
 #' group - the name of the group (path) the item is being added to;
 #' name - the name of the data item (directory or dataset);
-#' groupname - the full path to the data item;
+#' groupname - the full path to the data item relative to the Datastore root;
 #' attributes - a list containing the named attributes of the data item.
 #' @return TRUE if the listing is successfully read from the datastore and
 #' written to the model state file.
 #' @export
 listDatastoreRD <- function(DataListing_ls = NULL) {
-  #TODO: Using this to update the data listing is "just wrong"
   #Load the model state file
-  G <- readModelState() # will load from file if not already present in getModelEnvironment()
+  G <- getModelState()
 
   #If no Datastore component, get from DatastoreListing.Rda
   if (is.null(G$Datastore)) {
@@ -302,8 +301,8 @@ listDatastoreRD <- function(DataListing_ls = NULL) {
 #' @import stats utils
 initDatastoreRD <- function(AppendGroups = NULL) {
   G <- getModelState()
-  DatastoreName <- G$DatastoreName
-  #If 'AppendGroups' is NULL initialize a new datastore
+  DatastoreName <- G$DatastoreName;
+  # If 'AppendGroups' is NULL initialize a new datastore
   if (is.null(AppendGroups)) {
     #If datastore exists, delete
     if (file.exists(DatastoreName)) {
@@ -358,8 +357,8 @@ initDatastoreRD <- function(AppendGroups = NULL) {
                  attributes = list(NA))
           )
         }
-        #Error if groups listed in 'AppendGroups' are present in datastore
       } else {
+        #Error if groups listed in 'AppendGroups' are present in datastore
         DupGrp <- AppendGroups[AppendGroups %in% DstoreGroups_]
         stop(paste(
           "The following groups listed in the 'AppendGroups' argument are",
@@ -369,8 +368,8 @@ initDatastoreRD <- function(AppendGroups = NULL) {
           "argument."
         ))
       }
-      #Error if the datastore does not exist
     } else {
+      #Error if the datastore does not exist
       stop(paste(
         "The datastore -", DatastoreName, "- identified in the model",
         "'run_parameters.json' file does not exist.",
@@ -398,7 +397,7 @@ initDatastoreRD <- function(AppendGroups = NULL) {
 #' @param Group a string representation of the name of the top-level
 #' subdirectory the table is to be created in (i.e. either 'Global' or the name
 #' of the year).
-#' @param Length a number identifying the table length.
+#' @param Length a number identifying the number of rows the table is allowed to have
 #' @return The value TRUE is returned if the function is successful at creating
 #'   the table. In addition, the listDatastore function is run to update the
 #'   inventory in the model state file. The function stops if the group in which
@@ -407,8 +406,9 @@ initDatastoreRD <- function(AppendGroups = NULL) {
 #' @export
 initTableRD <- function(Table, Group, Length) {
   G <- getModelState()
-  DatastoreName <- G$DatastoreName
+  DatastoreName <- G$DatastoreName;
   #Create a directory for the table
+  # TODO: warn (lightly) if Table exists and do not update anything
   dir.create(file.path(DatastoreName, Group, Table))
   #Update the datastore listing and model state
   listDatastoreRD(
@@ -500,9 +500,9 @@ initDatasetRD <- function(Spec_ls, Group) {
 #' @param ModelState_ls an alternative ModelState_ls (for ad hoc retrieval of
 #'    a Dataset - getwd() must contain the Datastore)
 #' @param Index A numeric vector identifying the positions the data is to be
-#' written to. NULL if the entire dataset is to be read.
+#' read from. NULL if the entire dataset is to be read.
 #' @param ReadAttr A logical identifying whether to return the attributes of
-#' the stored dataset. The default value is FALSE.
+#' the stored dataset. The default value is TRUE (return the attributes)
 #' @return A vector of the same type stored in the datastore and specified in
 #' the TYPE attribute.
 #' @export
@@ -514,28 +514,29 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
   } else {
     G <- ModelState_ls
   }
-  #If DstoreLoc is NULL get the name of the datastore from the model state
+  # If DstoreLoc is NULL get the name of the datastore from the model state
+  # TODO: for linked Datastores, drill into G$Datastore
   if ( is.null(DstoreLoc) ) DstoreLoc <- G$DatastoreName; # presume it's in the working directory
 
   #Check that dataset exists to read from and if so get path to dataset
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if (DatasetExists) {
     FileName <- paste(Name, "Rda", sep = ".")
-    DatasetPath <- file.path(DstoreLoc, Group, Table, FileName)
+    Location <- DstoreLoc; # Eventually use specific DstoreLoc for the item
+    DatasetPath <- file.path(Location, Group, Table, FileName)
   } else {
     Message <-
-      paste("Dataset", Name, "in table", Table, "in group", Group, "doesn't exist.")
-    stop(Message)
+      paste("Dataset", Name, "in table", Table, "in group", Group, "doesn't exist in",DstoreLoc)
+    stop( writeLog(Message,Level="error") )
   }
   #Load the dataset
-  load(DatasetPath)
+  load(DatasetPath) # TODO: trap error on file not existing
   #Save the attributes
   Attr_ls <- attributes(Dataset)
   #Convert NA values
   # NAValue <- as.vector(attributes(Dataset)$NAVALUE)
   # Dataset[Dataset == NAValue] <- NA
   #If there is an Index, check, and use to subset the dataset
-  # TODO: examine why we don't just check the length/number of rows in the dataset?
   if (!is.null(Index)) {
     TableAttr_ <-
       unlist(G$Datastore$attributes[G$Datastore$groupname == file.path(Group, Table)])
@@ -593,7 +594,7 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL) {
   #Check that dataset exists to write to and attempt to create if not
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if ( DatasetExists ) {
-    # check for actual file, in case datset listing is obsolete
+    # check for actual file, in case dataset listing is obsolete
     # It is fine to re-write a missing file
     DatasetName <- paste0(Name, ".Rda")
     DatasetPath <- file.path(G$DatastoreName, Group, Table, DatasetName)
@@ -628,7 +629,7 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL) {
     if (any(Index > length(Dataset))) {
       Message <-
         paste0(
-          "One or more specified indicies for reading data from ",
+          "One or more specified indicies for writing data to ",
           file.path(Group, Table, Name), " exceed the length of the dataset."
         )
       writeLog(Message,Level="error")
