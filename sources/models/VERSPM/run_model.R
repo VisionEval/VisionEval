@@ -65,5 +65,6 @@ for(Year in getYears()) {
   }
   runModule("CalculateComEnergyAndEmissions",   "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   runModule("CalculatePtranEnergyAndEmissions", "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
+  runModule("CalculateSafetyMeasures",          "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
 }
 cat('run_model.R: run complete.\n')
