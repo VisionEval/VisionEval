@@ -92,7 +92,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
   # Model is expected to run in the directory that will receive its output.
   #   ModelState.Rda is the model description for this run
   #   Datastore are the model results for this run
-  if ( Save) save(ModelState_ls, envir=model.env, file = getModelStateFileName(Param_ls))
+  if ( Save) save("ModelState_ls", envir=model.env, file = getModelStateFileName(Param_ls))
 
   return(Save) 
 }

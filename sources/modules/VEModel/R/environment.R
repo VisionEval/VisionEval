@@ -187,8 +187,8 @@ ve.model.setupRunEnvironment <- function(
   invisible(ve.model$RunParam_ls)
 }
 
-# FUNCTION TO MAKE A UNIQUE FILE NAME
-#====================================
+# MAKE A UNIQUE FILE NAME
+#========================
 #  Get unique file name based on newName in folder newPath
 #  NewPath is the directory it should go in, newName is the name to disambiguate
 getUniqueName <- function(newPath,newName) {
@@ -202,3 +202,42 @@ getUniqueName <- function(newPath,newName) {
   return (newModelPath)
 }
 
+# CHECK IF PATH IS ABSOLUTE
+# =========================
+#  return TRUE if modelPath looks like an absolute file path
+isAbsolutePath <- function(modelPath,collapse=TRUE) {
+  absolute <- grepl("^([[:alpha:]]:|[\\/])",modelPath)
+  if (collapse) absolute <- any(absolute)
+  return(absolute)
+}
+
+
+
+# NORMALIZE A VISIONEVAL PATH
+# ===========================
+# Like the R built-in normalizePath, but better handling for missing path components
+# Empty string elements of the path will be treated as "."
+# NOTE: Do we need this? Standard normalize path seems to handle empty path elements...
+# Always does winslash="/"
+normalizePath <- function(
+  paths,                # character vector of file paths
+  RootDir="",           # prefixed onto all relative paths
+  mustWork=FALSE,       # or NA (warning) or TRUE (error) if not existing
+  winslash="/"          # passed through
+) {
+  elements <- unlist( lapply(
+    strsplit(paths,split="[\\/]"),
+    function(x) {
+      x[!nzchar(x)] <- "."
+      paste(x,collapse="/")
+    }
+  ) )
+  RootDir <- RootDir[1]
+  if ( nzchar(RootDir) ) {
+    relative <- !isAbsolutePath(elements,collapse=FALSE)
+    elements[relative] <- paste(RootDir,elements[relative],sep="/")
+  }
+  return( base::normalizePath(elements,winslash=winslash,mustWork=mustWork) )
+}
+
+    

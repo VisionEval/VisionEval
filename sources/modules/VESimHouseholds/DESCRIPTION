@@ -6,7 +6,6 @@ Date: 2020-08-14
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: AASHTO
-URL: https://github.com/gregorbj/VisionEval/sources/modules/VESimHouseholds
 Description: This package contains several modules which create synthetic
     households with attributes of persons by age group, income, workers,
     and life cycle. It also prepares a data frame of model estimation data from

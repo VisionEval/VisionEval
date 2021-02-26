@@ -21,8 +21,8 @@
 #'
 #' This function checks whether a dataset exists. The dataset is identified by
 #' its name and the table and group names it is in. If the dataset is not in the
-#' datastore, an error is thrown. If it is located in the datastore, the full
-#' path name to the dataset is returned.
+#' datastore listing, an error is thrown. If it is located in the datastore, the
+#' full path name to the dataset is returned.
 #'
 #' @param Name a string identifying the dataset name.
 #' @param Table a string identifying the table the dataset is a part of.
@@ -34,7 +34,8 @@
 #' an attribute that is a string of the full path to where the dataset should be
 #' in the datastore.
 #' @export
-checkDataset <- function(Name, Table, Group, DstoreListing_df, DstoreLoc=NULL) {
+checkDataset <- function(Name, Table, Group, DstoreListing_df) {
+  # TODO: DatasetName should include virtual location (local, base)
   Name <- as.character(Name)
   Table <- as.character(Table)
   Group <- as.character(Group)

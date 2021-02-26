@@ -6,7 +6,6 @@ Date: 2020-08-14
 Authors@R: person("Liming", "Wang", role=c("aut", "cre"), email="lmwang@pdx.edu")
 Maintainer: Liming Wang <lmwang@gmail.com>
 Copyright: Portland State University
-URL: https://github.com/cities-lab/VETravelDemandMM
 Description: This package contains a module for the VisionEval framework that simulates 
      multi-modal travel demand for individual households.
 License: file LICENSE
@@ -22,10 +21,10 @@ Imports:
     pscl,
     rmarkdown,
     data.table,
-    visioneval,
-    VE2001NHTS
+    visioneval
 Suggests:
     knitr,
+    VE2001NHTS,
     NHTS2009,
     SLD
 VignetteBuilder: knitr

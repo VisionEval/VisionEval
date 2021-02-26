@@ -393,7 +393,7 @@ docs: docs-reset docs-build
 docs-build: $(VE_LOGS)/docs.built
 
 $(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/runtime.built\
-	$(VE_LOGS)/velib.built scripts/build-docs.R scripts/build-inventory.R
+        $(VE_LOGS)/velib.built scripts/build-docs.R scripts/build-inventory.R
 	$(RSCRIPT) scripts/build-docs-framework.R
 	$(RSCRIPT) scripts/build-docs-visual.R
 	$(RSCRIPT) scripts/build-inventory.R

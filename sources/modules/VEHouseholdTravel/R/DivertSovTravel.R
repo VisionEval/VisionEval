@@ -127,7 +127,7 @@ SovModel_ls <- list(
 #Load household data and calculate added variables
 #-------------------------------------------------
 #Load NHTS household data
-Hh_df <- VE2001NHTS::Hh_df
+Hh_df <- loadPackageDataset("Hh_df","VE2001NHTS")
 #Add variables to Hh_df
 Hh_df$Density <- Hh_df$Hbppopdn
 Hh_df$LogDensity <- log(Hh_df$Density)
@@ -194,7 +194,7 @@ rm(Include_, IsMetro, Keep_)
 #Calculate mileage in SOV tours having lengths 20 miles or shorter
 #-----------------------------------------------------------------
 #Load NHTS tour data
-HhTours_df <- VE2001NHTS::HhTours_df
+HhTours_df <- loadPackageDataset("HhTours_df","VE2001NHTS")
 HhTours_dt <- data.table(HhTours_df[,c("Houseid", "Distance", "Persons", "Trips")])
 rm(HhTours_df)
 #Select SOV tours with distances of 20 miles or less

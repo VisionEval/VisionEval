@@ -6,7 +6,6 @@ Date: 2020-08-14
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: Oregon Department of Transportation
-URL: https://github.com/gregorbj/VisionEval/sources/modules/VESimLandUseData
 Description: This package processes data from several sources to produce a
     dataset that is used to estimate several models for synthesizing Bzones and
     their likely land use attributes. Datasets from the U.S. Census 2015

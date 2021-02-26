@@ -393,6 +393,7 @@ for ( module in seq_along(package.names) ) {
       # Run the module check (prior to building anything)
       # Set working directory outside devtools:check, or it gets very confused about where to put generated /data elements.
       # Need to set "check.dir" location explicitly to "check_dir=build.dir" (otherwise lost in space)
+      # Also need to make sure that Suggested packages are also loaded (e.g. VE2001NHTS) (cran=FALSE)
       chk.args <- if ( ! ve.test.pkg ) "--no-tests" else ""
       check.results <- withr::with_dir(  build.dir,
         devtools::check(
@@ -400,6 +401,7 @@ for ( module in seq_along(package.names) ) {
           check_dir=build.dir,
           document=FALSE,
           args=chk.args,
+          cran=FALSE,
           error_on="error"
         )
       )

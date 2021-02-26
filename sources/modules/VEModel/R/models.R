@@ -61,13 +61,6 @@ confirmDialog <- function(msg) {
 }
 
 ## Helper
-#  return TRUE if modelPath looks like an absolute file path
-isAbsolutePath <- function(modelPath) {
-  # TODO: may need a more robust regular expression
-  any(grepl("^([[:alpha:]]:[\\/]*|[\\/])",modelPath))
-}
-
-## Helper
 #  Generate a list of directories that might contain models
 #  Model roots: ve.runtime/models, getwd()/models, ve.runtime, getwd()
 getModelRoots <- function(get.root=0) {

@@ -6,7 +6,6 @@ Date: 2020-08-14
 Author: Brian Gregor [aut, cre], Aditya Gore <aditya.gore@rsginc.com> [cre]
 Maintainer: Brian Gregor <gregorb@or-analytics.com>, Aditya Gore <aditya.gore@rsginc.com>
 Copyright: AASHTO
-URL: https://github.com/gregorbj/VisionEval/sources/modules/VEVehicleOwnership
 Description: This package contains modules which predict household vehicle
     ownership, including the number owned, body types, and ages. It also
     identifies car service accessibility by household (High & Low) and
@@ -22,10 +21,10 @@ Depends: R (>= 3.6.0)
 Imports:
     visioneval,
     ordinal,
-    reshape2,
-    VE2001NHTS
+    reshape2
 Suggests:
-    knitr
+    knitr,
+    VE2001NHTS
 Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(load='source')

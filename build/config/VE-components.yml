@@ -38,6 +38,7 @@ Components:
     CRAN:
       - futile.logger
       - httpuv
+      - jrc
       - jsonlite
       - mime
       - R.utils
@@ -45,8 +46,10 @@ Components:
       - stringi
       - stringr
       - tryCatchLog
-    Github:
-      - anders-biostat/jrc
+#    Github:
+#      - anders-biostat/jrc
+#    To build properly, need to do externals after creating ve.lib!
+#    which requires a change to the Makefile sequencing.
   VEScenario:
     Type: module
     Path: sources/modules

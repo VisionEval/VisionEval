@@ -6,7 +6,6 @@ Date: 2020-08-14
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: AASHTO
-URL: https://github.com/gregorbj/VisionEval/sources/modules/VE2001NHTS
 Description: This package creates and saves 3 data frames that are used to 
     estimate various VisionEval models. These data frames are created from
     the publically available data from the 2001 National Household Travel Survey 

@@ -69,7 +69,7 @@ VehTrpLenModel_ls <- list()
 
 #Load NHTS household data
 #------------------------
-Hh_df <- VE2001NHTS::Hh_df
+Hh_df <- loadPackageDataset("Hh_df","VE2001NHTS")
 
 #Prepare variables for estimating trip models
 #--------------------------------------------

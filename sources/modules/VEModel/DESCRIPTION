@@ -6,7 +6,6 @@ Date: 2021-01-19
 Author: Jeremy Raw [aut, cre]
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: None
-URL: https://Github.com/VisionEval
 Description: Contains R6 object management code providing functions
   and objects to set up VisionEval models, run them, and query or extract
   their output.

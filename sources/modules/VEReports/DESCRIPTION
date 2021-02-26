@@ -6,7 +6,6 @@ Date: 2020-08-14
 Author: Aditya Gore <aditya.gore@rsginc.com> [cre], Ben Stabler <ben.stabler@rsginc.com> [cre],  Brian Gregor <gregor@or-analytics.com> [auth]
 Maintainer: Aditya Gore <aditya.gore@rsginc.com>, Ben Stabler <ben.stabler@rsginc.com>
 Copyright: AASHTO, ODOT
-URL: https://github.com/gregorbj/VisionEval/sources/modules/VEReports
 Description: This package contains modules that enable users to calculate
      various performance metrics from data stored in the datastore for a 
      VisionEval model run.

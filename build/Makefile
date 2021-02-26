@@ -7,7 +7,11 @@ VE_RUNTESTS?=Default
 VE_EXPRESS?=YES # should be NO, or unset, for standard use
 VE_BRANCH?=$(shell git branch --show-current 2>/dev/null || echo visioneval)
 ifeq ($(OS),Windows_NT)
+<<<<<<< HEAD
   VE_R_VERSION?=4.1.2
+=======
+  VE_R_VERSION?=4.0.5
+>>>>>>> db3ed1bc (Updated to build with VE2001NHTS as merely 'Suggested')
   RTERM:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
   WINDOWS=TRUE
 else
@@ -231,7 +235,7 @@ docs: docs-reset docs-build
 docs-build: $(VE_LOGS)/docs.built
 
 $(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/runtime.built\
-	$(VE_LOGS)/velib.built scripts/build-docs.R scripts/build-inventory.R
+        $(VE_LOGS)/velib.built scripts/build-docs.R scripts/build-inventory.R
 	$(RSCRIPT) scripts/build-docs-framework.R
 	$(RSCRIPT) scripts/build-docs-visual.R
 	$(RSCRIPT) scripts/build-inventory.R

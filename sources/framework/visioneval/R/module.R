@@ -264,48 +264,86 @@ processEstimationInputs <- function(Inp_ls, FileName, ModuleName) {
 #=========================
 #' Load a VisionEval package dataset
 #'
-#' \code{loadPackageDataset} a visioneval framework module developer function
-#' which loads a dataset identified by name from the VisionEval package
-#' containing the dataset.
+#' \code{loadPackageDataset} a visioneval framework module developer function which loads
+#' a dataset identified by name from the VisionEval package containing the dataset.
 #'
-#' This function is used to load a dataset identified by name from the
-#' VisionEval package which contains the dataset. Using this function is the
-#' preferred alternative to hard-wiring the loading a dataset using the
-#' 'package::dataset' notation because it enables users to switch between module
-#' versions contained in different packages. For example, there may be different
-#' versions of the VEPowertrainsAndFuels package which have different default
-#' assumptions about light-duty vehicle powertrain mix and characteristics by
-#' model year. Using this function, the module developer only needs to identify
-#' the dataset name. The module developer should also specify a 'DefaultPackage'
+#' This function is used to load a dataset identified by name from the VisionEval package
+#' which contains the dataset. Using this function is the preferred alternative to
+#' hard-wiring the loading a dataset using the 'package::dataset' notation because it
+#' enables users to switch between module versions contained in different packages. For
+#' example, there may be different versions of the VEPowertrainsAndFuels package which
+#' have different default assumptions about light-duty vehicle powertrain mix and
+#' characteristics by model year. Using this function, the module developer only needs to
+#' identify the dataset name. The module developer should also specify a 'DefaultPackage'
 #' name to simplify module development and testing. For example, the default
-#' 'VEPowertrainsAndFuels' package can be specified. During module development
-#' and testing the dataset will be loaded from that package, but during a model
-#' run the dataset will be loaded from the package that is specified to be used
-#' in the model run. The function uses 'DatasetsByPackage_df' data frame in the
-#' model state list to identify the package which contains the dataset. If
-#' 'DatasetsByPackage_df' is not present in the model state list, as is the case
-#' during module development and testing, the the dataset is retrieved from the
-#' 'DefaultPackage'.
+#' 'VEPowertrainsAndFuels' package can be specified. During module development and testing
+#' the dataset will be loaded from that package, but during a model run the dataset will
+#' be loaded from the package that is specified to be used in the model run. The function
+#' uses 'DatasetsByPackage_df' data frame in the model state list to identify the package
+#' which contains the dataset. If 'DatasetsByPackage_df' is not present in the model state
+#' list, as is the case during module development and testing, the the dataset is
+#' retrieved from the named 'DefaultPackage'.
+#'
+#' In practice,this function should always be used in code that estimates models and that
+#' relies, for example, on VE2001NHTS since the estimation is technically done "during
+#' development", not at runtime. In that case, the required package should be explicitly
+#' listed. Calls for a dataset inside a module function should preferentially use this
+#' function.
 #'
 #' @param DatasetName A string identifying the name of the dataset.
 #' @param DefaultPackage A string identifying the name of the package to
-#'   retrieve the dataset from during module development and testing.
+#'   retrieve the dataset from
 #' @return The identified dataset.
 #' @export
 loadPackageDataset <- function(DatasetName, DefaultPackage = NULL) {
-  if (exists(DatasetName)) {
-    return(eval(parse(text = DatasetName)))
-  } else {
-    if (!is.null(getModelState()$DatasetsByPackage_df)) {
-      Dat_df <- getModelState()$DatasetsByPackage_df
-      PkgName <- with(Dat_df, Package[Dataset == DatasetName])
+  if ( is.null(DefaultPackage) ) {
+    Dat_df <- getModelState()$DatsetsByPackage_df
+    if ( is.null(Dat_df) ) {
+      stop( 
+        writeLog(
+          paste("Could not find Dataset",DatasetName,"as no package name is available."),
+          Level="error"
+        )
+      )
     } else {
-      PkgName <- DefaultPackage
+      PkgName <- with(Dat_df, Pacakge[Dataset == DatasetName])
     }
-    FullName <- paste(PkgName, DatasetName, sep = "::")
-    return(eval(parse(text = FullName)))
+  } else {
+    PkgName <- DefaultPackage
   }
+  df.env <- new.env()
+  dfErr <- tryCatch(
+    data(
+      list=DatasetName,
+      package=PkgName,
+      envir=df.env
+    ),condition=function(e) return(conditionMessage(e))
+  )
+  if ( dfErr!=DatasetName ) {
+    stop(
+      writeLog(
+        c(
+          paste0("Error accessing data '",DatasetName,"' in Package ",PkgName,"\n"),
+          dfErr
+        ), Level="error"
+      )
+    )
+  }
+  return( get(DatasetName,envir=df.env) )
 }
+  # PREVIOUS VERSION:
+  #   if (exists(DatasetName)) {
+  #     return(eval(parse(text = DatasetName)))
+  #   } else {
+  #     if (!is.null(getModelState()$DatasetsByPackage_df)) {
+  #       Dat_df <- getModelState()$DatasetsByPackage_df
+  #       PkgName <- with(Dat_df, Package[Dataset == DatasetName])
+  #     } else {
+  #       PkgName <- DefaultPackage
+  #     }
+  #     FullName <- paste(PkgName, DatasetName, sep = "::")
+  #     return(eval(parse(text = FullName)))
+  #   }
 
 #SAVE A VE PACKAGE DATASET
 #=========================

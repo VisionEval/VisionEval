@@ -6,7 +6,6 @@ Date: 2020-08-14
 Author: Brian Gregor [aut, cre], Aditya Gore <aditya.gore@rsginc.com> [cre]
 Maintainer: Brian Gregor <gregorb@or-analytics.com>, Aditya Gore <aditya.gore@rsginc.com>
 Copyright: AASHTO
-URL: https://github.com/gregorbj/VisionEval/sources/modules/VEAltModes
 Description: Contains modules for predicting household average DVMT, trips by
     alternative modes (walking, biking, transit), household vehicle trips, and 
     percentage reduction in household DVMT a result of diversion of SOV DVMT to 
@@ -16,11 +15,11 @@ LazyData: TRUE
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    VE2001NHTS,
     filesstrings,
     data.table,
     pscl
 Suggests:
+    VE2001NHTS,
     knitr
 Encoding: UTF-8
 VignetteBuilder: knitr

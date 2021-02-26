@@ -6,7 +6,6 @@ Date: 2020-08-14
 Author: Brian Gregor [aut, cre],
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: AASHTO, ODOT
-URL: https://github.com/gregorbj/VisionEval/sources/modules/VETravelCosts
 Description: Contains modules for inputting default powertrain and fuel
     characteristics and for allowing households to override some of the defaults
     with characteristics for their region. Calculates the carbon intensity of 
@@ -20,11 +19,11 @@ LazyData: TRUE
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    VE2001NHTS,
     VEHouseholdTravel,
     data.table
 Suggests:
-    knitr
+    knitr,
+    VE2001NHTS
 Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(load='source')

@@ -6,7 +6,6 @@ Date: 2020-08-14
 Author: Ben Stabler <ben.stabler@rsginc.com>, Peter Andrews <peter.andrews@rsginc.com>, Brian Gregor <gregor@or-analytics.com>
 Maintainer: Ben Stabler <ben.stabler@rsginc.com>
 Copyright: AASHTO
-URL: https://github.com/gregorbj/VisionEval/sources/modules/VESyntheticFirms
 Description: VisionEval Synthetic Firms module
 License: file LICENSE
 LazyData: TRUE
