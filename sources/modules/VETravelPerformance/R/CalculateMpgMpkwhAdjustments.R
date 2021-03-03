@@ -622,7 +622,7 @@ CalculateMpgMpkwhAdjustments <- function(L) {
   #Calculates speed smoothing maximum factors by road class for a given vehicle
   #type based on the estimated congested speeds
 
-  MpgMpkwhAdj_ls <- VETravelPerformance::MpgMpkwhAdj_ls
+  MpgMpkwhAdj_ls <- loadPackageDataset("MpgMpkwhAdj_ls","VETravelPerformance")
 
   calcMaxSpdSmAdj <- function(vt) {
     #Choose the speed smoothing factor model
@@ -734,12 +734,17 @@ CalculateMpgMpkwhAdjustments <- function(L) {
   #-----------------------------------------------------
   getModelCoeff <- function(VehPtType, ft) {
     CoeffNames_ <- c("a1", "a2", "a3", "a4")
-    Coeff_mx <-
-      subset(MpgMpkwhAdj_ls$VehFSC_df,
-             AdvVehType == VehPtType & FacilityType == ft)[,CoeffNames_]
-    rownames(Coeff_mx) <-
-      subset(MpgMpkwhAdj_ls$VehFSC_df,
-             AdvVehType == VehPtType & FacilityType == ft)[,"CongEff"]
+    # Per help on 'subset' it should not be used in scripts (only interactively).
+#     Coeff_mx <-
+#       subset(MpgMpkwhAdj_ls$VehFSC_df,
+#              AdvVehType == VehPtType & FacilityType == ft)[,CoeffNames_]
+#     rownames(Coeff_mx) <-
+#       subset(MpgMpkwhAdj_ls$VehFSC_df,
+#              AdvVehType == VehPtType & FacilityType == ft)[,"CongEff"]
+    # It's so easy to use standard subsetting...
+    select.rows <- with(MpgMpkwhAdj_ls$VehFSC_df,AdvVehType == VehPtType & FacilityType == ft)
+    Coeff_mx           <- MpgMpkwhAdj_ls$VehFSC_df[select.rows,CoeffNames_]
+    rownames(Coeff_mx) <- MpgMpkwhAdj_ls$VehFSC_df[select.rows,"CongEff"]
     Coeff_mx
   }
 
@@ -848,7 +853,6 @@ documentModule("CalculateMpgMpkwhAdjustments")
 #-------------------------------------------------------------------------------
 # #Load libraries and test functions
 # library(visioneval)
-# library(filesstrings)
 # source("tests/scripts/test_functions.R")
 # #Set up test environment
 # TestSetup_ls <- list(

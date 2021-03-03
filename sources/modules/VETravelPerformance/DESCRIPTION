@@ -20,8 +20,9 @@ Depends: R (>= 3.6.0)
 Imports:
     visioneval,
     dplyr,
-    filesstrings,
-    stringr,
+    rlang,
+    magrittr
+Suggests:
     VEPowertrainsAndFuels,
     VEHouseholdTravel
 Encoding: UTF-8
