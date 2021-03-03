@@ -1113,7 +1113,7 @@ CalculateCongestionBase <- function(L) {
   Its_Yr <- L$Year$Azone$ITS
 
   #Make an array of congestion prices
-  CongModel_ls <- VETransportSupplyUse::CongModel_ls
+  CongModel_ls <- loadPackageDataset("CongModel_ls","VETransportSupplyUse")
   CongPrice_ClFc <-
     array(0,
           dim = c(length(CongestionLevel_vc), length(FunctionalClass_vc)),

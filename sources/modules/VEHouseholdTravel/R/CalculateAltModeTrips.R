@@ -478,7 +478,7 @@ CalculateAltModeTrips <- function(L) {
   calcTrips <- function(Mode) {
     Trips_ <- nrow(Hh_df)
     IsMetro_ <- Hh_df$LocType == "Urban"
-    AltModeModels_ls <- VEHouseholdTravel::AltModeModels_ls
+    AltModeModels_ls <- visioneval::loadPackageDataset("AltModeModels_ls","VEHouseholdTravel")
     Trips_[IsMetro_] <-
       applyHurdleTripModel(Hh_df[IsMetro_,], AltModeModels_ls$Metro[[Mode]])
     

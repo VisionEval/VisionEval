@@ -281,7 +281,7 @@ processEstimationInputs <- function(Inp_ls, FileName, ModuleName) {
 #' be loaded from the package that is specified to be used in the model run. The function
 #' uses 'DatasetsByPackage_df' data frame in the model state list to identify the package
 #' which contains the dataset. If 'DatasetsByPackage_df' is not present in the model state
-#' list, as is the case during module development and testing, the the dataset is
+#' list, as is the case during module development and testing, the dataset is
 #' retrieved from the named 'DefaultPackage'.
 #'
 #' In practice,this function should always be used in code that estimates models and that
@@ -292,12 +292,12 @@ processEstimationInputs <- function(Inp_ls, FileName, ModuleName) {
 #'
 #' @param DatasetName A string identifying the name of the dataset.
 #' @param DefaultPackage A string identifying the name of the package to
-#'   retrieve the dataset from
+#'   retrieve the dataset from (or NULL to find it in the ModelState). 
 #' @return The identified dataset.
 #' @export
 loadPackageDataset <- function(DatasetName, DefaultPackage = NULL) {
   if ( is.null(DefaultPackage) ) {
-    Dat_df <- getModelState()$DatsetsByPackage_df
+    Dat_df <- getModelState()$DatasetsByPackage_df
     if ( is.null(Dat_df) ) {
       stop( 
         writeLog(
@@ -306,7 +306,7 @@ loadPackageDataset <- function(DatasetName, DefaultPackage = NULL) {
         )
       )
     } else {
-      PkgName <- with(Dat_df, Pacakge[Dataset == DatasetName])
+      PkgName <- with(Dat_df, Package[Dataset == DatasetName])
     }
   } else {
     PkgName <- DefaultPackage
@@ -352,10 +352,10 @@ loadPackageDataset <- function(DatasetName, DefaultPackage = NULL) {
 #' \code{savePackageDataset} a visioneval framework module developer function
 #' which saves a dataset to the data/ directory during package build.
 #'
-#' This function is used to save a dataset during module estimation and when
-#' building module specifications. Using this function is the
-#' preferred alternative to hard-wiring saving a dataset using usthis::use_data
-#' or other means as it does suitable error-checking.
+#' This function is used to save a dataset during module estimation and when ' building
+#' module specifications. Using this function is the ' preferred alternative to
+#' hard-wiring saving a dataset using usthis::use_data ' or other means as it does
+#' suitable error-checking.
 #'
 #' @param dataset A string identifying the name of the object containing
 #' the dataset.

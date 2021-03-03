@@ -49,8 +49,8 @@
 #Prepare 2001 NHTS data
 #----------------------
 #Load 2001 NHTS household and vehicle data
-Hh_df <- VE2001NHTS::Hh_df
-Veh_df <- VE2001NHTS::Veh_df
+Hh_df <- loadPackageDataset("Hh_df","VE2001NHTS")
+Veh_df <- loadPackageDataset("Veh_df","VE2001NHTS")
 #Create a vehicle age variable and cap at 30 years
 MaxAge <- 30
 Veh_df$VehAge <- 2002 - Veh_df$Vehyear

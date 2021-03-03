@@ -437,7 +437,7 @@ CalculateFuturePlaceTypes <- function(L) {
   set.seed(L$G$Seed)
 
   # Assign area types to households
-  HhAllocationModelCoeff_df <- VELandUse::HhAllocationModelCoeff_df
+  HhAllocationModelCoeff_df <- loadPackageDataset("HhAllocationModelCoeff_df","VELandUse")
   Hhlds$AreaType <- runLogit(HhldPop = Hhlds[ ,Ag], ModelData = Hhlds[ ,ModelVar_],
                              ModelCoeffs = HhAllocationModelCoeff_df, TargetPop = Target_At,
                              TargetGroups = ModelCoeffs_corresp[,2])

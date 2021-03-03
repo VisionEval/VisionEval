@@ -342,7 +342,7 @@ PredictWorkers <- function(L) {
   }
   #Iterate through age groups and Azones and identify number of workers by
   #age group for each household
-  PropHhWkr_HtAg <- VESimHouseholds::PropHhWkr_HtAg
+  PropHhWkr_HtAg <- loadPackageDataset("PropHhWkr_HtAg","VESimHouseholds")
   for (i in 1:length(Ag)) {
     NumWkr_Hh <- integer(NumHh)
     for (az in Az) {

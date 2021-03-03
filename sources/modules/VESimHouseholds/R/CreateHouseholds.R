@@ -452,7 +452,7 @@ createHhByAge <-
            TargetHhSize = NA,
            TargetProp1PerHh = NA) {
     #Dimension names
-    HtProb_HtAp <- VESimHouseholds::HtProb_HtAp
+    HtProb_HtAp <- loadPackageDataset("HtProb_HtAp","VESimHouseholds")
     Ap <- colnames(HtProb_HtAp)
     Ht <- rownames(HtProb_HtAp)
     #Place persons by age into household types by multiplying person vector

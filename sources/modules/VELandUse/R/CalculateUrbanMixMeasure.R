@@ -82,14 +82,14 @@ estimateUrbanMixModel <- function(EstData_df, StartTerms_) {
 #Estimate the binomial logit model for urban mixed-use
 #-----------------------------------------------------
 #Create model estimation dataset
-NhtsHometype_ <- VE2001NHTS::Hh_df$Hometype
+NhtsHometype_ <- loadPackageDataset("Hh_df","VE2001NHTS")$Hometype
 HouseType_ <- rep("SF", length(NhtsHometype_))
 HouseType_[NhtsHometype_ == "Dorm"] <- "GQ"
 HouseType_[NhtsHometype_ %in% c("Duplex", "Multi-family", "Other")] <- "MF"
 Data_df <-
   data.frame(
-    UrbanMix = VE2001NHTS::Hh_df$UrbanDev,
-    LocalPopDensity = VE2001NHTS::Hh_df$Hbppopdn,
+    UrbanMix = loadPackageDataset("Hh_df","VE2001NHTS")$UrbanDev,
+    LocalPopDensity = loadPackageDataset("Hh_df","VE2001NHTS")$Hbppopdn,
     IsSF = as.numeric(HouseType_ == "SF"))
 Data_df <- Data_df[complete.cases(Data_df),]
 rm(NhtsHometype_, HouseType_)
@@ -354,7 +354,7 @@ CalculateUrbanMixMeasure <- function(L) {
 
   #Define a function to apply the model to match mix target if there is one
   #------------------------------------------------------------------------
-  UrbanMixModel_ls <- VELandUse::UrbanMixModel_ls
+  UrbanMixModel_ls <- loadPackageDataset("UrbanMixModel_ls","VELandUse")
   matchMixTarget <- function(D_df, MixTarget) {
     D_df$Intercept <- 1
     Odds_ <- exp(eval(parse(text = UrbanMixModel_ls$Formula), envir = D_df))

@@ -134,13 +134,13 @@ library(visioneval)
 D4cModels_ls <- list()
 #Load D4c percentiles by place type
 
-SimBzone_ls <- VESimLandUse::SimBzone_ls
+SimBzone_ls <- loadPackageDataset("SimBzone_ls","VESimLandUse")
 
-D4cModels_ls$NormD4_PtQt <- VESimLandUse::SimBzone_ls$UaProfiles$NormD4_PtQt
+D4cModels_ls$NormD4_PtQt <- loadPackageDataset("SimBzone_ls","VESimLandUse")$UaProfiles$NormD4_PtQt
 #Load D4 supply ratios
-D4cModels_ls$D4SupplyRatio_Ua <- VESimLandUse::SimBzone_ls$UaProfiles$D4SupplyRatio_Ua
+D4cModels_ls$D4SupplyRatio_Ua <- loadPackageDataset("SimBzone_ls","VESimLandUse")$UaProfiles$D4SupplyRatio_Ua
 #Load linear model to predict urbanized area average D4c value
-D4cModels_ls$AveD4cModel_ls <- VESimLandUse::SimBzone_ls$UaProfiles$AveD4cModel_ls
+D4cModels_ls$AveD4cModel_ls <- loadPackageDataset("SimBzone_ls","VESimLandUse")$UaProfiles$AveD4cModel_ls
 
 rm(SimBzone_ls)
 
@@ -411,7 +411,7 @@ SimulateTransitService <- function(L) {
   #Fix seed as synthesis involves sampling
   set.seed(L$G$Seed)
 
-  BusEquivalents_df <- VETransportSupply::BusEquivalents_df
+  BusEquivalents_df <- loadPackageDataset("BusEquivalents_df","VETransportSupply")
 
   #Define vector of modes
   Md <- as.character(BusEquivalents_df$Mode)
@@ -444,7 +444,7 @@ SimulateTransitService <- function(L) {
   #Calculate vehicle miles by vehicle type
   #---------------------------------------
   #Make vector of vehicle miles factors conforming with RevMi_df
-  VehMiFactors_df <- VETransportSupply::VehMiFactors_df
+  VehMiFactors_df <- loadPackageDataset("VehMiFactors_df","VETransportSupply")
 
   VehMiFactors_Md <- VehMiFactors_df$VehMiFactors
   names(VehMiFactors_Md) <- VehMiFactors_df$Mode
@@ -475,7 +475,7 @@ SimulateTransitService <- function(L) {
   #Calculate Marea urban average D4c
   #---------------------------------
   #Get estimated average D4c values where exist
-  D4cModels_ls <- VESimTransportSupply::D4cModels_ls
+  D4cModels_ls <- loadPackageDataset("D4cModels_ls","VESimTransportSupply")
 
   UaName_Ma <- setNames(L$Global$Marea$UzaProfileName, Ma)
   AveD4c_Ma <- setNames(numeric(length(Ma)), Ma)

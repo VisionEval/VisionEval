@@ -147,6 +147,7 @@ getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,logSource=FALSE) 
 default.parameters.table = list(
   Seed = 1,
   LogLevel = "error",
+  DstoreDir = ".",
   DatastoreName = "Datastore",
   ModelDir = ".", # subdirectory containing run_model.R (e.g. "script")
   ModelScriptFile = "run_model.R",

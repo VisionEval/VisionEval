@@ -343,7 +343,7 @@ library(plot3D)
 #--------------------------
 #LOAD MODEL ESTIMATION DATA
 #--------------------------
-D_df <- VESimLandUseData::SimLandUseData_df
+D_df <- loadPackageDataset("SimLandUseData_df","VESimLandUseData")
 #Create a list to hold model elements
 SimBzone_ls <- list(
   UaProfiles = list(),

@@ -1842,7 +1842,7 @@ CalculatePolicyVmt <- function(L) {
                   "Age55to64", "Age65Plus", "VehPerDrvAgePop", "DrvAgePop" )
   #fix seed as allocation involves sampling
   set.seed(L$G$Seed)
-  LtVehOwnModels_ls <- VEHouseholdTravel::LtVehOwnModels_ls
+  LtVehOwnModels_ls <- loadPackageDataset("LtVehOwnModels_ls","VEHouseholdTravel")
   if( any( IsMetro_ ) ) {
     LtVehOwn_Hh[ IsMetro_ ] <- predictLightVehicles( Hh_df[ IsMetro_, ModelVar_ ],
                                                      LtVehOwnModels_=LtVehOwnModels_ls, Type="Metro",
@@ -1868,7 +1868,7 @@ CalculatePolicyVmt <- function(L) {
                   "DrvAgePop" )
   #fix seed as allocation involves sampling
   set.seed(L$G$Seed)
-  AveSovPropModels_ls <- VEHouseholdTravel::AveSovPropModels_ls
+  AveSovPropModels_ls <- loadPackageDataset("AveSovPropModels_ls","VEHouseholdTravel")
   if( any( IsMetro_ ) ) {
     LtVehDvmt_Hh[ IsMetro_ ] <- calcLtVehDvmt( Hh_df[ IsMetro_, ModelVar_ ],
                                                AveSovPropModels_ls,

@@ -119,7 +119,7 @@ load("./data/PowertrainFuelDefaults_ls.rda")
 #----------------------------------------------------------
 calcElectricProp <- function(Dvmt, Range, MareaType) {
   #Select the DVMT percentile models for the metropolitan area type
-  PctlModels_ls <- VEHouseholdTravel::DvmtModel_ls[[MareaType]][-c(1,2)]
+  PctlModels_ls <- loadPackageDataset("DvmtModel_ls","VEHouseholdTravel")[[MareaType]][-c(1,2)]
   #Calculate DVMT by pecentile
   Dvmt_df <- data.frame(
     Intercept = 1,

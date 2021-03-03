@@ -135,7 +135,7 @@ estimateHousingModel <- function(Data_df, StartTerms_) {
 #Estimate the binomial logit model
 #---------------------------------
 #Load the household estimation data
-Hh_df <- VESimHouseholds::Hh_df
+Hh_df <- loadPackageDataset("Hh_df","VESimHouseholds")
 #Select regular households
 Hh_df <- Hh_df[Hh_df$HhType == "Reg",]
 Hh_df$Income[Hh_df$Income == 0] <- 1
@@ -647,7 +647,7 @@ PredictHousing <- function(L) {
       L$Year$Household$Azone[!IsGQ_Hh]
     )
   Az <- names(Hh_df_Az)
-  HouseTypeModel_ls <- VELandUse::HouseTypeModel_ls
+  HouseTypeModel_ls <- loadPackageDataset("HouseTypeModel_ls","VELandUse")
   for (az in Az) {
     #Calculate the single family housing proportion
     SFDU <- sum(L$Year$Bzone$SFDU[L$Year$Bzone$Azone == az])

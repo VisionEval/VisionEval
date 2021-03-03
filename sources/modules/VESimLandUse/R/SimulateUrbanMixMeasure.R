@@ -63,7 +63,7 @@
 #Load the urban mixed-use model estimated by the CalculateUrbanMixMeasure
 #module in the VELandUse package
 #------------------------------------------------------------------------
-UrbanMixModelSim_ls <- VELandUse::UrbanMixModel_ls
+UrbanMixModelSim_ls <- loadPackageDataset("UrbanMixModel_ls","VELandUse")
 
 #Save the urban mixed-use model
 #------------------------------
@@ -303,7 +303,7 @@ idUrbanMixBzones <- function(Hh_BzHt, Den_Bz, Target) {
   Bz <- names(Den_Bz)
   Hh_BzHt <- Hh_BzHt[Bz,]
   Hh_Bz <- rowSums(Hh_BzHt)
-  UrbanMixModel_ls <- VESimLandUse::UrbanMixModelSim_ls # Avoid name conflict
+  UrbanMixModel_ls <- loadPackageDataset("UrbanMixModelSim_ls","VESimLandUse")  # Avoid name conflict
   #Calculate probabilities by Bzone for SF and Mf
   Prob_BzHt <- 0 * Hh_BzHt
   Prob_BzHt[,"SFDU"] <-

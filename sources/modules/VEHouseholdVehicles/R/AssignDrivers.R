@@ -567,7 +567,7 @@ AssignDrivers <- function(L) {
 
   #Assign drivers to households by age bin
   #---------------------------------------
-  DriverModel_ls <- VEHouseholdVehicles::DriverModel_ls
+  DriverModel_ls <- loadPackageDataset("DriverModel_ls","VEHouseholdVehicles")
   for (Bin in Bins_) {
     # Name the bin
     BinName <- paste0("Drv", Bin)

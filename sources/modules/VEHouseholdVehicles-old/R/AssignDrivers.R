@@ -90,11 +90,11 @@ estimateDriverModel <- function(Data_df, StartTerms_, ValidationProp) {
 #Set up data estimate models
 #---------------------------
 #Load NHTS household data
-Hh_df <- VE2001NHTS::Hh_df
+Hh_df <- loadPackageDataset("Hh_df","VE2001NHTS")
 #Identify records used for estimating metropolitan area models
 Hh_df$IsMetro <- Hh_df$Msacat %in% c("1", "2")
 #Load NHTS person data to use for model estimation
-Per_df <- VE2001NHTS::Per_df[, c("Houseid", "Driver", "AgeGroup", "Worker")]
+Per_df <- loadPackageDataset("Per_df","VE2001NHTS")[, c("Houseid", "Driver", "AgeGroup", "Worker")]
 #Join person data with select household data
 ModelVars_ <-
   c("Houseid", "Hbppopdn", "Income", "Hhsize", "Hometype", "UrbanDev",

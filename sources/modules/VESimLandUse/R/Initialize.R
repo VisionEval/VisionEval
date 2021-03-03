@@ -59,8 +59,8 @@ UzaProfileNames_ls <- list()
 
 #Make a vector of acceptable urbanized area profile names
 #--------------------------------------------------------
-AllNames_ <- VESimLandUseData::SimLandUseData_df$UZA_NAME
-LocType_ <- VESimLandUseData::SimLandUseData_df$LocType
+AllNames_ <- loadPackageDataset("SimLandUseData_df","VESimLandUseData")$UZA_NAME
+LocType_ <- loadPackageDataset("SimLandUseData_df","VESimLandUseData")$LocType
 UzaNames_ <- sort(unique(AllNames_[LocType_ == "Urban"]))
 UzaNames_ <-
   c(UzaNames_,
@@ -778,7 +778,7 @@ Initialize <- function(L) {
   #Only check if no other errors identified
   if (length(Errors_) == 0) {
     #Calculate average density limits
-    SimBzone_ls <- VESimLandUse::SimBzone_ls
+    SimBzone_ls <- loadPackageDataset("SimBzone_ls","VESimLandUse")
     RuralActDenRng_ <- range(SimBzone_ls$RuProfiles$D1DGrp_ls$AveDensity)
     TownActDenRng_ <- range(SimBzone_ls$TnProfiles$D1DGrp_ls$AveDensity)
     UrbanActDenRng_ <- local({
@@ -1069,7 +1069,7 @@ Initialize <- function(L) {
 
   #Check each assigned UzaProfileName for consistency
   #--------------------------------------------------
-  UzaProfileNames_ls <- VESimLandUse::UzaProfileNames_ls
+  UzaProfileNames_ls <- loadPackageDataset("UzaProfileNames_ls","VESimLandUse")
   UzaNames_ <- UzaProfileNames_ls$Names
   Marea_ <- L$Data$Global$Marea$Geo
   UzaProfileName_ <- L$Data$Global$Marea$UzaProfileName

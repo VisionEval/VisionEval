@@ -537,7 +537,7 @@ PredictIncome <- function(L) {
   Data_df$AvePerCapInc <- L$Year$Azone$HHIncomePC[HhToAzIdx_Hh]
   #Predict income for households by Azone using Azone household income target
   HhIncome_Hh <- numeric(NumHH)
-  HHIncModel_ls <- VESimHouseholds::HHIncModel_ls
+  HHIncModel_ls <- loadPackageDataset("HHIncModel_ls","VESimHouseholds")
   for (az in Az) {
     IsAz <- Data_df$Azone == az
     #Calculate average household income target to match
@@ -566,7 +566,7 @@ PredictIncome <- function(L) {
     Data_df$AvePerCapInc <- L$Year$Azone$GQIncomePC[GqToAzIdx_Gq]
     #Predict income for group quarters by Azone using Azone household income target
     GqIncome_Gq <- numeric(NumGQ)
-    GQIncModel_ls <- VESimHouseholds::GQIncModel_ls
+    GQIncModel_ls <- loadPackageDataset("GQIncModel_ls","VESimHouseholds")
     for (az in Az) {
       IsAz <- Data_df$Azone == az
       if (sum(IsAz) > 0) {

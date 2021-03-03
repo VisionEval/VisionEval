@@ -39,7 +39,7 @@
 #' @import VELandUse
 #' @import graphics
 
-HouseTypeModel_ls <- VELandUse::HouseTypeModel_ls
+HouseTypeModel_ls <- loadPackageDataset("HouseTypeModel_ls","VELandUse")
 
 #Save the housing choice model
 #-----------------------------

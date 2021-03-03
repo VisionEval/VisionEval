@@ -391,6 +391,7 @@ function(
     AlreadyInitialized,
     Save=RunModel
   )
+  writeLog("Done parsing Module Calls.",Level="warn")
 
   #============================
   # RUN THE MODEL, IF REQUESTED

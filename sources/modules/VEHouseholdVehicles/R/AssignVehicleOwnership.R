@@ -58,7 +58,7 @@
 #Create model estimation dataset
 #-------------------------------
 #Load selected data from VE2001NHTS package
-Hh_df <- VE2001NHTS::Hh_df
+Hh_df <- loadPackageDataset("Hh_df","VE2001NHTS")
 FieldsToKeep_ <-
   c("NumVeh", "Income", "Hbppopdn", "Hhsize", "Hometype", "UrbanDev", "FwyLnMiPC",
     "Wrkcount", "Drvrcnt", "Age0to14", "Age65Plus", "MsaPopDen", "BusEqRevMiPC")
@@ -470,7 +470,7 @@ AssignVehicleOwnership <- function(L) {
 
   #Make a vehicle probability matrix
   #---------------------------------
-  AutoOwnModels_ls <- VEHouseholdVehicles::AutoOwnModels_ls
+  AutoOwnModels_ls <- loadPackageDataset("AutoOwnModels_ls","VEHouseholdVehicles")
 
   #Identify Urban households
   IsUrban <- Hh_df$LocType == "Urban"

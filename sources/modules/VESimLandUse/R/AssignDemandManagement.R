@@ -41,7 +41,7 @@
 
 #Load the TDM model data from the VELandUse package
 #--------------------------------------------------
-TdmModel_ls <- VELandUse::TdmModel_ls
+TdmModel_ls <- loadPackageDataset("TdmModel_ls","VELandUse")
 
 NULL # Don't need to save this - we'll go back to the well when needed
 # #Save the TDM model data
