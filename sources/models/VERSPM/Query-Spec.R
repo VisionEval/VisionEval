@@ -45,7 +45,7 @@
 #
 # There are examples of all of these below
 #
-# Note that VEReports::summarizeDatesets has additional parameters (e.g. Group and QueryPrep_ls) that are
+# Note that VEReports::summarizeDatasets has additional parameters (e.g. Group and QueryPrep_ls) that are
 # automatically supplied by the script. You can put them here, but they will be ignored.
 
 # It doesn't matter what name you use for the variable you put the list in, so long as this file
