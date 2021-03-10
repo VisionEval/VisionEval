@@ -49,7 +49,7 @@ DoPredictions <- function(Model_df, Dataset_df,
 
   if (!is.null(SegmentCol_vc)) {
     Dataset_lcdf <- Dataset_df %>%
-      group_by_(SegmentCol_vc) %>%
+      group_by_at(SegmentCol_vc) %>%
       nest() %>%
       left_join(Model_df, by=SegmentCol_vc)
   } else { # if there is no segmentation in model(s)
@@ -76,10 +76,15 @@ DoPredictions <- function(Model_df, Dataset_df,
   # zero VMT model + 2. non-zero VMT regression model). For now,
   # combine_preds multiplies predictions from each step, it's possible to pass
   # other functions to it
+  if ( is.null(SegmentCol_vc) ) {
+    msg <- "SegmentCol_vc not defined in VETravelDemandMM::DoPredictions, line 81"
+    writeLog(msg)
+    stop(msg)
+  }
   if (combine_preds & "step" %in% names(Preds_lcdf)) {
     Preds_lcdf <- Preds_lcdf %>%
       arrange(step) %>%
-      group_by_(SegmentCol_vc) %>%
+      group_by_at(SegmentCol_vc) %>%
       summarize(data=list(first(data)),
                 y=CombinePreds(y)) %>%
       ungroup()
