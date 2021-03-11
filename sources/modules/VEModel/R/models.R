@@ -97,13 +97,11 @@ getModelRoots <- function(get.root=0) {
 #  Look for run_model.R (any case) in root or subdirectories and return full paths
 #  modelPath is where to look (possibly more than one directory)
 #  searchScript is a name or pattern to search for (character string)
-#  searchExact is a boolean - if true, look for an exact match for searchScript, otherwise
 #  treat searchScript as an R regular expression.
-modelInRoot <- function(modelPath,searchScript,searchExact) {
+modelInRoot <- function(modelPath,searchScript) {
   # Search initially just in modelPath, then in first-level subdirectories
   # Expect modelPath to be normalized
-  grepArgs <- list(searchScript,fixed=searchExact,value=TRUE)
-  if ( ! searchExact ) grepArgs <- c(grepArgs,list(ignore.case=TRUE))
+  grepArgs <- list(searchScript,value=TRUE,ignore.case=TRUE)
   dirs <- list(dir(modelPath,full.names=TRUE))
   paths <- do.call("grep",c(grepArgs,dirs))
   if ( length(paths) == 0 ) {
@@ -117,11 +115,9 @@ modelInRoot <- function(modelPath,searchScript,searchExact) {
     # Must have no more than one run_model.R per subdirectory
     if ( ( any(dupes <- duplicated(dirname(paths))) ) ) {
       Msg <- paste(
-        "Model script ",
-        if ( searchExact ) "exact search" else "regex search",
-        " yielded more than one script file per subdirectory:\n\n",
+        "Model script search yielded more than one file per Model directory:\n\n",
         paste(paths[ dirname(paths) %in% dirname(paths)[dupes] ],"\n",sep="",collapse="\n"),
-        "\nAdjust ModelScript or ModelScriptFile pattern in configuration\n",
+        "\nAdjust ModelScript pattern in configuration\n",
         "or remove/rename one of the excess scripts."
       )
       stop(Msg)
@@ -134,7 +130,7 @@ modelInRoot <- function(modelPath,searchScript,searchExact) {
 
 ## Helper function
 # Examine modelPath and return (sub-)directories containing run_model.R
-# Param_ls provides a list of configuration values 
+# Param_ls provides a list of configuration values
 # Returns a list with the following elements:
 #   isValid : a boolean, TRUE if we found model(s), FALSE if we did not
 #   ModelScript : a vector (length of stagePaths) with the actual files found matching
@@ -157,14 +153,12 @@ findModel <- function( modelPath, Param_ls ) {
   # VisionEval.R startup will set ModelScript from site configuration file
   #   located in runtime root (first of .visioneval, VisionEval.ini, VisionEval.cnf)
   #   with same default as here ("run_model.R")
-  searchScript <- visioneval::getRunParameter("ModelScript")
-  searchExact <- is.na(searchScript)
-  if ( searchExact ) {
-    searchScript <- visioneval::getRunParameter("ModelScriptFile")
-  }
+  searchScript <- visioneval::getRunParameter("ModelScript",Param_ls=Param_ls)
+
+  # TODO: add new style model_setup.yml file as an alternative (only in ModelDir)
 
   # check if modelPath contains a runModelName
-  findPath <- grep(modelPath,searchScript,fixed=searchExact,ignore.case=TRUE,value=TRUE)
+  findPath <- grep(modelPath,searchScript,ignore.case=TRUE,value=TRUE)
   if ( length(findPath>0) ) {
     modelPath <- findPath[1]
     visioneval::writeLog(paste0("Using explicit script matching ",searchScript,":\n"),Level="debug")
@@ -201,9 +195,11 @@ findModel <- function( modelPath, Param_ls ) {
     find_ls$modelPath <- modelPath
   }
 
+  # TODO: replace stages architecture with new BaseModel / RunStep architecture
+  
   # Attempt to locate runModelName in directory and first-level sub-directories
   # The stagePaths need to be relative to modelPath
-  find_ls$stagePaths <- modelInRoot(find_ls$modelPath,searchScript,searchExact)
+  find_ls$stagePaths <- modelInRoot(find_ls$modelPath,searchScript)
   if ( length(find_ls$stagePaths)<=0 ) {
     visioneval::writeLog(
       paste0("No matching pattern for",searchScript," found in ",find_ls$modelPath),Level="error"
@@ -218,6 +214,19 @@ findModel <- function( modelPath, Param_ls ) {
     find_ls$stagePaths[ ! nzchar(find_ls$stagePaths) ] <- "."
     find_ls$isValid <- TRUE
   }
+
+  # Finally load the model configuration if it exists and update Param_ls
+  # see visioneval::readConfigurationFile to learn that parameter files can be
+  #  named VisionEval.yml, VisionEval.json, VisionEval.cnf, or VisionEval.ini
+  # and their format can be either YAML or JSON. The first name found will be used.
+  # If no file is found, find_ls$RunParam_ls will just be the same as Param_ls
+  find_ls$RunParam_ls <- visioneval::loadConfiguration(ParamDir=find_ls$modelPath,override=Param_ls)
+  ModelDir_ls <- visioneval::addParameterSource(Param_ls=list(ModelDir=find_ls$modelPath),Source="VEModel::initialize")
+  find_ls$RunParam_ls <- visioneval::mergeParameters(find_ls$RunParam_ls,ModelDir_ls)
+
+  # Note that when the model is run, further changes to RunParam_ls may come from "dots"
+  #  in initializeModel, or from ParamDir/ParamFile (if source'ing a run_model.R; the
+  #  new model_setup.yml model configuration will ignore those).
   
   return( find_ls )
 }
@@ -452,12 +461,13 @@ ve.model.loadModelState <- function(log="error") {
 #  if it is a relative path.
 ve.model.init <- function(modelPath=NULL,log="error") {
   # Load system model configuration
+  visioneval::initLog(Save=FALSE,Threshold=log)
+  self$RunParam_ls <- getRuntimeParameters()
   # Opportunity to override names of ModelState, run_model.R, Datastore, etc.
   # Also to establish standard model directory structure (inputs, results)
-  visioneval::initLog(Save=FALSE,Threshold=log)
-  self$RunParam_ls <- getRuntimeParameters() # load defined defaults from System
 
   # Identify the run_model.R root location(s)
+  # Also, update self$RunParam_ls with model-specific configuration
   modelPaths <- findModel(modelPath,self$RunParam_ls)
   if ( ! modelPaths$isValid ) {
     stop(
@@ -471,6 +481,7 @@ ve.model.init <- function(modelPath=NULL,log="error") {
   }
 
   # Set up the model name, folder tree and script files
+  self$RunParam_ls <- modelPaths$RunParam_ls; # Updated from model configuration file, if any
   self$modelPath <- modelPaths$modelPath
   self$modelName <- basename(self$modelPath)
   self$stagePaths <- modelPaths$stagePaths; # named stage names (folders with run_model.R, relative to ModelPath)
@@ -480,7 +491,6 @@ ve.model.init <- function(modelPath=NULL,log="error") {
   initMsg <- paste("Loading Model",self$modelName)
   visioneval::writeLog(initMsg,Level="info")
 
-  # Load the Model State
   private$loadModelState(log=log)
 
   visioneval::writeLogMessage(self$modelPath)
@@ -903,20 +913,32 @@ ve.model.results <- function(stage) {
 }
 
 # open a Query object for the model from its QueryDir (or report a list
-#  of available queries if no QueryName is provided.
-ve.model.query <- function(QueryName=NULL,FileName=NULL,new=FALSE) {
+#  of available queries if no QueryName is provided).
+ve.model.query <- function(QueryName=NULL,FileName=NULL) {
   # Get the Query directory for the model
   QueryDir <- visioneval::getRunParameter("QueryDir",Param_ls=self$RunParam_ls)
-  QueryDir <- file.path(self$modelPath,QueryDir)
   if ( all(is.null(c(QueryName,FileName))) ) {
-    cat("Available Queries:\n")
-    print(dir(QueryDir))
+    QueryPath <- file.path(self$modelPath,QueryDir)
+    if ( ! dir.exists(QueryPath) ) QueryPath <- self$modelPath;
+#     cat("QueryDir:"); print(QueryDir)
+#     cat("Query Directory:"); print(QueryPath)
+#     cat("Query Directory Exists:"); print(dir.exists(QueryPath))
+#     cat("Available Queries:\n")
+    queries <- dir(QueryPath,pattern="\\.VEqry$",ignore.case=TRUE)
+    if ( length(queries)==0 ) queries <- "No queries defined"
+    print(queries)
     return(NULL)
-  } else if ( ! is.null(QueryName) && is.null(FileName) ) {
-    FileName <- paste0(QueryName,".VEqry")
   }
-  # attempt to open existing query (which may not exist)
-  return(VEQuery$new(QueryName=QueryName,FileName=FileName,QueryDir=QueryDir,Param_ls=self$RunParam_ls))
+  # Let VEquery find the query...
+  return(
+    VEQuery$new(
+      ModelPath=self$modelPath,
+      QueryName=QueryName,
+      FileName=FileName,
+      QueryDir=QueryDir,
+      Param_ls=self$RunParam_ls
+    )
+  )
 }
 
 # Here is the VEModel R6 class

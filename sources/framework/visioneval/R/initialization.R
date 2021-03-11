@@ -25,7 +25,6 @@
 #' @return TRUE if the model state list is created and file is saved, FALSE if
 #' the model state file was not saved.
 #' @export
-#' @import jsonlite
 initModelState <- function(Save=TRUE,Param_ls=NULL) {
 
   # Load model environment (should have RunParam_ls already loaded, furnishing ...)

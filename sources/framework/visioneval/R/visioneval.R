@@ -109,7 +109,7 @@ function(
     "RunParam_ls in modelEnvironment()"
   )
 
-  ModelDir <- getRunParameter("ModelDir",Param_ls=Param_ls)
+  ModelDir <- getRunParameter("ModelDir",Param_ls=Param_ls) # Default is working directory
 
   # External environment will override dots (which are vestigial)
   DotParam_ls <- addParameterSource(list(...),"initializeModel(...)")
@@ -128,13 +128,15 @@ function(
   RunParam_ls <- loadConfiguration(ParamPath=ParamPath,override=RunParam_ls)
 
   # ModelScriptFile needs to be the absolute path to the model script
+  # It will be provided either in dots, or by the pre-existing RunParam_ls environment (e.g. if
+  # built by VEModel). Default is a fixed string, "run_model.R"
   ModelScriptFile <- getRunParameter("ModelScriptFile",Param_ls=RunParam_ls)
 
   # If ResultsDir is not present in RunParam_ls, set it to the current directory
   if ( ! "ResultsDir" %in% names(RunParam_ls) ) RunParam_ls[["ResultsDir"]] <- "."
 
-  # If the RunParam version of ModelScriptFile is relative, normalize it
-  # to ModelDir (which defaults to the current directory for backward compatibility)
+  # If the ModelScriptFile is relative, normalize it to ModelDir, which is either
+  # working directory.
   if ( ! any(grepl("^([[:alpha:]]:[\\/]|[\\/])",ModelScriptFile)) ) {
     # if relative path, normalize relative to ModelDir (which is probably ".")
     ModelScriptFile <- normalizePath(

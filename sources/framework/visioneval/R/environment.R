@@ -149,8 +149,8 @@ default.parameters.table = list(
   LogLevel = "error",
   DstoreDir = ".",
   DatastoreName = "Datastore",
-  ModelDir = ".", # subdirectory containing run_model.R (e.g. "script")
-  ModelScriptFile = "run_model.R",
+  ModelDir = ".", # root directory for the model
+  ModelScriptFile = "run_model.R", # default model script name
   ModelStateFileName = "ModelState.Rda",
   InputPath = ".", # should default to same directory as ModelDir
   RunParamFile = "run_parameters.json",
@@ -161,7 +161,9 @@ default.parameters.table = list(
   InputDir = "inputs",
   ParamDir = "defs",
   DatastoreType = "RD",
-  SaveDatastore = FALSE
+  SaveDatastore = FALSE,
+  ResultsDir = ".",        # To get framework support for VEModel, which overrides
+  StageDir = "."           # To get framework support for VEModel, which overrides
 )
 
 #GET DEFAULT PARAMETERS
@@ -554,7 +556,7 @@ loadConfiguration <- function( # if all arguments are defaulted, return an empty
 
   # Get code origins of keep and override and make "source" attribute if necessary
   # This is a backstop; use addParameterSource for any keep or override parameter
-  #   before callling loadConfiguration
+  #   before calling loadConfiguration
   keep.origin <- deparse(substitute(keep))
   if ( is.list(keep) && length(keep)>0 && is.null(attr(keep,"source") ) ) {
     keep <- addParameterSource(keep,keep.origin)

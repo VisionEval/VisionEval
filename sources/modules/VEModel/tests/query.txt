@@ -1,0 +1,131 @@
+#### DVMT
+#Urban area household DVMT
+#--------------------
+list(
+  Name = "UrbanHhDvmt",
+  Summarize = list(
+    Expr = "sum(UrbanHhDvmt)",
+    Units = c(
+      UrbanHhDvmt = "MI/DAY",
+      Marea = ""
+    ),
+    By = "Marea",
+    Table = "Marea"
+  ),
+  Units = "Miles per day",
+  Description = "Daily vehicle miles traveled by households residing in the urban area"
+), # every specification (sub-list) has to have a comma after it, except the last one
+
+#Urban area household DVMT in mix used
+list(
+  Name = "UrbanHhDvmt_MixNbrhd",
+  Summarize = list(
+    Expr = "sum(Dvmt[LocType == 'Urban' & IsUrbanMixNbrhd == '1'])",
+    Units = c(
+      Dvmt = "MI/DAY",
+      LocType = "",
+      IsUrbanMixNbrhd = "",
+      Marea = ""
+    ),
+    By = "Marea",
+    Table = "Household"
+  ),
+  Units = "Miles per day",
+  Description = "Daily vehicle miles traveled by households residing in mixed use in the urban area"
+),
+
+#Urban area public transit 'van' DVMT
+#-------------------------------
+list(
+  Name = "UrbanVanDvmt",
+  Summarize = list(
+    Expr = "sum(VanDvmt)",
+    Units = c(
+      VanDvmt = "MI/DAY",
+      Marea = ""
+    ),
+    By = "Marea",
+    Table = "Marea"
+  ),
+  Units = "Miles per day",
+  Description = "Daily vehicle miles traveled by on-demand transit vans in the Urban area."
+),
+
+#Urban area commercial service vehicle DVMT
+#-------------------------------------
+list(
+  Name = "UrbanComSvcDvmt",
+  Summarize = list(
+    Expr = "sum(ComSvcUrbanDvmt)",
+    Units = c(
+      ComSvcUrbanDvmt = "MI/DAY",
+      Marea = ""
+    ),
+    By = "Marea",
+    Table = "Marea"
+  ),
+  Units = "Miles per day",
+  Description = "Commercial service vehicle daily vehicle miles traveled attributable to the demand of households and businesses located in the urban area"
+),
+
+#Urban area light-duty vehicle DVMT
+list(
+  Name = "UrbanLdvDvmt",
+  Function = "UrbanHhDvmt + UrbanVanDvmt + UrbanComSvcDvmt",
+  Units = "Miles per day",
+  Description = "Sum of daily vehicle miles traveled by households residing in the urban area, commercial service travel attributable to the demand of urban area households and businesses, and on-demand transit van travel in the urban area."
+),
+
+#Population residing in "Urban" LocType
+#-------------------
+list(
+  Name = "UrbanHhPop",
+  Summarize = list(
+    Expr = "sum(HhSize[LocType == 'Urban'])",
+    Units = c(
+      HhSize = "",
+      LocType = "",
+      Marea = ""
+    ),
+    By = "Marea",
+    Table = "Household"
+  ),
+  Units = "Persons",
+  Description = "Number of persons residing in urban area location type"
+),
+
+#Urban Population, broken out by income
+#-------------------
+list(
+  Name = "UrbanHhPopLowInc",
+  Summarize = list(
+    Expr = "sum(HhSize[LocType == 'Urban'])",
+    Units = c(
+      HhSize = "",
+      LocType = "",
+      Income = "USD",
+      Marea = ""
+    ),
+    By = c(
+      "Income",
+      "Marea"),
+    Breaks = list(
+      Income = c(20000, 40000, 60000, 80000, 100000)
+    ),
+    BreakNames = list(
+      Income = c("20000", "40000", "60000", "80000", "100000")
+    ),
+    Table = "Household"
+  ),
+  Units = "Persons",
+  Description = "Number of persons in urban location by income strata"
+),
+
+#DVMT per Capita in Marea
+list(
+  Name = "UrbanLdvDmvtPerCap",
+  Function = "UrbanLdvDvmt / UrbanHhPop",
+  Units = "Dvmt per person",
+  Description = "daily vehicle miles traveled per person residing in the urban location."
+),
+

@@ -205,8 +205,8 @@ addDisplayUnits <- function(GTN_df,Param_ls) {
   } else {
     DisplayUnitsFile <- DisplayUnitsFile[existing][1]
   }
-  cat("DisplayUnitsFile:\n")
-  print(DisplayUnitsFile)
+#   cat("DisplayUnitsFile:\n")
+#   print(DisplayUnitsFile)
   displayUnits <- try(utils::read.csv(DisplayUnitsFile),silent=TRUE)   # May fail for various reasons
   if ( ! "data.frame" %in% class(displayUnits) ) {
     visioneval::writeLog( Level="warn",
@@ -286,7 +286,7 @@ ve.results.units <- function(selected=TRUE) {
   Units_df <- addDisplayUnits(Units_df,Param_ls=private$RunParam_ls)
   displayUnits <- !is.na(Units_df$DisplayUnits)
   Units_df$Units[ displayUnits ] <- Units_df$DisplayUnits[ displayUnits ]
-  Units_df$Source[ displayUnits ] <- Units_df$DisplayUnitsFile[ displayUnits ]
+  Units_df$Source[ displayUnits ] <- basename(Units_df$DisplayUnitsFile[ displayUnits ])
   return( Units_df[,c("Group","Table","Name","Units","Source")] )
 }
 
@@ -719,6 +719,8 @@ VESelection <- R6::R6Class(
     initialize=ve.select.initialize,
     copy=ve.select.copy,          # Create a new selection object with the same results and indices
     print=ve.select.print,
+#    save=ve.select.save,          # This saves the selection
+#    open=ve.select.open,          # This opens a selection
     extract=ve.select.extract,
     export=ve.select.extract,
     find=ve.select.find,
