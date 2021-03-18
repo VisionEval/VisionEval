@@ -138,7 +138,7 @@ VEPackageRunParameters <- function(Param_ls=list()) {
 
 #LOAD RUNTIME CONFIGURATION
 #==========================
-#' Load a VisionEval.cnf file from a directory into the runtime environment
+#' Load a VisionEval.cnf file from the runtime directory into the runtime environment
 #'
 #' \code{loadRuntimeConfig} merges a configuration file from a directory into the runtime R
 #' environment. With no parameters it will read and merge the file's contents into the system
@@ -166,19 +166,19 @@ loadRuntimeConfig <- function(ParamDir=NULL,ParamFile=NULL) {
   invisible( ve.env$RunParam_ls )
 }
 
-#GET RUNTIME PARAMETERS
-#======================
+#GET RUNTIME SETUP
+#=================
 #' Return runtime base RunParam_ls (loading it if not present)
 #'
-#' \code{getRuntimeParameters} gets a subset of the current runParameters by name. It does NOT
+#' \code{getSetup} gets a subset of the current runParameters by name. It does NOT
 #' supply default values. It returns the ones that are defined.
 #'
 #' @param paramNames is a character vector of parameter names identifying a subset of runParameters
 #'   to retrieve. If not provided, return all defined parameters (but not any that are defaulted).
 #' @return A list of defined run parameters (possibly empty, if no parameters are defined)
 #' @export
-getRuntimeParameters <- function(paramNames=NULL) {
-  RunParams_ls <- if ( is.null(ve.env$RunParam_ls) ) ve.env$RunParam_ls else loadRuntimeConfig()
+getSetup <- function(paramNames=NULL) {
+  RunParams_ls <- if ( ! is.null(ve.env$RunParam_ls) ) ve.env$RunParam_ls else loadRuntimeConfig()
   if ( is.character(paramNames) ) RunParams_ls <- RunParams_ls[names(RunParams_ls) %in% paramNames]
   return(RunParams_ls)
 }
@@ -265,7 +265,7 @@ ve.model.setupRunEnvironment <- function(
     LogLevel        = LogLevel
   )
   if ( ! is.null(ModelScriptFile) ) addParams_ls <- c(addParams_ls,list(ModelScriptFile=ModelScriptFile))
-  addParams_ls <- visioneval::addParameterSource(addParams_ls,paste0("Set up RunParam_ls for ",Owner))
+  addParams_ls <- visioneval::addParameterSource(addParams_ls,paste0("Owner"))
   ve.model$RunParam_ls <- visioneval::mergeParameters(Param_ls,addParams_ls) # addParams_ls will override
 
   invisible(ve.model$RunParam_ls)
@@ -295,12 +295,9 @@ isAbsolutePath <- function(modelPath,collapse=TRUE) {
   return(absolute)
 }
 
-
-
 # NORMALIZE A VISIONEVAL PATH
 # ===========================
 # Like the R built-in normalizePath, but better handling for missing path components
-# Empty string elements of the path will be treated as "."
 # NOTE: Do we need this? Standard normalize path seems to handle empty path elements...
 # Always does winslash="/"
 normalizePath <- function(
@@ -323,4 +320,3 @@ normalizePath <- function(
   }
   return( base::normalizePath(elements,winslash=winslash,mustWork=mustWork) )
 }
-    

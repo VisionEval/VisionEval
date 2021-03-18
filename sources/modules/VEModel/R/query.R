@@ -81,7 +81,7 @@ ve.query.init <- function(
   invisible(self$valid())
 }
 
-# Build self$QueryFile, which will be used for saving (and perhaps loading)
+# Build self$QueryFile, which will be used for saving (and perhaps loading if not requested up front)
 # Filename will NOT be disambiguated until we get to the save operation
 # Just prepare a candidate absolute path to a valid directory
 ve.query.attach <- function(ModelPath=NULL, QueryName=NULL, QueryDir=NULL, OtherQuery=NULL) {
@@ -89,7 +89,7 @@ ve.query.attach <- function(ModelPath=NULL, QueryName=NULL, QueryDir=NULL, Other
     self$QueryDir <- OtherQuery$QueryDir
   } else {
     if ( is.null(ModelPath) || ! dir.exists(ModelPath) ) {
-      ModelPath <- getRuntimeDir()
+      ModelPath <- getRuntimeDirectory()
     }
     if ( is.null(QueryDir) ) {
       QueryDir <- visioneval::getRunParameter("QueryDir")
@@ -104,8 +104,8 @@ ve.query.attach <- function(ModelPath=NULL, QueryName=NULL, QueryDir=NULL, Other
   if ( is.null(QueryName) ) {
     QueryName <- visioneval::getRunParameter("QueryFileName") # no extension
   }
-  if ( ! grepl("\\.[^.]*$",QueryName) ) {
-    QueryName <- sub("\\.[^.]*$","",FileName) # No extension on QueryName
+  if ( grepl("\\.[^.]*$",QueryName) ) {
+    QueryName <- sub("\\.[^.]*$","",QueryName) # No extension on QueryName
   }
   QueryFile <- normalizePath(file.path(QueryDir,QueryName),winslash="/",mustWork=FALSE)
   QueryFile <- paste0(QueryFile,".VEqry")
@@ -542,7 +542,6 @@ VEQuery <- R6::R6Class(
     spec=ve.query.spec,             # Return a single VEQuerySpec from the list
     print=ve.query.print,           # List names of Specs in order, or optionally with details
     getlist=ve.query.getlist,       # Extract he QuerySpec list (possibly filtering geography) for $run)
-    namecheck=ve.query.namecheck,   # Check query name and file (and supply defaults if missing)
     results=ve.query.results,       # report results of last run
     run=ve.query.run                # Option to save; results are cached in self$QueryResults
   ),

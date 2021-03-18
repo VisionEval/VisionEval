@@ -274,7 +274,10 @@ ve.results.inputs <- function( fields=FALSE, module="", filename="" ) {
   return( ret.value[order(ret.value$InputDir,ret.value$File),] )
 }
 
-ve.results.units <- function(selected=TRUE) {
+ve.results.units <- function(selected=TRUE,display=NULL) {
+  # if display==TRUE, show DisplayUnits plus Datastore Units
+  # if display==FALSE, show only Datastore units
+  # if display is NULL (default) merge Display and Datastore and show source
   # selected == FALSE shows units for ALL fields, not just selected
   # Transiently attaches DisplayUnits to field list (transient because user
   #   may be editing the file in this session)
@@ -283,11 +286,20 @@ ve.results.units <- function(selected=TRUE) {
   selected <- if ( selected ) self$selection$selection else 1:nrow(self$modelIndex)
   Units_df <- self$modelIndex[ selected, c("Group","Table","Name","Units") ]
   Units_df$Source <- "Datastore"
-  Units_df <- addDisplayUnits(Units_df,Param_ls=private$RunParam_ls)
-  displayUnits <- !is.na(Units_df$DisplayUnits)
-  Units_df$Units[ displayUnits ] <- Units_df$DisplayUnits[ displayUnits ]
-  Units_df$Source[ displayUnits ] <- basename(Units_df$DisplayUnitsFile[ displayUnits ])
-  return( Units_df[,c("Group","Table","Name","Units","Source")] )
+  returnFields <- c("Group","Table","Name","Units","Source")
+  if ( is.null(display) || display ) {
+    # Add Display Units if requested
+    Units_df <- addDisplayUnits(Units_df,Param_ls=private$RunParam_ls)
+    displayUnits <- !is.na(Units_df$DisplayUnits)
+    Units_df$Source[ displayUnits ] <- basename(Units_df$DisplayUnitsFile[ displayUnits ])
+    if ( is.null(display) ) {
+      # merge into single Units Column
+      Units_df$Units[ displayUnits ] <- Units_df$DisplayUnits[ displayUnits ]
+    } else {
+      returnFields <- c(returnFields,"DisplayUnits")
+    }
+  }
+  return( Units_df[,returnFields] )
 }
 
 ve.results.extract <- function(
@@ -307,11 +319,12 @@ ve.results.extract <- function(
   if ( saving ) {
     saveTo <- saveTo[1]
     outputPath <- if ( isAbsolutePath(saveTo) ) saveTo else file.path(self$modelDir,saveTo)
-    if ( ! dir.exists(saveTo) ) dir.create(saveTo,showWarnings=FALSE)
-    if ( ! dir.exists(saveTo) ) {
+    print(outputPath)
+    if ( ! dir.exists(outputPath) ) dir.create(outputPath,showWarnings=FALSE)
+    if ( ! dir.exists(outputPath) ) {
       stop(
         visioneval::writeLog( Level="error",
-          c( "Output directory not available:",saveTo )
+          c( "Output directory not available:",outputPath )
         )
       )
     }
@@ -385,16 +398,16 @@ ve.results.extract <- function(
       # Files will have length(dataNames)
       Files <- paste0(paste(group,dataNames,timeWritten,sep="_"),".csv")
       if ( ! overwrite ) {
-        existing <- file.exists(file.path(saveTo,Files))
+        existing <- file.exists(file.path(outputPath,Files))
         for ( file in which(existing) ) {
-          Files[ file ] <- basename(getUniqueName(saveTo,Files[file]))
+          Files[ file ] <- basename(getUniqueName(outputPath,Files[file]))
         }
       }
       names(Files) <- dataNames;
 
       # Write the files (data = .csv) and a metadata file (meta = .metadata.csv)
       for ( table in dataNames ) {
-        fn <- file.path(saveTo,paste0(prefix,Files[table]))
+        fn <- file.path(outputPath,paste0(prefix,Files[table]))
         utils::write.csv(Data_ls$Data[[table]],file=fn,row.names=FALSE)
         utils::write.csv(Metadata_ls[[table]],file=sub("\\.csv$",".metadata.csv",fn),row.names=FALSE)
       }

@@ -14,11 +14,11 @@ LazyData: TRUE
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    jsonlite,
     R6,
     stringr,
     tryCatchLog,
-    futile.logger
+    futile.logger,
+    yaml
 Suggests:
     knitr,
     pkgload

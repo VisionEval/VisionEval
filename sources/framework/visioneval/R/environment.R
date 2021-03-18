@@ -104,7 +104,7 @@ getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,logSource=FALSE) 
   } else {
     ve.model$VERuntimeDefaults <- defaultVERunParameters(defaultParams_ls)
   }
-  if ( ! is.list(Param_ls) ) { # look only there
+  if ( ! is.list(Param_ls) ) { # if provided, look only there, otherwise in ve.model
     param.source <- "ve.model$RunParam_ls"
     Param_ls <- get0("RunParam_ls",envir=ve.model,ifnotfound=list())
   }
@@ -361,7 +361,8 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
       writeLog(paste("Successfully read parameters from", ParamFilePath),Level="debug")
     }
   } else writeLog(paste("No parameter file found in",ParamDir),Level="debug") # Just return an empty list
-        
+
+  # The following works fine if ParamFile_ls is an empty list (it gets an empty "source" attribute)
   ParamFile_ls <- addParameterSource(ParamFile_ls,paste("File:",ParamFilePath))
   return(ParamFile_ls)
 }
@@ -420,7 +421,7 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
 #' The list in "Keep_ls" will be added to Param_ls, with duplicated names from keep replacing
 #' those in Param_ls.  The "source" attribute of each will be updated.
 #'
-#' @param Param_ls the list whose parameters will be replace
+#' @param Param_ls the list whose parameters will be replaced
 #' @param Keep_ls the list whose parameters take priority
 #' @return a list combining the two arguments
 #' @export

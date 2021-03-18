@@ -1722,6 +1722,7 @@ processModuleInputs <-
       SortSpec_ls[[File]][[Name]] <- Spec_ls
       rm(Spec_ls, File, Name)
     }
+
     #Initialize a list to store all the input data
     Data_ls <- initDataList()
 

@@ -2,11 +2,6 @@
 # Comprehensively test VEModel and related interfaces
 # Also provides working examples of the API
 
-# function: create_test_environment
-# Expects to run from <pkg>/tests; looks in parent directory
-# Creates a temporary directory and initializes it as a ve.runtime
-# Sets the working directory to that temporary location
-
 # function: pseudo_package
 # 
 if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
@@ -15,8 +10,17 @@ if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
 if ( ! requireNamespace("visioneval",quietly=TRUE) ) {
   stop("Missing required package: 'visioneval'")
 }
+if ( ! requireNamespace("jsonlite",quietly=TRUE) ) {
+  stop("Missing required package: 'jsonlite'")
+}
+if ( ! requireNamespace("yaml",quietly=TRUE) ) {
+  stop("Missing required package: 'yaml'")
+}
 
 setup <- function(ve.runtime=NULL) {
+  # Creates or uses a fresh minimal runtime environment as a sub-directory of "tests"
+  # Set VE_RUNTIME to some other location if desired (does not need to have a runtime
+  # there yet, and in fact it's better if it doesn't).
   if ( ! is.character(ve.runtime) ) {
     ve.runtime <- Sys.getenv("VE_RUNTIME",unset=NA)
     if ( ! is.na(ve.runtime ) ) {
@@ -82,7 +86,8 @@ testStep <- function(msg) {
   cat("",paste(msg,collapse="\n"),"",sep="\n")
 }
 
-test_model <- function(log="warn") {
+test_run <- function(log="warn") {
+  testStep("Install and Run a Full Model")
   owd <- getwd()
   tryCatch(
     {
@@ -103,7 +108,140 @@ test_model <- function(log="warn") {
   return("Failed to run.")
 }
 
+test_model <- function(oldstyle=TRUE, low="warn") {
+  testStep("Model Management Functions")
+
+#   testStep("open a model")
+#   jr <- openModel("JRSPM")
+# 
+#   testStep("model directory original")
+#   print(jr$dir())
+# 
+#   testStep("copy a model")
+#   cp <- jr$copy("CRSPM")
+#   cp$clear(force=TRUE)
+#   
+#   testStep("model directory copy")
+#   print(cp)
+#   print(cp$dir())
+# 
+#   testStep("remove model copy")
+#   unlink("models/CRSPM",recursive=TRUE)
+# 
+  testStep("construct a bare model from scratch")
+  bare.dir <- file.path("models","BARE")
+  base.dir <- file.path("models","JRSPM")
+  if ( dir.exists(bare.dir) ) unlink(bare.dir,recursive=TRUE)
+  dir.create(bare.dir)
+
+  testStep("Create minimal run_model.R")
+
+  runModelFile <- file.path(bare.dir,"run_model.R")
+  runModel_vc <- c(
+    'initializeModel()',
+    'for(Year in getYears()) {',
+    'runModule("CreateHouseholds","VESimHouseholds",RunFor = "AllYears",RunYear = Year)',
+    'runModule("PredictWorkers","VESimHouseholds",RunFor = "AllYears",RunYear = Year)',
+    '}'
+  )
+  cat(runModelFile,paste(runModel_vc,collapse="\n"),sep="\n")
+  writeLines(runModel_vc,con=runModelFile)
+
+  testStep("Set up model directory structure.")
+
+  # Borrow model geography, units, deflators from VERSPM
+  base.defs <- file.path(base.dir,"defs")
+  base.inputs <- file.path(base.dir,"inputs")
+  bare.defs <- file.path(bare.dir,"defs")
+  bare.inputs <- file.path(bare.dir,"inputs")
+  dir.create(bare.defs)
+  dir.create(bare.inputs)
+  print(dir(bare.dir,recursive=TRUE,full.names=TRUE,include.dirs=TRUE))
+
+  testStep(paste0("Create configuration: ",if (oldstyle) "defs/run_parameters.json" else "visioneval.cnf"))
+
+  # Create run_model.R script (two variants)
+  # Create model-specific configuration
+  # Could equivalently place these in run_parameters.json
+  runConfig_ls <-  list(
+      Model       = jsonlite::unbox("BARE Model Test"),
+      Scenario    = jsonlite::unbox("Test"),
+      Description = jsonlite::unbox("Minimal model constructed programmatically"),
+      Region      = jsonlite::unbox("RVMPO"),
+      BaseYear    = jsonlite::unbox("2010"),
+      Years       = c("2010", "2038")
+    )
+
+  if ( oldstyle ) {
+    cat("Old style model setup (defs/run_parameters.json)")
+    configFile <- file.path(bare.defs,"run_parameters.json")
+    write(jsonlite::toJSON(runConfig_ls, pretty=TRUE),configFile)
+    print(bare.defs)
+    print(configFile)
+    cat(readLines(configFile),sep="\n")
+  } else {
+    configFile <- file.path(bare.dir,"visioneval.cnf")
+    yaml::write_yaml(runConfig_ls,configRile)
+    print(bare.dir)
+    print(configFile)
+    cat(readLines(configFile),sep="\n")
+  }
+
+  testStep("Copy other configuration files (geo, units, deflators)")
+
+  from <- file.path(base.defs,c("units.csv","deflators.csv","geo.csv"))
+  file.copy(from=from,to=bare.defs)
+  print(bare.defs)
+  print(dir(bare.defs,full.names=TRUE))
+
+  testStep("Copy basic input files (model_parameters.json could also live in 'defs')")
+
+  # Inputs for CreateHouseholds and PredictWorkers
+  from <- file.path(base.defs,"model_parameters.json")
+  file.copy(from=from,to=bare.inputs)
+
+  from <- file.path( base.inputs,c(
+    "azone_hh_pop_by_age.csv",
+    "azone_hhsize_targets.csv",
+    "azone_gq_pop_by_age.csv"
+  ) )
+  file.copy(from=from, to=file.path(bare.inputs) )
+  print(bare.inputs)
+  print(dir(bare.inputs,full.names=TRUE))
+
+  testStep("Open BARE model using defaults...")
+  bare <- openModel("BARE",log="info")
+
+  testStep("List model inputs...")
+  # list model input files and fields
+  #   Needs to work before running - that's why ModelState is pre-loaded
+  return(bare)
+  
+  bare$list(input=TRUE)
+
+  testStep("run the bare model")
+#  bare$run()
+  
+  testStep("directory of the bare model: results")
+#  bare$dir(results=TRUE)
+
+  testStep("list fields in bare model")
+#  bare$list()
+
+  testStep("extract model results")
+#  bare$extract(prefix="BareTest")
+
+  testStep("clear the bare model")
+#   bare$dir(output=TRUE)
+#   bare$clear()
+  bare$dir()
+  bare$unlink(bare.dir,recursive=TRUE)
+  bare$dir() # Should reveal error of some sort
+}
+
 test_results <- function (log="warn") {
+  testStep("Manipulate Model Results in Detail")
+
   testStep("Opening model and pulling out results and selection...")
   jr <- openModel("JRSPM")
   rs <- jr$results()
@@ -143,17 +281,33 @@ test_results <- function (log="warn") {
   testStep("Exporting speed fields using DATASTORE units")
   sl$export(prefix="Datastore",convertUnits=FALSE) # Using DATASTORE units
 
-  # Do some erroneous things to make sure we get suitable errors.
+  testStep("Model directory")
+  print(jr$dir())
+
+  testStep("Model directory of results")
+  print(jr$dir(results=TRUE))
+  
+  testStep("Model directory of outputs")
+  print(jr$dir(outputs=TRUE))
+  
+  testStep("Clear outputs")
+  jr$clear(outputOnly=TRUE, force=FALSE)
+
+  testStep("Directory after clearing")
+  jr$dir()
 }
 
 test_query <- function(log="warn") {
   # Process the standard query list for the test model
+  testStep("Set up Queries and Run on Model Results")
   testStep("Opening test model and caching its results...")
   jr <- openModel("JRSPM")
   rs <- jr$results()
 
   testStep("Show query directory (may be empty)...")
   jr$query()
+
+  testStep("Show model directory for queries")
 
   testStep("Create an empty query object and print it...")
   # create a query object
@@ -325,8 +479,6 @@ test_query <- function(log="warn") {
   cat("Directory: "); print(qry$QueryDir)
   cat("Name; "); print(qry$QueryName)
   cat("Path: "); print(qry$QueryFile)
-
-  return("Test Done")
 
   testStep("Model QueryDir contents...")
 

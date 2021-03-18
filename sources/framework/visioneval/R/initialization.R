@@ -35,28 +35,34 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
 
   # The required parameters will be the initial elements for the ModelState
   # Other RunParam_ls elements will be placed in ModelState_ls$RunParam_ls
-  RequiredParam_ <- c(
-    "Model", "Scenario", "Description", "Region", "BaseYear", "Years",
-    "DatastoreName", "DatastoreType", "Seed"
-  )
+
+  # Make sure structural defaults are present in Param_ls
+  # These will mostly be set in either the ve.runtime configuration or the model
+  # configuration/run_parameters.json
+  DefaultValues_ <- defaultVERunParameters(Param_ls)[c( "DatastoreName", "DatastoreType", "Seed" )]
+  DefaultValues_ <- addParameterSource(DefaultValues_,"Defaults")
+  Param_ls <- mergeParameters(DefaultValues_,Param_ls)
+
+  # Don't need these until running model; Save will always be TRUE if running model
+  # In memory model state will not contain these elements, though they may be added after the fact
+  RequiredParam_ <- c( "Model", "Scenario", "Description", "Region", "BaseYear", "Years" )
   ParamExists_ <- RequiredParam_ %in% names(Param_ls)
   if (any(!ParamExists_)) {
     MissingParam_ <- RequiredParam_[!ParamExists_]
     Message <- c(
-      "Missing model run parameters (not set in VisionEval configuration or function call):",
+      "Missing model run parameters (not set in VisionEval configuration, run_parameters.json or function call):",
       paste(MissingParam_, collapse = ", ")
     )
     stop( writeLog(Message,Level="error") )
-  } 
-
-  # Install the parameters - the required parameters become the foundation for
+  }
+  # Install the parameters that do exist - the required parameters become the foundation for
   # ModelState_ls. Other parameters are placed in newModelState_ls$RunParameters,
   # (including things like ParamDir, UnitsFile, etc.)
-  newModelState_ls <- Param_ls[RequiredParam_]
   # ModelState version of Param_ls now also includes the required parameters
   # Formerly: newModelState_ls$RunParam_ls <- RunParam_ls[ ! (names(RunParam_ls) %in% RequiredParam_) ]
+  newModelState_ls <- Param_ls[RequiredParam_[ParamExists_]]
   newModelState_ls$LastChanged <- Sys.time()
-
+  
   # Also load the complete deflators and units files, which will be accessed later via ModelState_ls
   DeflatorsFile <- getRunParameter("DeflatorsFile",Param_ls=Param_ls)
   DeflatorsFilePath <- findRuntimeInputFile(DeflatorsFile,Dir="ParamDir",Param_ls=Param_ls)
@@ -87,11 +93,13 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
   model.env$ModelState_ls <- newModelState_ls
   model.env$RunParam_ls <- Param_ls; # Includes all the run Parameters, including "required"
 
-  # Note that the ModelState is always saved in the working directory
+  # Note that the ModelState is saved in the working directory
   # Model is expected to run in the directory that will receive its output.
   #   ModelState.Rda is the model description for this run
   #   Datastore are the model results for this run
-  if ( Save) save("ModelState_ls", envir=model.env, file = getModelStateFileName(Param_ls))
+  if ( Save) save("ModelState_ls", envir=model.env, file = getModelStateFileName(model.env$RunParam_ls))
+
+  writeLog(paste0("Parameter Names from initModelState:\n",paste(names(model.env$RunParam_ls),collapse=",")),Level="info")
 
   return(Save) 
 }
@@ -382,7 +390,8 @@ getUnits <- function(Type_) {
 #' @param RequiredPackages a character vector of packages already required
 #' @param Save if FALSE, just update ModelState in memory, otherwise write changes to disk
 #' @return A list of all processed module specifications
-parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized, RequiredPackages, Save=TRUE ) {
+#' @export
+parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized="", RequiredPackages="", Save=TRUE ) {
 
   ModuleCalls_df <- unique(ModuleCalls_df)
 
@@ -478,6 +487,7 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized, RequiredPackag
     PackageName <- ModuleCalls_df$PackageName[i]
     AllSpecs_ls[[i]]$PackageName <- PackageName
     AllSpecs_ls[[i]]$RunFor <- ModuleCalls_df$RunFor[i]
+    names(AllSpecs_ls)[i] <- paste0(PackageName,"::",ModuleName)
     #Check module availability
     Err <- checkModuleExists(ModuleName, PackageName, InstalledPkgs_)
     if (length(Err) > 0) {
@@ -1604,7 +1614,7 @@ loadModelParameters <- function(FlagChanges=FALSE) {
 #' @return A list of parsed parameters for each of the VisionEval model elements found in the script.
 #' @export
 parseModelScript <- function(FilePath) {
-  writeLog("Parsing model script",Level="info")
+  writeLog(c("Parsing model script",FilePath),Level="info")
   if (!file.exists(FilePath)) {
     Msg <- c(
       paste0("Specified model script file does not exist."),
@@ -1650,6 +1660,7 @@ parseModelScript <- function(FilePath) {
   InitParams_ls      <- lapply(extractElement("initializeModel"),function(x)x$initializeModel)[[1]] # Ignore more than one
   RequiredVEPackages <- sapply(extractElement("requirePackage"),function(x)x$requirePackage$Package) # Vector of package names
 
+  writeLog("Done parsing model script",Level="info")
   return(
     list(
       AllCalls_ls        = Elements,
