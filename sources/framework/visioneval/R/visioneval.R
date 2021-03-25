@@ -391,6 +391,7 @@ function(
     RequiredPackages,
     Save=RunModel
   )
+  setModelState(list(AllSpecs_ls=AllSpecs_ls),Save=RunModel)
 
   writeLog("Preparing Model Run...",Level="warn")
 

@@ -318,7 +318,7 @@ ve.results.extract <- function(
   saving <- is.character(saveTo) && nzchar(saveTo)[1]
   if ( saving ) {
     saveTo <- saveTo[1]
-    outputPath <- if ( isAbsolutePath(saveTo) ) saveTo else file.path(self$modelDir,saveTo)
+    outputPath <- if ( isAbsolutePath(saveTo) ) saveTo else file.path(self$resultsPath,saveTo)
     print(outputPath)
     if ( ! dir.exists(outputPath) ) dir.create(outputPath,showWarnings=FALSE)
     if ( ! dir.exists(outputPath) ) {
