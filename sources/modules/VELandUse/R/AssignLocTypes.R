@@ -316,7 +316,7 @@ AssignLocTypes <- function(L) {
   Props_BzHtLt[,,"Town"] <-
     with(L$Year$Bzone, cbind(PropTownSFDU, PropTownMFDU, PropTownGQDU))
   Props_BzHtLt[,,"Rural"] <-
-    1 - Props_BzHtLt[,,"Urban"] + Props_BzHtLt[,,"Town"]
+    1 - Props_BzHtLt[,,"Urban"] - Props_BzHtLt[,,"Town"]
   #Define a function to do a whole number splitting according to proportions
   splitInt <- function(Props_, Tot) {
     SplitAll_ <- Props_ * Tot
