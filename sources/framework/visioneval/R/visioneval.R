@@ -99,45 +99,20 @@ function(
   #### IMPORTANT: The working directory must be the place we want to write the ModelState file and
   ####            create the Datastore. The "ResultsDir" (plus RunStep/Scenario)
 
-  # Access the model environment and check for RunModel condition
-  ve.model <- modelEnvironment(Clear="") # clear ve.model environment (but don't destroy pre-existing RunParam_ls)
+  RunParam_ls <- getModelParameters(DotParam_ls=list(...),DatastoreName)
   RunModel <- modelRunning()
 
-  # Check for pre-existing elements in ve.model environment (e.g. from VEModel$run) and RunParam_ls found there
-  Param_ls <- addParameterSource(
-    get0( "RunParam_ls", envir=ve.model, ifnotfound=list() ),
-    "RunParam_ls in modelEnvironment()"
-  )
+  # Extract parameters used to navigate the model script and model state
 
-  ModelDir <- getRunParameter("ModelDir",Param_ls=Param_ls) # Default is working directory
-
-  # External environment will override dots (which are vestigial)
-  DotParam_ls <- addParameterSource(list(...),"initializeModel(...)")
-  if ( is.character(DatastoreName) ) { # the function parameter, not the Run Parameter
-    DotParam_ls[["LoadDatastoreName"]] <- DatastoreName
-  }
-  if ( "Param_ls" %in% DotParam_ls ) {
-    DotParam_ls[ names(Param_ls) ] <- Param_ls; # Elevate parameters passed as an argument
-  }
-  RunParam_ls <- loadConfiguration(ParamDir=ModelDir,keep=Param_ls,override=DotParam_ls)
-
-  # Look for defs along InputPath, and run_parameters.json.
-  # Note that we can't change parameters listed in run_parameters.json
-  # Those represent model setup invariants (e.g. inputs, defs locations)
-  # New style model will already have loaded those from visioneval.cnf in the model root
-  ParamPath <- findRuntimeInputFile("run_parameters.json","ParamDir",Param_ls=RunParam_ls,StopOnError=FALSE)
-  if ( ! is.na(ParamPath) ) RunParam_ls <- loadConfiguration(ParamPath=ParamPath,override=RunParam_ls)
+  ModelDir <- getRunParameter("ModelDir",Param_ls=RunParam_ls)
 
   # ModelScriptFile needs to be the absolute path to the model script
   # It will be provided either in dots, or by the pre-existing RunParam_ls environment (e.g. if
   # built by VEModel). Default is a fixed string, "run_model.R"
   ModelScriptFile <- getRunParameter("ModelScriptFile",Param_ls=RunParam_ls)
 
-  # If ResultsDir is not present in RunParam_ls, set it to the current directory
-  if ( ! "ResultsDir" %in% names(RunParam_ls) ) RunParam_ls[["ResultsDir"]] <- "."
-
   # If the ModelScriptFile is relative, normalize it to ModelDir, which is either
-  # working directory.
+  # working directory or a sub-location holding the scripts.
   if ( ! any(grepl("^([[:alpha:]]:[\\/]|[\\/])",ModelScriptFile)) ) {
     # if relative path, normalize relative to ModelDir (which is probably ".")
     ModelScriptFile <- normalizePath(
@@ -147,22 +122,18 @@ function(
       ), winslash="/"
     )
   }
-
   ModelStateFileName <- getRunParameter("ModelStateFileName",Param_ls=RunParam_ls)
+
+  # Timestamp will be placed in new ModelState (and possibly used to rename an old one)
+  Timestamp <- gsub(":","-",gsub(" ", "_",Sys.time())) # Suitable for use in file name
 
   #=========================================
   # CONFIGURE SAVE MODEL STATE AND DATASTORE
   #=========================================
 
-  # Configure default for SaveDatastore run parameter
-  SaveDatastore <- if ( "SaveDatastore" %in% names(RunParam_ls) ) {
-    RunParam_ls$SaveDatastore
-  } else TRUE # Save by default
-  # If SaveDatastore is TRUE, any existing ModelState and Datastore will be renamed rather
-  #  than deleted and over-written
-
-  # Timestamp will be placed in new ModelState (and possibly used to rename an old one)
-  Timestamp <- gsub(":","-",gsub(" ", "_",Sys.time())) # Suitable for use in file name
+  SaveDatastore <- getRunParameter("SaveDatastore",Param_ls=RunParam_ls)
+  # If SaveDatastore is TRUE (default), the ResultsDir and any existing ModelState and Datastore
+  #  will be renamed rather than deleted and over-written.
 
   SaveParameters <- list()
   if ( RunModel && SaveDatastore ) {
@@ -200,71 +171,35 @@ function(
   currentModelStateExists <- file.exists(currentModelStatePath)
   SaveParameters$currentModelStatePath <- currentModelStatePath;
 
-  saveModelState <- FALSE # Always start out FALSE; set to TRUE once we're running
+  #================================
+  # ESTABLISH MODEL STATE IN MEMORY
+  #================================
 
-  #===================================
-  # INSTALL MODEL STATE IN ENVIRONMENT
-  #===================================
-
-  if (
-    RunModel ||                 # always make a new one if running the model (and save the last one)
-    ! currentModelStateExists ) # if just opening a fresh model, initialize one in memory
-  {
-    if ( RunModel ) writeLog("Initializing Model. This may take a while")
-    # TODO: Why does this "take a while"? (it does) There's just not that much processing...
-
-    # If running and the ModelState already exists and we want to SaveDatastore
-    #   Set the ModelState aside
-    # TODO: This should be done at the level of ResultsDir, and it should sweep up
-    #   both the ModelState.Rda and the Datastore, plus any Log files
-    # TODO: This should only be done when we Run, and at the same time we save
-    #   the Datastore. We could simply not save the current ModelState (Save=FALSE)
-    #   and then start saving the ModelState later when we get to the RunModel part.
-    if ( currentModelStateExists && RunModel && SaveDatastore ) {
-      SaveParameters <- archiveModelState(currentModelStatePath,SaveParameters)
-      # unlike archiveDatastore, this MOVES the model state aside
-      # it may update SaveParameters$previousTimestamp
-    }
-
-    # Build a new ModelState_ls (in modelEnvironment())
-    # Loads the units, deflators and model geography
-    # Will only save it if running the model, otherwise it's just in memory
-    # TODO: there is "overall model init", which can be entirely virtual:
-    #   process all the scripts/run steps and load up the input specifications
-    # TODO: need a complete document/directory of what gets put into the ModelState
-    initModelState(Save=RunModel,Param_ls=RunParam_ls)
-  } else { # ModelState file exists and not running model
-    # open the existing model state
-    loadModelState(currentModelStatePath)
+  # We'll start saving the model state after we have (if necessary) archived the existing one.
+  if ( ! RunModel && currentModelStateExists ) {
+    RunParam_ls <- loadModelState(currentModelStatePath)
+  } else {
+    # In all cases, initialize a fresh model state - may replace it later if loading existing
+    # datastore
+    RunParam_ls <- initModelState(Save=FALSE,Param_ls=RunParam_ls)
   }
   RunParam_ls <- ve.model$RunParam_ls; # May have been modified in initModelState or loadModelState
 
-  # ===================================
-  # PUT LOG PARAMETERS INTO MODEL STATE
-  # ===================================
-  
   # We started the log before we had a ModelState into which to save its configuration
   if ( length(logState)>0 ) {
-    setModelState(logState,Save=RunModel)
+    setModelState(logState,Save=FALSE)
+  }
+
+  # If not
+  if ( ! RunModel ) {
+    return(invisible(ve.model$ModelState_ls))
   }
 
   #=========================
-  # END OF "LOAD" OPERATIONS
+  # REMAINDER RUNS THE MODEL
   #=========================
 
-  if ( ! RunModel ) return(invisible(ve.model$ModelState_ls))
-  
-  #=================================================
-  # REMAINDER SETS UP TO RUN THE MODEL, IF REQUESTED
-  #=================================================
-
-  #===========================================================================
-  #PARSE SCRIPT TO MAKE TABLE OF ALL THE MODULE CALLS, CHECK AND COMBINE SPECS
-  #===========================================================================
-
-  # Parse script and make data frame of modules that are called directly
-  parsedScript <- parseModelScript(ModelScriptFile)
-  setModelState(list(ParsedScript=parsedScript),Save=RunModel)
+  # IMPORTANT: Do not write/re-write a model state until archiving is done.
 
   #===================================================
   # DEVELOP RUN DATASTORE AND LOAD DATASTORE LOCATIONS
@@ -274,7 +209,8 @@ function(
   # Note that the DatastoreName in RunParam_ls is decidedly NOT the same as the DatastoreName
   #   in the parameter list to initializeModel; see above for initializing LoadDatastoreName
   #   (the parameter is the path/filename for the *other* Datastore from a previous stage)
-  RunDstoreName <- normalizePath(RunParam_ls$DatastoreName, winslash = "/", mustWork = FALSE)
+  RunDstoreName <- getRunParameter("DatastoreName",Param_ls=RunParam_ls)
+  RunDstoreName <- normalizePath(RunDstoreName, winslash = "/", mustWork = FALSE)
   RunDstoreDir <- dirname(RunDstoreName)
   RunDstoreFile <- basename(RunDstoreName)
 
@@ -306,6 +242,151 @@ function(
   # Flag if we're trying to (re-)load the existing Datastore
   LoadExistingDatastore <- LoadDatastore && (RunDstoreName == LoadDstoreName) && (RunDstoreDir == LoadDstoreDir)
 
+  #=======================================
+  #INITIALIZE MODEL STATE OR LOAD PREVIOUS
+  #=======================================
+
+  DstoreConflicts <- character(0)
+
+  if ( ! LoadExistingDatastore ) {
+
+    # Check for consistency of Load and Save parameters
+    if ( file.exists(RunDstoreName) ) {
+      if ( ! ( LoadDatastore || SaveDatastore ) ) {
+        DstoreConflicts <- c(DstoreConflicts,
+          paste(
+            "The existing datastore, ",RunDstoreName," will NOT be overwritten.\n",
+            "Set SaveDatastore=TRUE to move the existing results aside.\n",
+            "To add to it, set DatastoreName=NULL and set LoadDatastore=TRUE.\n",
+            "Or just delete it and try again.\n"
+          )
+        )
+      } else if (
+        LoadDatastore &&
+        ! SaveDatastore ) {
+        DstoreConflicts <- c(DstoreConflicts,
+          paste(
+            "Loading DatastoreName='",LoadDstoreName,"'.",
+            "Existing datastore ",RunDstoreName," would be overwritten.",
+            "Set SaveDatastore=TRUE to move the existing results aside.\n",
+            "Or delete it and try again.\n"
+          )
+        )
+      }
+    } else if ( SaveDatastore ) {
+      InfoMsg <- "Ignored run parameter SaveDatastore=TRUE, as there is no Datastore to save."
+      writeLog(InfoMsg,Level="warn")
+      SaveDatastore <- FALSE
+    }
+
+    # Abort if we have irresolvable (not just warning) conflicts
+    if (length(DstoreConflicts) != 0) {
+      writeLog(DstoreConflicts,Level="error")
+      stop("Datastore configuration error: See log messages.",call.=FALSE)
+    }
+
+    # Save the previous results directory if present and requested
+    if (SaveDatastore && file.exists(RunDstoreName)) {
+      # copies the Datastore plus the ModelState plus any log file from
+      # ResultsDir to new location based on run timestamp in ModelState
+      if ( ! archiveDatastore( RunDstoreName, SaveParameters ) )
+      {
+        stop( writeLog("Failed to save old Datastore!",Level="error") )
+      }
+    }
+  } else {
+    RunParam_ls <- loadModelState(currentModelStatePath)
+  }
+    
+  # ===================================================
+  # INITIALIZE LOG AND START WRITING TO NEW MODEL STATE
+  # ===================================================
+  
+  # We started the log before we had a ModelState into which to save its configuration
+  # Now we have archived and initialized the model state so we can save the log parameters
+  # After this point, Save=RunModel will always be TRUE because we already returned if not.
+  if ( length(logState)>0 ) {
+    setModelState(logState,Save=RunModel)
+  }
+
+  writeLog("Initializing Model. This may take a while.",Level="warn")
+
+  #=====================================
+  #CHECK CONFLICTS WITH LOADED DATASTORE
+  #=====================================
+
+  # Verify that there is a Datastore to load if requested
+  LoadEnv <- new.env() # for loaded ModelState
+  DstoreConflicts <- character(0)
+
+  if ( LoadDatastore && ! LoadExistingDatastore ) {
+    if ( !file.exists(LoadDstoreName) ) {
+      DstoreConflicts <- c(DstoreConflicts,
+        paste0(
+          "Failed to load existing Datastore ",LoadDstoreName,". ",
+          "Perhaps the full path name was not specified."
+        )
+      )
+    } else { # loading and file exists
+      # Presume that if we're loading the existing one, it's fine!
+      # Check whether the datastore to be loaded is consistent with
+      #  the current datastore (using its ModelState)
+
+      #Get datastore type from current ModelState
+      LoadDstoreType <- (LoadEnv$ModelState_ls$DatastoreType)
+      RunDstoreType <- (ve.model$ModelState_ls$DatastoreType)
+
+      #Check that run and load datastores are of same type
+      if ( RunDstoreType != LoadDstoreType) {
+        DstoreConflicts <- c(DstoreConflicts, paste(
+          "Incompatible datastore types.\n",
+          "This Model Run has type: ", RunDstoreType, ".\n",
+          "Load Datastore has type: ", LoadDstoreType, "."
+        ))
+      }
+
+      #Check that geography, units, deflators and base year are consistent
+      BadGeography <- !isTRUE(all.equal(ve.model$ModelState_ls$Geo_df, LoadEnv$ModelState_ls$Geo_df))
+      BadUnits <- !isTRUE(all.equal(ve.model$ModelState_ls$Units, LoadEnv$ModelState_ls$Units))
+      BadDeflators <- !isTRUE(all.equal(ve.model$ModelState_ls$Deflators, LoadEnv$ModelState_ls$Deflators))
+      BadBaseYear <- ! (ve.model$ModelState_ls$BaseYear == LoadEnv$ModelState_ls$BaseYear)
+
+      if ( BadGeography || BadUnits || BadDeflators || BadBaseYear) {
+        elements <- paste(
+          "Geography"[BadGeography],
+          "Units"[BadUnits],
+          "Deflators"[BadDeflators],
+          "Base Year"[BadBaseYear],
+          sep="_"
+        )
+        elements <- gsub("_",", ",gsub("^_+|_+$","",elements))
+        DstoreConflicts <- c(DstoreConflicts,
+          paste(
+            "Inconsistent ",elements," between Model Run and Load Datastore."
+          )
+        )
+      }
+    }
+  }
+
+  #=============================================
+  # REPORT RESULTS OF DATABASE CONSISTENCY CHECK
+  #=============================================
+
+  # Abort if we have irresolvable (not just warning) conflicts
+  if (length(DstoreConflicts) != 0) {
+    writeLog(DstoreConflicts,Level="error")
+    stop("Datastore configuration error: See log messages.",call.=FALSE)
+  }
+
+  #===========================================================================
+  #PARSE SCRIPT TO MAKE TABLE OF ALL THE MODULE CALLS, CHECK AND COMBINE SPECS
+  #===========================================================================
+
+  # Parse script and make data frame of modules that are called directly
+  parsedScript <- parseModelScript(ModelScriptFile)
+  setModelState(list(ParsedScript=parsedScript),Save=RunModel)
+
   #==========================================================
   # SAVE RAW MODULE CALLS INTO MODEL STATE FROM PARSED SCRIPT
   #==========================================================
@@ -333,50 +414,35 @@ function(
   # TODO: Difference is just how we link/access the previous Datastore
 
   # Load the previous model state, if available
-  LoadEnv <- new.env() # for loaded ModelState
   if ( LoadDatastore ) {
     # Find the other Datastore that will become the basis for this one
     # Start by finding its ModelState
-    if ( RunModel && LoadExistingDatastore  ) {
-      # LoadExistingDatastore means we're picking up and continuing the last model run
-      # If it doesn't exist and we're not running, that's fine 
-      if ( nzchar(SaveParameters$previousModelStateName) ) {
-        # we moved aside the old model state; now we'll resurrect it
-        # into the current model state, OVERWRITING everything we may
-        # have initialized earlier.
-        modelStateLoaded <- load(SaveParameters$previousModelStateName, envir=LoadEnv)
-        if ( modelStateLoaded ) {
-          setModelState(LoadEnv$ModelState_ls,Save=RunModel)
-        } # else use the current (in memory) ModelState
-      } # else use the current (in memory) ModelState
+    # Seek ModelState from the directory containing the other Datastore
+    # In the file system, use the currently configured ModelStateFileName
+    #  if it's not right, that other model needs to be re-run in
+    #  the current environment.
+    modelStatePath <- file.path(LoadDstoreDir,ModelStateFileName)
+    LoadRunParam_ls <- loadModelState(modelStatePath,envir=LoadEnv)
+    modelStateLoaded <- length(LoadRunParam_ls)>0
+    if ( ! modelStateLoaded ) {
+      stop(
+        writeLog(
+          c(
+            "Error in LoadDatastore:",
+            "The prior stage ModelState is missing; run it first.",
+            paste("Prior stage:",LoadDstoreName),
+            paste("Unable to load ModelState:",modelStatePath)
+          ),
+          Level="error"),
+        call.=FALSE
+      )
     }
-    if ( ! LoadExistingDatastore ) {
-      # Seek ModelState from the directory containing the other Datastore
-      # In the file system, use the currently configured ModelStateFileName
-      #  if it's not right, that other model needs to be re-run in
-      #  the current environment.
-      modelStatePath <- file.path(LoadDstoreDir,ModelStateFileName)
-      modelStateLoaded <- loadModelState(modelStatePath,envir=LoadEnv)
-      if ( ! modelStateLoaded ) {
-        stop(
-          writeLog(
-            c(
-              "Error in LoadDatastore:",
-              "The prior stage ModelState is missing; run it first.",
-              paste("Prior stage:",LoadDstoreName),
-              paste("Unable to load ModelState:",modelStatePath)
-            ),
-            Level="error"),
-          call.=FALSE
-        )
-      }
 
-      # Copy over the required packages part of the previous model state
-      # That's all we need so we can parse the current module calls successfully
-      if ( "RequiredVEPackages" %in% names(LoadEnv$ModelState_ls) ) {
-        AlreadyInitialized <- LoadEnv$ModelState_ls$RequiredVEPackages
-        RequiredPackages <- unique(c(RequiredPackages, LoadEnv$ModelState_ls$RequiredVEPackages))
-      }
+    # Copy over the required packages part of the previous model state
+    # That's all we need so we can parse the current module calls successfully
+    if ( "RequiredVEPackages" %in% names(LoadEnv$ModelState_ls) ) {
+      AlreadyInitialized <- LoadEnv$ModelState_ls$RequiredVEPackages
+      RequiredPackages <- unique(c(RequiredPackages, LoadEnv$ModelState_ls$RequiredVEPackages))
     }
   }
 
@@ -393,7 +459,7 @@ function(
   )
   setModelState(list(AllSpecs_ls=AllSpecs_ls),Save=RunModel)
 
-  writeLog("Preparing Model Run...",Level="warn")
+  writeLog("Preparing Model Run...",Level="info")
 
   #==================
   #SIMULATE MODEL RUN
@@ -409,146 +475,10 @@ function(
     simDataTransactions(AllSpecs_ls)
   }
 
-  #==============================================
-  # Establish the datastore interaction functions
-  #==============================================
-  # TODO: This should already have happened at the highest level (e.g. VEModel)
-  # Only needed here for "old style" model setups
+  #=============================================
+  #ESTABLISH THE DATASTORE INTERACTION FUNCTIONS
+  #=============================================
   assignDatastoreFunctions(ve.model$ModelState_ls$DatastoreType)
-
-  #=====================================
-  #CHECK CONFLICTS WITH LOADED DATASTORE
-  #=====================================
-  # Sort out LoadDatastore/SaveDatastore parameters, based on what exists
-  # Do this step in all run modes, but skip some of the checking if not RunModel
-  # The "local" block has side-effects on variables defined outside it;
-  # "local" is used to gather the errors into one place via "return" statements
-
-  # Prepare to accumulate errors and warnings
-  DstoreConflicts <- character(0)
-  InfoMsg <- character(0)
-
-  # Check for consistency of Load and Save parameters
-  if ( file.exists(RunDstoreName) ) {
-    if ( ! ( LoadDatastore || SaveDatastore ) ) {
-      DstoreConflicts <- c(DstoreConflicts,
-        paste(
-          "The existing datastore, ",RunDstoreName," will NOT be overwritten.\n",
-          "Set SaveDatastore=TRUE to move the existing datastore aside.\n",
-          "To add to it, set DatastoreName=NULL and set LoadDatastore=TRUE.\n",
-          "Or just delete it and try again.\n"
-        )
-      )
-    } else if (
-      LoadDatastore &&
-      ! SaveDatastore &&
-      ! LoadExistingDatastore ) {
-      DstoreConflicts <- c(DstoreConflicts,
-        paste(
-          "Loading DatastoreName='",LoadDstoreName,"'.",
-          "Existing datastore ",RunDstoreName," would be overwritten.",
-          "Set SaveDatastore=TRUE to move the existing datastore aside.\n",
-          "Or delete it and try again.\n"
-        )
-      )
-    }
-  } else if ( SaveDatastore ) {
-    InfoMsg <- c(
-      InfoMsg,
-      "Ignored run parameter SaveDatastore=TRUE, as there is no Datastore to save."
-    )
-    SaveDatastore <- FALSE
-  }
-
-  # Verify that there is a Datastore to load
-  if ( LoadDatastore && !file.exists(LoadDstoreName) ) {
-    DstoreConflicts <- c(DstoreConflicts,
-      paste0(
-        "Failed to load existing Datastore ",LoadDstoreName,". ",
-        "Perhaps the full path name was not specified."
-      )
-    )
-  } else if ( LoadDatastore && ! LoadExistingDatastore ) { # loading and file exists
-    # Presume that if we're loading the existing one, it's fine!
-    # Check whether the datastore to be loaded is consistent with
-    #  the current datastore (using its ModelState)
-
-    #Get datastore type from current ModelState
-    LoadDstoreType <- (LoadEnv$ModelState_ls$DatastoreType)
-    RunDstoreType <- (ve.model$ModelState_ls$DatastoreType)
-
-    #Check that run and load datastores are of same type
-    if ( RunDstoreType != LoadDstoreType) {
-      DstoreConflicts <- c(DstoreConflicts, paste(
-        "Incompatible datastore types.\n",
-        "This Model Run has type: ", RunDstoreType, ".\n",
-        "Load Datastore has type: ", LoadDstoreType, "."
-      ))
-    }
-
-    #Check that geography, units, deflators and base year are consistent
-    BadGeography <- !isTRUE(all.equal(ve.model$ModelState_ls$Geo_df, LoadEnv$ModelState_ls$Geo_df))
-    BadUnits <- !isTRUE(all.equal(ve.model$ModelState_ls$Units, LoadEnv$ModelState_ls$Units))
-    BadDeflators <- !isTRUE(all.equal(ve.model$ModelState_ls$Deflators, LoadEnv$ModelState_ls$Deflators))
-    BadBaseYear <- ! (ve.model$ModelState_ls$BaseYear == LoadEnv$ModelState_ls$BaseYear)
-
-    if ( BadGeography || BadUnits || BadDeflators || BadBaseYear) {
-      elements <- paste(
-        "Geography"[BadGeography],
-        "Units"[BadUnits],
-        "Deflators"[BadDeflators],
-        "Base Year"[BadBaseYear],
-        sep="_"
-      )
-      elements <- gsub("_",", ",gsub("^_+|_+$","",elements))
-      DstoreConflicts <- c(DstoreConflicts,
-        paste(
-          "Inconsistent ",elements," between Model Run and Load Datastore."
-        )
-      )
-    }
-  }
-
-  #=============================================
-  # REPORT RESULTS OF DATABASE CONSISTENCY CHECK
-  #=============================================
-
-  if (length(InfoMsg) != 0) {
-    writeLog(InfoMsg,Level="warn")
-  }
-
-  # Abort if we have irresolvable (not just warning) conflicts
-  if (length(DstoreConflicts) != 0) {
-    # Restore previous model state if we had archived it earlier
-    # TODO: don't actually move the old model state until we move the Datastore below
-    # TODO: wrap the moving/archiving into a single function that will handle old style and new
-    #   style models.
-    if ( nzchar(SaveParameters$previousModelStateName) && SaveParameters$savedPreviousModelState ) {
-      unlink(currentModelStatePath)
-      if (file.exists(SaveParameters$previousModelStateName)) { # TODO: relative to RunDirectory
-        file.rename(SaveParameters$previousModelStateName, basename(currentModelStatePath))
-      }
-    }
-    writeLog(DstoreConflicts,Level="error")
-    stop("Datastore configuration error: See log messages.",call.=FALSE)
-  }
-
-  #=====================================================
-  # SAVE PREVIOUS MODEL STATE AND DATASTORE IF REQUESTED
-  #=====================================================
-
-  if (SaveDatastore && file.exists(RunDstoreName)) {
-    if ( ! archiveDatastore(
-      # unlike archiveModelState, this copies the Datastore plus the ModelState
-      RunDstoreName,
-      SaveParameters
-    ) ) {
-      stop(
-        writeLog("Failed to save old Datastore!",Level="error"),
-        call. = FALSE
-      )
-    }
-  } # If not saving, we'll just blow away the old Datastore
 
   #==================================
   # LOAD OTHER DATASTORE IF SPECIFIED
@@ -564,63 +494,58 @@ function(
   #  final (or specified) run step
 
   writeLog("Preparing Data Store...",Level="warn")
-  if (LoadDatastore) {
-    # If not the same as any existing datastore, delete existing datastore
-    if ( ! LoadExistingDatastore ) {
-      # Remove existing Datastore if we're not re-using it
-      if ( file.exists(RunDstoreName) ) {
-        unlink(RunDstoreName,recursive=TRUE)
-      }
-      # Copy the loaded file/directory Datastore hierarchy
-      loadDatastoreCopy <- tempfile(tmpdir=getwd(),pattern="Datastore_")
-      dir.create(loadDatastoreCopy)
-      file.copy(LoadDstoreName, loadDatastoreCopy, recursive = TRUE)
-      file.rename(file.path(loadDatastoreCopy,basename(LoadDstoreName)),RunDstoreName)
-      unlink(loadDatastoreCopy,recursive=TRUE)
-      writeLog(paste("Copied previous datastore from:",LoadDstoreName),Level="info")
-      writeLog(paste("Copied datastore            to:",RunDstoreName),Level="info")
 
-      # Copy datastore inventory for loaded datastore into current ModelState
-      # TODO: this same step happens for BaseModel, but must rectify DstoreLoc for
-      # the loaded Datastore listing. No rectification needed for LoadDatastore (copying)
-      # The Datastore listing needs to be ready before we update the Year groups
-      setModelState(list(Datastore=LoadEnv$ModelState_ls$Datastore),Save=RunModel)
-
-      #=================================================
-      # HANDLE USE CASE WHERE SOME YEARS ALREADY DEFINED
-      #=================================================
-
-      # TODO: Key feature is to make sure all the geography is present for the new
-      #  year. This will probably work for both BaseModel and LoadDatastore variations.
-
-      # Each RunStep needs to have groups available locally (i.e. materialized in its own
-      # Datastore) for the years it is evaluating (even if those years might also be
-      # present in earlier RunSteps).
-
-      # Initialize geography for years not present in datastore
-      # Handles model stages where the new stage adds one or more Years
-      #  instead of (or in addition to) adding module calls.
-      RunYears_ <- ve.model$ModelState_ls$Years
-      LoadYears_ <- LoadEnv$ModelState_ls$Years
-      if (!all(RunYears_ == LoadYears_)) {
-        NewYears_ <- RunYears_[!(RunYears_ %in% LoadYears_)]
-        # NOTE: initDatastore and initDatastoreGeography are performed separately
-        # as initDatastore depends on DatastoreType (RD vs H5), whereas
-        # initDatastoreGeography will use the assigned functions 
-        initDatastore(AppendGroups = NewYears_)
-        initDatastoreGeography(GroupNames = NewYears_)
-        loadModelParameters(FlagChanges=TRUE)
-        # FlagChanges: A bunch of warnings are printed if the model parameters changed
-        # TODO: Probably we should just abandon ship in those cases
-      }
-    }
-    # if we ARE loading the existing Datastore, it's just there and we'll continue
-    # all the book-keeping was done when we loaded its ModelState
-  } else {
+  if ( ! LoadDatastore ) {
     # not loading, so make a new Datastore
-    initDatastore()
+    initDatastore() # Deletes any existing Datastore in ResultsDir
     initDatastoreGeography()
     loadModelParameters()
+  } else if ( ! LoadExistingDatastore ) {
+    # Remove existing Datastore if we're not re-using it
+    if ( file.exists(RunDstoreName) ) {
+      unlink(RunDstoreName,recursive=TRUE)
+    }
+    # Copy the loaded file/directory Datastore hierarchy
+    loadDatastoreCopy <- tempfile(tmpdir=getwd(),pattern="Datastore_")
+    dir.create(loadDatastoreCopy)
+    file.copy(LoadDstoreName, loadDatastoreCopy, recursive = TRUE)
+    file.rename(file.path(loadDatastoreCopy,basename(LoadDstoreName)),RunDstoreName)
+    unlink(loadDatastoreCopy,recursive=TRUE)
+    writeLog(paste("Copied previous datastore from:",LoadDstoreName),Level="info")
+    writeLog(paste("Copied datastore            to:",RunDstoreName),Level="info")
+
+    # Copy datastore inventory for loaded datastore into current ModelState
+    # TODO: this same step happens for BaseModel, but must rectify DstoreLoc for
+    # the loaded Datastore listing. No rectification needed for LoadDatastore (copying)
+    # The Datastore listing needs to be ready before we update the Year groups
+    setModelState(list(Datastore=LoadEnv$ModelState_ls$Datastore),Save=RunModel)
+
+    #=================================================
+    # HANDLE USE CASE WHERE SOME YEARS ALREADY DEFINED
+    #=================================================
+    # TODO: Key feature is to make sure all the geography is present for the new
+    #  year. This will probably work for both BaseModel and LoadDatastore variations.
+
+    # Each RunStep needs to have groups available locally (i.e. materialized in its own
+    # Datastore) for the years it is evaluating (even if those years might also be
+    # present in earlier RunSteps).
+
+    # Initialize geography for years not present in datastore
+    # Handles model stages where the new stage adds one or more Years
+    #  instead of (or in addition to) adding module calls.
+    RunYears_ <- ve.model$ModelState_ls$Years
+    LoadYears_ <- LoadEnv$ModelState_ls$Years
+    if (!all(RunYears_ == LoadYears_)) {
+      NewYears_ <- RunYears_[!(RunYears_ %in% LoadYears_)]
+      # NOTE: initDatastore and initDatastoreGeography are performed separately
+      # as initDatastore depends on DatastoreType (RD vs H5), whereas
+      # initDatastoreGeography will use the assigned functions 
+      initDatastore(AppendGroups = NewYears_)
+      initDatastoreGeography(GroupNames = NewYears_)
+      loadModelParameters(FlagChanges=TRUE)
+      # FlagChanges: A bunch of warnings are printed if the model parameters changed
+      # TODO: Probably we should just abandon ship in those cases
+    }
   }
 
   #===============================

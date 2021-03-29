@@ -161,7 +161,7 @@ default.parameters.table = list(
   InputDir = "inputs",
   ParamDir = "defs",
   DatastoreType = "RD",
-  SaveDatastore = FALSE,
+  SaveDatastore = TRUE,
   ResultsDir = ".",        # To get framework support for VEModel, which overrides
   StageDir = "."           # To get framework support for VEModel, which overrides
 )

@@ -5,6 +5,54 @@
 #This script defines functions used to set up and manage a model
 #run. These are helpers for finding the ModelState and running modules
 
+#INITIALIZE MODEL RUN STATE
+#==========================
+#' Initialize model run parameters during initialization.
+#'
+#' \code{getModelParameters} a visioneval framework control function that establishes the runtime
+#' model environment during model initialization.
+#'
+#' @param DotParam_ls Function arguments to initializeModel (overridden by stored RunParams in
+#' environment; backward compatible).
+#' @param DatastoreName Pass the one relevant explict argument from initializeModel
+#' @return The RunParam_ls list of loaded parameters, properly overridden
+#' @export
+getModelParameters <- function(DotParam_ls=list(),DatastoreName) {
+
+  # Access the model environment and check for RunModel condition
+  ve.model <- modelEnvironment(Clear="") # clear ve.model environment (but don't destroy pre-existing RunParam_ls)
+
+  # Check for pre-existing elements in ve.model environment (e.g. from VEModel$run) and RunParam_ls found there
+  Param_ls <- addParameterSource(
+    get0( "RunParam_ls", envir=ve.model, ifnotfound=list() ),
+    "RunParam_ls in modelEnvironment()"
+  )
+
+  ModelDir <- getRunParameter("ModelDir",Param_ls=Param_ls) # Default is working directory
+
+  # External environment will override dots (which are vestigial)
+  if ( is.character(DatastoreName) ) { # the function parameter, not the Run Parameter
+    DotParam_ls[["LoadDatastoreName"]] <- DatastoreName
+  }
+  if ( "Param_ls" %in% names(DotParam_ls) ) {
+    DotParam_ls[ names(Param_ls) ] <- Param_ls; # Elevate parameters passed as an argument
+  }
+  DotParam_ls <- addParameterSource(DotParam_ls,"initializeModel(...)")
+  RunParam_ls <- loadConfiguration(ParamDir=ModelDir,keep=Param_ls,override=DotParam_ls)
+
+  # Look for defs along InputPath, and run_parameters.json.
+  # Note that we can't change parameters listed in run_parameters.json
+  # Those represent model setup invariants (e.g. inputs, defs locations)
+  # New style model will already have loaded those from visioneval.cnf in the model root
+  ParamPath <- findRuntimeInputFile("run_parameters.json","ParamDir",Param_ls=RunParam_ls,StopOnError=FALSE)
+  if ( ! is.na(ParamPath) ) RunParam_ls <- loadConfiguration(ParamPath=ParamPath,override=RunParam_ls)
+
+  # If ResultsDir is not present in RunParam_ls, set it to the current directory
+  if ( ! "ResultsDir" %in% names(RunParam_ls) ) RunParam_ls[["ResultsDir"]] <- "."
+
+  return(RunParam_ls)
+}
+
 #INITIALIZE MODEL STATE
 #======================
 #' Initialize model state.
@@ -22,8 +70,7 @@
 #' @param Save A logical (default=TRUE) indicating whether the model state file
 #'   should be written out.
 #' @param Param_ls A named list of model run parameters
-#' @return TRUE if the model state list is created and file is saved, FALSE if
-#' the model state file was not saved.
+#' @return The updated RunParam_ls with ModelState parameters fleshed out
 #' @export
 initModelState <- function(Save=TRUE,Param_ls=NULL) {
 
@@ -101,7 +148,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
 
   writeLog(paste0("Parameter Names from initModelState:\n",paste(names(model.env$RunParam_ls),collapse=",")),Level="info")
 
-  return(Save) 
+  return(Param_ls) 
 }
 #initModelState(ParamDir = "tests/defs")
 
@@ -182,15 +229,21 @@ archiveDatastore <- function(RunDstoreName,SaveParameters) {
 #' the ModelState_ls list. The default is the ModelStateFileName in getwd().
 #' @param envir An environment into which to load ModelState.Rda
 #' (default ve.model)
-#' @return TRUE if ModelState was loaded, FALSE if it could not be
-#  (invisibly)
+#' @return The RunParam_ls from the saved model state (or an empty list if not found)
 #' @export
 loadModelState <- function(FileName=getModelStateFileName(),envir=NULL) {
   if ( is.null(envir) ) envir = modelEnvironment()
   if (file.exists(FileName)) {
     load(FileName,envir=envir)
   }
-  invisible( "ModelState_ls" %in% ls(envir) )
+  Param_ls <- get0( "RunParam_ls", envir=envir, ifnotfound=list() )
+  if ( length(Param_ls) == 0 ) {
+    ModelState_ls <- get0( "ModelState_ls", envir=envir, ifnotfound=list() )
+    if ( length(ModelState_ls) > 0 ) {
+      Param_ls <- ModelState_ls$RunParam_ls
+    }
+  }
+  return ( Param_ls )
 }
 
 # GET MODEL STATE

@@ -185,7 +185,7 @@ test_model <- function(oldstyle=TRUE, test.copy=FALSE, log="warn") {
     cat(readLines(configFile),sep="\n")
   } else {
     configFile <- file.path(bare.dir,"visioneval.cnf")
-    yaml::write_yaml(runConfig_ls,configRile)
+    yaml::write_yaml(runConfig_ls,configFile)
     print(bare.dir)
     print(configFile)
     cat(readLines(configFile),sep="\n")
