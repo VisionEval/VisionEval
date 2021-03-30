@@ -38,7 +38,7 @@ ve.query.init <- function(
                      # use runtime environment RunParams_ls
   load=FALSE         # If TRUE, build a FileName as ModelPath/QueryDir/QueryName.VEqry
                      # However, if FileName is provided, use that if absolute, othewise normalize
-                     # with ModelPath/QueryDir, attaching ".VEqry" if need be.
+                     # with ModelPath/QueryDir, attaching ".VEqry" if need be. See ve.query.load
 ) {
   # Fill in useful filename default
   if ( !is.null(FileName) && is.null(QueryName) ) {
@@ -73,7 +73,7 @@ ve.query.init <- function(
   # if "load==TRUE" and null QuerySpec/FileName, build the output name and
   #   see if it already exists
   if ( !is.null(QuerySpec) || !is.null(FileName) || load ) {
-    self$load(FileName=FileName,QuerySpec=QuerySpec)
+    self$load(FileName=FileName,QuerySpec=QuerySpec,ModelPath=ModelPath,QueryDir=QueryDir)
   }
 
   # Evaluate what is present
@@ -142,18 +142,27 @@ ve.query.clear <- function() {
   invisible( self$remove(1:length(private$QuerySpec)) ) # return what just removed...
 }
 
-ve.query.load <- function(FileName=NULL,QuerySpec=NULL) {
+ve.query.load <- function(FileName=NULL,QuerySpec=NULL,ModelPath=NULL,QueryDir=NULL) {
   if ( ! is.null(QuerySpec) ) {
     self$add(QuerySpec)
-  }
-  if ( ! is.null(FileName) && file.exists(FileName) ) {
-    # TODO: resolve absolute/relative FileName
-    # try relative to self$QueryDir or ve.runtime/QueryDir or ve.runtime
-
-    # Load the query from sourceFile, commandeering the modelEnvironment
-    ve.model <- visioneval::modelEnvironment() # Don't need to clear ve.model
-    sys.source(self$QueryFile,envir=ve.model)
-    self$add(ve.model$QuerySpec)
+  } else {
+    if ( is.null(FileName) && !is.null(self$QueryFile) ) {
+      FileName <- self$QueryFile
+    }
+    else if ( is.null(FileName) && !is.null(ModelPath) && !is.null(self$QueryName) ) {
+      # build a FileName as ModelPath/QueryDir/QueryName.VEqry
+      if ( is.null(QueryDir) ) QueryDir <- ""
+      FileName <- self$queryFile <- normalizePath(
+        file.path(ModelPath,QueryDir,paste(self$QueryName,".VEqry")),
+        winslash="/",mustWork=FALSE
+      )
+    }
+    if ( !is.null(FileName) && file.exists(FileName) ) {
+      # Load the query from FileName, commandeering the modelEnvironment
+      ve.model <- visioneval::modelEnvironment() # Don't need to clear ve.model
+      sys.source(self$QueryFile,envir=ve.model)
+      self$add(ve.model$QuerySpec)
+    }
   }
   return( self$check() )
 }

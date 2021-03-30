@@ -10,7 +10,7 @@
   # library(VEModel) will always put us in VE_RUNTIME from the system environment
   packageStartupMessage("Welcome to the new VisionEval!")
   setRuntimeDirectory() # uses VE_RUNTIME if set, else getwd()
-  loadRuntimeConfig()   # looks first for ve.runtime/ConfigDir, then ve.runtime itself
+  loadRuntimeConfig()   # looks first for ve.runtime/ConfigDir, then in ve.runtime itself
   packageStartupMessage(paste0("Running in ",getwd()))
 }
 

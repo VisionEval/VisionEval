@@ -242,7 +242,6 @@ getRuntimeDirectory <- function() {
 # model-run-specific parameters (see list of parameters)
 # Used internally when loading ModelState files and running Models. A specific model's
 # configuration may replace these with something else.
-# TODO: review the process with the new VEModel::ve.env environment and its RunParam_ls
 ve.model.setupRunEnvironment <- function(
   Owner,
   PreviousState=list(),
@@ -251,7 +250,9 @@ ve.model.setupRunEnvironment <- function(
   ModelDir=getwd(),
   ResultsDir=".",         # Should be relative to ModelDir
   InputPath=".",          # Should be relative to ModelDir
+  SaveDatastore=NULL,     # Override if set to TRUE or FALSE
   ModelScriptFile = NULL, # Override if provided
+  Name=NULL,              # Override with self$modelName
   LogLevel="warn"
 ) {
   # Set up ve.model environment with run parameters
@@ -264,8 +265,10 @@ ve.model.setupRunEnvironment <- function(
     InputPath       = InputPath,
     LogLevel        = LogLevel
   )
+  if ( ! is.null(SaveDatastore) )   addParams_ls <- c(addParams_ls,list(SaveDatastore=SaveDatastore))
   if ( ! is.null(ModelScriptFile) ) addParams_ls <- c(addParams_ls,list(ModelScriptFile=ModelScriptFile))
-  addParams_ls <- visioneval::addParameterSource(addParams_ls,paste0("Owner"))
+  if ( ! is.null(Name) )            addParams_ls <- c(addParams_ls,list(Model=Name))
+  addParams_ls <- visioneval::addParameterSource(addParams_ls,paste0(Owner))
   ve.model$RunParam_ls <- visioneval::mergeParameters(Param_ls,addParams_ls) # addParams_ls will override
 
   invisible(ve.model$RunParam_ls)

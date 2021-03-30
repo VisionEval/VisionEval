@@ -37,15 +37,23 @@ getModelParameters <- function(DotParam_ls=list(),DatastoreName) {
   if ( "Param_ls" %in% names(DotParam_ls) ) {
     DotParam_ls[ names(Param_ls) ] <- Param_ls; # Elevate parameters passed as an argument
   }
+
+  # We always want to keep "Region", "BaseYear" and "Years" from configuration files
+  # Those cannot be defined at runtime since they change the model structure, not just
+  # how it is processed
+  safeList <- c("Region","BaseYear","Years")
+  paramNames <- names(Param_ls)
+  Param_ls <- Param_ls[ paramNames[ ! paramNames %in% safeList ] ]
+
+  # Merge DotParam and configuration file with "safe" parameters from runtime
   DotParam_ls <- addParameterSource(DotParam_ls,"initializeModel(...)")
   RunParam_ls <- loadConfiguration(ParamDir=ModelDir,keep=Param_ls,override=DotParam_ls)
 
   # Look for defs along InputPath, and run_parameters.json.
-  # Note that we can't change parameters listed in run_parameters.json
-  # Those represent model setup invariants (e.g. inputs, defs locations)
   # New style model will already have loaded those from visioneval.cnf in the model root
+  # We'll keep the "safe" runtime parameters (see above)
   ParamPath <- findRuntimeInputFile("run_parameters.json","ParamDir",Param_ls=RunParam_ls,StopOnError=FALSE)
-  if ( ! is.na(ParamPath) ) RunParam_ls <- loadConfiguration(ParamPath=ParamPath,override=RunParam_ls)
+  if ( ! is.na(ParamPath) ) RunParam_ls <- loadConfiguration(ParamPath=ParamPath,keep=RunParam_ls)
 
   # If ResultsDir is not present in RunParam_ls, set it to the current directory
   if ( ! "ResultsDir" %in% names(RunParam_ls) ) RunParam_ls[["ResultsDir"]] <- "."
@@ -152,67 +160,124 @@ initModelState <- function(Save=TRUE,Param_ls=NULL) {
 }
 #initModelState(ParamDir = "tests/defs")
 
-#ARCHIVE MODEL STATE
-#===================
-#  Probably do not need to export
-#' Move an existing model state into a different time-stamped file
+#ARCHIVE RESULTS
+#===============
+#' Move an existing set of results into a different time-stamped directory
 #'
-#' @param currentModelStatePath the path to the model state that is being archived (moved)
-#' @param SaveParameters a named list of parameters, containing at a minimum previousTimestamp.
-#' @return a copy of SaveParameters with name of the archived model state (archivedModelStateName)
-#'   the updated previousTimestamp, and an updated flag savedPrevousModelState (TRUE if the
-#'   previous model state was successfully archived).
+#' @param ModelDir the directory in which to create the archive
+#' @param RunDstoreName the name of the Datastore (file/folder) for the archive within
+#'   dirname(ModelStatePath)
+#' @param ModelStatePath the absolute path to the current model state
+#' @param OutputDir the name of the outputs directory (possibly non-existent) containing
+#'   extracted results from this model run
+#' @param ResultsName the root name for the created archive directory
+#' @return TRUE if all files were moved successfully, otherwise FALSE
 #' @export
-archiveModelState <- function(currentModelStatePath,SaveParameters) {
+archiveResults <- function(ModelDir, RunDstoreName, ModelStatePath, OutputDir, ResultsName) {
+  # Create a temporary directory under ModelDir to hold the archive
 
-  # Get time stamp information from the previous model state if available
-  previousModelState <- readModelState(FileName=currentModelStatePath,envir=new.env())
-
-  # Get timestamp from previous ModelState
-  # Use the current time if the ModelState was "blank"
-  Timestamp <- if ( "FirstCreated" %in% previousModelState ) {
-    previousModelState$FirstCreated
-  } else if ( "LastChanged" %in% previousModelState ) {
-    previousModelState$LastChanged
+  # Get the timestamp from the ModelStatePath
+  # Alternative - could extract it from the log file (but the log may or may not
+  # exist - the model state is more likely to be there).
+  loadModelState( ModelStatePath, (ms.env <- new.env()) )
+  TimeStamp <- if ( "FirstCreated" %in% names(ms.env$ModelState_ls) ) {
+    writeLog(paste("Archive TimeStamp FirstCreated:",ms.env$ModelState_ls$FirstCreated),Level="trace")
+    ms.env$ModelState_ls$FirstCreated
+  } else if ( "LastChanged" %in% names(ms.env$ModelState_ls) ) {
+    writeLog(paste("Archive TimeStamp LastChanged:",ms.env$ModelState_ls$FirstCreated),Level="trace")
+    ms.env$ModelState_ls$LastChanged
   } else {
-    Timestamp <- NULL
-  }
-  if ( ! is.null(Timestamp) ) {
-    SaveParameters$previousTimestamp <- gsub(":","-",gsub(" ", "_",Timestamp))
+    writeLog(paste("Archive TimeStamp Sys.time():",ms.env$ModelState_ls$FirstCreated),Level="trace")
+    Sys.time()
   }
 
-  # Move the previous model state out of the way, but keep track of it
-  #  as it may be resurrected later if we are re-loading a previous (possibly partial) model run
-  SaveParameters$archivedModelStateName <- paste0("ModelState_",SaveParameters$previousTimestamp,".Rda")
-  SaveParameters$savedPreviousModelState <- file.rename(currentModelStatePath, SaveParameters$archivedModelStateName)
-  return(SaveParameters)
-}
+  ArchiveDirectory <- normalizePath(
+    file.path(
+      ModelDir,
+      fileTimeStamp(TimeStamp,Prefix=ResultsName)
+    ), winslash="/",mustWork=FALSE
+  )
+  if ( dir.exists(ArchiveDirectory) ) {
+    writeLog(c("Results have already been archived:",ArchiveDirectory),Level="warn")
+    # Despite the warning, we'll still copy everything over!
+  } else {
+    dir.create(ArchiveDirectory)
+  }
+  writeLog(paste("Archive Directory:",ArchiveDirectory),Level="trace")
 
-#ARCHIVE DATASTORE
-#=================
-#  Probably do not need to export
-#' Move an existing model state into a different time-stamped file
-#'
-#' @param RunDstoreName the name of the Datastore (file/folder) in the working directory
-#' @param SaveParameters a named list of parameters, containing at a minimum previousModelStateName
-#'   and previousTimestamp
-#' @return TRUE if all files were copied successfully, otherwise FALSE
-#' @export
-archiveDatastore <- function(RunDstoreName,SaveParameters) {
-  # A previous model state should be associated with this Datastore, created by
-  #   archiveModelState
-  # Create a directory in which to save the datastore
-  # Working directory is target of archive
-  ArchiveDstoreName <- paste(RunDstoreName, SaveParameters$previousTimestamp, sep = "_")
-  dir.create(ArchiveDstoreName)
-  # Copy the datastore into the directory
-  # Inside the archive folder, the Datastore itself and its model state
-  #  have their original names, not timestamped names
-  copy.datastore <- file.copy(RunDstoreName, ArchiveDstoreName, recursive = TRUE)
-  #Copy the previous model state file into the directory as well
-  copy.modelstate <- file.copy(SaveParameters$previousModelStateName,
-    file.path(ArchiveDstoreName, getModelStateFileName()))
-  invisible(!all(c(copy.datastore,copy.modelstate)))
+  existingResultsDir <- dirname(ModelStatePath)
+  # that directory was current when the model ran, and it necessarily contains
+  # the Datastore, the Model State and the log (if they exist at all)
+  owd <- setwd(existingResultsDir)
+  on.exit(setwd(owd))
+
+  # Now working in existingResultsDir
+
+  # Process Datastore
+  remove <- c(Datastore=TRUE,Outputs=TRUE,ModelState=TRUE,Logs=TRUE)
+  success <- file.copy(RunDstoreName,ArchiveDirectory,recursive=TRUE,copy.date=TRUE)
+  msg <- paste("Datastore: ",file.path(getwd(),RunDstoreName))
+  if ( ! all(success) ) {
+    remove["Datastore"] <- FALSE
+    writeLog(paste0("Failed to archive ",msg),Level="error")
+  } else {
+    writeLog(paste0("Archived ",msg),Level="trace")
+  }
+
+  # Process Output directory (extracts, query results from this run)
+  if ( dir.exists(OutputDir) ) {
+    success <- file.copy(OutputDir,ArchiveDirectory,recursive=TRUE,copy.date=TRUE)
+    msg <- paste("Outputs:",file.path(getwd(),OutputDir))
+    if ( ! all(success) ) {
+      remove["Outputs"] <- FALSE
+      writeLog(paste0("Failed to archive ",msg),Level="error")
+    } else {
+      writeLog(paste0("Archived ",msg),Level="trace")
+    }
+  } else {
+    remove <- remove[ c("Datastore","ModelState","Logs") ] # don't bother with OutputDir
+  }
+
+  # Process ModelState
+  success <- file.copy(ModelStatePath,ArchiveDirectory,copy.date=TRUE)
+  msg <- paste("Model State:",ModelStatePath)
+  if ( ! all(success) ) {
+    remove["ModelState"] <- FALSE
+    writeLog(paste0("Failed to archive ",msg),Level="error")
+  } else {
+    writeLog(paste0("Archived ",msg),Level="trace")
+  }
+
+  # Process all the relevant log files (may be more than one)
+  LogPath <- dir(pattern="Log_.*\\.txt",full.names=TRUE) # see initLog for template
+  if ( length(LogPath) == 0 ) { # No Log present; a recoverable error
+    remove["Logs"] <- TRUE
+    writeLog(paste0("No Log file for run at ",TimeStamp," (not stopping)"),Level="error")
+  } else {
+    success <- file.copy(LogPath,ArchiveDirectory,copy.date=TRUE)
+    msg <- paste("Log File(s):\n",paste(LogPath,collapse="\n"))
+    if ( ! all(success) ) {
+      remove["Logs"] <- FALSE
+      writeLog(paste0("Failed to archive ",msg),Level="error")
+    } else {
+      writeLog(paste0("Archived ",msg),Level="trace")
+    }
+  }
+
+  # Remove the previous Results if they were copied successfully
+  for ( file in names(remove) ) {
+    if ( remove[file] ) {
+      if ( file=="Datastore" ) unlink(RunDstoreName,recursive=TRUE)
+      if ( file=="Outputs"   ) unlink(OutputDir,recursive=TRUE)
+      if ( file=="ModelState") unlink(ModelStatePath)
+      if ( file=="Logs"      ) unlink(LogPath)
+    } else {
+      writeLog(paste("Saving prior results failed; Not removing",file),Level="error")
+    }
+  }
+  writeLog(paste("Archived",paste(names(remove)[remove],collapse=",")),Level="info")
+
+  return(invisible(names(remove)[!remove]))
 }
 
 #LOAD MODEL STATE
@@ -359,7 +424,7 @@ readModelState <- function(Names_ = "All", FileName=NULL, envir=NULL) {
   # Establish environment
   if ( is.null(envir) ) envir <- modelEnvironment()
   if ( !is.null(FileName) ) {
-    if ( ! loadModelState(FileName,envir) ) {
+    if ( length(loadModelState(FileName,envir))==0 ) {
       Msg <- paste("Could not load ModelState from",FileName)
       writeLog(c(Msg,getwd()),Level="error")
       writeLogMessage(.traceback(2))
