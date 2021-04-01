@@ -7,6 +7,7 @@
 .DS_Store
 built/
 build/*.make
+build/make*.out
 dev/
 docs/
 external/
