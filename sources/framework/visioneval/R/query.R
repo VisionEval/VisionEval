@@ -253,36 +253,36 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
 #======================================
 #' Read multiple datasets from multiple tables in datastores
 #'
-#' \code{readDatastoreTables} a visioneval framework query user function that reads datasets
-#' from one or more tables in a specified group in one or more datastores
+#' \code{readDatastoreTables} a visioneval framework query user function that reads datasets from
+#' one or more tables in a specified group in one or more datastores
 #'
-#' This function can read multiple datasets in one or more tables in a group. More than
-#' one datastore my be specified so that if datastore references are used in a model run,
-#' datasets from the referenced datastores may be queried as well. Note that the
-#' capability for querying multiple datastores is only for the purpose of querying
-#' datastores for a single model scenario. This capability should not be used to compare
-#' multiple scenarios. The function does not segregate datasets by datastore. Attempting
-#' to use this function to compare multiple scenarios could produce unpredictable results.
+#' This function can read multiple datasets in one or more tables in a group. More than one
+#' datastore my be specified so that if datastore references are used in a model run, datasets from
+#' the referenced datastores may be queried as well. Note that the capability for querying multiple
+#' datastores is only for the purpose of querying datastores for a single model scenario. This
+#' capability should not be used to compare multiple scenarios. The function does not segregate
+#' datasets by datastore. Attempting to use this function to compare multiple scenarios could
+#' produce unpredictable results.
 #'
-#' @param Tables_ls a named list where the name of each component is the name of
-#' a table in a datastore group and the value is a named string vector where the
-#' names are the names of the datasets to be retrieved and the values are the
-#' units of measure to be used for the retrieved values or NULL (or NA) if the
-#' values are to be retrieved in the units they are in in the datastore.
-#' @param Group a string that is the name of the group to retrieve the table
-#' datasets from.
-#' @param QueryPrep_ls a list created by calling the prepareForDatastoreQuery
-#' function which identifies the datastore location(s), listing(s), and
-#' functions for listing and read the datastore(s).
-
-#' @return A named list having two components. The 'Data' component is a list
-#' containing the datasets from the datastores where the name of each component
-#' of the list is the name of a table from which identified datasets are
-#' retrieved and the value is a data frame containing the identified datasets.
-#' The 'Missing' component is a list which identifies the datasets that are
-#' missing in each table.
+#' @param Tables_ls a named list where the name of each component is the name of a table in a
+#' datastore group and the value is a named string vector where the names are the names of the
+#' datasets to be retrieved and the values are the units of measure to be used for the retrieved
+#' values or NULL (or NA) if the values are to be retrieved in the units they are in in the
+#' datastore.
+#' @param Group a string that is the name of the group to retrieve the table datasets from.
+#' @param QueryPrep_ls a list created by calling the prepareForDatastoreQuery function which
+#' identifies the datastore location(s), listing(s), and functions for listing and read the
+#' datastore(s).
+#' @param asList if FALSE (default), return all the fields as columns ' in a data.frame; if TRUE,
+#' return the fields as elements in a list (data.frame return fails if the columns have different
+#' lengths)
+#' @return A named list having two components. The 'Data' component is a list containing the
+#' datasets (or list of field vectors if asList==TRUE) from the datastores where the name of each
+#' component of the list is the name of a table from which identified datasets are retrieved and the
+#' value is a data frame containing the identified datasets. The 'Missing' component is a list which
+#' identifies the datasets that are missing in each table.
 #' @export
-readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
+readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls,asList=FALSE) {
   #Select datastore read function
   readFromTable <- assignDatastoreFunctions(QueryPrep_ls$DstoreType,FunctionName="readFromTable")
   #Extract the datastore listings
@@ -326,7 +326,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
         }
       }
     }
-    Out_ls[[tb]] <- data.frame(Out_ls[[tb]])
+    if (!asList) Out_ls[[tb]] <- data.frame(Out_ls[[tb]])
   }
   #Identify missing datasets
   OutDsetNames_ls <- lapply(Out_ls, names)
