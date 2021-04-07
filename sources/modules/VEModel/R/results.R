@@ -5,24 +5,14 @@ self=private=NULL
 # Output just wraps a ModelState and Datastore for one stage
 # It maintains everything we need for a QueryPrep_ls structure for queries
 # Plus it can export slices of the Datastore into .csv or data.frame
-ve.results.init <- function(OutputPath,ModelDir=NULL,Param_ls=NULL) {
+ve.results.init <- function(OutputPath,Param_ls=list()) {
   # OutputPath is the normalized path to a directory containing the model results
   #  typically from the last model stage. Expect to find a ModelState.Rda file
   #  and a Datastore in that folder.
-  # mo
-  # Param_ls is the list of Run Parameters used by the model
   self$resultsPath <- OutputPath
-  self$modelDir <- if ( ! is.null(ModelDir) ) ModelDir else getwd()
   self$Name <- basename(OutputPath)
-  private$RunParam_ls <- Param_ls;
-    # NULL Param_ls will use default from VEModel::ve.env
-    # In practice, if a VEResults object is created from an arbitrary path,
-    #   we'll use the system parameters (loading VisionEval.cnv from ve.runtime/local/config/VisonEval.cnf if
-    #   that path exists, otherwise looking in ve.runtime/VisionEval.cnf if that exists)
-    # If we're coming from a VEModel, we'll use its RunParam_ls, which will
-    #   read VisionEval.cnf from the path supplied to VEModel::new it it exists,
-    #   otherwise reading defs/VisionEval.cnf if that exists
   self$index()
+  private$RunParam_ls <- self$ModelState$RunParam_ls
   self$selection <- VESelection$new(self)
   return(self$valid())
 }
@@ -471,7 +461,6 @@ VEResults <- R6::R6Class(
     # public data
     Name = NULL,
     resultsPath=NULL,
-    modelDir=NULL,
     ModelState=NULL,
     modelIndex=NULL,
     selection=NULL,

@@ -368,6 +368,7 @@ test_results <- function (log="warn") {
 
   testStep("Copy model and get 'results' and 'selection' from empty model...")
   jr <- openModel("JRSPM")
+  if ( "COPY" %in% dir("models") ) unlink("models/COPY",recursive=TRUE)
   cp <- jr$copy("COPY")
   cat("Directory before clearing...\n")
   print(cp$dir())
@@ -475,11 +476,11 @@ test_query <- function(log="warn") {
   rs <- jr$results()
 
   testStep("Show query directory (may be empty)...")
-  jr$query()
+  print(jr$query())
 
   testStep("Create an empty query object and print it...")
   # create a query object
-  qry <- jr$query("Test-Query")
+  qry <- jr$query("Test-Query",load=FALSE) # Don't open it if file exists already
   cat("Query valid:",qry$valid(),"\n")
   cat("Print qry$checkResults:"); print(qry$checkResults)
   cat("Print query\n")
@@ -512,6 +513,8 @@ test_query <- function(log="warn") {
   print(qry)
   spec <- VEQuerySpec$new(spec)
   spec <- spec$update(Name="UrbanHhDvmt_before")
+  cat("Adding spec:\n")
+  print(spec)
   qry$add(spec,before=TRUE) # Should be placed at location=1 (first element); existing list after
   cat("Before goes at beginning\n")
   print(qry)
@@ -527,18 +530,18 @@ test_query <- function(log="warn") {
   print(qry)
   spec <- VEQuerySpec$new(spec)
   spec <- spec$update(Name="UrbanHhDvmt_loc0")
-  qry$add(spec,location=0)  # should put loc0 "after" first element: 2nd position
+  qry$add(spec,location=2,before=TRUE)  # should put loc0 "after" first element: 2nd position
   cat("loc0 goes after first element\n")
   print(qry)
 
   testStep("Remove test queries...")
   cat("Removing:\n")
   print( nm <- qry$names()[1:3] )
-  qry <- qry$remove(nm) # remove by name (bye-bye before,loc2 and loc0)
+  qry$remove(nm) # remove by name (bye-bye before,loc2 and loc0)
   print(qry)
   cat("Removing:\n")
   print(c("2",qry$names()[2]))
-  qry <- qry$remove(2) # remove by position (bye-bye loc45)
+  qry$remove(2) # remove by position (bye-bye loc45)
   print(qry)
 
   testStep("Construct bare query...")
@@ -610,7 +613,9 @@ test_query <- function(log="warn") {
       Description = "Commercial service vehicle daily vehicle miles traveled attributable to the demand of households and businesses located in the urban area"
     )
   )
-  qry$add(spec)
+  print(qry)
+  qry$add(spec,location=1,after=TRUE)
+  print(qry)
   
   testStep("Create a 'Function' query specification...")
 
@@ -629,46 +634,66 @@ test_query <- function(log="warn") {
 
   testStep("Add the Function spec to the query...")
 
+  print(qry)
   qry$add(spec)
-  qry$print()
+  print(qry)
 
+  testStep("Clear test queries, if any...")
+  qfiles <- jr$query()
+  print(qfiles <- file.path(jr$modelPath,"queries",qfiles))
+  unlink(qfiles)
+  print(jr$query())
+  
   testStep("Save the query and fix its extension...")
 
-  qry$save()
+  qry$save() # as Test-Query.VEqry
   cat("Saved values in original query...\n")
-  cat("Name; "); print(qry$QueryName)
+  cat("Name; "); print(qry$QuerydName)
   cat("Path: "); print(qry$QueryFile)
   cat("Directory: "); print(qry$QueryDir)
   print(dir(qry$QueryDir))
 
   testStep("Save a copy of the query and fix its extension...")
 
-  qry$save("Copy-Query.R") # Essentially as "Save As"
+  # TODO: create a copy of the test query with the new name and
+  #   then just save that.
+  qry2 <- qry$copy("Copy-Query.R") # .R will be removed from the name
+  qry2$save() # Essentially as "Save As"
   cat("Saved values in renamed query...\n")
-  cat("Directory: "); print(qry$QueryDir)
-  cat("Name; "); print(qry$QueryName)
-  cat("Path: "); print(qry$QueryFile)
+  cat("Directory: "); print(qry2$QueryDir)
+  cat("Name; "); print(qry2$QueryName)
+  cat("Path: "); print(qry2$QueryFile)
+  cat("Contents of copied query...\n")
+  print(qry2)
 
   testStep("Model QueryDir contents...")
 
   cat("Expecting "); print(c("Copy-Query.VEqry","Test-Query.VEqry"))
-  jr$query()
+  print(jr$query())
 
-  testStep("Open the query in a different object from the file...")
+  testStep("Save a query somewhere else...")
+  qry2$save(qfile <- file.path(jr$modelPath,"queries","Dump-Query.R"))
+  print(jr$query())
+  unlink(qfile); rm(qry2)
 
-  runqry <- VEquery$new(QueryName="Test-Query",load=TRUE)
+  testStep("Open the query by short name in a different object from the file...")
+
+  runqry <- jr$query("Test-Query")
   cat("Loaded query...\n")
   cat("Directory: "); print(runqry$QueryDir)
   cat("Name; "); print(runqry$QueryName)
   cat("Path: "); print(runqry$QueryFile)
   print(runqry)
 
-  runqry <- VEquery$new(QueryName="Test-Query.VEQry")
+  testStep("Open the query again from the file, using full file name...")
+
+  runqry <- jr$query("Test-Query.VEQry")
   cat("Re-Loaded query with name extension...\n")
   cat("Directory: "); print(runqry$QueryDir)
   cat("Name; "); print(runqry$QueryName)
   cat("Path: "); print(runqry$QueryFile)
   print(runqry)
+  rm(runqry)
 
   testStep("Run the query on the model...")
   qry$run(jr)

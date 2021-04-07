@@ -32,10 +32,8 @@ ve.query.init <- function(
   QueryDir=NULL,     # relative sub-directory for Queries (could be ".")
   FileName=NULL,     # relative to ModelPath/QueryDir or ve.runtime/QueryDir, or absolute
                      # Forces "load=TRUE"; also fills unattached QueryName; "FromFile"
-  OtherQuery=NULL,   # provides fully-formed QueryDir for attach
+  OtherQuery=NULL,   # provides fully-formed VEQuery for attach
   QuerySpec=NULL,    # A list of VEQuerySpec's (or another VEQuery) to initialize with
-  # Param_ls=NULL,   # Don't bother - pre-construct in "ModelPath" if coming from a model, otherwise
-                     # use runtime environment RunParams_ls
   load=FALSE         # If TRUE, build a FileName as ModelPath/QueryDir/QueryName.VEqry
                      # However, if FileName is provided, use that if absolute, othewise normalize
                      # with ModelPath/QueryDir, attaching ".VEqry" if need be. See ve.query.load
@@ -45,22 +43,33 @@ ve.query.init <- function(
     QueryName <- sub("\\.[^.]*$","",basename(FileName))
   }
   if ( ! is.list(QuerySpec) && ! "VEQuery" %in% class(QuerySpec) ) {
-    QuerySpec <- NULL
+    if ( "VEQuerySpec" %in% class(QuerySpec) ) {
+      QuerySpec <- list(QuerySpec) # a single query spec becomes a list of one
+    } else if ( !is.null(QuerySpec) ) {
+      visioneval::writeLogMessage("Unrecognized QuerySpec:")
+      visioneval::writeLogMessage(deparse(QuerySpec))
+      QuerySpec <- NULL # Invalid query spec
+    }
   }
   otherValid <- TRUE
-  if ( ! is.null(OtherQuery) && class(OtherQuery)!="VEQuery" ) {
-    if ( is.list(OtherQuery) && length(OtherQuery)>0 ) {
-      if ( class(OtherQuery[[1]]) != "VEQuerySpec" ) {
-        OtherQuery <- list(VEQuerySpec$new(OtherQuery))
-      }
-      if ( class(OtherQuery[[1]]) == "VEQuerySpec" ) {
-        QuerySpec <- OtherQuery
-        OtherQuery <- NULL
+  if ( ! is.null(OtherQuery) ) {
+    if ( ! "VEQuery" %in% class(OtherQuery) ) {
+      if ( is.list(OtherQuery) && length(OtherQuery)>0 ) {
+        if ( ! "VEQuerySpec" %in% class(OtherQuery[[1]]) ) {
+          OtherQuery <- list(VEQuerySpec$new(OtherQuery))
+        }
+        if ( "VEQuerySpec" %in% class(OtherQuery[[1]]) ) {
+          QuerySpec <- OtherQuery
+          OtherQuery <- NULL
+        } else {
+          otherValid <- FALSE
+        }
       } else {
         otherValid <- FALSE
       }
     } else {
-      otherValid <- FALSE
+      # OtherQuery is a VEQuery object - clone its specification
+      QuerySpec <- OtherQuery$getlist()
     }
   }
   if ( ! otherValid ) {
@@ -84,7 +93,7 @@ ve.query.init <- function(
 # Build self$QueryFile, which will be used for saving (and perhaps loading if not requested up front)
 # Filename will NOT be disambiguated until we get to the save operation
 # Just prepare a candidate absolute path to a valid directory
-ve.query.attach <- function(ModelPath=NULL, QueryName=NULL, QueryDir=NULL, OtherQuery=NULL) {
+ve.query.attach <- function(OtherQuery=NULL, ModelPath=NULL, QueryDir=NULL, QueryName=NULL) {
   if ( !is.null(OtherQuery) ) {
     self$QueryDir <- OtherQuery$QueryDir
   } else {
@@ -95,7 +104,7 @@ ve.query.attach <- function(ModelPath=NULL, QueryName=NULL, QueryDir=NULL, Other
       QueryDir <- visioneval::getRunParameter("QueryDir")
     }
     QueryDir <- normalizePath(file.path(ModelPath,QueryDir),winslash="/",mustWork=FALSE)
-    if ( ! dir.exists(self$QueryDir) ) {
+    if ( ! dir.exists(QueryDir) ) {
       QueryDir <- normalizePath(file.path(ModelPath),winslash="/",mustWork=FALSE)
     }
     self$QueryDir  <- QueryDir
@@ -107,7 +116,7 @@ ve.query.attach <- function(ModelPath=NULL, QueryName=NULL, QueryDir=NULL, Other
   if ( grepl("\\.[^.]*$",QueryName) ) {
     QueryName <- sub("\\.[^.]*$","",QueryName) # No extension on QueryName
   }
-  QueryFile <- normalizePath(file.path(QueryDir,QueryName),winslash="/",mustWork=FALSE)
+  QueryFile <- normalizePath(file.path(self$QueryDir,QueryName),winslash="/",mustWork=FALSE)
   QueryFile <- paste0(QueryFile,".VEqry")
 
   self$QueryName <- QueryName
@@ -134,7 +143,7 @@ ve.query.save <- function(saveTo=TRUE,overwrite=FALSE) {
     saveTo = ""
   }
   print(self)
-  QuerySpec <- lapply(private$QuerySpec,function(spec) spec$QuerySpec) # extract R list from VEQuerySpec object
+  QuerySpec <- lapply(private$QuerySpec,function(spec) spec$QuerySpec)
   dump("QuerySpec",file=saveTo) # dump the QuerySpec list as R
 }
 
@@ -161,7 +170,7 @@ ve.query.load <- function(FileName=NULL,QuerySpec=NULL,ModelPath=NULL,QueryDir=N
       # Load the query from FileName, commandeering the modelEnvironment
       ve.model <- visioneval::modelEnvironment() # Don't need to clear ve.model
       sys.source(self$QueryFile,envir=ve.model)
-      self$add(ve.model$QuerySpec)
+      self$add(ve.model$QuerySpec) # will interpret the list of lists as a list of VEQuerySpec
     }
   }
   return( self$check() )
@@ -181,6 +190,14 @@ ve.query.check <- function(verbose=FALSE) {
   self$checkResults <- character(0)
   query.names <- character(0)
   for ( spec in self$QuerySpec ) {
+    if ( ! "VEQuerySpec" %in% class(spec) ) {
+      self$checkResults <- c(
+        self$checkResults,
+        "QuerySpec contains an unknown type of object:",
+        deparse(spec)
+      )
+      next
+    }
     spec$check( Names=query.names ) # names list for validating functions
     query.names <- c( query.names,spec$Name )
     if ( ! spec$valid() ) {
@@ -203,20 +220,28 @@ ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
   #   in QuerySpec, the existing value(s) will be over-written, regardless of location
   # If you use "update", specs not already present will be ignored with a warning.
 
-  # Start by getting "obj" in order - make it into a new VEQuery, using standard error checking
-  qry <- asQuery(obj)
-  if ( ! qry$valid() ) {
-    msg <- c("Cannot add to query:",qry$checkResults)
-    visioneval::writeLogMessage( c(msg,deparse(obj)) )
-    stop(msg)
+  # Start by getting the specification list to add
+  if ( is.list(obj) && all(sapply(obj,function(o)"VEQuerySpec"%in%class(o))) ) {
+    # obj is already a list of VEQuerySpec objects (what we want)
+    # But we want to clone it to avoid messing with its contents
+    spec <- asSpecList(obj)
+  } else {
+    qry <- asQuery(obj) # Do deeper type conversions to build a query if needed
+    # NOTE: if obj is already a VEQuery, it is returned as is. It is NOT copied.
+    if ( ! qry$valid() ) {
+      msg <- c("Cannot add to query:",qry$checkResults)
+      visioneval::writeLogMessage( c(msg,deparse(obj)) )
+      stop(msg)
+    }
+    spec <- qry$getlist() # Clone the spec list from obj
   }
-  # Now validate and interpret "location", "before" and "after"
+
+  # Validate and interpret "location", "before" and "after"
   currentSpec <- self$getlist() # clone existing spec list
   currentNames <- names(currentSpec)
   nameLen <- length(currentNames)
 
-  spec <- qry$getlist() # get spec list by cloning it
-  if ( nameLen == 0 ) { # Already have query specifications
+  if ( nameLen == 0 ) { # No existing query spec, so don't need to add
     newSpec <- spec
   } else {
     if ( is.character(location) ) {
@@ -232,7 +257,7 @@ ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
     } else if ( before ) after <- FALSE # if before, then not after
 
     location <- if ( location < 1 ) {
-      1
+      if ( before ) 1 else nameLen
     } else if ( location > nameLen ) {
       nameLen
     } else {
@@ -307,16 +332,57 @@ ve.query.update <- function(obj) {
   return(self)
 }
 
+#' Convert a list of list-formatted specifications to a list of VEQuerySpec objects
+#'
+#' @param spec a list of lists where the inner lists are (probably) raw specifications. Running
+#'   a list of VEQuerySpec's through this function will simply duplicate the specifications (a deep
+#'   copy).
+#' @return a named list of VEQuerySpec objects created from the raw specifications
+#' @export
+asSpecList <- function(spec) {
+  spec.list <- lapply(spec,function(s) VEQuerySpec$new(s))
+  names(spec.list) <- sapply(spec.list,function(s) if ( is.null(name <- s$Name) ) "" else name)
+  return(spec.list)
+}
+
+#' Convert an R object of various compatible types to a VEQuery
+#'
+#' This function will convert various kinds of things into a VEQuery that can then be added to
+#'   another query or otherwise used. If \code{obj} is already a VEQuery, it is NOT copied, but
+#'   just returned as-is. That limits opportunities for infinite recursion since the $add function
+#'   is called within VEQuery$new, so we need to be cautious about creating a new VEQuery here.
+#'
+#' @param obj The object to convert to the query's specifications. Can be a VEQuery, a VEQuerySpec,
+#'   or a list of objects where each inner object is already (or is convertible to) a VEQuerySpec
+#'   (that last format is how query specifications are manipulated by VEQuery$load or VEQuery$save).
+#' @param QueryName The name to use for the returned VEQuery
+#' @return A VEQuery constructed from the obj parameter
+#' @export
 asQuery <- function(obj,QueryName="Temp-Query") {
   if ( ! "VEQuery" %in% class(obj) ) {
-    # If it's not a query, assume it's a single object and clone it
-    qry.spec <- VEQuerySpec$new(obj)
-    name <- qry.spec$QuerySpec$Name
-    loc <- if ( is.null(name) ) 1 else name
-    qry <- list()
-    qry[[loc]] <- qry.spec
-    qry <- VEQuery$new(QueryName="Temp-Query",OtherQuery=self,QuerySpec=qry)
+    # check if it's a query spec or a list of query specs
+    if ( is.list(obj) ) {
+      qry.spec <- asSpecList(obj)
+      if ( ! all(sapply(qry.spec,function(s) { "VEQuerySpec" %in% class(s) && s$valid() } )) ) {
+        # Second, if it wasn't a list of specs, perhaps it is an individual spec
+        qry.spec <- list()
+        spec <- VEQuerySpec$new(obj) # Attempt to convert unknown list to a single spec
+        if ( spec$valid() ) {
+          name <- spec$QuerySpec$Name
+          loc <- if ( is.null(name) ) 1 else name
+          qry.spec[[loc]] <- spec;
+        }
+      }
+    } else if ( "VEQuerySpec" %in% class(obj) ) {
+      # Make a bare query spec into a one-element list
+      qry.spec <- list(obj)
+      names(qry.spec) <- obj$Name
+    } else {
+      stop("Cannot interpret object as query or specification:\n",deparse(obj))
+    }
+    qry <- VEQuery$new(QueryName="Temp-Query",OtherQuery=self,QuerySpec=qry.spec)
   } else {
+    # obj is already another VEQuery
     qry <- obj
   }
   qry$check()
@@ -335,7 +401,7 @@ ve.query.remove <- function(SpecToRemove) {
     VEQuery$new(
       QueryName="Removed-Specs",
       OtherQuery=self,
-      QuerySpec=private$QuerySpec
+      QuerySpec=extract
     )
   )
 }
@@ -431,6 +497,7 @@ ve.query.getlist <- function(Geography=NULL) {
   ################################
   
   self$check()
+  # Deep copy the current QuerySpec
   newSpec <- lapply(private$QuerySpec,function(s) VEQuerySpec$new(s))
   if ( ! is.null(Geography) ) {
     validity <- list()
@@ -450,6 +517,8 @@ ve.query.getlist <- function(Geography=NULL) {
       cat(checkResults,collapse="\n")
     }
   }
+  # Make sure list names are up to date
+  names(newSpec) <- sapply(newSpec,function(s) if ( is.null(name <- s$Name) ) "" else name)
   return( newSpec )
 }
   
@@ -463,7 +532,7 @@ ve.query.results <- function() {
 
 # @return A character vector with the names of the .csv files containing the computed measures.
 ve.query.run <- function(
-  Results, # May be a vector of locations, or a single location
+  Results,   # May be a vector of file locations, a VEResults or VEModel object, or a list of such objects
   Geography  ="Region",
   GeoValue   = NULL,   # optional - if Geography is not Region, only compute for this list
   OutputDir  = visioneval::getRunParameter("OutputDir"),
@@ -472,9 +541,33 @@ ve.query.run <- function(
   log        = "error"
   )
 {
-  if ( missing(Results) ) {
-    stop( visioneval::writeLog("No results provided for query",Level="error") )
+  if ( ! missing(Results) ) {
+    if ( "VEModel" %in% class(Results) ) {
+      Results <- list(Results$results())
+    } else if ( "VEResults" %in% class(Results) ) {
+      Results <- list(Results)
+    } else if ( is.character(Results) ) {
+      # Assume it's a list of directories
+      Results <- Results[file.exists(Results)]
+      if ( length(Results)==0 ) {
+        Results <- NULL
+      } else {
+        Results <- lapply( Results, function(r) VEResults$new(r) )
+      }
+    } else if ( is.list(Results) ) {
+      if ( "VEModel" %in% class(Results[[1]]) ) {
+        Results <- lapply( Results, function(m) m$results() )
+      } else if ( ! "VEResults" %in% class(Results[[1]]) ) {
+        Results <- NULL
+      }
+    } else {
+      Results <- NULL
+    }
+  } else Results <- NULL
+  if ( is.null(Results) ) {
+    stop( visioneval::writeLog("No results provided to query",Level="error") )
   }
+
   if ( ! is.character(Geography) || ! Geography %in% c("Region", "Azone","Marea") )
   {
     visioneval::writeLog("Geography must be one of 'Region','Marea' or 'Azone'",Level="error")
@@ -506,7 +599,7 @@ ve.query.run <- function(
 
   # Now run the query
   outputFiles <- doQuery(
-    Results=Results,  # Adapt to work with VEResults
+    Results=Results,  # list of VEResults objects
     Geography=Geography,
     Specifications=self$getlist(), # A list of VEQuerySpec
     OutputDir=OutputDir,
@@ -766,7 +859,7 @@ cleanSpecNames <- function(self)
   return(self)
 }
 
-# TODO: the following is still a mess.
+# TODO: the following is still rather a mess.
 # Need a function to build a "Summarize" or "Function" sub-spec
 # Then go in and update specific elements
 ve.spec.update <- function(
@@ -842,6 +935,7 @@ ve.small.geo <- c("Marea","Azone")
 
 ve.spec.setgeo <- function(Geography=NULL) {
   # Return a new, geography adjusted VEQuerySpec
+  # TODO: this is not especially robust yet...
 
   test.spec <- self$copy()
   if ( ! is.null(Geography) && test.spec$type() == "Summarize" ) {
@@ -977,6 +1071,7 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
     # Yields one less dimension on results from summarizeDatasets
   }
   measureName <- measureSpec$Name
+  measureSpec <- measureSpec$QuerySpec
 
   # Skip or include measures based on presence of required Dataset
   if ( "Require" %in% names(measureSpec) ) {
@@ -990,12 +1085,11 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
     }
   }
 
-  # Compute the measure based on the measureSpec     
+  # Compute the measure based on the measureSpec
   if ( "Function" %in% names(measureSpec) ) {
     measure <- eval(parse(text=measureSpec$Function), envir=measureEnv)
     names(measure) <- measureName
-  } else
-  if ( "Summarize" %in% names(measureSpec) ) {
+  } else if ( "Summarize" %in% names(measureSpec) ) {
     sumSpec <- measureSpec$Summarize;
     ## TODO: Push the following checks up to evaluate the query spec earlier
     if ( ! byRegion ) {
@@ -1060,7 +1154,8 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
   for ( nm in names(measure) ) {
     msr <- measure[nm]
     attributes(msr) <- list(
-      Description = measureSpec$Description
+      Description = measureSpec$Description,
+      Units = measureSpec$Units
     )
     assign(nm,msr,envir=measureEnv)
   }
@@ -1080,17 +1175,13 @@ makeMeasureDataFrame <- function(measureEnv) {
   Values_       <- sapply(Measures_, get, envir=measureEnv)
   Units_        <- unname(sapply(Measures_, function(x) attributes(get(x,envir=measureEnv))$Units))
   Description_  <- unname(sapply(Measures_, function(x) attributes(get(x,envir=measureEnv))$Description))
+  browser()
   Data_df       <- data.frame(
     Measure     = Measures_,
     thisYear    = Values_,
     Units       = Units_,
     Description = Description_
   )
-  # The following addresses a unique naming standard in original script
-  # TODO: make it obsolete
-  Data_df$Measure <- gsub("_Ma", "_", Data_df$Measure)
-  Data_df$Measure <- gsub("_$", "", Data_df$Measure)
-  Data_df$Measure <- gsub("_\\.", ".", Data_df$Measure)
   rownames(Data_df) <- NULL
   return(Data_df)
 }
@@ -1122,21 +1213,6 @@ doQuery <- function (
     return(character(0))
   }
     
-  # TODO: Update to get the years from the list of VEResults we are processing
-  # Years are those defined for the model, less any that are not selected via $groups
-  # We will only query groups that are Years from the runParams in each set of results
-  # BaseYear will be evaluated only once unless it is unique in another scenario
-  # Other years will be selected based on the individual results
-  Years <- self$runParams$Years
-  groups <- self$groups
-  Years <- Years[Years %in% groups$Group[groups$Selected=="Yes"]]
-  if ( length(Years)==0 || any(is.na(Years)) ) {
-    visioneval::writeLogMessage("Invalid Years specified")
-    cat("No years appear to be selected (check VEmodel$groups)\n")
-    cat("Model has these Years available:",self$runParams$Years,"\n")
-    return(character(0))
-  }
-
   if ( ! is.logical(save) ) save <- TRUE
   if ( ! save ) {
     OutputFiles <- list() # will return list of data.frames
@@ -1147,94 +1223,90 @@ doQuery <- function (
   attr(OutputFiles,"Specifications") <- Specifications
 
   old.wd <- getwd()
+  on.exit(setwd(old.wd))
+ 
+  for ( results in Results ) {
+    # Results is a list of VEResults objects
+    # Scenario is a VEResults object (with ModelState, etc all available)
 
-  futile.logger::flog.threshold(log)
-  tryCatchLog::tryCatchLog(
-    {
-      for ( scenario in Results ) {
-        # scenario is a VEResults object (with ModelState, etc all available)
+    # Move to results directory
+    setwd(results$resultsPath)
 
-        # Move to scenario directory
-        setwd(scenario$path)
+    # Scenario Name for reporting / OutputFile
+    scenarioName <- results$ModelState$Scenario;
 
-        # Scenario Name for reporting / OutputFile
-        scenarioName <- scenario$Name;
+    # Gather years from the results
+    Years <- results$ModelState$Years
+    catYears<-paste(Years,collapse=",")
 
-        # Confirm what we're working on
-        catYears <- paste(Years,collapse=",")
-        catGeography <- Geography["Type"]
-        if ( Geography["Type"]!="Region" &&
-          (
-            "Value" %in% Geography &&
-            ! any(is.null(Geography["Value"])) &&
-            ! any(is.na(Geography["Value"]))
-          )
-        ) {
-          catGeography <- paste(catGeography,"=",paste0("'",Geography["Value"],"'"))
-        }
-        cat(
-          "Building measures for:\n",
-          "Scenario:",scenarioName,"\n",
-          "Years:",catYears,"\n",
-          "Geography:",catGeography,"\n"
-        )
+    # Confirm what we're working on
+    catGeography <- Geography["Type"]
+    if ( Geography["Type"]!="Region" &&
+      (
+        "Value" %in% Geography &&
+        ! any(is.null(Geography["Value"])) &&
+        ! any(is.na(Geography["Value"]))
+      )
+    ) {
+      catGeography <- paste(catGeography,"=",paste0("'",Geography["Value"],"'"))
+    }
+    cat(
+      "Building measures for:\n",
+      "Scenario:",scenarioName,"\n",
+      "Years:",catYears,"\n",
+      "Geography:",catGeography,"\n"
+    )
 
-        # Build the OutputFile name using the just reported specifications
-        OutputFileToWrite <- stringr::str_replace(OutputFile,"%scenario%",scenarioName)
-        OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%years%",catYears)
-        OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%geography%",stringr::str_remove_all(catGeography,"[ ']"))
-        if ( save ) {
-          OutputFileToWrite <- normalizePath(file.path(OutputDir,OutputFileToWrite),mustWork=FALSE)
-        } else {
-          OutputFileToWrite <- sub("\\.[^.]+$","",OutputFileToWrite) # use this as data.frame name (dropping any file extension)
-        }
+    # Build the OutputFile name using the just reported specifications
+    OutputFileToWrite <- stringr::str_replace(OutputFile,"%scenario%",scenarioName)
+    OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%years%",catYears)
+    OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%geography%",stringr::str_remove_all(catGeography,"[ ']"))
+    if ( save ) {
+      OutputFileToWrite <- normalizePath(file.path(OutputDir,OutputFileToWrite),mustWork=FALSE)
+    } else {
+      OutputFileToWrite <- sub("\\.[^.]+$","",OutputFileToWrite) # use this as data.frame name (dropping any file extension)
+    }
 
-        # Prepare for datastore queries
-        #------------------------------
-        QPrep_ls <- scenario$queryprep()
+    # Prepare for datastore queries
+    #------------------------------
+    QPrep_ls <- results$queryprep()
 
-        # Create the name of the data.frame that will collect the results
-        Measures_df <- NULL
+    # Create the name of the data.frame that will collect the results
+    Measures_df <- NULL
 
-        # Iterate across the Years in the scenario
-        for ( thisYear in Years ) {
+    # Iterate across the Years in the scenario
+    for ( thisYear in Years ) {
 
-          cat("Working on Year",thisYear,"\n")
-          results <- new.env()
+      cat("Working on Year",thisYear,"\n")
+      results <- new.env()
 
-          # Iterate over the measures
-          for ( measureSpec in Specifications ) {
-            cat("Processing ",measureSpec$Name,"...",sep="")
-            measure <- makeMeasure(measureSpec,thisYear,Geography,QPrep_ls,results)
-            if ( length(measure)>1 ) for ( m in measure ) cat( paste0(m,"||") )
-            cat("..Processed\n")
-          }
-
-          # Add this Year's measures to the output data.frame
-          temp <- makeMeasureDataFrame(results)
-          if ( is.null(Measures_df) ) {
-            Measures_df<-temp[,c("Measure","Units","Description","thisYear")]
-          } else {
-            Measures_df<-cbind(Measures_df,thisYear=temp$thisYear )
-          }
-          names(Measures_df)[names(Measures_df)=="thisYear"]<-thisYear
-        }
-
-        # Add the measures to the output list
-        if ( save ) {
-          cat("Saving measures in",basename(dirname(OutputFileToWrite)),"as",basename(OutputFileToWrite),"...")
-          utils::write.csv(Measures_df, row.names = FALSE, file = OutputFileToWrite)
-          cat("Saved\n")
-          OutputFiles <- c(OutputFiles,OutputFileToWrite) # Saving: return list of file names
-        } else {
-          OutputFiles[OutputFileToWrite] <- (Measures_df) # Not Saving: return list of data.frames
-        }
+      # Iterate over the measures
+      for ( measureSpec in Specifications ) {
+        cat("Processing ",measureSpec$Name,"...",sep="")
+        measure <- makeMeasure(measureSpec,thisYear,Geography,QPrep_ls,results)
+        if ( length(measure)>1 ) for ( m in measure ) cat( paste0(m,"||") )
+        cat("..Processed\n")
       }
-    },
-    error=function(e) {
-      cat("Error:",geterrmessage(),"\n")
-    },
-    finally=setwd(old.wd)
-  )
+
+      # Add this Year's measures to the output data.frame
+      temp <- makeMeasureDataFrame(results)
+      if ( is.null(Measures_df) ) {
+        Measures_df<-temp[,c("Measure","Units","Description","thisYear")]
+      } else {
+        Measures_df<-cbind(Measures_df,thisYear=temp$thisYear )
+      }
+      names(Measures_df)[names(Measures_df)=="thisYear"]<-thisYear
+    }
+
+    # Add the measures to the output list
+    if ( save ) {
+      cat("Saving measures in",basename(dirname(OutputFileToWrite)),"as",basename(OutputFileToWrite),"...")
+      utils::write.csv(Measures_df, row.names = FALSE, file = OutputFileToWrite)
+      cat("Saved\n")
+      OutputFiles <- c(OutputFiles,OutputFileToWrite) # Saving: return list of file names
+    } else {
+      OutputFiles[OutputFileToWrite] <- (Measures_df) # Not Saving: return list of data.frames
+    }
+  }
   return(OutputFiles)
 }

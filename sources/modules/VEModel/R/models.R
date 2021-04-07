@@ -1273,7 +1273,7 @@ ve.model.results <- function(stage) {
 
   Param_ls <- self$ModelState[[stage]]$RunParam_ls
   resultsPath <- self$resultspath(stage,Param_ls=Param_ls)
-  results <- VEResults$new(resultsPath,self$modelPath,Param_ls)
+  results <- VEResults$new(resultsPath)
   if ( ! results$valid() ) {
     private$lastResults <- list()
     if (stage!=self$stageCount) {
@@ -1292,7 +1292,7 @@ ve.model.results <- function(stage) {
 
 # open a Query object for the model from its QueryDir (or report a list
 #  of available queries if no QueryName is provided).
-ve.model.query <- function(QueryName=NULL,FileName=NULL) {
+ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
   if ( ! self$valid ) {
     visioneval::writeLog(paste0("Invalid model: ",self$status),level="error")
     return( NULL )
@@ -1309,17 +1309,16 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL) {
 #     cat("Available Queries:\n")
     queries <- dir(QueryPath,pattern="\\.VEqry$",ignore.case=TRUE)
     if ( length(queries)==0 ) queries <- "No queries defined"
-    print(queries)
-    return(NULL)
+    return(queries)
   }
   # Let VEquery find the query...
   return(
     VEQuery$new(
-      ModelPath=self$modelPath,
       QueryName=QueryName,
-      FileName=FileName,
+      ModelPath=self$modelPath,
       QueryDir=QueryDir,
-      Param_ls=self$RunParam_ls
+      FileName=FileName,
+      load=load
     )
   )
 }

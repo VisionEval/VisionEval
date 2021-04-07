@@ -36,16 +36,13 @@ Components:
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
     CRAN:
-      - futile.logger
       - httpuv
-      - jrc
       - jsonlite
       - mime
       - R.utils
       - R6
       - stringi
       - stringr
-      - tryCatchLog
 #    Github:
 #      - anders-biostat/jrc
 #    To build properly, need to do externals after creating ve.lib!

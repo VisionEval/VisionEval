@@ -1130,19 +1130,11 @@ with( CompiledSpec,
     #----------------------------------------------
     #Calculate the Expression and Return the Result
     #----------------------------------------------
-    if (is.null(By)) {
-      #If there isn't a By argument
-      tryCatch(
-        Result <- eval(parse(text = Expr), envir = Data_ls$Data[[1]]),
-        warning=function(w) { return(list(Result=NA,Errors=conditionMessage(w))) },
-        error=function(e) { return(list(Result=NA,Errors=conditionMessage(e))) }
-      )
-    }
-    else if ( !is.null(By) ) {
+    if ( "By" %in% names(CompiledSpec) ) {
       # There is a By argument, with one or two merged datasets
       if ( length(Data_ls$Data) == 1 ) {
         #If there is a By but only one merged dataset
-        calcResults <- calcWithBy(Data_ls$Data[[1]])
+        calcResults <- calcWithBy(CompiledSpec,Data_ls$Data[[1]])
         if ( length(calcResults$Errors)>0 && any(nzchar(calcResults$Errors)) ) {
           return( list(Result=NA,Errors=calcResults$Errors) )
         }
@@ -1151,7 +1143,7 @@ with( CompiledSpec,
         calcResults_ls <- lapply(
           Data_ls$Data,
           function(x) {
-            calcResults <- calcWithBy(x)
+            calcResults <- calcWithBy(CompiledSpec,x)
             if ( length(calcResults$Errors)>0 && any(nzchar(calcResults$Errors)) ) {
               return( list(Result=NA,Errors=calcResults$Errors) )
             } else return( calcResults )
@@ -1188,6 +1180,8 @@ with( CompiledSpec,
         }
         Result <- do.call("+", Results_ls)
       }
+    } else {
+      Result <- eval(parse(text = Expr), envir = Data_ls$Data[[1]])
     }
     # Return results
     return(list(Result=Result,Errors=""))
