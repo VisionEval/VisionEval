@@ -273,22 +273,21 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
 #' @param QueryPrep_ls a list created by calling the prepareForDatastoreQuery function which
 #' identifies the datastore location(s), listing(s), and functions for listing and read the
 #' datastore(s).
-#' @param asList if FALSE (default), return all the fields as columns ' in a data.frame; if TRUE,
-#' return the fields as elements in a list (data.frame return fails if the columns have different
-#' lengths)
 #' @return A named list having two components. The 'Data' component is a list containing the
 #' datasets (or list of field vectors if asList==TRUE) from the datastores where the name of each
 #' component of the list is the name of a table from which identified datasets are retrieved and the
-#' value is a data frame containing the identified datasets. The 'Missing' component is a list which
-#' identifies the datasets that are missing in each table.
+#' value is a data frame or list containing the identified datasets (it will be a data.frame if all
+#' the datsets have the same length, otherwise it will be a named list with each element having
+#' the name of the dataset. The 'Missing' component is a list which identifies the datasets that
+#' are entirely missing in each table.
 #' @export
-readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls,asList=FALSE) {
+readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
   #Select datastore read function
   readFromTable <- assignDatastoreFunctions(QueryPrep_ls$DstoreType,FunctionName="readFromTable")
   #Extract the datastore listings
   MS_ls <- QueryPrep_ls$Listing;
   #Datastore locations
-  DstoreLocs_ <- QueryPrep_ls$Dir;
+  DstoreLocs_ <- QueryPrep_ls$Dir; # Can be a vector...
   #Get data from table
   Tb <- names(Tables_ls)
   Out_ls <- list()
@@ -301,7 +300,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls,asList=FALSE) {
     Out_ls[[tb]] <- list()
     Ds <- names(Tables_ls[[tb]])
     for (Loc in DstoreLocs_) { # Though written for a vector, currently only supporting one Datastore
-      ModelState_ls <- QueryPrep_ls$Listing[[Loc]]
+      ModelState_ls <- MS_ls[[Loc]]
       HasTable <- checkTableExistence(tb, Group, ModelState_ls$Datastore)
       if (HasTable) {
         for (ds in Ds) {
@@ -326,7 +325,12 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls,asList=FALSE) {
         }
       }
     }
-    if (!asList) Out_ls[[tb]] <- data.frame(Out_ls[[tb]])
+    # Try to convert extracted datasets to a data.frame
+    # If that fails for some reason, return a list instead
+    if ( length(unique(sapply(Out_ls[[tb]],length)))==1 ) {
+      try.df <- try( data.frame(Out_ls[[tb]]) )
+      if ( is.data.frame(try.df) ) Out_ls[[tb]] <- try.df
+    }
   }
   #Identify missing datasets
   OutDsetNames_ls <- lapply(Out_ls, names)

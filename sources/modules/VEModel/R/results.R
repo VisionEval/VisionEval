@@ -294,7 +294,7 @@ ve.results.units <- function(selected=TRUE,display=NULL) {
 
 ve.results.extract <- function(
   saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
-  prefix = "",            # Label to further distinguish output files
+  prefix = "",            # Label to further distinguish output files, if desired
   overwrite=FALSE,
   select=NULL,            # replaces self$selection if provided
   convertUnits=TRUE       # will convert if display units are present; FALSE not to attempt any conversion
@@ -309,8 +309,10 @@ ve.results.extract <- function(
   if ( saving ) {
     saveTo <- saveTo[1]
     outputPath <- if ( isAbsolutePath(saveTo) ) saveTo else file.path(self$resultsPath,saveTo)
-    print(outputPath)
-    if ( ! dir.exists(outputPath) ) dir.create(outputPath,showWarnings=FALSE)
+    extractRoot <- visioneval::getRunParameter("ExtractRootName",Param_ls=private$RunParam_ls)
+    extractName <- paste0(extractRoot,"_",visioneval::fileTimeStamp(Sys.time()))
+    outputPath <- file.path(outputPath,extractName)
+    dir.create(outputPath,showWarnings=FALSE,recursive=TRUE)
     if ( ! dir.exists(outputPath) ) {
       stop(
         visioneval::writeLog( Level="error",
@@ -318,6 +320,12 @@ ve.results.extract <- function(
         )
       )
     }
+    # Write out the selected fields
+    write.csv(
+      file=file.path(outputPath,"!SelectedFields.csv"),
+      data.frame(SelectedFields = self$selection$fields()),
+      row.names=FALSE
+    )
   }
 
   metadata <- self$modelIndex[ select$selection, ]
@@ -334,6 +342,15 @@ ve.results.extract <- function(
   QueryPrep_ls <- self$queryprep()
   outputList <- list()
   results <- list()
+
+  # Construct descriptive file name (hard coded...)
+  lastChanged <- self$ModelState$LastChanged;
+  timeStamp <- if ( ! is.null(lastChanged) ) {
+    timeStamp <- visioneval::fileTimeStamp(lastChanged)
+  } else {
+    timeStamp <- "timeUnknown"
+  }
+
   for ( group in extractGroups ) {
     # Build Tables_ls for readDatastoreTables
     Tables_ls <- list()
@@ -349,14 +366,10 @@ ve.results.extract <- function(
       Metadata_ls[[table]] <- meta
     }
 
-    # TODO: the following fails for VERPAT since the future vehicles table
-    #  includes two different series of data with different lengths. Those
-    #  should be put into different tables in the model (e.g. Vehicles versus
-    #  VehiclesFuture).
     # Get a list of data.frames, one for each Table configured in Tables_ls
     Data_ls <- visioneval::readDatastoreTables(Tables_ls, group, QueryPrep_ls)
 
-    # Report errors from readDatastoreTables
+    # Report Missing Tables from readDatastoreTables
     HasMissing_ <- unlist(lapply(Data_ls$Missing, length)) != 0
     if (any(HasMissing_)) {
       WhichMissing_ <- which(HasMissing_)
@@ -374,23 +387,43 @@ ve.results.extract <- function(
       stop( writeLog( msg, Level="error" ) )
     }
 
+    # Handle tables with different lengths of data elements ("multi-tables")
+    # readDatastoreTables will have returned a ragged list rather than a data.frame
+
+    # TODO: Make this unnecessary by fixing VERSPM so it works correctly (a "Table"
+    #   should always have the same number of elements in its Datasets).
+
+    if ( ! all(is.df <- sapply(Data_ls$Data,is.data.frame)) ) {
+      # Unpack "multi-tables"
+      MultiTables <- Data_ls$Data[which(! is.df)]
+      for ( multi in names(MultiTables) ) {
+        # multi is a list of datasets not made into a data.frame by readDatastoreTables
+        multi.data <- MultiTables[[multi]]
+        lens <- sapply(multi.data,length) # vector of lengths of datastores
+        multi.len <- unique(lens)
+        for ( dfnum in 1:length(multi.len) ) { # work through unique dataset lengths
+          dfname <- multi
+          if ( dfnum > 1 ) dfname <- paste(multi,dfnum,sep="_")
+          fordf <- which(lens==multi.len[dfnum])
+          try.df <- try( data.frame(multi.data[fordf]) )
+          if ( ! is.data.frame(try.df) ) {
+            msg <- paste("Could not make data.frame from Datastore Table",multi)
+            stop( writeLog( msg, Level="error" ) )
+          }
+          Data_ls$Data[[dfname]] <- try.df
+        }
+      }
+    }
+
     # Process the table data.frames into results
     dataNames <- names(Data_ls$Data)
     newTableNames <- paste(group,dataNames,sep=".")
     if ( saving ) {
       # Push each data.frame into a file, and accumulate a list of file names to return
-      # TODO: File name template is hard-coded; maybe we'll change that one day
-      #   (e.g. using an sprintf format or the glue package)
 
-      # Build file name template
-      lastChanged <- self$ModelState$LastChanged
-      timeWritten <- paste0("(",paste("Written",format(Sys.time(),"%Y-%m-%d_%H%M"),sep="_"),")")
-      if ( ! is.null(lastChanged) ) {
-        timeWritten <- paste(format(lastChanged,"%Y-%m-%d_%H%M"),timeWritten,sep="+")
-      }
       # group and timeWritten must have one element, dataNames may have many
       # Files will have length(dataNames)
-      Files <- paste0(paste(group,dataNames,timeWritten,sep="_"),".csv")
+      Files <- paste0(paste(group,dataNames,timeStamp,sep="_"),".csv")
       if ( ! overwrite ) {
         existing <- file.exists(file.path(outputPath,Files))
         for ( file in which(existing) ) {
@@ -402,7 +435,10 @@ ve.results.extract <- function(
       # Write the files (data = .csv) and a metadata file (meta = .metadata.csv)
       for ( table in dataNames ) {
         fn <- file.path(outputPath,paste0(prefix,Files[table]))
-        utils::write.csv(Data_ls$Data[[table]],file=fn,row.names=FALSE)
+        disp.fn <- sub(paste0(self$resultsPath,"/"),"",fn,fixed=TRUE)
+        df2w <- Data_ls$Data[[table]]
+        visioneval::writeLog(paste("Extracting",sub("\\.[^.]*$","",disp.fn),paste0("(",nrow(df2w)," rows)")),Level="warn")
+        utils::write.csv(df2w,file=fn,row.names=FALSE)
         utils::write.csv(Metadata_ls[[table]],file=sub("\\.csv$",".metadata.csv",fn),row.names=FALSE)
       }
 

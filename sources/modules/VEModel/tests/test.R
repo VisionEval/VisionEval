@@ -318,11 +318,11 @@ test_model <- function(oldstyle=TRUE, test.copy=FALSE, log="info") {
   print(nrow(flds))
   print(flds[sample(nrow(flds),10),])
 
-  testStep("extract model results")
+  testStep("extract model results - should see them in the directory")
   br <- bare$results()
   br$extract(prefix="BareTest")
 
-  testStep("clear the bare model")
+  testStep("clear the bare model extracts")
   print(bare$dir(output=TRUE))
   bare$clear(force=!interactive())
 
@@ -534,7 +534,7 @@ test_query <- function(log="warn") {
   cat("loc0 goes after first element\n")
   print(qry)
 
-  testStep("Remove test queries...")
+  testStep("Remove test specifications...")
   cat("Removing:\n")
   print( nm <- qry$names()[1:3] )
   qry$remove(nm) # remove by name (bye-bye before,loc2 and loc0)
@@ -674,6 +674,11 @@ test_query <- function(log="warn") {
   testStep("Save a query somewhere else...")
   qry2$save(qfile <- file.path(jr$modelPath,"queries","Dump-Query.R"))
   print(jr$query())
+
+  testStep("Save a query without overwriting...")
+  actualFile <- qry2$save(overwrite=FALSE)
+  qfile <- c(qfile,actualFile)
+  print(jr$query())
   unlink(qfile); rm(qry2)
 
   testStep("Open the query by short name in a different object from the file...")
@@ -701,7 +706,30 @@ test_query <- function(log="warn") {
   testStep("Run the query on the results...")
   qry$run(rs)
 
+  # TODO: test a list of several models and results:
+  #   List of model names (open each as a VEModel)
+  #   list of VEModel objects
+  #   list of result directory paths (open each as a VEResults)
+  #   list of VEResults objects
+
   # Throw some additional specific broken queries at it to see if errors are correct.
+}
+
+test_rpat <- function(run=TRUE) {
+  testStep("Testing VERPAT as JRPAT")
+  verpat <- openModel("JRPAT")
+  if ( ! verpat$valid() ) {
+    testStep("Installing VERPAT as JRPAT")
+    verpat <- installModel("VERPAT","JRPAT")
+  }
+  if ( run || ! verpat$results()$valid() ) {
+    testStep("Clearing previous extracts")
+    verpat$clear(force=TRUE) # outputs only
+    testStep("Running JRPAT")
+    verpat$run()
+  }
+  testStep("Extracting JRPAT results...")
+  verpat$results()$extract()
 }
 
 # Now set it all up

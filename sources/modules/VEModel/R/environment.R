@@ -105,9 +105,10 @@ default.parameters.table = list(
   StageDir            = ".", # Constructed at runtime within ResultsDir if model has stages
   OutputDir           = "output",  # Will create if not already present
   QueryDir            = "queries", # Home for defined queries within the ModelDir
+  ExtractRootName     = "Extract", # used by VEResults$extract to make "output/Extract_<timestamp>" to hold extracted files
   DisplayUnitsFile    = "display_units.csv",
   QueryFileName       = "New-Query",
-  QueryOutputTemplate = "Measures_%scenario%_%years%_%geography%.csv"
+  QueryOutputTemplate = "%queryname%_Results_%timestamp%.csv"
 )
 
 #GET DEFAULT PARAMETERS

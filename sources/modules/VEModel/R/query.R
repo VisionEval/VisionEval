@@ -125,26 +125,48 @@ ve.query.attach <- function(OtherQuery=NULL, ModelPath=NULL, QueryDir=NULL, Quer
   return(self$QueryFile)
 }
 
-# TODO: one day allow alternate storage formats
-# However, because the existing query spec format uses named vectors,
-#  it is difficult to recover full information from JSON or YAML
+# Save a .VEqry representation (R dump) of the Query Specification
+#  Loading that file will recreate the specification (possibly with
+#  different QueryName, QueryDir, etc.) depending on options to the
+#  VEQuery$new function.
 # overwrite:
 #  if TRUE, destroy any identically named file;
-#  if FALSE, insert digit disambiguation in filename
-ve.query.save <- function(saveTo=TRUE,overwrite=FALSE) {
-  # TODO: Disambiguate self$QueryFile if overwrite==FALSE
+#  if FALSE, use serial number disambiguation for existing filename
+ve.query.save <- function(saveTo=TRUE,overwrite=TRUE) {
   if ( is.logical(saveTo) ) { # save to stored name
     if ( saveTo ) {
-      saveTo <- self$QueryFile; # TODO: check existence & disambiguate based on overwrite
+      saveTo <- self$QueryFile;
     } else {
       saveTo <- "" # empty string dumps to console
     }
-  } else if ( ! is.character(saveTo) || ! nzchar(saveTo) ) { # saveTo console if not valid filename
+  }
+  if ( ! is.character(saveTo) || ! nzchar(saveTo) ) { # saveTo console if not valid filename
     saveTo = ""
   }
-  print(self)
+  if ( nzchar(saveTo) && file.exists(saveTo) && ! overwrite ) {
+    number <- 1
+    actualFile <- saveTo
+    while ( file.exists(actualFile) && number < 10 ) {
+      # insert, e.g., "-1" in between root filename and extension
+      # So MyQuery.VEqry becomes MyQuery-1.VEqry, MyQuery-2.VEqry, etc.
+      actualFile <- sub("(-[[:digit:]])*(\\.[^.]+)$",paste0("-",number,"\\2"),actualFile)
+      number <- number + 1
+    }
+    if ( file.exists(actualFile) && number>=10 ) {
+      visioneval::writeLog(
+        c(
+          paste("Too many files piled up trying not to overwrite",saveTo),
+          "You should save with overwrite=TRUE and/or remove some of them."
+        ),
+        Level="error"
+      )
+      stop()
+    }
+    saveTo <- actualFile
+  }
   QuerySpec <- lapply(private$QuerySpec,function(spec) spec$QuerySpec)
-  dump("QuerySpec",file=saveTo) # dump the QuerySpec list as R
+  dump("QuerySpec",file=saveTo,control=NULL) # dump the QuerySpec list as R code
+  return(invisible(saveTo))
 }
 
 ve.query.clear <- function() {
@@ -513,8 +535,8 @@ ve.query.getlist <- function(Geography=NULL) {
     }
     if ( length(checkResults)>0 ) {
       newSpec <- newSpec[validity] # Remove any invalid elements from newSpec
-      cat("Specifications invalid for Geography",Geography,":\n")
-      cat(checkResults,collapse="\n")
+      visioneval::writeLog(paste("Specifications invalid for Geography",Geography,":"),Level="warn")
+      visioneval::writeLog(paste(checkResults,collapse="\n"),Level="warn")
     }
   }
   # Make sure list names are up to date
@@ -538,21 +560,38 @@ ve.query.run <- function(
   OutputDir  = visioneval::getRunParameter("OutputDir"),
   OutputFile = visioneval::getRunParameter("QueryOutputTemplate"),
   save       = TRUE,  # Send to file
-  log        = "error"
+  log        = "error"  # Only show errors during run...
   )
 {
   if ( ! missing(Results) ) {
+    # TODO: Add VEScenario class for new scenario API
     if ( "VEModel" %in% class(Results) ) {
       Results <- list(Results$results())
     } else if ( "VEResults" %in% class(Results) ) {
       Results <- list(Results)
     } else if ( is.character(Results) ) {
-      # Assume it's a list of directories
-      Results <- Results[file.exists(Results)]
-      if ( length(Results)==0 ) {
-        Results <- NULL
+      # Assume it's a list of directories, which must exist
+      ExistingResults <- Results[dir.exists(Results)] # Trim to existing files
+      if ( length(ExistingResults)==0 ) {
+        ExistingResults <- Results[Results %in% openModel()]
+        if ( length(ExistingResults)>0 ) {
+          Results <- lapply(ExistingResults,
+            function(m) {
+              model <- openModel(m)
+              results <- model$results()
+              if ( ! results$valid() ) results <- NA
+              return(results)
+            }
+          )
+          Results <- Results[ ! sapply(Results,is.na) ]
+          if ( length(Results)==0 ) {
+            Results <- NULL
+          }
+        } else {
+          Results <- NULL
+        }
       } else {
-        Results <- lapply( Results, function(r) VEResults$new(r) )
+        Results <- lapply( ExistingResults, function(r) VEResults$new(r) )
       }
     } else if ( is.list(Results) ) {
       if ( "VEModel" %in% class(Results[[1]]) ) {
@@ -568,6 +607,9 @@ ve.query.run <- function(
     stop( visioneval::writeLog("No results provided to query",Level="error") )
   }
 
+  # Set up default logging
+  visioneval::initLog(Save=FALSE,Threshold=log)
+
   if ( ! is.character(Geography) || ! Geography %in% c("Region", "Azone","Marea") )
   {
     visioneval::writeLog("Geography must be one of 'Region','Marea' or 'Azone'",Level="error")
@@ -575,7 +617,7 @@ ve.query.run <- function(
   }
   if ( Geography %in% c("Azone","Marea") ) {
     if ( missing(GeoValue) || ! is.character(GeoValue) || length(GeoValue)>1 || ! nzchar(GeoValue) ) {
-      visioneval::writeLog("Not supported: Breaking measures by ",Geography,"; including all values",Level="error")
+      visioneval::writeLog("Not supported: Breaking measures by ",Geography," including all values",Level="error")
       # TODO: need to assemble proper combinations of By/GeoValues when unpacking results from
       # summarizeDatasets in makeMeasure: we end up with a 2-D matrix, not a vector or scalar, and
       # we need to transform that to a long form with suitable names for each element
@@ -597,18 +639,35 @@ ve.query.run <- function(
   # Check and compile the specifications; abort if not valid
   self$check()
 
-  # Now run the query
-  outputFiles <- doQuery(
+  # Now run the query and get the consolidated data.frame of results
+  Measures_df <- doQuery(
     Results=Results,  # list of VEResults objects
     Geography=Geography,
-    Specifications=self$getlist(), # A list of VEQuerySpec
-    OutputDir=OutputDir,
-    OutputFile=OutputFile, # TODO: compute from VEQuery state
-    save=save,
-    log=log
+    Specifications=self$getlist() # A list of VEQuerySpec
   )
 
-  invisible(outputFiles)
+  # Construct the OutputFile name
+  # Default QueryOutputTemplate = "%queryname%_Results_%timestamp%.csv"
+  if ( save ) {
+    OutputFileToWrite <- stringr::str_replace(OutputFile,"%queryname%",self$QueryName)
+    TimeStamp <- visioneval::fileTimeStamp(Sys.time())
+    OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%timestamp%",TimeStamp)
+    OutputFileToWrite <- normalizePath(file.path(OutputDir,OutputFileToWrite),mustWork=FALSE)
+
+    # Save measure results into a file
+    visioneval::writeLog(paste("Saving measures in",basename(dirname(OutputFileToWrite)),"as",basename(OutputFileToWrite),"..."),Level="warn")
+    utils::write.csv(Measures_df, row.names = FALSE, file = OutputFileToWrite)
+
+    # Save query itself adjacent to measure results
+    self$save(saveTo=sub("\\.csv$",".VEqry",OutputFileToWrite))
+
+    visioneval::writeLog("Saved\n",Level="warn")
+
+    # TODO: save the query specification as metadata (as a .VEqry file in the output, with the same
+    # basename as the results .csv - should be "openable").
+  }
+
+  return(invisible(Measures_df))
 }
 
 # Here is the emerging VEQuery R6 class
@@ -739,7 +798,7 @@ ve.spec.print <- function() {
   # If summarize, print its elements (nicely)
   if ( ! self$valid() ) {
     cat("Specification is not valid:\n")
-    cat(self$checkResults,collapse="\n")
+    cat(paste(self$checkResults,collapse="\n"),"\n")
   } else {
     nm <- specOverallElements[ specOverallElements %in% names(self$QuerySpec) ]
     dummy <- lapply(nm,spec=self$QuerySpec,
@@ -1196,35 +1255,37 @@ makeMeasureDataFrame <- function(measureEnv) {
 doQuery <- function (
   Results, # one (or a list of) VEResult object(s)
   Geography,
-  Specifications,
-  OutputDir,
-  OutputFile,
-  save,
-  log=""
+  Specifications
 )
 {
   if (
     missing(Results) ||
     missing(Geography) ||
-    missing(Specifications) ||
-    missing(OutputFile)
+    missing(Specifications)
   ) {
     visioneval::writeLogMessage("Invalid Setup for doQuery function")
     return(character(0))
   }
     
-  if ( ! is.logical(save) ) save <- TRUE
-  if ( ! save ) {
-    OutputFiles <- list() # will return list of data.frames
-  } else {
-    OutputFiles <- character(0) # will return vector of file names
-  }
-  # Put the Specifications where we can review them against the outputs
-  attr(OutputFiles,"Specifications") <- Specifications
-
   old.wd <- getwd()
   on.exit(setwd(old.wd))
  
+  # Report what we're working on
+  catGeography <- Geography["Type"]
+  if ( Geography["Type"]!="Region" &&
+    (
+      "Value" %in% Geography &&
+      ! any(is.null(Geography["Value"])) &&
+      ! any(is.na(Geography["Value"]))
+    )
+  ) {
+    catGeography <- paste(catGeography,"=",paste0("'",Geography["Value"],"'"))
+  }
+  visioneval::writeLog(paste("Building measures for Geography",catGeography,"\n"),Level="warn")
+
+  # Create a placeholder for the Measures data.frame to accumulate the results
+  Measures_df <- NULL
+
   for ( results in Results ) {
     # Results is a list of VEResults objects
     # Scenario is a VEResults object (with ModelState, etc all available)
@@ -1233,80 +1294,44 @@ doQuery <- function (
     setwd(results$resultsPath)
 
     # Scenario Name for reporting / OutputFile
-    scenarioName <- results$ModelState$Scenario;
+    ScenarioName <- results$ModelState$Scenario;
+    visioneval::writeLog(paste("Building measures for Scenario",ScenarioName,"\n"),Level="warn")
 
     # Gather years from the results
     Years <- results$ModelState$Years
-    catYears<-paste(Years,collapse=",")
 
-    # Confirm what we're working on
-    catGeography <- Geography["Type"]
-    if ( Geography["Type"]!="Region" &&
-      (
-        "Value" %in% Geography &&
-        ! any(is.null(Geography["Value"])) &&
-        ! any(is.na(Geography["Value"]))
-      )
-    ) {
-      catGeography <- paste(catGeography,"=",paste0("'",Geography["Value"],"'"))
-    }
-    cat(
-      "Building measures for:\n",
-      "Scenario:",scenarioName,"\n",
-      "Years:",catYears,"\n",
-      "Geography:",catGeography,"\n"
-    )
-
-    # Build the OutputFile name using the just reported specifications
-    OutputFileToWrite <- stringr::str_replace(OutputFile,"%scenario%",scenarioName)
-    OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%years%",catYears)
-    OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%geography%",stringr::str_remove_all(catGeography,"[ ']"))
-    if ( save ) {
-      OutputFileToWrite <- normalizePath(file.path(OutputDir,OutputFileToWrite),mustWork=FALSE)
-    } else {
-      OutputFileToWrite <- sub("\\.[^.]+$","",OutputFileToWrite) # use this as data.frame name (dropping any file extension)
-    }
-
-    # Prepare for datastore queries
-    #------------------------------
+    # Set up model state and datastore for query processing
     QPrep_ls <- results$queryprep()
-
-    # Create the name of the data.frame that will collect the results
-    Measures_df <- NULL
 
     # Iterate across the Years in the scenario
     for ( thisYear in Years ) {
 
-      cat("Working on Year",thisYear,"\n")
-      results <- new.env()
+      visioneval::writeLog(paste("Working on Year",thisYear,"\n"),Level="warn")
+      result.env <- new.env()
 
-      # Iterate over the measures
+      # Iterate over the measures, computing each one
       for ( measureSpec in Specifications ) {
-        cat("Processing ",measureSpec$Name,"...",sep="")
-        measure <- makeMeasure(measureSpec,thisYear,Geography,QPrep_ls,results)
-        if ( length(measure)>1 ) for ( m in measure ) cat( paste0(m,"||") )
+        cat( paste("Processing",measureSpec$Name,"...") )
+        measure <- makeMeasure(measureSpec,thisYear,Geography,QPrep_ls,result.env)
+        if ( length(measure)>1 ) {
+          subm <- character(0)
+          for ( m in measure ) {
+            subm <- c(subm,m)
+          }
+          cat(subm,collapse="||")
+        }
         cat("..Processed\n")
       }
 
       # Add this Year's measures to the output data.frame
-      temp <- makeMeasureDataFrame(results)
+      computed <- makeMeasureDataFrame(result.env)
       if ( is.null(Measures_df) ) {
-        Measures_df<-temp[,c("Measure","Units","Description","thisYear")]
-      } else {
-        Measures_df<-cbind(Measures_df,thisYear=temp$thisYear )
+        # Uninitialized Measures_df - initialize from metadata columns
+        Measures_df<-computed[,c("Measure","Units","Description")]
       }
-      names(Measures_df)[names(Measures_df)=="thisYear"]<-thisYear
-    }
-
-    # Add the measures to the output list
-    if ( save ) {
-      cat("Saving measures in",basename(dirname(OutputFileToWrite)),"as",basename(OutputFileToWrite),"...")
-      utils::write.csv(Measures_df, row.names = FALSE, file = OutputFileToWrite)
-      cat("Saved\n")
-      OutputFiles <- c(OutputFiles,OutputFileToWrite) # Saving: return list of file names
-    } else {
-      OutputFiles[OutputFileToWrite] <- (Measures_df) # Not Saving: return list of data.frames
+      # Then add the measure results for thisYear
+      Measures_df[paste0(thisYear,"-",ScenarioName)] <- computed$thisYear
     }
   }
-  return(OutputFiles)
+  return(Measures_df)
 }

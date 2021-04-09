@@ -328,7 +328,7 @@ installStandardModel <- function( modelName, modelPath, confirm, skeleton=c("sam
 
 ve.model.copy <- function(newName=NULL,newPath=NULL) {
 
-  if ( ! self$valid ) {
+  if ( ! private$p.valid ) {
     visioneval::writeLog(paste0("Invalid model: ",self$status),level="error")
     return( NULL )
   }
@@ -435,7 +435,7 @@ ve.model.loadModelState <- function(log="error") {
   # If ModelState exists from a prior run, load that rather than rebuild
 
   if ( ! dir.exists(self$modelPath) ) {
-    self$valid <- FALSE
+    private$p.valid <- FALSE
     return( list() )
   }
   
@@ -559,10 +559,10 @@ ve.model.loadModelState <- function(log="error") {
       Level="error"
     )
     self$status <- "No ModelState"
-    self$valid <- FALSE
+    private$p.valid <- FALSE
   } else {
     self$status <- self$runStatus[length(self$runStatus)]
-    self$valid <- TRUE
+    private$p.valid <- TRUE
   }
   invisible(self$ModelState)
 }
@@ -583,7 +583,7 @@ ve.model.init <- function(modelPath=NULL,log="error") {
   modelPaths <- findModel(modelPath,self$RunParam_ls)
   if ( ! modelPaths$isValid ) {
     self$status <- "No Model"
-    self$valid <- FALSE
+    private$p.valid <- FALSE
   } else {
     # Set up the model name, folder tree and script files
     self$RunParam_ls <- modelPaths$RunParam_ls; # Updated from model configuration file, if any
@@ -598,14 +598,14 @@ ve.model.init <- function(modelPath=NULL,log="error") {
 
     private$loadModelState(log=log) # load bare bones...
 
-    if ( self$valid ) {
+    if ( private$p.valid ) {
       visioneval::writeLog(self$modelPath,Level="info")
       visioneval::writeLog("Model Load Complete.",Level="info")
     } else {
       visioneval::writeLog(c("Model Load Failed",paste(self$modelPath,"\nStatus:",self$status)),Level="error")
     }
   }
-  invisible(self$valid)
+  invisible(private$p.valid)
 }
 
 # Function to inspect the model configuration/setup parameters
@@ -645,13 +645,13 @@ ve.model.set <- function(show="values", src=NULL, namelist=NULL, pattern=NULL,Pa
 
   if ( is.null(Param_ls) ) {
     where.options <- c("defaults","self","runtime")
-    if ( ! self$valid ) {
+    if ( ! private$p.valid ) {
       where.options <- where.options[-2] # Can't seek self if invalid
     }
     where.to.look <- where.options %in% show;
     names(where.to.look) <- where.options;
     if ( ! any(where.to.look) ) {
-      if ( self$valid && "self" %in% names(where.to.look) ) {
+      if ( private$p.valid && "self" %in% names(where.to.look) ) {
         where.to.look["self"] <- TRUE
       } else {
         where.to.look["runtime"] <- TRUE
@@ -732,7 +732,7 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL) {
   # "details" FALSE lists units and description plus pacakge/module/group/table/name
   # "details" TRUE lists all the field attributes (the full data.frame of specSummary)
 
-  if ( ! self$valid ) {
+  if ( ! private$p.valid ) {
     visioneval::writeLog(paste0("Invalid model: ",self$status),level="error")
     return( invisible(data.frame()) )
   }
@@ -770,7 +770,7 @@ ve.model.save <- function(FileName="visioneval.cnf") {
   # Use the "set" function to limit what is shown.
   # Can provide alternate name (but if it's not part of the known name set, it's 'just for
   # reference')
-  if ( ! self$valid ) {
+  if ( ! private$p.valid ) {
     visioneval::writeLog(paste0("Invalid model: ",self$status),level="error")
     return( invisible(list()) )
   }
@@ -805,7 +805,7 @@ ve.model.run <- function(run="save",stage=NULL,lastStage=NULL,log="warn") {
   #   modelPath) and the interior stage is from the "name" parameter of a runStage
   #   directive (just defaulting to Stage-N for the Nth runStage directive).
 
-  if ( ! self$valid ) {
+  if ( ! private$p.valid ) {
     visioneval::writeLog(paste0("Invalid model: ",self$status),Level="error")
     return( invisible(self$status) )
   }
@@ -1031,7 +1031,7 @@ ve.model.log <- function() {
 # all.files is a logical parameter indicating whether to print (TRUE) all file name (e.g. the 50-something
 #   input file names) or (FALSE) just the model directory(root), input directories
 #   (InputPath+InputDir) or date of data set (Current, Timestamp) for results, and for outputs,
-#   show how many independent files there are.
+#   show the contents of the extract directories rather than just the subdirectory name
 # TODO: the all.files functionality is not implemented.
 ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,outputs=FALSE,inputs=FALSE,all.files=TRUE,shorten=TRUE) {
   # We're going to search up contents of these directories
@@ -1047,9 +1047,9 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
   # If none root/results/outputs/inputs is TRUE, then all are TRUE
   #   Otherwise, only report the ones actually asked for
   validDir <- dir.exists(self$modelPath)
-  if ( ! self$valid || ! validDir ) {
+  if ( ! private$p.valid || ! validDir ) {
     return("No model found.")
-    self$valid <- FALSE
+    private$p.valid <- FALSE
   }
   
   inputDetails <- if ( ! missing(inputs) ) inputs else FALSE
@@ -1057,7 +1057,7 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
     root <- results <- outputs <- inputs <- TRUE
   }
 
-  if ( missing(shorten) ) shorten <- self$modelPath
+  if ( missing(shorten) || shorten ) shorten <- self$modelPath
   if ( is.null(stage) ) stage<-c(1:self$stageCount)
 
   if ( inputs ) {
@@ -1085,8 +1085,7 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
     outputPath <- file.path(
       ResultsDir,(OutputDir <- visioneval::getRunParameter("OutputDir",Param_ls=self$RunParam_ls))
     )
-    outputFiles <- dir(normalizePath(outputPath,winslash="/",mustWork=FALSE),full.names=TRUE)
-    outputFiles <- outputFiles[ ! dir.exists(outputFiles) ] # keep only the files, not subdirectories
+    outputFiles <- dir(normalizePath(outputPath,winslash="/",mustWork=FALSE),full.names=TRUE,recursive=all.files)
   } else outputFiles <- character(0)
   ResultsInRoot <- ( root && ResultsDir==self$modelPath )
   if ( results || ResultsInRoot  ) {
@@ -1134,7 +1133,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,stage=NULL,show=10) {
   #   so the default is to delete the outputs and leave the results, but if
   #   called a second time, will delete the results.
 
-  if ( ! self$valid ) {
+  if ( ! private$p.valid ) {
     visioneval::writeLog(self$status,Level="error")
     return( invisible(FALSE) )
   }
@@ -1221,7 +1220,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,stage=NULL,show=10) {
 
 # Print a summary of the VEModel, including its run status
 ve.model.print <- function() {
-  if ( self$valid ) {
+  if ( private$p.valid ) {
     cat("Model:",self$modelName,"\n")
     cat("Path:\n")
     print(self$modelPath)
@@ -1260,7 +1259,7 @@ ve.model.resultspath <- function(stage,Param_ls=NULL) {
 ve.model.results <- function(stage) {
   # Create a results object wrapping the directory that contains the model
   # results for the given stage (or last stage if not given)
-  if ( ! self$valid ) {
+  if ( ! private$p.valid ) {
     visioneval::writeLog(paste0("Invalid model: ",self$status),level="error")
     return( NULL )
   }
@@ -1293,7 +1292,7 @@ ve.model.results <- function(stage) {
 # open a Query object for the model from its QueryDir (or report a list
 #  of available queries if no QueryName is provided).
 ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
-  if ( ! self$valid ) {
+  if ( ! private$p.valid ) {
     visioneval::writeLog(paste0("Invalid model: ",self$status),level="error")
     return( NULL )
   }
@@ -1340,10 +1339,10 @@ VEModel <- R6::R6Class(
     specSummary=NULL,                       # List of inputs, gets and sets from master module spec list  
     runStatus=NULL,
     status="Uninitialized",
-    valid=FALSE,
 
     # Methods
     initialize=ve.model.init,               # initialize a VEModel object
+    valid=function() private$p.valid,         # report valid state
     run=ve.model.run,                       # run a model (or just a subset of stages)
     print=ve.model.print,                   # provides generic print functionality
     list=ve.model.list,                     # interrogator function (script,inputs,outputs,parameters
@@ -1363,8 +1362,9 @@ VEModel <- R6::R6Class(
     }),
   private = list(
     # Private Members
+    p.valid=FALSE,                          # R6 error: "All items in public, private and active must have unique names"
     runError=NULL,
-    lastResults=list(),                      # Cache previous results object
+    lastResults=list(),                     # Cache previous results object
     index=NULL,
     # Private Methods
     loadModelState=ve.model.loadModelState  # Function to load a model state file

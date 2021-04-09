@@ -645,6 +645,7 @@ findRuntimeInputFile <- function(File,Dir="InputDir",Param_ls=NULL,StopOnError=T
 #' @param Prefix An optional prefix to put ahead of the time
 #' @return A string representing date and time with all characters sanitized for use in a file or
 #'   directory name
+#' @export
 fileTimeStamp <- function( TimeStamp, Prefix=NULL ) {
   TimeStamp <- gsub(":","-",gsub(" ", "_",TimeStamp))
   LogNameParts <- unlist(strsplit(TimeStamp,split=" "))
