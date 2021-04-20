@@ -2,7 +2,7 @@
 
   {
     "NAME" : "ScenarioOutputFolder",
-    "VALUE": "D:\\projects2\\scenarios",
+    "VALUE": "scenarios",
    "TYPE": "character",
    "UNITS": "NA",
    "PROHIBIT": "NA",
