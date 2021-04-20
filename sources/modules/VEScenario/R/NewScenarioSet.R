@@ -120,7 +120,7 @@ visioneval::savePackageDataset(NewScenarioSetSpecifications, overwrite = TRUE)
 #' @name NewScenarioSetInterior
 #' @import jsonlite 
 #' @export
-   NewScenarioSetInterior <- function(ScenarioInputFolder=NULL , ScenarioManagerFile, ModelFolder, ScenarioBaselineInputFolder=NULL   ){
+   NewScenarioSetInterior <- function(ScenarioInputFolder=NULL, ScenarioManagerFile, ModelFolder, ScenarioBaselineInputFolder=NULL){
      assign("%>%",getFromNamespace("%>%","magrittr"))
      
          if (is.null( ScenarioInputFolder)) {
@@ -137,7 +137,7 @@ visioneval::savePackageDataset(NewScenarioSetSpecifications, overwrite = TRUE)
         stop("Base scenario folder directory is missing")
         
       } else {
-        ScenarioBaselineInputFolder = file.path(ModelFolder,"inputs")
+        ScenarioBaselineInputFolder = file.path(ModelFolder, "inputs")
       }
     }
     
@@ -255,7 +255,7 @@ visioneval::savePackageDataset(NewScenarioSetSpecifications, overwrite = TRUE)
     #   input_form_file_name:
     #     Standard VisionEval scenario configuration CSV file, which can have any name and
     #     file location that you wish. 
-    ve.scenario_management.make_directory_structure <- function(target_root_dir , input_form_csv){
+    ve.scenario_management.make_directory_structure <- function(target_root_dir, input_form_csv){
       dir = grepl(basename(ScenarioManagerFile),list.files(target_root_dir, full.names = TRUE))
       unlink(list.files(target_root_dir, full.names = TRUE)[!dir], recursive = TRUE)
       form_df <- .ReadScenarioFormFromCSV(input_form_csv)
@@ -270,7 +270,7 @@ visioneval::savePackageDataset(NewScenarioSetSpecifications, overwrite = TRUE)
         if (!dir.exists(level_one_dir)) dir.create(level_one_dir)
         if (!dir.exists(level_two_dir)) dir.create(level_two_dir)
         inputs_list <-  unlist(strsplit(inputs_requierd, ","))
-        #check if inputs exist in parent directry
+        #check if inputs exist in parent directory
         for (i in 1:length(inputs_list)) {
           
           if( !file.exists(file.path(ScenarioBaselineInputFolder , inputs_list[i])) ) {
@@ -288,8 +288,8 @@ visioneval::savePackageDataset(NewScenarioSetSpecifications, overwrite = TRUE)
       }
     }
     
-    ve.scenario_management.make_json_from_form_csv(ScenarioManagerFile, ScenarioInputFolder)
-    ve.scenario_management.make_directory_structure(ScenarioInputFolder,ScenarioManagerFile)
+    #ve.scenario_management.make_json_from_form_csv(ScenarioManagerFile, ScenarioInputFolder)
+    ve.scenario_management.make_directory_structure(ScenarioInputFolder, ScenarioManagerFile)
     ve.scenario_management.make_json_from_form_csv(ScenarioManagerFile, ScenarioInputFolder)
     cat('NewScenarioSet run is complete')
     

@@ -145,9 +145,7 @@ visioneval::savePackageDataset(BuildScenariosSpecifications, overwrite = TRUE)
 #' @name BuildScenariosInterior
 #' @import jsonlite
 #' @export
-BuildScenariosInterior <- function(ScenarioInputFolder , ScenarioOutputFolder , ModelFolder  ){
-  
-  
+BuildScenariosInterior <- function(ScenarioInputFolder, ScenarioOutputFolder, ModelFolder){
   
   ScenarioInputPath <- ScenarioInputFolder
   # Gather Scenario file structure and names
@@ -171,8 +169,8 @@ BuildScenariosInterior <- function(ScenarioInputFolder , ScenarioOutputFolder , 
       file.remove(ScenarioOutputFolder)
     }
     dir.create(ScenarioOutputFolder)
-  }
-  if(file.exists(file.path(ScenarioInputPath,"scenario_config.json"))){
+  } 
+  if(file.exists(file.path(ScenarioInputPath, "scenario_config.json"))){
     file.copy(file.path(ScenarioInputPath, "scenario_config.json"),
               ScenarioOutputFolder)
     ScenarioConfig_ls <- fromJSON(file.path(ScenarioInputPath, "scenario_config.json"))
