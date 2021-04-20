@@ -76,20 +76,26 @@ These are the current list of VERSPM_Scenarios categories:
 
 You can compeletly delete the default list and add new strategies for your own specific scenarios.
 
-After creating this database when you run a sample visioneval model, a directory with all the scneario levels and required inputs will be created . see `runtime/VEScenario/scenario_inputs` for an example of the directory structure.
+After creating this database when you run a sample visioneval model, a directory with all the scenario levels and required inputs will be created . see `runtime/models/VEScenario/scenario_inputs` for an example of the directory structure.
+
 ## Running VEScenario
 After creating scenario manager file, you need to run VEScenario::NewScenarioSetInterior() function to 
 create the scenario directories and populate with required inputs
-                                                                                                        ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-VEScenario::NewScenarioSetInterior(ScenarioInputFolder=NULL,ScenarioManagerFile,ModelFolder,ScenarioBaselineInputFolder=NULL)
-```                                                                                                     This function requires 4 inputs by user:
+                                                                                                                   
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ScenarioManagerFile = "models/VEScenario/scenario_inputs/verspm_scenario_manager"
+ModelFolder = "models/VERSPM"
+VEScenario::NewScenarioSetInterior(ScenarioManagerFile,ModelFolder,ScenarioInputFolder=NULL,ScenarioBaselineInputFolder=NULL)
+```
 
-** ScenarioInputFolder — a file path identifying the location on the computer hard disk where the inputs for the scenarios will be located.
-May be NULL, in which case ScenarioManagerFile is interpreted as the full path to the file, and ** ScenarioManagerFile is computed as basename(normalizePath(ScenarioInputFolder))
-** ScenarioManagerFile — the file path of the CSV file described above, which is expected to be in the ScenarioInputFolder. 
+
+
+This function requires 4 inputs by user:
+
+** ScenarioInputFolder — a file path identifying the location on the computer hard disk where the inputs for the scenarios will be located. In case ScenarioManagerFile is in this folder, it can be NULL.
+** ScenarioManagerFile — the file path of the CSV file described above, which is expected ( but not required) to be in the ScenarioInputFolder. 
 ** ModelFolder — The path to the folder containing the Base Model run_model.R  script that will run each of the constructed scenarios plus its other elements (inputs and defs sub-folders).
-** ScenarioBaselineInputFolder — the location on the computer of the hard disk where the inputs used for the baseline scenarios are located.
-May be NULL, in which case it is constructed as file.path(ModelFolder,”inputs”)
+** ScenarioBaselineInputFolder — the location on the computer of the hard disk where the inputs used for the baseline scenarios are located. In case the folder it inside the ModelFolder it can be NULL
 
 
 
@@ -100,14 +106,16 @@ all the required inputs will be copied to the relevant scenario folder. However 
 The next step is to build all the possible scenarios based on the scenario set by running the following code
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ScenarioInputFolder = "models/VEScenario/scenario_inputs"
+ScenarioOutputFolder ="models/VEScenario/scenarios"
 VEScenario::BuildScenariosInterior(ScenarioInputFolder,ScenarioOutputFolder,ModelFolder)
 ```
 
 This function requires 3 inputs by user:
 
-** ScenarioInputFolder — a file path identifying the location on the computer hard disk where the inputs for the scenarios will be located.
+** ScenarioInputFolder — described above
+** ModelFolder — Described above
 ** ScenarioOutputFolder — file path identifying the location on the computer hard disk where the built scenarios will be located
-** ModelFolder — The path to the folder containing the Base Model run_model.R  script that will run each of the constructed scenarios plus its other elements (inputs and defs sub-folders).
 
 After running this step, you can see all the built scenarios in the outputfolder. This function Copies the Base Model input files to each scenario combination folder. It also copies the run_model.R and defs folder from the ModelFolder into each of the scenario folders 
 It overwrites the specific scenario input_filename files from the ScenarioBaselineInputFolder into the scenario directories so that each scenario folder can execute a standalone VERPAT or VERPSM model run with the combinations of scenario input files.
@@ -118,6 +126,7 @@ to copy the RunScenario sample model located in the  `runtime/models/VEScenario`
 model_parameters.json needs to be modifed to point to ScenarioOutputFolder mentioned in BuildScenariosInterior step.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
+ve.run()
 VEScneario_test <- openModel("VEScenario")
 VEScneario_test $run()
 ```
