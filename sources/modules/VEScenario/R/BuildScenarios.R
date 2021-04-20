@@ -120,65 +120,67 @@ visioneval::savePackageDataset(BuildScenariosSpecifications, overwrite = TRUE)
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
 #=======================================================
-
-
 #Main module function builds scenarios
 #------------------------------------------------------------------
-#' Function to build scenarios.
+#' Interior Function to build scenarios.
 #'
-#' \code{BuildScenarios} builds structure to run mulitple scenarios.
+#' \code{BuildScenariosInterior} builds structure to run mulitple scenarios.
 #'
-#' This function builds scenarios from scenario input levels. The folder names
-#' in the scenario input folder is used for naming scenarios. The function
-#' creates folder for each scneario, copy the model files to the scenario folder,
-#' and replaces the model files with relevant scenario inputs.
+#'Check if the folder structure expected by VEScenario, which is every unique combination of 
+#'category_name and policy_name, for example B1C1D1E1F1G1I1L2P1T2V2, exists. If it does not exist, 
+#'create it. Copies the Base Model input files to each scenario combination folder.
+#'Copies the run_model.R and defs folder from the ModelFolder into each of the scenario folders 
+#'(for example B1C1D1E1F1G1I1L2P1T2V2) Overwrites the specific scenario input_filename files from the 
+#'ScenarioBaselineInputFolder into the scenario directories so that each scenario folder can execute 
+#'a standalone VERPAT or VERPSM model run with the combinations of scenario input files.
+#'At this stage the user should have modified the UNEDITED- file names created by the NewScenarioSet 
+#'method. If these file names remain, the method should issue an error and identify the unedited files.
+#'If any of these actions fail (e.g. because a path is wrong or input files are missing), throw an error
 #'
-#' @param L A list containing the components listed in the Get specifications
-#' for the module.
+#' @param ScenarioInputFolder a file path identifying the location on the computer hard disk where the inputs for the scenarios will be located
+#' @param ScenarioOutputFolder file path identifying the location on the computer hard disk where the built scenarios will be located
+#' @param ModelFolder The (preferably normalized) path to the folder containing the Base Model run_model.R  script that will run each of the constructed scenarios plus its other elements 
 #' @return A list containing the components specified in the Set
 #' specifications for the module.
-#' @name BuildScenarios
+#' @name BuildScenariosInterior
 #' @import jsonlite
 #' @export
-BuildScenarios <- function(L){
-  # Setup
-  # -------------
-  # Set input directory
-  RunDir <- getwd()
-  ModelPath <- file.path(RunDir, L$Global$Model$ModelFolder)
-  ScenarioInputPath <- file.path(RunDir, L$Global$Model$ScenarioInputFolder)
+BuildScenariosInterior <- function(ScenarioInputFolder , ScenarioOutputFolder , ModelFolder  ){
+  
+  
+  
+  ScenarioInputPath <- ScenarioInputFolder
   # Gather Scenario file structure and names
   InputLabels_ar <- list.dirs(path = ScenarioInputPath, recursive = FALSE,
                               full.names = FALSE)
   ScenarioFiles_ar <- grep(list.files(path = ScenarioInputPath, recursive = TRUE),
                            pattern = "config", value = TRUE, invert = TRUE)
-
+  
   LevelDef_ar <- dirname(ScenarioFiles_ar)
   # if(any(duplicated(LevelDef_ar))){
   #   stop("More than one file exists in the scenario inputs.")
   # }
   LevelDef_ar <- unique(LevelDef_ar)
-
   # Gather scenario and category config files
-  if (! dir.exists(L$Global$Model$ScenarioOutputFolder) ){
-    dir.create(L$Global$Model$ScenarioOutputFolder)
+  if (! dir.exists(ScenarioOutputFolder) ){
+    dir.create(ScenarioOutputFolder)
   } 
   
-  if(!dir.exists(file.path(RunDir, L$Global$Model$ScenarioOutputFolder))) { 
-    if(file.exists(file.path(RunDir, L$Global$Model$ScenarioOutputFolder))){
-      file.remove(file.path(RunDir, L$Global$Model$ScenarioOutputFolder))
+  if(!dir.exists(ScenarioOutputFolder)) { 
+    if(file.exists(ScenarioOutputFolder)){
+      file.remove(ScenarioOutputFolder)
     }
-    dir.create(file.path(RunDir, L$Global$Model$ScenarioOutputFolder))
+    dir.create(ScenarioOutputFolder)
   }
   if(file.exists(file.path(ScenarioInputPath,"scenario_config.json"))){
     file.copy(file.path(ScenarioInputPath, "scenario_config.json"),
-              file.path(RunDir, L$Global$Model$ScenarioOutputFolder))
+              ScenarioOutputFolder)
     ScenarioConfig_ls <- fromJSON(file.path(ScenarioInputPath, "scenario_config.json"))
   }
-
+  
   if(file.exists(file.path(ScenarioInputPath,"category_config.json"))){
     file.copy(file.path(ScenarioInputPath, "category_config.json"),
-              file.path(RunDir, L$Global$Model$ScenarioOutputFolder))
+              ScenarioOutputFolder)
     CategoryConfig_ls <- fromJSON(file.path(ScenarioInputPath, "category_config.json"))
     # Filter to only scenarios mentioned in categories config file
     # Structure of Category files
@@ -200,20 +202,20 @@ BuildScenarios <- function(L){
     CategoryLevels_df$PATH <- paste0(CategoryLevels_df$NAME,
                                      "/",
                                      CategoryLevels_df$LEVEL)
-
+    
     # Check if all the scenario level inputs exists
     InputsExists_ar <- sapply(CategoryLevels_df$PATH,
-                             function(path) dir.exists(file.path(ScenarioInputPath, path)))
+                              function(path) dir.exists(file.path(ScenarioInputPath, path)))
     if(!all(InputsExists_ar)){
       simpleWarning("Scenario level inputs are missing")
       simpleMessage(paste0("Missing Inputs: ",paste0(names(InputsExists_ar[!InputsExists_ar]),
-                                     collapse = ", ")))
+                                                     collapse = ", ")))
     }
-
+    
     Categories_ls <- lapply(CategoryConfig_ls$LEVELS, function(categories){
       lapply(categories$INPUTS, function(inputlevel){
         sort(apply(inputlevel,1,paste0,collapse="/"))
-        }
+      }
       )
     })
     # Create scenario combinations from categories
@@ -227,28 +229,26 @@ BuildScenarios <- function(L){
     LevelDef_ls <- split(LevelDef_ar, dirname(LevelDef_ar), drop = TRUE)
     ScenarioDef_df <- expand.grid(LevelDef_ls, stringsAsFactors = FALSE)
   }
-
+  
   ScenarioNames_ar <- apply(ScenarioDef_df, 1, function(x231) {
     Name <- paste(x231, collapse = "/")
     gsub("/", "", Name)
   })
   rownames(ScenarioDef_df) <- ScenarioNames_ar
-
-
-
+  
   # Iterate through scenarios and build inputs
-  if(dir.exists(file.path(RunDir, L$Global$Model$ScenarioOutputFolder))){
-    unlink(file.path(RunDir, L$Global$Model$ScenarioOutputFolder),
+  if(dir.exists(ScenarioOutputFolder)){
+    unlink(ScenarioOutputFolder,
            recursive = TRUE)
   }
   tryCatch({
-    if(dir.exists(file.path(RunDir, L$Global$Model$ScenarioOutputFolder))){
+    if(dir.exists(ScenarioOutputFolder)){
       stop("Cannot delete the scenario output directory. Please delete manually!")
     }
   },
   warning = function(w) print(w),
   error = function(e) print(e))
-  dir.create(file.path(RunDir, L$Global$Model$ScenarioOutputFolder))
+  dir.create(ScenarioOutputFolder)
   if(file.exists(file.path(ScenarioInputPath,"scenario_config.json"))){
     # file.copy(file.path(ScenarioInputPath, "scenario_config.json"),
     #           file.path(RunDir, L$Global$Model$ScenarioOutputFolder))
@@ -256,15 +256,14 @@ BuildScenarios <- function(L){
                               simplifyDataFrame = FALSE)
     scenconfig_ch <- paste0("var scenconfig = ",
                             toJSON(scenconfig_ls, pretty = TRUE), ";")
-    write(scenconfig_ch, file = file.path(RunDir,
-                                          L$Global$Model$ScenarioOutputFolder,
+    write(scenconfig_ch, file = file.path(ScenarioOutputFolder,
                                           "scenario-cfg.js"))
   }
   if(file.exists(file.path(ScenarioInputPath,"category_config.json"))){
     # file.copy(file.path(ScenarioInputPath, "category_config.json"),
     #           file.path(RunDir, L$Global$Model$ScenarioOutputFolder))
     catconfig_ls <- fromJSON(file.path(ScenarioInputPath,"category_config.json"),
-                              simplifyDataFrame = FALSE)
+                             simplifyDataFrame = FALSE)
     cat_list <- c("Community Design","Marketing/Incentive", "Pricing", "Vehicles/Fuels", "Fuel Price" )
     cat_names <- sapply( catconfig_ls, function(x) x$NAME  )
     cat_diff <- setdiff(cat_list,cat_names)   
@@ -280,25 +279,24 @@ BuildScenarios <- function(L){
     }
     
     catconfig_ch <- paste0("var catconfig = ",
-                            toJSON(catconfig_ls, pretty = TRUE), ";")
-    write(catconfig_ch, file = file.path(RunDir,
-                                         L$Global$Model$ScenarioOutputFolder,
+                           toJSON(catconfig_ls, pretty = TRUE), ";")
+    write(catconfig_ch, file = file.path(ScenarioOutputFolder,
                                          "category-cfg.js"))
   }
-  commonfiles_ar <- file.path(ModelPath, c("defs", "inputs", "run_model.R"))
-
+  commonfiles_ar <- file.path(ModelFolder, c("defs", "inputs", "run_model.R"))
+  
   # Create/Save a file to store the results of scenario builds, runs,
   # and results
   Scenarios_df <- data.frame(Name=ScenarioNames_ar,
                              Build="NA",
                              Run="NA",
                              Results="NA", stringsAsFactors = FALSE)
-
+  
   # cat("Bulding Scenarios\n")
   for (sc_ in ScenarioNames_ar) {
     # cat(paste0(sc_, "\n"))
     #Make scenario directory
-    ScenarioPath <- file.path(RunDir, L$Global$Model$ScenarioOutputFolder, sc_)
+    ScenarioPath <- file.path(ScenarioOutputFolder, sc_)
     dir.create(ScenarioPath)
     #Copy common files into scenario directory
     file.copy(commonfiles_ar, ScenarioPath, recursive = TRUE)
@@ -315,6 +313,9 @@ BuildScenarios <- function(L){
         File <- list.files(Path, full.names = TRUE)
         # If a csv file then copy and overwrite existing file
         # If a json file then replace the existing values with new values
+        if(any(grepl("UNEDITED", File))){
+          stop(paste0("There are unedited inputs, check the input folder and rename the inputs"))
+        }
         if(any(grepl("\\.csv$", File))){
           if(!any(file.exists(file.path(ScenarioPath, "inputs", basename(File))))){
             stop(paste0("Scenario input file not recognized: ", basename(File)))
@@ -356,11 +357,41 @@ BuildScenarios <- function(L){
   #Return the results
   #------------------
   # Write/Save Scenario Progress Report
-  write.csv(Scenarios_df, file = file.path(RunDir,
-                                           L$Global$Model$ScenarioOutputFolder,
+  write.csv(Scenarios_df, file = file.path(ScenarioOutputFolder,
                                            "ScenarioProgressReport.csv"),
             row.names = FALSE)
   #Initialize output list
+  cat('BuildScenarios run is complete')
+  
+}
+#Main module function builds scenarios
+#------------------------------------------------------------------
+#' Function to build scenarios.
+#'
+#' \code{BuildScenarios} builds structure to run mulitple scenarios.
+#'
+#' This function builds scenarios from scenario input levels. The folder names
+#' in the scenario input folder is used for naming scenarios. The function
+#' creates folder for each scneario, copy the model files to the scenario folder,
+#' and replaces the model files with relevant scenario inputs.
+#'
+#' @param L A list containing the components listed in the Get specifications
+#' for the module.
+#' @return A list containing the components specified in the Set
+#' specifications for the module.
+#' @name BuildScenarios
+#' @import jsonlite
+#' @export
+BuildScenarios <- function(L){
+  # Setup
+  # -------------
+  # Set input directory
+  RunDir <- getwd()
+  ScenarioInputFolder <- file.path(RunDir, L$Global$Model$ScenarioInputFolder)
+  ScenarioOutputFolder <- file.path(RunDir, L$Global$Model$ScenarioOutputFolder)
+  ModelFolder <- file.path(RunDir, L$Global$Model$ModelFolder)
+
+  BuildScenarios_interior(ScenarioInputFolder , ScenarioOutputFolder , ModelFolder) 
   Out_ls <- initDataList()
   Out_ls$Global$Model <- list(CompleteBuild = 1L,
                               InputLabels = InputLabels_ar)

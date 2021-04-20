@@ -39,16 +39,6 @@ RunScenariosSpecifications <- list(
   # Specify data to be loaded from the datastore
   Get = items(
     item(
-      NAME = "ScenarioInputFolder",
-      TABLE = "Model",
-      GROUP = "Global",
-      TYPE = "character",
-      UNITS = "NA",
-      SIZE = 20,
-      PROHIBIT = "NA",
-      ISELEMENTOF = ""
-    ),
-    item(
       NAME = "ScenarioOutputFolder",
       TABLE = "Model",
       GROUP = "Global",
@@ -411,8 +401,9 @@ RunScenarios <- function(L){
   # -------------
   # Set input directory
   ModelPath <- getwd()
-  ScenarioInputPath <- file.path(ModelPath, L$Global$Model$ScenarioOutputFolder)
-
+  ScenarioInputPath <- L$Global$Model$ScenarioOutputFolder
+  ScenarioInputPath <- L$Global$Model$ScenarioOutputFolder
+  
   # Gather Scenario file structure and names
   ScenariosPath_ar <- list.dirs(ScenarioInputPath, recursive = FALSE)
   ScenarioNames_ar <- basename(ScenariosPath_ar)
@@ -435,8 +426,7 @@ RunScenarios <- function(L){
   libs <- .libPaths() # Set .libPaths(libs) in call to child process
   
   # Update the Scenario Progress Report
-  Scenarios_df  <- read.csv(file.path(ModelPath,
-                                      L$Global$Model$ScenarioOutputFolder,
+  Scenarios_df  <- read.csv(file.path(ScenarioInputPath,
                                       "ScenarioProgressReport.csv"),
                             stringsAsFactors = FALSE)
   RunScenariosFlag_ar <- vector(mode="logical",
@@ -506,8 +496,7 @@ RunScenarios <- function(L){
                        return(output)
                      },
                      label = ScenarioName_,
-                     globals = TRUE,
-                     seed = TRUE),
+                     globals = TRUE),
                      callback = function(asyncResults){
                        # asyncResults is: list(asyncTaskName,
                        #                        taskResult,
@@ -521,8 +510,7 @@ RunScenarios <- function(L){
                        taskResult <- asyncResults[["taskResult"]]
                        ScenarioName_ <- gsub("Scenario_", "", taskName_)
                        # Check if the log file exists
-                       LogFilePath_ <- list.files(file.path(ModelPath,
-                                                            L$Global$Model$ScenarioOutputFolder,
+                       LogFilePath_ <- list.files(file.path(ScenarioInputPath,
                                                             ScenarioName_),
                                                   pattern = "^Log")
                        msg <- ""
@@ -534,11 +522,9 @@ RunScenarios <- function(L){
                          msg <- paste0("***ERROR*** More than 1 log file found.")
                          stop(msg)
                        }
-                       ScenarioLogFile <- list.files(file.path(ModelPath,
-                                                               L$Global$Model$ScenarioOutputFolder),
+                       ScenarioLogFile <- list.files(ScenarioInputPath,
                                                      pattern = paste0(ScenarioName_,".txt"))
-                       ScenarioLogFilePath <- file.path(ModelPath,
-                                                        L$Global$Model$ScenarioOutputFolder,
+                       ScenarioLogFilePath <- file.path(ScenarioInputPath,
                                                         ScenarioLogFile)
                        write(paste0("Log File: ", LogFilePath_),
                              file = ScenarioLogFilePath, append = TRUE)
@@ -574,8 +560,7 @@ RunScenarios <- function(L){
                        Scenarios_df$Run %in% "Submitted" &
                        !RunScenariosFinishFlag_ar[Scenarios_df$Name]] <- "Run Error"
 
-    write.csv(Scenarios_df, file.path(ModelPath,
-                                      L$Global$Model$ScenarioOutputFolder,
+    write.csv(Scenarios_df, file.path(ScenarioInputPath,
                                       "ScenarioProgressReport.csv"),
               row.names = FALSE)
   }
@@ -592,8 +577,7 @@ RunScenarios <- function(L){
   Scenarios_df$Run[!(Scenarios_df$Name %in% ScenarioNames_) &
                      Scenarios_df$Run %in% "Submitted" &
                      !RunScenariosFinishFlag_ar[Scenarios_df$Name]] <- "Run Error"
-  write.csv(Scenarios_df, file.path(ModelPath,
-                                    L$Global$Model$ScenarioOutputFolder,
+  write.csv(Scenarios_df, file.path(ScenarioInputPath,
                                     "ScenarioProgressReport.csv"),
             row.names = FALSE)
 
