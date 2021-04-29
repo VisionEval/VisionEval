@@ -17,35 +17,109 @@ NULL
 #' VisionEval model manager class and functions
 #'
 #' The VisionEval model manager (VEModel) provides a simple way to run VisionEval models, and to
-#' access the model results. The framework itself contains full support for running a model, so
-#' if you have a model, you can still just change into its directory and do
+#' access the model results. The framework itself contains full support for running a model, so if
+#' you have a model, you can still just change into its directory and do
 #' \code{source('run_model.R')}. VEModel (and its helpers, VEResult and VEQuery) provide a
 #' convenient interface for running a model and exploring its structure and results.
 #'
 #' Creating a model is still a manual process, so you're usually better off duplicating one of the
 #' standard models The VEModel manager makes that very easy! See \code{vignette('VEModel')} for full
 #' instructions. A simple introduction is found on the VisionEval wiki, in the Getting-Started
-#' document (and that document is also included in runtime installations of VisionEval).
+#' document (that document is also included in runtime installations of VisionEval).
 #'
 #' Here are the details of the VEModel manager.
 #'
 #' @section Usage:
-#' \preformatted{model <- VEModel$new(modelName,log="error")}
+#' \preformatted{mdl <- VEModel$new(modelName,log="error")
+#'
+#' mdl$valid()
+#' mdl$run(run="save",stage=NULL,lastStage=NULL,log="warn")
+#' mdl$dir(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,outputs=FALSE,inputs=FALSE,all.files=TRUE,shorten=TRUE)
+#' mdl$clear(force=FALSE,outputOnly=NULL,stage=NULL,show=10)
+#' mdl$list(inputs=FALSE,outputs=FALSE,details=NULL)
+#' mdl$log()
+#' mdl$set(show="values", src=NULL, namelist=NULL, pattern=NULL,Param_ls=NULL)
+#' mdl$save(FileName="visioneval.cnf")
+#' mdl$copy(newName=NULL,newPath=NULL)
+#' mdl$results(stage,Param_ls=NULL)
+#' mdl$resultspath(stage,Param_ls=NULL)
+#' mdl$query(QueryName=NULL,FileName=NULL,load=TRUE)
+#' 
+#' print(mdl)
+#' }
 #'
 #' @section Arguments:
 #' \describe{
 #'   \item{modelName}{The path or basename of a directory containing a VisionEval model setup; if
 #'   it's a relative path, the model will be sought in the current directory plus standard places
-#'   like ve.runtime/models}
-#' }
+#'   like ve.runtime/models. Usually it will just the name of model directory within
+#'   ve.runtime/models.}
+#'   \item{log}{The error threshold to display within the function (from most detailed to least detailed,
+#'   one of the following: \code{c("trace","debug","info",warn","error","fatal")}. The default can
+#'   be configured in \code{visioneval.cnf} using the LogLevel parameter.}
+#'   \item{run}{Describes how to run the model if a previous run exists. Options are
+#'   "save","reset","continue". See "Details".}
+#'   \item{stage}{Under development: select a specific RunStep to process by name or sequential number; the default is
+#'   to work on the last RunStep, corresponding to the full model results. Specifying a name or number will treat the
+#'   model as if it only included results up to that RunStep.}
+#'   \item{lastStage}{Under development: RunStep at which to stop processing; run="continue" will resume with the next
+#'   stage after the specified one}
+#'   \item{pattern}{An R regular expression used to narrow the search of output elements (e.g. to just log files, or
+#'   just model state files, or a certain date in archived results)}
+#'   \item{stage}{Under development: RunStep for which to display or clear outputs or results. Default is to display the
+#'   overall ResultsDir for the model}
+#'   \item{results}{Show the model results files and archived results. Directories only for the archives unless all.files=TRUE)}
+#'   \item{outputs}{In $dir: Show the model outputs (extracts and queries). Directories only unless all.files=TRUE). In
+#'   $list: List output fields descriptions; see Details.}
+#'   \item{inputs}{In $dir: Show the model input directories on the InputPath. Directories only unless all.files=TRUE).
+#'   In $list: List input fields descriptions; see Details.}
+#'   \item{all.files}{Show files, rather than just the directory name for result archives, outputs and inputs.}
+#'   \item{shorten}{Remove the ve.runtime directory prefix from the displayed directory and file names. Default is
+#'   TRUE}
+#'   \item{force}{If TRUE, clear results without interaction. Default is TRUE if not interactive, otherwise FALSE. If
+#'   interactive, present a menu of available items and gather user input to determine which to clear.}
+#'   \item{outputOnly}{If NULL, offer to delete only outputs (extracts or queries) if any of those exist; otherwise
+#'   offer to delete results (like $run with run="reset"). If FALSE, offer to delete any existing outputs and results
+#'   (Warning: including archives). If TRUE, offer only to delete existing outputs.}
+#'   \item{show}{For $dir: A numeric value of how many results to show in the interactive display when clearing outputs
+#'   or results. For $set: A vector containing one or more of "values", "name", "source", "runtime", "defaults" or
+#'   "self" to examine the current set of run parameters for the model, after resolving the system and model
+#'   configuration files. See Details.}
+#'   \item{details}{Include details like UNITS and DESCRIPTION, not just field names, when $list shows model files. See
+#'   Details.}
+#'   \item{src}{A character string interpreted as a regular expression to match against the parameter source strings. Only
+#'   settings from matching sources will be returned. See Details.}
+#'   \item{namelist}{A character vector, where each element is interpreseted as the full name of a parameter about
+#'   which to return information.}
+#'   \item{pattern}{A vector of regular expressions to match against names of parameters - an alternative to
+#'   \code{namelist}. Any parameters matching any of the patterns will be returned.}
+#'   \item{Param_ls}{A list of run parameters to work on explicitly. In $set, will add these to self$RunParam_ls. In
+#'   $results and $resultspath, will allow a different set of parameters to used than self$RunParam_ls (which is used
+#'   internally to track BaseModel and such). See \code{runtimeEnvironment()} and Details below.}
+#'   \item{FileName}{A name to use to save the current model run parameters if they have been altered dynamically
+#'   ($save). Or in $query, the FileName (".VEqry" extension by default) from which to load a query specification; if
+#'   NULL, the query FileName will be constructed from the QueryName.}
+#'   \item{newName}{The internal name to attach to a copy of this model. Default is to add a numeric disambiguator to
+#'   the name of the model being copied.}
+#'   \item{newPath}{The directory into which to put the copy of this model. Default if NULL is ve.runtime/models
+#'   directory.}
+#'   \item{QueryName}{The name to use for the Query, which will be used to construct the output directory name when
+#'   the query is run. The query file name will be built from the QueryName if FileName is not explicitly provided.}
+#'   \item{load}{For a query, if FileName is provided and exists, then attempt to load the file. If it is FALSE, create
+#'   a blank query to associate with the FileName. Usually you won't want to touch this parameter.}
 #'
 #' @section Details:
 #'
-#' Details are yet to come.
-#' scalar.
+#' This section explains the particulars of each operation that can be performed on a VEModel object.
 #'
-#' \code{$new()} creates a new VEModel object from a file path that
-#' locates a \code{run_model.R} script and an optional configuration file.
+#' \code{$new()} creates a new VEModel object from a file path that locates a \code{run_model.R} script and an optional
+#' configuration file. Generally, you'll use \code{openModel()} to create a VEModel object.
+#'
+#' The "run" argument for $run has three options: "save","reset" and "continue". "save" will archive
+#' the Datastore, ModelState and Log file in a sub-folder of ResultsDir. "reset" will delete any
+#' existing Datastore, ModelState and Log file and start from scratch (same as running $clear before
+#' $run). "continue" is used for debugging and development and will load the existing Datastore and
+#' proceed from the first stage or RunStep that is not marked as "complete".
 #'
 #' @importFrom R6 R6Class
 #' @name VEModel

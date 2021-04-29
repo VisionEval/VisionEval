@@ -30,8 +30,10 @@ ve.env$RunParam_ls <- list()
 #' @section Model Environment:
 #'
 #' VEModel supports the following directory structures for models to configure the location of
-#' $export/$extract and $query artifacts as well as the models themselves.
-
+#' $export/$extract and $query artifacts as well as the models themselves. These are in addition
+#' to the configuration parameters for the framework (see
+#' \code{visioneval::defaultVERunParameters}).
+#'
 #' The visioneval framework itself defaults to a simpler directory structure (for "classic"
 #' VisionEval models) which apply only to the inputs and results for a single model. If you "source"
 #' a run_model.R script without loading the VEModel package, you will get the classic output
@@ -39,7 +41,8 @@ ve.env$RunParam_ls <- list()
 #' understand the classic structure, but will use these settings to manage new models, new model
 #' runs, and outputs generated using VEModel, VEResults or VEQuery functions. Override them in a
 #' model-specific VisionEval.cnf file (in ModelDir) to make it as much like the old behavior as you
-#' wish. Set the various directories to "." or "" to ignore them and just use ModelDir.
+#' wish. Set the various directories to "." or "" to ignore them and just to use "ModelDir", which
+#' is classically the location of the \code{run_model.R} script.
 #'
 #' Here is a summary of the VEModel defaults. To see parameters and defaults defined in the
 #' visioneval framework itself, see \code{visioneval::defaultVERuntimeParameters}.

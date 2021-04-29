@@ -321,7 +321,7 @@ ve.results.extract <- function(
       )
     }
     # Write out the selected fields
-    write.csv(
+    utils::write.csv(
       file=file.path(outputPath,"!SelectedFields.csv"),
       data.frame(SelectedFields = self$selection$fields()),
       row.names=FALSE
