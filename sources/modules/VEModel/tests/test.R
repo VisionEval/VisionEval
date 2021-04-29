@@ -468,8 +468,12 @@ test_results <- function (log="warn") {
   jr$dir()
 }
 
-test_query <- function(log="warn") {
+test_query <- function(log="warn",multiple=FALSE) {
   # Process the standard query list for the test model
+  # If multiple==TRUE, copy the test model and its results a few times, then submit the
+  # list of all the copies to VEQuery. Each column of results will be the same (see
+  # test_scenarios for a run that will generate different results in each column).
+
   testStep("Set up Queries and Run on Model Results")
   testStep("Opening test model and caching its results...")
   jr <- openModel("JRSPM")
@@ -638,6 +642,10 @@ test_query <- function(log="warn") {
   qry$add(spec)
   print(qry)
 
+  testStep("Make a new VEQuery and add various bad specifications to it...")
+  # TODO: Throw some additional specific broken queries at it to see if errors are correct.
+  # TODO: destroy that object once we're done abusing it.
+
   testStep("Clear test queries, if any...")
   qfiles <- jr$query()
   print(qfiles <- file.path(jr$modelPath,"queries",qfiles))
@@ -655,8 +663,6 @@ test_query <- function(log="warn") {
 
   testStep("Save a copy of the query and fix its extension...")
 
-  # TODO: create a copy of the test query with the new name and
-  #   then just save that.
   qry2 <- qry$copy("Copy-Query.R") # .R will be removed from the name
   qry2$save() # Essentially as "Save As"
   cat("Saved values in renamed query...\n")
@@ -706,13 +712,37 @@ test_query <- function(log="warn") {
   testStep("Run the query on the results...")
   qry$run(rs)
 
-  # TODO: test a list of several models and results:
-  #   List of model names (open each as a VEModel)
-  #   list of VEModel objects
-  #   list of result directory paths (open each as a VEResults)
-  #   list of VEResults objects
+  # TODO: ensure that the query outputs are disambiguated and remain available
+    
+  if ( multiple) {
+    testStep("Query multiple models or scenarios...")
+    # Generate several copies of jr
+    testStep("Making model copies")
+    # copy the jr model and its results over and over
+    # TODO: add a flag to VEModel:$copy to copy or ignore any results (currently does
+    # results if they exist)
+    # TODO: fiddle each model's Name and Scenario description (and build functions to
+    # allow that if necessary - don't want to have to re-run each model...). That will
+    # be easier if we create the VEModel objects, since the Name and Scenario are
+    # inscribed in the model state.
 
-  # Throw some additional specific broken queries at it to see if errors are correct.
+    testStep("Multiple query by model name")
+    # Query the vector of model names (character vector says "model names" to VEQuery)
+    
+    testStep("Multiple query as a list of opened VEModel objects")
+    # Make a list of VEModel objects from the names and query that
+
+    testStep("Multiple query as a list of VEResult objects")
+    # Make a list of VEResults objects from the VEModel list and query that
+
+    testStep("Multiple query as a list of ResultsDir path names")
+    # Make a list of ResultsDir path names (i.e. list of character strings) from the
+    # VEResults and query that
+
+    testStep("Cleaning up model copies")
+  }
+  testStep("Returning test model")
+  return(jr)
 }
 
 test_rpat <- function(run=TRUE) {
