@@ -1,0 +1,79 @@
+RunStep and BaseModel Datastore restructuring
+=============================================
+
+Currently: ResultsDir is the home for Datastore, ModelState and Log, within ModelDir. Archiving the
+ResultsDir creates an archive directory within ModelDir.
+
+The framework knows about ResultsDir, so that's what needs to be locatable via the
+BaseModel setting. Do it without forcing the full VEModel stuff (ve.runtime etc):
+
+  1. Look for Datastore/ModelState in specified Directory
+  2. If not found, look for visioneval.cnf (or variant) to obtain ResultsDir
+  3. If no configuration found, go up one level in the tree and look there.
+  3. Failing all of those, report "missing Base Model" if we didn't find a configuration
+     or run_model.R, and report "Base Model appears not to have been run yet" if we
+     found run_model.R/visioneval.cnf but no results.
+  
+
+Is it worth (one time) building the directory (in the current ModelState$Datastore) of the
+DstoreLocs. That would be easy to update when something got written in place.ds
+
+Should also test the InputPath mechanism for this as well (parcel out required inputs
+for each of the modules in the child models, perhaps by opening the input files and
+just saving out subsets rather than copying whole files). Simple test is to create
+different inputs in the BaseModel and Child Model and make sure the right ones are
+being used. Hide certain files in certain places and see if errors show up due to
+finding/not finding the file. Examine the InputDir in the Child Model for its input
+files (especially the ones that occur in both places, or that are missing).
+
+If all that works, then we will have fully virtual Datastores.
+
+VEModel changes
+===============
+
+VEModel package should have a function that will mine the BaseModel list and let the user
+open any of the BaseModels as VEResults objects (and if the model is available, to walk
+back from that to the model).
+
+TODO: Add a $model function to VEResults that will walk back from the results to the
+VEModel that generated them, if it is available.
+
+Need to get VEResults extract to work right with this scheme:
+  - Add a flag that says whether to include the BaseModel in the field list
+    That affects the selection of fields (filter to only the current model or
+    instead to any of the BaseModels)
+  - If the BaseModel is included, we effectively flatten the results
+    So to build the directory, we need to build up the flat directory of
+    available GTN elements: start up from the bottom, overwriting locations as we find
+    newer stuff in the later models. When searching for one element, go the other way...
+
+Add a function to VEResults that makes a copy of ResultsDir that is "flattened". Option
+to report that as the model's current ResultsDir, or just to create something that looks
+like an Archive (log just says it is the result of flattening) with Datastore/ModelState.
+
+Framework/Datastore Updates
+===========================
+
+The list of BaseModels we need to maintain in the framework is really the list of
+BaseModel ResultDir.
+
+We should examine how we determine the presence of a Dataset (GTN) in a Datastore.
+
+1. Get DstoreLoc for Dataset (investigate each BaseModel's Datastore directory) from GTN
+   Should search through BaseModel list (or just extract the Datastore directory from each).
+   The visioneval package wrapper should inspect the list of BaseModel Datastore directories
+   in order to find the associated DstoreLoc (using the BaseModel's ModelDir and ResultsDir and
+   DatastoreName).
+2. Need a separate framework helper function we can call on an open model to update
+   it's ModelState Datastore directory based on what is actually there. That is probably
+   one function of the listDatastore framework function.
+
+Test/Development Environment
+============================
+
+In the test.R sequence, we should construct the bare model which only does a couple of
+modules in the base year, then create a child model with the bare model as its base
+and just have the child model do the same modules in a future year. Then we could
+create a second child module which has a different run_model.R script that includes
+the first child as its base, but that re-runs one of the modules and then adds one
+or two more.

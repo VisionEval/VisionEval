@@ -596,6 +596,11 @@ ve.query.run <- function(
     } else if ( is.list(Results) ) {
       if ( "VEModel" %in% class(Results[[1]]) ) {
         Results <- lapply( Results, function(m) m$results() )
+      } else if ( is.character(Results) {
+        # TODO: support this - just make a VEResults object from each
+        # element of Results
+        visioneval::writeLog(msg<-"Unsupported: character list of result paths",Level="error")
+        stop(msg)
       } else if ( ! "VEResults" %in% class(Results[[1]]) ) {
         Results <- NULL
       }
@@ -1294,6 +1299,8 @@ doQuery <- function (
     setwd(results$resultsPath)
 
     # Scenario Name for reporting / OutputFile
+    # TODO: If Results is a named list, use the name from the list
+    #       Then do the $ModelState$Scenario as a fallback
     ScenarioName <- results$ModelState$Scenario;
     visioneval::writeLog(paste("Building measures for Scenario",ScenarioName,"\n"),Level="warn")
 
