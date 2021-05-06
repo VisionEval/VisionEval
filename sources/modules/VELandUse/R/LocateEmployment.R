@@ -369,7 +369,8 @@ LocateEmployment <- function(L) {
   #Tabulate workers by residence Bzone
   Wkr_Bz <- tapply(L$Year$Household$Workers, L$Year$Household$Bzone, sum)[Bz]
   Wkr_Bz[is.na(Wkr_Bz)] <- 0
-
+  names(Wkr_Bz) = Bz # After filling in NA's, need to give the names of Bzones again
+  
   #Allocate workers by origin and destination using IPF
   #----------------------------------------------------
   #Use IPF with seed matrix that is inverse of distance between Bzones
@@ -391,7 +392,12 @@ LocateEmployment <- function(L) {
     round(TotEmp_Bz * (L$Year$Bzone$RetEmp / L$Year$Bzone$TotEmp))
   SvcEmp_Bz <-
     round(TotEmp_Bz * L$Year$Bzone$SvcEmp / L$Year$Bzone$TotEmp)
-
+  
+  # Fill NA with 0.
+  # NA occur if total employment in a Bzone is 0
+  RetEmp_Bz[is.na(RetEmp_Bz)] = 0
+  SvcEmp_Bz[is.na(SvcEmp_Bz)] = 0
+  
   #Create worker table
   #-------------------
   #Identify households having workers
