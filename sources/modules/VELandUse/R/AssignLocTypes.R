@@ -307,8 +307,8 @@ AssignLocTypes <- function(L) {
   #Assign location types
   #---------------------
   #Create an array of location type proportions by Bzone and location type for
-  #each housing type
-  Props_BzHtLt <-
+  #each housing type. Create also an array to hold the output dwelling unit values.
+  Props_BzHtLt <- DU_BzHtLt <-
     array(NA, dim = c(length(Bz), length(Ht), length(Lt)),
           dimnames = list(Bz, Ht, Lt))
   Props_BzHtLt[,,"Urban"] <-
@@ -317,28 +317,38 @@ AssignLocTypes <- function(L) {
     with(L$Year$Bzone, cbind(PropTownSFDU, PropTownMFDU, PropTownGQDU))
   Props_BzHtLt[,,"Rural"] <-
     1 - Props_BzHtLt[,,"Urban"] - Props_BzHtLt[,,"Town"]
-  #Define a function to do a whole number splitting according to proportions
+  # Define a function to do a whole number splitting according to proportions
   splitInt <- function(Props_, Tot) {
     SplitAll_ <- Props_ * Tot
     SplitInt_ <- round(SplitAll_)
     Rem <- sum(SplitAll_ - SplitInt_)
+    
+    Rem <- as.integer(round(abs(Rem))) # Eliminate floating point issues
+    
     if (Rem != 0) {
       RemTab_ <- table(
-        sample(1:length(Props_), abs(Rem), replace = TRUE, prob = Props_)
+        sample(1:length(Props_), Rem, replace = TRUE, prob = Props_)
       )
       SplitInt_[as.numeric(names(RemTab_))] <-
         SplitInt_[as.numeric(names(RemTab_))] + sign(Rem) * RemTab_
     }
+    
     SplitInt_
   }
+  
   #Calculate dwelling units by Bzone and housing type
-  DU_BzHt_full <- matrix(0,nrow = length(Bz), ncol = length(Ht), dimnames = list(Bz,Ht))
+  DU_BzHt_full <- matrix(0, nrow = length(Bz), ncol = length(Ht), dimnames = list(Bz,Ht))
   DU_BzHt <- table(L$Year$Household$Bzone, L$Year$Household$HouseType)
-  rowmatch <- match(rownames(DU_BzHt),rownames(DU_BzHt_full))
+  rowmatch <- match(rownames(DU_BzHt), rownames(DU_BzHt_full))
   colmatch <- match(colnames(DU_BzHt), colnames(DU_BzHt_full))
   DU_BzHt_full[rowmatch, colmatch] <- DU_BzHt
-  #Calculate dwelling units by Bzone, housing type and location type
-  DU_BzHtLt <- sweep(Props_BzHtLt, c(1,2), DU_BzHt_full, splitInt)
+  # Calculate dwelling units by Bzone, housing type and location type
+  for(i in 1:nrow(Props_BzHtLt)){
+    for(j in 1:ncol(Props_BzHtLt)){
+      DU_BzHtLt[i,j,] <- splitInt(Props_BzHtLt[i,j,], Tot = DU_BzHt_full[i,j])
+    }
+  }
+  
   #Function to assign a location type to a set of households
   assignLocType <- function(HouseID_, NumDU_Lt) {
     Lt <- names(NumDU_Lt)
