@@ -325,7 +325,7 @@ NewScenarioSet <- function(L){
   ModelFolder <- file.path(RunDir, L$Global$Model$ModelFolder)
   ScenarioBaselineInputFolder <- file.path(ModelFolder,"inputs")
   
-  NewScenarioSet_interior(ScenarioInputFolder , ScenarioManagerFile, ModelFolder, ScenarioBaselineInputFolder)   
+  NewScenarioSetInterior(ScenarioInputFolder , ScenarioManagerFile, ModelFolder, ScenarioBaselineInputFolder)   
   Out_ls <- initDataList()
   Out_ls$Global$Model <- list(Scenarioset = 1L)
   return(Out_ls)  

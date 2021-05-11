@@ -123,7 +123,7 @@ The next step is to build all the possible scenarios based on the scenario set b
 ScenarioInputFolder = "models/VEScenarios/scenario_inputs"
 ScenarioOutputFolder = "models/VEScenarios/scenarios"
 
-if(grepl('Unedited', list.files(ScenarioInputFolder, all.files = T, recursive = T))){
+if(any(grepl('Unedited', list.files(ScenarioInputFolder, all.files = T, recursive = T)))){
   stop('Please finish editing the input files before continuing. At least one is still `Unedited`.')
 }
 

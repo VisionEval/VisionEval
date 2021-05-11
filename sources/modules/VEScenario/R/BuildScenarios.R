@@ -389,7 +389,7 @@ BuildScenarios <- function(L){
   ScenarioOutputFolder <- file.path(RunDir, L$Global$Model$ScenarioOutputFolder)
   ModelFolder <- file.path(RunDir, L$Global$Model$ModelFolder)
 
-  BuildScenarios_interior(ScenarioInputFolder , ScenarioOutputFolder , ModelFolder) 
+  BuildScenariosInterior(ScenarioInputFolder , ScenarioOutputFolder , ModelFolder) 
   Out_ls <- initDataList()
   Out_ls$Global$Model <- list(CompleteBuild = 1L,
                               InputLabels = InputLabels_ar)
