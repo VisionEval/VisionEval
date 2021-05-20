@@ -1,0 +1,42 @@
+---
+title: "Make Tableau from Tara's Files"
+output: html_notebook
+---
+
+# Overhead
+```{r overhead, include = FALSE}
+packages_vector <- c("tidyverse")
+
+need_to_install <- packages_vector[!(packages_vector %in% installed.packages()[,"Package"])]
+
+if (length(need_to_install)) install.packages(need_to_install)
+
+for (package in packages_vector) {
+  library(package, character.only = TRUE)
+}
+
+source("tableau_scenario_viewer.R")
+```
+
+# Remote I-O
+```{r remote-io}
+input_dir <- "../input/"
+output_dir <- "../output/"
+
+input_viewer_dir <- paste0(input_dir, "VERSPM/")
+
+output_file_name <- paste0(output_dir, "for-tableau.csv")
+
+```
+
+# Make Scenario database
+```{r}
+output_df <- ve.tableau_scenario_viewer.MakeCSV(input_viewer_dir)
+```
+
+# Write Data
+```{r write-data}
+write_csv(output_df, path = output_file_name)
+```
+
+

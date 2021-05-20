@@ -257,6 +257,9 @@ Components:
 #   VE-State-Staged:
 #     Type: model
 #     Path: sources/models
+  VEScenarios:
+    Type: model
+    Path: sources/models
 
 # "Type: runtime" components are copied recursively to the runtime root
 # Their name is used to find them under the Path but unlike "script" components

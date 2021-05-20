@@ -116,7 +116,6 @@ This function requires 4 inputs by user:
 After running the code above, a new scenario set with all the folder and sub-folders will be created and 
 all the required inputs will be copied to the relevant scenario folder. However all the inputs are from the base mode and needs to be modified for different scenario levels. You will see all the inputs has the prefix of UNEDITED- to signal to the user that this file needs to be edited. After modifying all the files with the correct inputs you need to remove the UNEDITED prefix from all the files names.
 
-
 The next step is to build all the possible scenarios based on the scenario set by running the following code:
 
 ```{r build_scenarios}
