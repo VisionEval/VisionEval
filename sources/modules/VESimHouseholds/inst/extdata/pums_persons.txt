@@ -24,7 +24,7 @@ INCTOT: Person’s Total Income in 1999
 Source:
 -------
 Data included in this package is an extract of the 5-Percent Public Use Microdata Sample (PUMS) from the 2000 Census for the State of Oregon. The web address for the Census 2000 PUMS data is:
-https://www.census.gov/census2000/PUMS5.html
+https://www.census.gov/data/datasets/2000/dec/microdata.html
 The Oregon data was downloaded from:
 https://www2.census.gov/census_2000/datasets/PUMS/FivePercent/Oregon/
 The extract was produced by the Process_2000_PUMS.R script included in https://github.com/gregorbj/Process_2000_PUMS.
