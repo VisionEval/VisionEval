@@ -27,4 +27,4 @@ Data included in this package is an extract of the 5-Percent Public Use Microdat
 https://www.census.gov/census2000/PUMS5.html
 The Oregon data was downloaded from:
 https://www2.census.gov/census_2000/datasets/PUMS/FivePercent/Oregon/
-The extract was produced by the Process_2000_PUMS.R script included in this package.
+The extract was produced by the Process_2000_PUMS.R script included in https://github.com/gregorbj/Process_2000_PUMS.
