@@ -7,11 +7,7 @@ VE_RUNTESTS?=Default
 VE_EXPRESS?=YES # should be NO, or unset, for standard use
 VE_BRANCH?=$(shell git branch --show-current 2>/dev/null || echo visioneval)
 ifeq ($(OS),Windows_NT)
-<<<<<<< HEAD
-  VE_R_VERSION?=4.1.2
-=======
-  VE_R_VERSION?=4.0.5
->>>>>>> db3ed1bc (Updated to build with VE2001NHTS as merely 'Suggested')
+  VE_R_VERSION?=4.1.0
   RTERM:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
   WINDOWS=TRUE
 else
