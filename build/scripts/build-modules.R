@@ -417,7 +417,7 @@ for ( module in seq_along(package.names) ) {
         # Just do installation directly from source package (no binary package created)
         if ( ! package.installed ) {
           cat("++++++++++ Installing source package:",src.module,"\n")
-          if ( package.names[module] %in% pkgs.installed ) remove.package(package.names[module])
+          if ( package.names[module] %in% pkgs.installed ) remove.packages(package.names[module])
           install.packages(src.module, repos=NULL, lib=ve.lib, type="source")
           cat("++++++++++ DONE",package.names[module],"\n\n")
         } else {
