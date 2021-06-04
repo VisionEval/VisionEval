@@ -71,6 +71,7 @@ ve.env$RunParam_ls <- list()
 #'   \item{ModelDir}{Default value is provided in the visioneval framework. In VEModel, ModelDir is
 #'   constructed when a model is loaded. It is then used as the root for most of the following parameters,
 #'   as well as the model parameters such as ParamDir and InputsDir defined in the framework.}
+#'
 #'   \item{ModelRoot}{Where to search in ve.runtime for model directories (default "models")}
 #'   \item{ModelSetup}{File name for 'new style' model (default "model_setup.yml")}
 #'   \item{ModelScript}{Regular expression for run_model file name (default "run_model\\.R")}
@@ -89,7 +90,7 @@ ve.env$RunParam_ls <- list()
 #'   \item{QueryFileName}{Default name for a newly constructed query (within QueryDir) (default
 #'   "New-Query.VEqry")}
 #'   \item{QueryOutputTemplate}{File template for output from the $query function, within
-#'   OutputDir/query_%datetime% (default "Measures_%scenario%_%years%_%geography%.csv")}
+#'   OutputDir/query_\%datetime\% (default "Measures_\%scenario\%_\%years\%_\%geography\%.csv")}
 #' }
 #'
 #' @return an R environment "ve.env"

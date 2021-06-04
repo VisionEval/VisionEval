@@ -394,7 +394,7 @@ setModelState <- function(ChangeState_ls=list(), FileName = NULL, Save=TRUE) {
 #' reports the model state file name for this model (from configuration)
 #'
 #' @param Param_ls a run parameter list to search (if NULL, the default, load the RunParam_Ls from
-#    the modelEnvironment if that exists
+#    the modelEnvironment if that exists)
 #' @return a character string containing the ModelState file base name
 #' @export
 getModelStateFileName <- function(Param_ls=NULL) {

@@ -55,7 +55,7 @@ NULL
 #'   like ve.runtime/models. Usually it will just the name of model directory within
 #'   ve.runtime/models.}
 #'   \item{log}{The error threshold to display within the function (from most detailed to least detailed,
-#'   one of the following: \code{c("trace","debug","info",warn","error","fatal")}. The default can
+#'   one of the following: \code{c("trace","debug","info","warn","error","fatal")}. The default can
 #'   be configured in \code{visioneval.cnf} using the LogLevel parameter.}
 #'   \item{run}{Describes how to run the model if a previous run exists. Options are
 #'   "save","reset","continue". See "Details".}
@@ -107,6 +107,7 @@ NULL
 #'   the query is run. The query file name will be built from the QueryName if FileName is not explicitly provided.}
 #'   \item{load}{For a query, if FileName is provided and exists, then attempt to load the file. If it is FALSE, create
 #'   a blank query to associate with the FileName. Usually you won't want to touch this parameter.}
+#' }
 #'
 #' @section Details:
 #'

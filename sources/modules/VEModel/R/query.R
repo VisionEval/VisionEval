@@ -596,7 +596,7 @@ ve.query.run <- function(
     } else if ( is.list(Results) ) {
       if ( "VEModel" %in% class(Results[[1]]) ) {
         Results <- lapply( Results, function(m) m$results() )
-      } else if ( is.character(Results) {
+      } else if ( is.character(Results) ) {
         # TODO: support this - just make a VEResults object from each
         # element of Results
         visioneval::writeLog(msg<-"Unsupported: character list of result paths",Level="error")
