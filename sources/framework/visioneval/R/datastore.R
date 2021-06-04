@@ -1055,8 +1055,7 @@ writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL) {
 #' specifications in which each component includes all the geographic datasets
 #' for the table represented by the component.
 #' @export
-createGeoIndexList <-
-  function(Specs_ls, RunBy, RunYear) {
+createGeoIndexList <- function(Specs_ls, RunBy, RunYear) {
     G <- getModelState()
     #Make data frame of all tables and groups
     TablesToIndex_df <-
@@ -1298,8 +1297,7 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
 #' @return A logical value which is TRUE if the data are successfully saved to
 #' the datastore.
 #' @export
-setInDatastore <-
-  function(Data_ls, ModuleSpec_ls, ModuleName, Year, Geo = NULL, GeoIndex_ls = NULL) {
+setInDatastore <- function(Data_ls, ModuleSpec_ls, ModuleName, Year, Geo = NULL, GeoIndex_ls = NULL) {
     #Get the model state
     G <- getModelState()
     #Make any specified tables
@@ -1409,8 +1407,7 @@ setInDatastore <-
 #' @return A logical indicating successful completion. Most of the outputs of
 #' the function are the side effects of writing data to the datastore.
 #' @export
-inputsToDatastore <-
-  function(Inputs_ls, ModuleSpec_ls, ModuleName) {
+inputsToDatastore <- function(Inputs_ls, ModuleSpec_ls, ModuleName) {
     G <- getModelState()
     #Make sure the inputs are error free
     if (length(Inputs_ls$Errors) != 0) {

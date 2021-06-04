@@ -471,8 +471,7 @@ checkDataConsistency <- function(DatasetName, Data_, DstoreAttr_) {
 #' UNITS component has been parsed and the YEAR and MULTIPLIER components
 #' extracted, the UNITS component is modified to only be the units name.
 #' @export
-parseUnitsSpec <-
-  function(Spec_ls, ComponentName) {
+parseUnitsSpec <- function(Spec_ls, ComponentName) {
     #Define function to return a multiplier value from a multiplier string
     #NA if none, NaN if not a properly specified scientic notation (e.g. 1e3)
     getMultiplier <- function(String) {
@@ -1100,8 +1099,7 @@ checkSpec <- function(Spec_ls, SpecGroup, SpecNum) {
   #Define function to check one specification requirement
   #ReqName argument is the requirement name (e.g. TYPE). Is NULL for RunBy
   #specification group.
-  checkRequirement <-
-    function(ReqName = NULL){
+  checkRequirement <- function(ReqName = NULL){
       if (is.null(ReqName)) {
         Spec <- Spec_ls
         Req_ls <- Require_ls
@@ -1504,8 +1502,7 @@ sortGeoTable <- function(Data_df, Table, Group) {
 #' the list is named with the value of the Name component (i.e. the field name
 #' without the year and multiplier elements.)
 #' @export
-parseInputFieldNames <-
-  function(FieldNames_, Specs_ls, FileName) {
+parseInputFieldNames <- function(FieldNames_, Specs_ls, FileName) {
     #Define function to return a multiplier value from a multiplier string
     #NA if none, NaN if not a properly specified scientic notation (e.g. 1e3)
     getMultiplier <- function(String) {
@@ -1686,8 +1683,7 @@ parseInputFieldNames <-
 #' errors. The second (Data) is a list containing the data in the input files
 #' organized in the standard format for data exchange with the datastore.
 #' @export
-processModuleInputs <-
-  function(ModuleSpec_ls, ModuleName) {
+processModuleInputs <- function(ModuleSpec_ls, ModuleName) {
     G <- getModelState()
     InpSpec_ls <- (ModuleSpec_ls$Inp)
 

@@ -385,13 +385,14 @@ savePackageDataset <- function(dataset,overwrite=TRUE,keep=FALSE,compress="xz") 
       if ( ! file.exists(file) ) { traceback(); stop("File NOT saved!\n") } else cat("Saved\n")
     }
   } else if (build.phase == "BUILD" ) {
-    # During the BUILD phase, we won't keep the dataset unless explicitly requested.
-    # Some modules will break (e.g. using variable as an exported function default
-    # parameter) if the object is removed. The "Undefined Global Variable" message
-    # from R CMD check will identify variables that are used in that wrong way.
-    # Currently, they won't get deleted if they hadn't already been saved to a data/ set.
-    # The right way is to save the variable to data/ and then reload it inside the
-    # function if the variable default is not a usable value (e.g. NULL)
+    # During the BUILD phase, we won't keep the dataset unless explicitly requested. Some modules
+    # will break (e.g. using variable as an exported function default parameter) if the object is
+    # removed. The "Undefined Global Variable" message from R CMD check will identify variables that
+    # are used in that wrong way. Currently, they won't get deleted if they hadn't already been
+    # saved to a data/ set. The right way is to save the variable to data/ and then reload it inside
+    # the function if the variable default is not a usable value (e.g. NULL). Eventually all of this
+    # becomes moot when model estimation is pushed down into a function that is called as part of
+    # a separate build step.
     Msg_ <- paste(dsname,"in R/ space")
     if ( ! keep ) {
       rm(list=dsname,envir=parent.frame())
@@ -439,8 +440,7 @@ savePackageDataset <- function(dataset,overwrite=TRUE,keep=FALSE,compress="xz") 
 #' @return A character vector containing a list of error messages or having a
 #' length of 0 if there are no error messages.
 #' @export
-checkModuleOutputs <-
-  function(Data_ls, ModuleSpec_ls, ModuleName) {
+checkModuleOutputs <- function(Data_ls, ModuleSpec_ls, ModuleName) {
     #Initialize Errors vector
     Errors_ <- character(0)
     #Check that required info for specified tables is present in the outputs
@@ -556,8 +556,7 @@ checkModuleOutputs <-
 #' @return the value in the 'SearchRange_' for the function parameter which
 #' matches the target value.
 #' @export
-binarySearch <-
-  function(Function,
+binarySearch <- function(Function,
            SearchRange_,
            ...,
            Target = 0,
@@ -711,8 +710,7 @@ makeModelFormulaString <- function (EstimatedModel) {
 #' search range, a two-element vector identifying if the search range produces
 #' NA or NaN values.
 #' @export
-applyBinomialModel <-
-  function(Model_ls,
+applyBinomialModel <- function(Model_ls,
            Data_df,
            TargetProp = NULL,
            CheckTargetSearchRange = FALSE,
@@ -836,8 +834,7 @@ applyBinomialModel <-
 #' search range, a summary of predicted values when the model is run with
 #' dispersion set at the high value of the search range.
 #' @export
-applyLinearModel <-
-  function(Model_ls,
+applyLinearModel <- function(Model_ls,
            Data_df,
            TargetMean = NULL,
            CheckTargetSearchRange = FALSE) {
@@ -904,8 +901,7 @@ applyLinearModel <-
 #' @return TRUE if successful. Has a side effect of updating the VisionEval
 #' name registry.
 #' @export
-writeVENameRegistry <-
-  function(ModuleName, PackageName, NameRegistryList = FALSE, NameRegistryDir = NULL) {
+writeVENameRegistry <- function(ModuleName, PackageName, NameRegistryList = FALSE, NameRegistryDir = NULL) {
     if ( ! NameRegistryList ) {
       #Check whether the name registry file exists
       if (is.null(NameRegistryDir)) {
@@ -1030,8 +1026,7 @@ writeVENameRegistry <-
 #' frame containing the respective Inp and Set specifications of registered
 #' modules.
 #' @export
-readVENameRegistry <-
-  function(NameRegistryDir = NULL) {
+readVENameRegistry <- function(NameRegistryDir = NULL) {
     #Check whether the name registry file exists
     if (is.null(NameRegistryDir)) {
       NameRegistryFile <- "VENameRegistry.json"
@@ -1071,8 +1066,7 @@ readVENameRegistry <-
 #' @return A data frame containing the Get specifications for the identified
 #' datasets.
 #' @export
-getRegisteredGetSpecs <-
-  function(Names_, Tables_, Groups_, NameRegistryDir = NULL) {
+getRegisteredGetSpecs <- function(Names_, Tables_, Groups_, NameRegistryDir = NULL) {
     #Put Names_, Tables_, Groups_ into data frame
     Datasets_df <-
       data.frame(
@@ -1252,8 +1246,7 @@ fetchModuleData <- function(ModuleName, PackageName, Year, Geo = NULL) {
 #' 'Package' element is the name of the package that the calling module is in.
 #' @return TRUE if all packages and modules are present and FALSE if not.
 #' @export
-checkModuleExists <-
-  function(ModuleName,
+checkModuleExists <- function(ModuleName,
            PackageName,
            InstalledPkgs_ = rownames(installed.packages()),
            CalledBy = NA) {

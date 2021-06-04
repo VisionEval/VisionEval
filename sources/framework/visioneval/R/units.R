@@ -42,8 +42,7 @@
 #' Warnings - a string containing a warning message or character(0) if no
 #' warning.
 #' @export
-convertUnits <-
-  function(Values_, DataType, FromUnits, ToUnits = "default") {
+convertUnits <- function(Values_, DataType, FromUnits, ToUnits = "default") {
     #Define return value template
     Result_ls <- list(
       Values = Values_,
@@ -231,8 +230,7 @@ convertUnits <-
 #' Converted attribute of the returned values is FALSE. Otherwise the conversion
 #' is done and the Converted attribute of the returned values is TRUE.
 #' @export
-convertMagnitude <-
-  function(Values_, FromMagnitude, ToMagnitude) {
+convertMagnitude <- function(Values_, FromMagnitude, ToMagnitude) {
     if (is.na(FromMagnitude) | is.na(ToMagnitude)) {
       Result_ <- Values_
       attributes(Result_) <- c(attributes(Values_), list(Converted = FALSE))
@@ -285,8 +283,7 @@ convertMagnitude <-
 #' Values_ are returned with a Converted attribute of FALSE. Otherwise the
 #' conversion is done and the Converted attribute of the returned values is TRUE.
 #' @export
-deflateCurrency <-
-  function(Values_, FromYear, ToYear) {
+deflateCurrency <- function(Values_, FromYear, ToYear) {
     Deflators_df <- getModelState()$Deflators
     Years_ <- as.character(Deflators_df$Year)
     Idx_ <- Deflators_df$Value

@@ -765,8 +765,7 @@ documentModule <- function(ModuleName){
 
   #Define function to trim strings
   #-------------------------------
-  trimStr <-
-  function(String, Delimiters = NULL, Indices = NULL, Characters = NULL) {
+  trimStr <- function(String, Delimiters = NULL, Indices = NULL, Characters = NULL) {
     Chars_ <- unlist(strsplit(String, ""))
     if (!is.null(Delimiters)) {
       Start <- which(Chars_ == Delimiters[1]) + 1
@@ -784,8 +783,7 @@ documentModule <- function(ModuleName){
 
   #Define function to split documentation into list
   #------------------------------------------------
-  splitDocs <-
-  function(Docs_, Idx_) {
+  splitDocs <- function(Docs_, Idx_) {
     Starts_ <- c(1, Idx_ + 1)
     Ends_ <- c(Idx_ - 1, length(Docs_))
     apply(cbind(Starts_, Ends_), 1, function(x) Docs_[x[1]:x[2]])
