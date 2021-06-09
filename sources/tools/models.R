@@ -437,7 +437,7 @@ ve.model.index <- function() {
     # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each
     # column)
     # message("Adding inputs to Inputs data.frame")
-    ccases <- complete.cases(GroupTableName)
+    ccases <- complete.cases(GroupTableName[,c("Group","Table","Name")])
     GroupTableName <- GroupTableName[ccases,]
     # message("Length of complete.cases:",nrow(GroupTableName))
     Index <- rbind(Index,GroupTableName)
