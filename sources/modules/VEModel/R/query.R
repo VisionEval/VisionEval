@@ -653,6 +653,7 @@ ve.query.run <- function(
 
   # Construct the OutputFile name
   # Default QueryOutputTemplate = "%queryname%_Results_%timestamp%.csv"
+  browser()
   if ( save ) {
     OutputFileToWrite <- stringr::str_replace(OutputFile,"%queryname%",self$QueryName)
     TimeStamp <- visioneval::fileTimeStamp(Sys.time())
@@ -1239,7 +1240,6 @@ makeMeasureDataFrame <- function(measureEnv) {
   Values_       <- sapply(Measures_, get, envir=measureEnv)
   Units_        <- unname(sapply(Measures_, function(x) attributes(get(x,envir=measureEnv))$Units))
   Description_  <- unname(sapply(Measures_, function(x) attributes(get(x,envir=measureEnv))$Description))
-  browser()
   Data_df       <- data.frame(
     Measure     = Measures_,
     thisYear    = Values_,

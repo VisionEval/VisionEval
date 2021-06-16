@@ -40,7 +40,8 @@ NULL
 #' mdl$log()
 #' mdl$set(show="values", src=NULL, namelist=NULL, pattern=NULL,Param_ls=NULL)
 #' mdl$save(FileName="visioneval.cnf")
-#' mdl$copy(newName=NULL,newPath=NULL)
+#' mdl$copy(newName=NULL,newPath=NULL,copyResults=TRUE)
+#' mdl$rename(Name=NULL,Scenario=NULL,Description=NULL,Save=TRUE)
 #' mdl$results(stage,Param_ls=NULL)
 #' mdl$resultspath(stage,Param_ls=NULL)
 #' mdl$query(QueryName=NULL,FileName=NULL,load=TRUE)
@@ -103,6 +104,12 @@ NULL
 #'   the name of the model being copied.}
 #'   \item{newPath}{The directory into which to put the copy of this model. Default if NULL is ve.runtime/models
 #'   directory.}
+#'   \item{copyResults}{logical: if TRUE, copy the results, otherwise only copy the model setup. If
+#'   the ResultsDir is the same as the root (classic VisionEval), results will always be copied.}
+#'   \item{Model}{A character vector with the new model identifier (name) for each stage in the model}
+#'   \item{Scenario}{A character vector with the new scenario identifier for each stage in the model}
+#'   \item{Description}{A character vector with the new description string for each stage in the model}
+#'   \item{Save}{logical; if true save new name etc back to existing ModelState}
 #'   \item{QueryName}{The name to use for the Query, which will be used to construct the output directory name when
 #'   the query is run. The query file name will be built from the QueryName if FileName is not explicitly provided.}
 #'   \item{load}{For a query, if FileName is provided and exists, then attempt to load the file. If it is FALSE, create
@@ -137,23 +144,23 @@ confirmDialog <- function(msg) {
 
 ## Helper
 #  Generate a list of directories that might contain models
-#  Model roots: ve.runtime/models, getwd()/models, ve.runtime, getwd()
-getModelRoots <- function(get.root=0) {
+#  referring to getwd(), ve.runtime, and <ModelRoot>
+getModelRoots <- function(get.root=0,Param_ls=NULL) {
   roots <- c( getwd() )
   if ( exists("ve.runtime") ) {
     ve.runtime <- get("ve.runtime")
     if ( ve.runtime != getwd() ) roots <- c( ve.runtime, roots )
   }
   # Hierarchy of roots:
-  #    ve.runtime/ModelRoot (if exists)
-  #    getwd()/ModelRoot (if exists)
+  #    ve.runtime/<ModelRoot> (if exists)
+  #    getwd()/<ModelRoot> (if exists)
   #    ve.runtime
   #    getwd()
-  modelRoot <- file.path(roots,visioneval::getRunParameter("ModelRoot"))
+  modelRoot <- file.path(roots,visioneval::getRunParameter("ModelRoot",Param_ls=Param_ls))
   if ( length(modelRoot)>0 ) {
     if ( isAbsolutePath(modelRoot[1]) ) {
       modelRoot <- modelRoot[1]
-    } else {
+    } else { # happens if ve.runtime is defined but not an absolute pqth (unlikely)
       test.paths <- normalizePath(file.path(roots,modelRoot))
       modelRoot <- test.paths[dir.exists(test.paths)]
       if ( length(modelRoot)==0 || ! nzchar(modelRoot[1]) ) {
@@ -165,56 +172,98 @@ getModelRoots <- function(get.root=0) {
   }
   roots <- c( modelRoot, roots)
   if ( get.root > length(roots) ) get.root <- 1
-  if ( get.root>0 ) return(roots[get.root]) else return(roots)
+  if ( get.root > 0 ) return(roots[get.root]) else return(roots)
+}
+
+## Helper function: getBaseModel
+getBaseModel <- function(modelStages) {
+  # Locate BaseModel parameter in Param_ls
+  # modelStages parameter is a list of model stages already previously defined for this model
+  # if it exists, find the BaseModel by deparsing the parameter
+  # 
+  # Check if BaseModel is defined in Param_ls. If so, interpret it as a location:
+  #   If pipe included, first part is model locator, second part is stage within it
+  #   Model locator is checked like this:
+  #     1. Name of stage already in self$ModelStages (part of what we have built so far)
+  #     2. Name of another model that can be opened with VEModel$new
+  #   The part after the (optional) pipe is used as an index into the modelStages of the
+  #     model that was opened before the pipe. If not provided, use the last terminal
+  #     element in the list of model stages from the other model
+  # What we need to know about the BaseModel: structural input settings
+  #   InputPath, ModelScriptFile, (Base)ModelDir, ParamDir, RunPath (for datastore and
+  #     model state).
+  #   plus where to find its Datastore - each stage needs to keep its RunPath in
+  #   the ModelState file. We can use that to obtain the BaseModel model state
+  #   file location (even if it's a stage itself)
+  return(Param_ls)
+}
+
+## Helper function: getModelStage
+# Check if StageDir within modelDir contains a model stage and return a ModelStage structure
+## Helper Function
+# Examine a directory for a complete model:
+#  0. Parameters:
+#       modelDir: an absolute path in the file system to inspect for a model stage
+#       Param_ls: the current run parameters to be modified here and used to navigate
+#       stageDir: if ".", ignore it (use modelDir only). Otherwise this is a relative
+#          path for the stage (and its default name). If stageDir is not ".", then also
+#          do not allow override of ParamDir if defined (nor DatastoreName, DatastoreType)
+#          ResultsDir is also ignored when building stages (always relative to overall ModelDir)
+#  1. Load any visioneval.cnf if present (possibly redefining structural directory names)
+#       Drop any of the ignore fields if StageDir is not "." (ParamDir, DatastoreName, DatastoreType)
+#  1A. Check for BaseModel defined and layer its structural parameters "underneath" visioneval.cnf.
+#  2. Establish ParamDir if <ModelDir>/<ParamDir> does not exist
+#       Set it to <StageDir>/<ParamDir> if <ModelDir>/<StageDir>/<ParamDir> exists
+#       <ModelDir>/<ParamDir> (with ParamDir possibly redefined) must exist for the stage to be valid
+#  3. Override ModelScriptFile as <ModelDir>/<StageDir>/<ScriptsDir>/<ModelScript> if that file exists
+#       Otherwise leave existing ModelScriptFile
+#       ModelScriptFile must be defined for the stage to be valid
+#       Parse the ModelScriptFile for initializeModel parameters ("dots")
+#  4. Run the Parameter Initialization (including ModelScriptFile$initializeModel arguments)
+#       That's visioneval::getModelParameters
+#  5. Update InputPath in StageParams if InputDir found specifically in ModelDir/StageDir
+#       There must at least one element in InputPath for the stage to be valid
+#       All elements of <InputPath>/<InputDir> must exist (but may be empty)
+#  6. It's a model stage if:
+#       InputPath has at least one element, and all <InputPath>/<InputDir> can be found
+#       <ModelDir>/<ParamDir> (with ParamDir possibly redefined) exists in the file system
+#       ModelScriptFile can be found
+#       Param_ls has Model(Name), Scenario, and Description
+#       Param_ls has BaseYear, Years and Region
+#  7. Return ModelStage structure (or some error condition)
+#     StageModelState
+#       Filled in when the stage is loaded (not just found); NA initially; triggers a load
+#       when we try to do anything that requires it.
+#     StageInputPath
+#       All the places to look for InputDir and files we need...
+#     StageRunPath
+#       The directory in which the stage will run to create its ModelState.Rda, Datastore
+#       and Log file (absolute).
+#     StageName
+#       Becomes name of stage entry in self$modelStages
+#       Might come from visioneval.cnf, or from StageDir by default
+#     StageScriptPath
+#       Might be ModelDir/ModelScript, might be ModelDir/StageDir/ScriptsDir/ModelScript
+#     StageParam_ls
+#       Param_ls updated with stage's visioneval.cnf - basis for ModelStage for this stage
+#       Should get default Model(Name), Scenario, Description if not defined in stage's visioneval.cnf
+#       May drop parameters not relevant to running the model or reading its results
+#     StageBaseModel
+#       A ModelStage structure for the BaseModel (which may itself have a BaseModel, etc.)
+#       The chain of run paths is used when setting up the child model Datastore list along
+#       with StageParam_ls (to load the relevant ModelState and Datastore).
+#
+addModelStage <- function(modelStages, modelDir, Param_ls, stageDir=".") {
+  # Augment modelStages with new modelStage
+  # Use modelStages to locate BaseModels specified by relative path
+  return(modelStages)
 }
 
 ## Helper function
-#  Look for run_model.R (any case) in root or subdirectories and return full paths
-#  modelPath is where to look (possibly more than one directory)
-#  searchScript is a name or pattern to search for (character string)
-#  treat searchScript as an R regular expression.
-modelInRoot <- function(modelPath,searchScript) {
-  # Search initially just in modelPath, then in first-level subdirectories
-  # Expect modelPath to be normalized
-  grepArgs <- list(searchScript,value=TRUE,ignore.case=TRUE)
-  dirs <- list(dir(modelPath,full.names=TRUE))
-  paths <- do.call("grep",c(grepArgs,dirs))
-  if ( length(paths) == 0 ) {
-    dirs <- list(dir(list.dirs(modelPath,recursive=FALSE),full.names=TRUE))
-    paths <- do.call("grep",c(grepArgs,dirs))
-    visioneval::writeLog(dirs,Level="debug")
-  }
-  if ( length(paths) > 0 ) {
-    # All matching searchScript files with path relative to modelPath
-    paths <- sub("^\\./","",sub( modelPath,".",paths )) # still includes the file name
-    # Must have no more than one run_model.R per subdirectory
-    if ( ( any(dupes <- duplicated(dirname(paths))) ) ) {
-      Msg <- paste(
-        "Model script search yielded more than one file per Model directory:\n\n",
-        paste(paths[ dirname(paths) %in% dirname(paths)[dupes] ],"\n",sep="",collapse="\n"),
-        "\nAdjust ModelScript pattern in configuration\n",
-        "or remove/rename one of the excess scripts."
-      )
-      stop(Msg)
-    }
-  }
-  return(paths)
-}
-
-## Helper function
-
-## Helper function
-# Examine modelPath and return (sub-)directories containing run_model.R
-# Param_ls provides a list of configuration values
-# Returns a list with the following elements:
-#   isValid : a boolean, TRUE if we found model(s), FALSE if we did not
-#   ModelScript : a vector (length of stagePaths) with the actual files found matching
-#      the ModelScript RunParameter.
-#   modelPath : character vector (length 1); the normalized version of parameter
-#   stagePaths : character vector of absolute paths below modelPath that were found
-#      to contain files named <runModelName> (per configuration). First part of
-#      each path will exactly match modelPath.
-findModel <- function( modelPath, Param_ls ) {
+#  Build ModelStages based on contents of modelPath
+#  This function works on a modelDir (absolute path) and finds all the stages
+# TODO: return the list of model stages found for this model
+findModel <- function( modelDir, Param_ls ) {
 
   find_ls <- list()
   find_ls$isValid <- FALSE # we'll change our mind later...
@@ -224,13 +273,18 @@ findModel <- function( modelPath, Param_ls ) {
     return( find_ls )
   }
 
+  # TODO: get model Stage in modelDir
+  # Examine ModelStages run parameter for subdirectories to consider
+  # If no ModelStages and stage in modelDir is incomplete, visit non-structural
+  #  sub-directories (based on Param_ls) to add modelStages
+  # Otherwise if ModelStages is defined, copy that structure into self$modelStages
+  #  and fill it in.  Error if any stage is not complete
+
   # Establish the local name for run_model.R
   # VisionEval.R startup will set ModelScript from site configuration file
   #   located in runtime root (first of .visioneval, VisionEval.ini, VisionEval.cnf)
   #   with same default as here ("run_model.R")
   searchScript <- visioneval::getRunParameter("ModelScript",Param_ls=Param_ls)
-
-  # TODO: add new style model_setup.yml file as an alternative (only in ModelDir)
 
   # check if modelPath contains a runModelName
   findPath <- grep(modelPath,searchScript,ignore.case=TRUE,value=TRUE)
@@ -270,8 +324,6 @@ findModel <- function( modelPath, Param_ls ) {
     find_ls$modelPath <- modelPath
   }
 
-  # TODO: replace stages architecture with new BaseModel / RunStep architecture
-  
   # Attempt to locate runModelName in directory and first-level sub-directories
   # The stagePaths need to be relative to modelPath
   find_ls$stagePaths <- modelInRoot(find_ls$modelPath,searchScript)
@@ -349,7 +401,7 @@ installStandardModel <- function( modelName, modelPath, confirm, skeleton=c("sam
     return(model) # Expecting a vector of available standard model names
   } # Otherwise model is the path to them model we will install
 
-  # Set up destination modelPath
+  # Set up destination modelPath (always put in the first defined root)
   if ( ! is.list(Param_ls) ) Param_ls <- list()
   root <- getModelRoots(1)
   if ( missing(modelPath) || is.null(modelPath) ) modelPath <- modelName
@@ -401,8 +453,8 @@ installStandardModel <- function( modelName, modelPath, confirm, skeleton=c("sam
   return( list(modelName=modelName,modelPath=installPath) )
 }
 
-ve.model.copy <- function(newName=NULL,newPath=NULL) {
-
+ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE) {
+  # Copy the current model to NewName (in ModelDir, unless newPath is also provided)
   if ( ! private$p.valid ) {
     visioneval::writeLog(paste0("Invalid model: ",self$status),level="error")
     return( NULL )
@@ -426,7 +478,7 @@ ve.model.copy <- function(newName=NULL,newPath=NULL) {
   newModelPath <- normalizePath(newModelPath,winslash="/",mustWork=FALSE)
 
   dir.create(newModelPath,showWarnings=FALSE)
-  model.files <- self$dir(root=TRUE) # Leave behind results and outputs
+  model.files <- self$dir(root=TRUE,results=copyResults)
   copy.subdir <- dirname(model.files)
   unique.dirs <- unique(copy.subdir)
   for ( d in unique.dirs ) {
@@ -441,6 +493,75 @@ ve.model.copy <- function(newName=NULL,newPath=NULL) {
     }
   }
   return( openModel(newModelPath) )
+}
+
+ve.model.rename <- function(Model=NULL,Scenario=NULL,Description=NULL,Save=TRUE) {
+  # Change description for a model that has already been run under another name
+  # Reports, but does not change, the underlying configuration file, so the
+  # description changes will be lost if the model is re-run...
+
+  # Need a valid model
+  if ( ! private$p.valid ) return(self)
+
+  # Prepare update list
+  upd <- list(Model=Model,Scenario=Scenario,Description=Description)
+  upd <- upd[!sapply(upd,is.null)]
+  if ( length(upd)==0 ) return(self) # Nothing to do
+
+  # Update model name in the object, if Model is in upd
+  if ( "Model" %in% names(upd) ) self$modelName <- upd$Model;
+
+  # Update self$ModelState, which is a named list of ModelStates (for each stage)
+  # Check self$stageCount and warn if any element of upd is not same length as self$ModelState
+  lens <- which(sapply(upd,length)!=self$stageCount)
+  if ( length(lens)>0 ) {
+    msg <- paste0("Replacement length does not match stage count (",self$stageCount,") for ",paste(names(upd)[lens],collapse=","))
+    visioneval::writeLog(msg,Level="error")
+    stop(msg)
+  }
+
+  # Update ModelState Model/Scenario/Description for each stage
+  for ( i in 1:self$stageCount ) {
+    # Get the model state for stage i
+    ms <- self$ModelState[[i]]
+    up <- sapply(upd,function(x)x[i])
+    ms[names(up)] <- up;
+
+    # Locate previous source for model description
+    prev.src <- (attr(ms$RunParam_ls,"source")[names(up)])[1]
+    if ( is.na(prev.src) ) {
+      stop(
+        visioneval::writeLog(paste("Program bug: No source for",names(up.src),sep=" ",collapse=","),Level="error")
+      )
+    }
+    
+    # Log a message stating the original configuration file
+    visioneval::writeLog("Overriding model description originally from:",Level="warn")
+    visioneval::writeLog(prev.src,Level="warn")
+
+    # Update RunParam_ls in ModelState
+    up.src <- visioneval::addParameterSource(up,"Manual Rename")
+    ms$RunParam_ls <- visioneval::mergeParameters( ms$RunParam_ls, up.src )
+    self$ModelState[[i]] <- ms;
+
+    # Save changes to ModelState
+    if ( Save ) {
+      up["RunParam_ls"] <- ms$RunParam_ls;
+      # locate model state to rewrite
+      msfile <- file.path(self$resultspath,visioneval::getModelStateFileName(Param_ls=ms$RunParam_ls))
+      # Update model state file if it exists (making the change "permanent")
+      # However, we're not updating the original configuration, so the change will be lost
+      #  if the model is run again.
+      if ( file.exists(msfile) ) {
+        visioneval::setModelState(up,Filename=msfile)
+        visioneval::writeLog(paste("Saving to ModelState:",msfile),Level="warn")
+      } else {
+        visioneval::writeLog("No existing model state to update",Level="warn")
+      }
+    }
+  }
+  
+  return( self ) # Will print model if running interactively
 }
 
 # Helper function:
@@ -612,8 +733,7 @@ ve.model.loadModelState <- function(log="error") {
           RequiredPackages <- unique(c(RequiredPackages, AlreadyInitialized))
         }
       }
-      AllSpecs_ls <- visioneval::parseModuleCalls(parsedScript$ModuleCalls_df, AlreadyInitialized, RequiredPackages, Save=FALSE)
-      self$ModelState[[ stageIndex ]][["AllSpecs_ls"]] <- AllSpecs_ls
+      visioneval::parseModuleCalls(parsedScript$ModuleCalls_df, AlreadyInitialized, RequiredPackages, Save=FALSE)
     }
     sumspec <- summarizeSpecs(self$ModelState[[ stageIndex ]]$AllSpecs_ls)
     if ( is.null(self$specSummary) ) {
@@ -660,7 +780,14 @@ ve.model.init <- function(modelPath=NULL,log="error") {
     self$status <- "No Model"
     private$p.valid <- FALSE
   } else {
+    # TODO: findModel returns ModelStages structure
     # Set up the model name, folder tree and script files
+    #  self$modelPath == ModelDir (an absolute path)
+    #  self$modelStages == list of ModelStage structures
+    #     StageDir (relative always to ModelDir, and later for ResultsDir)
+    #     RunParam_ls for this stage (specifying script, inputs, etc)
+    #     StageName (also name of ModelStage list item)
+    #     ModelState_ls for this stage will be built or added during Load
     self$RunParam_ls <- modelPaths$RunParam_ls; # Updated from model configuration file, if any
     self$modelPath <- modelPaths$modelPath
     self$modelName <- basename(self$modelPath)
@@ -671,7 +798,8 @@ ve.model.init <- function(modelPath=NULL,log="error") {
     initMsg <- paste("Loading Model",self$modelName)
     visioneval::writeLog(initMsg,Level="info")
 
-    private$loadModelState(log=log) # load bare bones...
+    # TODO: skip loading if desired (flag on this function)
+    private$loadModelState(log=log) # load model states for model stages
 
     if ( private$p.valid ) {
       visioneval::writeLog(self$modelPath,Level="info")
@@ -855,6 +983,30 @@ ve.model.save <- function(FileName="visioneval.cnf") {
   invisible(self$RunParam_ls)
 }
 
+ve.model.archive <- function() {
+  # TODO: Rebuild for new stage structure (re-write ResultsDir so we create and archive
+  # stage sub-directories)
+  # If SaveDatastore is true when a VEModel stage runs and we're resetting or 
+  return(NULL);
+  ResultsName = getRunParameter("ArchiveResultsName",Param_ls=self$RunParam_ls)
+  OutputDir <- getRunParameter("OutputDir",Param_ls=self$RunParam_ls) # May differ in other stages...
+  DstoreName <- getRunParameter("DatastoreName",self$RunParam_ls)
+  ModelDir <- self$modelPath
+  for ( stage in 1:self$stageCount ) {
+    ModelStatePath <- dirname(self$resultspath(stage,Param_ls=self$RunParam_ls))
+
+    # TODO: get full pathname of model state (will use
+    # dirname(ModelStatePath)) (was ve.model$ModelStatePath)
+    # TODO: construct ResultsName
+    # TODO: each stage gets archived into ModelDir/ResultsName/stagePath
+  
+    failToArchive <- archiveResults( ModelDir, DstoreName, ModelStatePath, OutputDir, file.path(stageDir,ResultsName) )
+    if ( length(failToArchive)>0 ) {
+      visioneval::writeLog(paste0("Failed to archive results (",paste(failToArchive,collapse=","),")"),Level="error")
+    }
+  }
+}
+
 # Run the modelPath (through its stages)
 # Find the runModel script
 # Work in the Results directory - need to relay locations from here to initializeModel
@@ -862,10 +1014,12 @@ ve.model.save <- function(FileName="visioneval.cnf") {
 #   which provides Datastore components previously computed (and possibly the entire run_model.R
 #   script).
 ve.model.run <- function(run="save",stage=NULL,lastStage=NULL,log="warn") {
+  # TODO: rework for the new Stage architecture
   # run parameter can be
-  #      "continue" (run all steps, starting from first incomplete)
-  #   or "save" in which case we continue, but first archive the stage's ResultsDir
-  #   or "reset" in which case we restart from stage 1, but first clearing out ResultsDir
+  #      "continue" (run all steps, starting from first incomplete; "reset" is done on the first
+  #      incomplete stage)
+  #   or "save" in which case we reset, but first save the ResultsDir tree
+  #   or "reset" in which case we restart from stage 1, but first clear out ResultsDir (no save)
   #
   # stage and lastStage will run a sequence of *exterior* model stages (separate run_model.R in
   # subdirectories)
@@ -1419,6 +1573,7 @@ VEModel <- R6::R6Class(
     initialize=ve.model.init,               # initialize a VEModel object
     valid=function() private$p.valid,         # report valid state
     run=ve.model.run,                       # run a model (or just a subset of stages)
+    rename=ve.model.rename,                 # Change model Name, Scenario, Description
     print=ve.model.print,                   # provides generic print functionality
     list=ve.model.list,                     # interrogator function (script,inputs,outputs,parameters
     dir=ve.model.dir,                       # list model elements (output, scripts, etc.)
@@ -1427,6 +1582,7 @@ VEModel <- R6::R6Class(
     set=ve.model.set,                       # set or list model parameters and their sources
     save=ve.model.save,                     # save changes to the model setup that were created locally (by source)
     copy=ve.model.copy,                     # copy a self$modelPath to another path (ignore results/outputs)
+    archive=ve.model.archive,               # apply framework archive function if results exist
     results=ve.model.results,               # Create a VEResults object (if model is run); option to open a past result
     resultspath=ve.model.resultspath,       # Report the path to the model results for a stage
     query=ve.model.query                    # Create a VEQuery object (or show a list of queries).

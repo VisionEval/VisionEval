@@ -472,7 +472,7 @@ test_query <- function(log="warn",multiple=FALSE) {
   # Process the standard query list for the test model
   # If multiple==TRUE, copy the test model and its results a few times, then submit the
   # list of all the copies to VEQuery. Each column of results will be the same (see
-  # test_scenarios for a run that will generate different results in each column).
+  # test_scenarios (TODO) for a run that will generate different results in each column).
 
   testStep("Set up Queries and Run on Model Results")
   testStep("Opening test model and caching its results...")
@@ -719,15 +719,12 @@ test_query <- function(log="warn",multiple=FALSE) {
     # Generate several copies of jr
     testStep("Making model copies")
     cp.1 <- jr$copy("Scenario1")
+    cp.1$rename(Scenario="Scenario 1",Description="Same as original...")
     cp.2 <- jr$copy("Scenario2")
+    cp.1$rename(Scenario="Scenario 2",Description="Same as original...")
 
     # TODO: add a flag to VEModel:$copy to copy or ignore any results (currently does
     # results if they exist; want to be able to force ignoring them.)
-
-    # TODO: fiddle each model's Name and Scenario description after the fact (and build
-    # functions to allow that if necessary - don't want to have to re-run each model...).
-    # Alter and save the ModelState with update Name and Scenario. Framework
-    # setModelState() could do the job, but it should be in the API.
 
     testStep("Multiple query by model name")
     # Query the vector of model names (character vector says "model names" to VEQuery)

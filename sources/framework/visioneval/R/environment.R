@@ -18,7 +18,7 @@ ve.model <- new.env()
 #'
 #' @param Clear if supplied as a non-empty character string, sets the environment owner and clears
 #'   the model environment. If an empty string and no Owner, clear the environment, and if Owner
-#'   just clear the Owner.
+#'   just clear the Owner
 #' @return an R environment for "ve.model"
 #' @export
 modelEnvironment <- function(Clear=NULL) {
@@ -163,8 +163,7 @@ default.parameters.table = list(
   DatastoreType = "RD",
   SaveDatastore = TRUE,           # Whether to archive any existing ResultsDir
   ArchiveResultsName = "Results", # Root name for archived Results directory
-  ResultsDir = ".",               # To get framework support for VEModel, which overrides
-  StageDir = "."                  # To get framework support for VEModel, which overrides
+  ResultsDir = "."                # To get framework support for VEModel, which overrides
 )
 
 #GET DEFAULT PARAMETERS
@@ -392,13 +391,28 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
       )
     )
   ) {
+    rewrite <- FALSE
     if ( length(Param_ls)>0 ) {
-      src.df <- data.frame(Source=Source,Name=names(Param_ls))
-      row.names(src.df) <- src.df$Name
+      # Do not override any existing source for an item
+      src.df <- attr(Param_ls,"source)
+      if ( is.null(src.df) ) {
+        src.df <- data.frame(Source=Source,Name=names(Param_ls))
+        row.names(src.df) <- src.df$Name
+        rewrite <- TRUE
+      } else {
+        new.items <- names(Param_ls)[! names(Param_ls) %in% row.names(src.df) ]
+        if ( length(new.items)>0 ) {
+          addl.src.df <- data.frame(Source=Source,Name=new.items)
+          row.names(addl.src.df) <- addl.src.df$Name
+          src.df <- rbind(src.df,addl.src.df)
+          rewrite <- TRUE
+        }
+      }
     } else {
       src.df <- data.frame()
+      rewrite <- TRUE
     }
-    attr(Param_ls,"source") <- src.df
+    if (rewrite) attr(Param_ls,"source") <- src.df
   } else {
     # Invalid Param_ls
     writeLog(
@@ -410,6 +424,28 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
     )
   }
   return(Param_ls)
+}
+
+#ADD PARAMETER
+#=============
+#' Convenience function for adding or updating a parameter to Param_ls
+#'
+#' \code{mergeParameters} a visioneval developer function that adds an arbitrary parameter to a
+#' RunParam_ls.
+#'
+#' @param Param_ls the list whose parameters will be changed/added to
+#' @param Source a character string specifying the source for the changed/added parameters
+#' @param ... Named arguments to be added to Param_ls
+#' @return The updated Param_ls
+#' @export
+addRunParameter <- function(Param_ls=list(),Source="Interactive",...) {
+  newParams_ls <- list(...)
+  # I think ... must have names; we'll drop any items that sneak into ... without names
+  if ( !is.null(names(newParams_ls)) ) newParam_ls <- newParam_ls[!is.na(names(newParams_ls))]
+  # Add the source to the new parameter list
+  newParams_ls <- addParameterSource(newParams_ls,Source)
+  # Merge new list into the base parameter list
+  return( mergeParameters(Param_ls,newParams_ls) )
 }
 
 #MERGE PARAMETER LISTS

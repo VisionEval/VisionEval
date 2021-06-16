@@ -753,7 +753,6 @@ loadDatastore <- function(FileToLoad, SaveDatastore = TRUE) {
 #' errors.
 #' @export
 simDataTransactions <- function(AllSpecs_ls) {
-  # TODO: make the model state use explicit (i.e. pass in as parameter)
   G <- getModelState()
 
   #Initialize errors and warnings vectors

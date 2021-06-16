@@ -515,7 +515,9 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
     G <- ModelState_ls
   }
   # If DstoreLoc is NULL get the name of the datastore from the model state
-  # TODO: for linked Datastores, drill into G$Datastore
+  # If DstoreLoc is not NULL, it should be the absolute path to the Datastore associated with ModelState_ls
+  # TODO: make sure ModelState_ls, if supplied, includes the full path to the Datastore as well
+  #   Then we don't pass DstoreLoc, we just pass the ModelState_ls and get the model results path + Datastore name
   if ( is.null(DstoreLoc) ) DstoreLoc <- G$DatastoreName; # presume it's in the working directory
 
   #Check that dataset exists to read from and if so get path to dataset
@@ -525,9 +527,11 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
     Location <- DstoreLoc; # Eventually use specific DstoreLoc for the item
     DatasetPath <- file.path(Location, Group, Table, FileName)
   } else {
+    # TODO: return NA - master function will try again with alternative DstoreLoc (from BaseModel)
     Message <-
       paste("Dataset", Name, "in table", Table, "in group", Group, "doesn't exist in",DstoreLoc)
-    stop( writeLog(Message,Level="error") )
+    writeLog(Message,Level="error")
+    return(NA)
   }
   #Load the dataset
   load(DatasetPath) # TODO: trap error on file not existing
