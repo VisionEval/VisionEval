@@ -1,0 +1,418 @@
+Immediate Next:
+
+Build ModelStages list of lists
+
+  Each ModelStage contains the info needed to build the model state (RunParam_ls), run the model,
+    and retrieve its results (RunPath)
+  BaseModel furnishes a starting RunParam_ls. Sequence of loading:
+    ve.runtime defaults
+    BaseModel structures [different elements retained if BaseModel is not an earlier stage in the current model]
+      [If BaseModel comes from "outside", it will be overridden by anything defined in the current model/stage - it
+        will only provide MISSING parameters in that case e.g. ModelScript, InputPath if that is entirely undefined.]
+      [If BaseModel is an earlier stage in the same model, we build on those and certain things cannot be overridden.
+        E.g. we can't redefine ResultsDir or ParamDir, and we can only add to InputPath. So there are things that
+        happen for the "first stage" in a model we're opening (if it has a BaseModel).]
+      [Here's a thought: what if "BaseModel" can only refer "outside" if it is attached to a Model's first stage.]
+      [All subsequent BaseModels must refer back to an earlier stage in the current model.]
+      [If we want to do a lot of repeated scenarios off one base model that is itself defined outside, we create an
+       initial child model that just redefines ModelDir/ResultsDir, InputPath, etc. Any structural parameters not
+       defined explicitly prior to processing the first stage are adopted from the BaseModel.]
+      So there it goes like this:
+        Core structure
+        Start processing a model, get to first stage, if it has a BaseModel that must be outside, and we use that
+          BaseModel to furnish any structural parameters not defined in the first stage. ModelDir and ResultsDir
+          are always defined locally and apply to this model's stages. Perhaps also QueryDir - need to review.
+        So we'll create a BaseModel first stage then process subsequent stages, which refer internally to that
+          first stage.
+      Do not allow Datastore searches to extend to an external BaseModel. The first child model can run to create a
+        consistent local Datastore (we only borrow structural parameters at that point). Or we can (if the external
+        base model has been run) execute a LoadDatastore operation to copy over the Datastore when we run the child
+        (saving an explicit run operation).
+      See LoadDatastore as an alternative to "running locally" - models should be the same in key respects (and we're
+        already checking that).
+    CurrentStage Structures
+
+Do the following:
+  Implement the ModelStages structure (replaces old ModelState and stagePaths)
+    Name = how to refer to the Stage
+    Report = TRUE/FALSE   # "terminal" stages by default; if TRUE, include in queries and extract
+    Directory = StageDir (sub-directory of ModelDir for input, of ResultsDir for output, of Extract/<Date>/ for Extract or Query)
+    ModelState = the cached ModelState for the stage (can go straight to "Run" with this)
+  Find a Model
+    Iterate through ModelDir and stages, loading complete configuration
+    Verify completeness and add ModelStage list element (all but ModelState)
+    Recognize intermediate and terminal stages
+    Process the ModelStages configuration (if explicit)
+  Archive ModelState and Results (SaveDatastore)
+    Only archive if Datastore/Log is done
+    Could force saving last ModelState build (but why?)
+    Archive before rebuilding if requested
+  Load a Model
+    Cache all the ModelState elements
+    Flag to not load ModelState (or not follow full BaseModel chain)
+    Save the cached ModelState (or blow it away for rebuild)
+  Run a Model
+    Use the saved ModelState to run (don't re-initialize by default)
+    Sub-function to eliminate/reset "run parts" (e.g. Datastore index) if model is re-running from a model state
+    Supply pre-built model state (shuffle into ve.model environment)
+    Constructs the Datastore and starts the log file
+  Execute the run_model.R script
+    Ignore initializeModel if Model is already set up (model state/Datastore/Logfile)
+    Is there a ModelState in ve.model? Or have some runtime flag to use cached ModelState?
+  Make sure we can build the index/inputs/list elements before the model is run
+    Should that still be part of the results? Yes.
+  Get the extract to work with stages
+    Extract requested stages
+  Get the queries to run across a set of stages in a model (only)
+    Query always works with one model (not a set of them).
+    Just iterate across the terminal stages.
+    Open a parent directory as a "model"
+      Queries/Extracts go in outputs at that level, even if there is nothing else set up as a Model there
+  Re-do
+    Model Copying
+    Model Print
+    Model Directory
+    Model List
+    Model Clear (include cached model state)
+    Model Archive (new - runs the archive function on any results/model state present)
+    Model Set (edit model configuration)
+    Model Save (save model configuration updates)
+    Model Results (get results object)
+    Model Query (get query object)
+  Implement the BaseModel approach
+    Virtual Datastores
+    Flatten Datastore (variation of extract - walks the child model ModelState_ls$Datastore)
+      Archive previous Datastore, recreate locally
+      If we copy a model with Datastore results (and include the outputs) it should flatten the results
+        rather than just copying what is there verbatim (flag to control)
+    Identify ModelStages
+  
+
+Now for the BaseModel:
+
+  LoadDatastore is incompatible with BaseModel (it's one or the other). If BaseModel is specified,
+  we ignore LoadDatastore. LoadDatastore makes things magically appear in the current Datastore. If
+  the Loaded Datastore has BaseModel, etc., we should force it to be flattened before copying it over.
+  Look at how the copy is done (might be brute force) and perhaps copy the fields by reading then
+  rewriting them (much slower - incorporates flattening in the process).
+
+  BaseModel implies linking an entire other model, not just pre-loading the Datastore. The latter is
+  very useful for debugging.
+
+  We want to create a full index in the ModelState that is the Datastore directory. We add a field
+  to it that says which physical DstoreDir we will access to get it. We consult that when we try
+  to read a Dataset. We also use that table to get Group/Table/Name. The list that is saved out
+  to the disk just includes what is actually in the current Datastore (no BaseModel)
+
+  So when we load a BaseModel, we just include its Datastore directory, and update all its "current"
+  DstoreDir entries with the BaseModel's ResultsDir. Then we'll add the new model to it.
+
+  The Datastore directory file only exists for a completed model.
+
+  Parsing the run_model.R should happen separately from running the model. The resulting structure
+  is the one we should interrogate for the model inputs and outputs. Perhaps that would be the
+  end result of "SimulateRun" - it creates the list of all the fields we encountered, without
+  actually building the Datastore.
+
+  We can "flatten" or "realize" a virtualized Datastore for the current model and its results.
+  That copies in all the BaseModel data (walks the chain), rewrites the Datastore index on disk,
+  and updates the Datastore directory in the finished ModelState. The output of all that should
+  not rewrite ResultsDir itself (or perhaps we *archive* ResultsDir before rewriting it).
+
+ModelDir for each model is absolute root of its components
+A model is defined by its RunParam_ls structure (amplified into its ModelState).
+We can start a model from RunParam_ls, so that is what we store in the modelStages.
+modelStages is a named list (it is kept in RunParam_ls)
+  Each element is a modelStage
+  Name is the path to the Stage (relative to ModelDir for model to which modelStages belongs)
+A modelStage is a named list.
+  RunParam_ls: Complete set of model settings
+    BaseModel is absolute or relative (to embracing ModelDir)
+    StageDir, if present, is relative directory (to embracing ModelDir)
+    ModelDir is file.path(embracing$ModelDir,StageDir) or absolute (if not a subdirectory of current model)
+  ModelState_ls: The model state (in memory, or loaded from disk if present)
+    Contains a copy of RunParam_ls
+    Contains model status (used during RunModel)
+
+When we run the model, we just set up that environment, change to ModelDir/ResultsDir
+and then source the ModelScript.
+
+Two steps for initializeModel():
+  LoadModel which sets up RunParam_ls and ModelState
+  RunModel which archives past run and initializes Datastore
+
+Essentially, we have to load its effective configuration (which we can get from
+its ModelState_ls if it has been run, otherwise we need to explore
+the BaseModel recursively first (we use the effective configuration of its
+final ModelStage). The BaseModel run_model.R gets overwritten by the local
+run_model.R if any. The BaseModel InputPath becomes the basis for the current
+model's InputPath (accessed after the current model).
+
+The current model is NOT allowed to override any of the BaseModel ParamDir
+contents.
+
+To find a model:
+  At top level, set the VEModel$modelPath (different from runtime ModelDir
+    that each stage gets)
+
+  Load "effective configuration" for a directory
+    locate directory from openModel/new/initialize
+    set ModelDir in RunParam_ls
+    read visioneval.cnf
+    If there is a BaseModel, get its "effective configuration" as a basis
+    Add ModelDir to InputPath (If present in visioneval.cnf, use that instead).
+    InputPath should be a normalized list of after we load it
+    Unpack the BaseModel
+    This effective configuration may or may not end up as a ModelStage (see next test)
+
+"Explore a directory" means to load the effective configuration and then see if it
+has everythign to be a model.
+
+Determine what directories and sub-directories to explore:
+  If ModelStages is explicit for the current directory
+    Explore only the listed directories
+    Return a named list of RunParam_ls objects, one for each ModelStage found
+      name of list item is directory (absolute or relative to initial ModelDir)
+  Else explore the current directory
+    If current directory IS a Model
+      add current RunParam_ls (with its ModelDir)
+    else (NOT a Model):
+      Explore all the sub-directories that are not already identified as structural
+        Structural Directories: InputDir, ParamDir, ResultsDir, QueryDir
+
+Iterate over list of directories to explore:
+  
+Iterate over ModelStates
+
+  Within that directory:
+    look for InputPath/InputDir (anywhere on InputPath)
+    look for ParamDir, if found read run_parameters.json and fill in the blanks
+    locate ScriptDir/run_model.R
+    read just the arguments from initializeModel (if present in run_model.R)
+      (To capture anything set in the script)
+    [TODO: need a framework function, called within initialize, to add build RunParam_ls]
+  Return assembled RunParam_ls
+
+Check if RunParam_ls is runnable:
+  Can locate defs / inputs / run_model.R
+  Has required elements for initiating ModelState (Name, Scenario, Desription)
+
+If runnable:
+  Add to end of self$modelStages
+
+  Sub-directories will also be investigated if they are not "structural"
+    That would let us build scenarios within a base model.
+  Resurrect the StageDir parameter to identify a home for stage sub-directories
+
+  Visit each subdirectory as a candidate ModelStage
+    Add (temporarily) InputPath
+    look for InputPath/InputDir (anywhere on InputPath) (if present)
+    read visioneval.cnf (if present)
+    look for ParamDir, if found read run_parameters.json and fill in the blanks (if present)
+    locate ScriptDir/run_model.R (if present)
+    if model is complete, store at end of ModelStage list
+    Make a note of the BaseModel (in the ModelStage list structure)
+    otherwise skip directory
+  We have found a model if all of  defs / inputs / run_model.R can be located
+    (May fail later on missing input files...)
+
+Right after finding a model, we should "open"/"load" / "initialize" its model state, using the run
+parameters we found (and checking presence of ResultsDir).
+
+Seeking a BaseModel:
+  name is an absolute path (living in space somewhere...)
+  name is a Model Stage Name already in ModelStages (if found, that other model stage is NOT terminal)
+  name is a directory in ModelPath (i.e. another model - that's a variation of "absolute path"
+
+Do we want to consider making the BaseModel a "pre-requisite" (so we can't run this model if the
+BaseModel is not complete).
+
+The ModelStage structure should be sufficient to run the stage (that is, with such a structure as a
+single parameter).
+
+ModelStage structure wants to examine whether a ModelStage is a base model for another
+stage (and flag it): we won't visit the base models during a query - just the ones
+that are nobody else's base. Need to know:
+  Model Path (relative to ModelDir or absolute)
+  Model Stage Name (basename of its stage directory)
+  BaseModel (if local, a Model Stage Name from this list; if not local, the absolute path)
+  Is Terminal? If no other stage in the model uses it as a base model
+  RunParam_ls - the one we built while looking for everything
+  Run Status (is there a model state and Datastore; what does it think is the status?)
+  Could include "live status" if the stage is running in a separate process
+
+Have the ModelStage structure be an "all in one" unit from which we can run a model will greatly
+facilitate running models in sub-processes. We pass the ModelStage structure to an R process that
+will load visioneval and then run the model using that environment. We could just set up the
+ModelStages and work through them. We should always run models that way, and then poll them as they
+are running for their status (and keep it all up to date).
+
+TODO: in initializeModel, ignore LoadDatastore and DatastoreName if BaseModel is set in run enviroment
+
+Travel Time Reliability is failing with missing value.
+
+Solve the test_query functionality for output directory by requiring the results to be from "stages" of
+the "same" model. So to run multiple directories, we just put them in a folder and then open that folder
+as a "staged" model. We'll look at the configuration for each stage to determine which ones to report -
+if the stage is loaded by another stage, we drop it from the output list. Then the "output" directory
+belongs to the staged model (root folder). Genius!
+
+The test_query function is failing because the output directory is not being created/set right. We want
+output to be in ResultsDir, but when we are processing multiple scenarios (or even multiple years for
+the same scenario) there is no single ResultsDir - so where then do we put the .csv results?
+
+Look at Tara's/Dave's setup/output for Tableau and make sure we can reproduce it from a VEQuery (reproduce
+the specific measures and row/column structure). Also make sure we can generate the tables used
+by the existing viewer (with consistent data definitions). Make sure we can generate results
+by combining multiple model/result scenarios.
+
+When we start a model, we overlay the physical rosters from the base models into a single virtual
+lookup roster that can set the Datastore location group/table/name to retrieve. Writing operations
+always go through they "physical" Datastore index (writing into it, deciding whether anything needs
+to be overwritten). So the "read" operation is a lookup in two layers - find the Datastore with what
+we're looking for, then read it from that location. Writing will update the master table, as well as
+the physical index of the local Datastore.
+
+Review Arash's scenario manager.
+
+#) Make several copies of the same base model with different years (only future) and different
+   Model Name and Scenario Name.  Then check that we get good output from:
+     List of model names
+     List of model results
+     List of model result directories
+#) Add some specifications with the "By" option (income analysis, also by MArea or Azone, and by
+   both. See how that shows up in the data.frame of results
+#) Test running the same query set at different geographies
+#) Think about the API for looking into a "scenario" root directory (where we might probe into
+   sub-folders looking for VEResults based on existence of Datastore and ModelState.rda...).
+   Eventually all that gets easier with the new VEScenario approach - we'll be able to require
+   everything to have the same BaseModel, and a single master ResultsDir for the scenarios.
+
+We should be able to create a list of VEResults (needed for querying) by providing a list
+of model names (all in the ModelDir), or a list of ResultsDir folders (how to handle run
+steps with that?). Do various diagnostics to figure out what has been supplied. If we provide
+a list/vector of names or objects, running the query stuff should assemble all the results
+into a single return table (see above).
+
+#) Explore running models in a separate space
+   a) Launch an R process that we pre-load with objects from the current process
+      Need visioneval, VEModel (full .libPaths); set working directory (ve.runtime)
+      and then load/run a particular model. Need to make sure that the whole search
+      path is properly constructed (including local environments) and that the
+      runtime environment stuff stays loaded. What's the least we could do in a child
+      process to make a model run (load VEModel, open the model, run it). Then when
+      the process is done, reload the model state (as we currently do) in the front-end
+      R session.
+#) Get the scenario stuff integrated - very simple set of scenarios
+   a) That will be the moment to change the Datastore access, which will need some
+      careful thinking about how to initialize (bomb the model initialization if
+      the base model has not been run, or should we recursively run the base model?).
+      Specify the base model as a VEModel, or just by locating its ResultsDir (both).
+   b) Future scenarios just run individual years, not the BaseYear. If there is no BaseModel
+      run the BaseYear. Otherwise just run the other explicit years. Models with a BaseModel
+      can but should not run the BaseYear.
+   c) The key for the scenarios is not to run the BaseYear, which we can easily do just by
+      leaving it out of Years.
+   d) The BaseModel stuff initially should also encompass the RunScript, and load the
+      BaseModel run parameters (so the derived model doesn't need to have any configuration
+      other than the InputPath and ResultsDir). If we define Scenarios within the BaseModel
+      then we'll just need a set of InputPath elements for each scenario category/level
+      that we concatenate into a full set for the Scenario. So the tree could look like:
+      /Base-Model
+        /inputs
+        /defs
+        /results
+        /queries
+        /Scenarios
+          /ScenarioName
+            ... config files at the root
+            ... config files specify category/level plus names
+            ... config files also specify the .VEqry that will be applied to generate
+                a comparative table of all the scenario results.
+            /inputs
+              /Category-Level folders with the input files
+            /results
+              /One subfolder for each permutation of category/level
+              /outputs (for queries that run across the full set of results)
+   e) Then do the visualizer base on what appears in the 
+
+*) Add a function to clear a query (remove its specs)
+*) Check saving and reloading a Query - make sure VEQuerySpec names are reconstructed
+*) Do the save/load/save/new versus open at the beginning
+*) Improve prettiness of dumped query
+*) Get the queries to run on a test model
+*) Get queries to run on several models/result sets
+*) Format multiple query outputs for use in visualizer / tableau
+*) Need the complete set of sample runs for scenario development
+
+API steps:
+  - Should be able to clearly distinguish whether VEQuery$new is opening an existing file in
+  QueryDir or creating a new one (requiring disambiguated name).
+  - Should allow a user-level "load.from" function will load from a file (and put in its
+  QueryName if we created the query without it originally.
+  - "Create and Load" should be a helper funciton (like "openModel")
+  - So we have an "initialize" function that passively sets parameters if provided
+  - And we have a "load" function that draws a QuerySpec from a file (and, only if QueryName etc
+  are not set, also sets those)
+
+** Need to figure out which 
+
+** Inspector
+
+The inspectModel function should do a very simple interaction:
+  1) We launch the HTML viewer, and point it at the page for the kind
+     of thing being inspected
+  2) Should be able to walk up or down the ladder
+  3) Pass to Javascript should be a "Model" or "Collection" (Backbone concepts) with
+     a particular name/processing type
+  4) Stuff is available
+
+Things we want to inspect:
+  1) Settings
+    a) Defaults
+    b) Global (after ve.runtime)
+  2) Models (model directory)
+    a) List all models and inspect one
+  3) Queries (query directory)
+    a) List all queries (root) and inspect one
+  4) One Model
+    a) List all model stages and inspect one
+    b) List all queries for Model (global, model-specific) and inspect one
+    c) List Identifier, paths to all result sets for the Model
+  5) One Model Stage
+    a) Settings
+    b) Input Directory (and files present)
+    c) Param Dir (and files present)
+    d) run_model.R script (raw text)
+    e) initializeModel parameters (LoadDatastore)
+    f) AllSpecs_ls (ordered sequence of Package/Module/Specs)
+        Show Packages
+        Within Packages expand to show Modules
+        Within Modules expand to show Input, Get, Set specs
+        Within a spec
+          If Input, show InputDir, File, Group, Table
+            Within InputDir,File show Fields, Units, Description
+              Expand optionally to remining non-NA spec elements
+          If Get/Set
+            Show Group/Table
+              Within Group, Table show Name, Units, Description
+                Expand optionally to remaining non-NA spec elements
+  6) One Query
+    a) List of Query Specifications (names) and expression, pick one
+    b) One Query Specification
+       Full list of defined specification elements
+
+Rework the model stage stuff (more thinking about elements and how to navigate)
+
+Separate Datastore locations for RunStep / RunStage (interior auto-generated steps).
+Also track Base Model for elements not defined in current mode (virtual Datastore and
+locations within it). Retrieval of Group/Table/Name always gets the most recently
+written one in the model chain (RunStage / RunStep / Base Model) - there's a Datastore
+at the bottom of each such chain. ModelState's Datastore directory contains the location
+of the most recently located one within this Datastore (and a link out to the BaseModel
+Datastore - we load that up when the model is initialized, expanding on the LoadDatastore
+processing that copies the Datastore - we just add a pointer to the ModelState$Datastore
+directory for that model, plus its results directory. To access a Datastore for a Base Model,
+we just need its ResultsDirectory (location of ModelState plus RunStep/RunStage/Datastore
+directory tree; from ModelState, we read Datastore directory)
+    
