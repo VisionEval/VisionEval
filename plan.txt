@@ -1,36 +1,129 @@
 Immediate Next:
 
-Build ModelStages list of lists
-
-  Each ModelStage contains the info needed to build the model state (RunParam_ls), run the model,
-    and retrieve its results (RunPath)
-  BaseModel furnishes a starting RunParam_ls. Sequence of loading:
-    ve.runtime defaults
-    BaseModel structures [different elements retained if BaseModel is not an earlier stage in the current model]
-      [If BaseModel comes from "outside", it will be overridden by anything defined in the current model/stage - it
-        will only provide MISSING parameters in that case e.g. ModelScript, InputPath if that is entirely undefined.]
-      [If BaseModel is an earlier stage in the same model, we build on those and certain things cannot be overridden.
-        E.g. we can't redefine ResultsDir or ParamDir, and we can only add to InputPath. So there are things that
-        happen for the "first stage" in a model we're opening (if it has a BaseModel).]
-      [Here's a thought: what if "BaseModel" can only refer "outside" if it is attached to a Model's first stage.]
-      [All subsequent BaseModels must refer back to an earlier stage in the current model.]
-      [If we want to do a lot of repeated scenarios off one base model that is itself defined outside, we create an
-       initial child model that just redefines ModelDir/ResultsDir, InputPath, etc. Any structural parameters not
-       defined explicitly prior to processing the first stage are adopted from the BaseModel.]
-      So there it goes like this:
-        Core structure
-        Start processing a model, get to first stage, if it has a BaseModel that must be outside, and we use that
-          BaseModel to furnish any structural parameters not defined in the first stage. ModelDir and ResultsDir
-          are always defined locally and apply to this model's stages. Perhaps also QueryDir - need to review.
-        So we'll create a BaseModel first stage then process subsequent stages, which refer internally to that
-          first stage.
-      Do not allow Datastore searches to extend to an external BaseModel. The first child model can run to create a
-        consistent local Datastore (we only borrow structural parameters at that point). Or we can (if the external
-        base model has been run) execute a LoadDatastore operation to copy over the Datastore when we run the child
-        (saving an explicit run operation).
-      See LoadDatastore as an alternative to "running locally" - models should be the same in key respects (and we're
-        already checking that).
-    CurrentStage Structures
+Runtime Setup (in VEModel)
+  Locate run parameters as follows:
+    ve.runtime (loaded from visioneval.cnf in that directory)
+      DatastoreType
+      QueryDir
+      ParamDir
+    ModelDir (loaded from visioneval.cnf in that directory)
+      if BaseModel provided, load BaseModel elements from BaseModelStage
+        BaseModel information accessed later by VEModel
+          Base$ModelDir/Base$QueryDir
+        Runtime File Locations that replace local path
+          InputPath
+          ModelScriptPath
+          RunDstore (transformed to LoadDstore if loading)
+          ParamPath
+      Rebuild locations always:
+        ModelDir (default is ".")
+        ResultsDir (default is "results" inside ".")
+      Possibly set:
+        QueryDir (will read/write there, plus do read-only Base$ModelDir/Base$QueryDir, plus do read-only ve.runtime/QueryDir)
+        Seed
+        DatastoreType
+        DatastoreName (not recommended)
+        ParamDir
+        ScriptsDir
+        ModelScript
+      Rebuild locations optionally
+        ParamDir (if defined here, or ParamPath undefined -> rebuild ParamPath)
+        InputPath (if defined to anything here or undefined anywhere -> reset to location; "." == ModelDir)
+        ModelScriptPath (if ScriptsDir defined, or ModelScript defined, or if ModelScriptPath is undefined)
+          Only define if ModelScript exists - may defer to subsequent stages
+      Add ModelDir to InputPath, if InputDir is present in ModelDir
+        Remove from InputPath any directory that is not present or does not have InputDir in it
+      Examine run_parameters.json for missing stuff
+        Model
+        Scenario
+        Description
+        Region
+        BaseYear
+        Years
+        DatastoreName
+        DatastoreType
+        Seed
+      Must have set after processing run_parameters.json (Years is optional; must be set to make a stage)
+        Model (name; default is basename(ModelDir))
+        Scenario (name; default is Model)
+        Description (name; default is Scenario)
+        Region
+        BaseYear
+        DatastoreName
+        DatastoreType
+        Seed
+      ModelStages
+        if defined, each named element uses name for sub-directory
+          The components of named element are RunParam_ls for the stage
+          Alternatively, each stage sub-directory can include a visioneval.cnf
+        When building:
+          Stage is complete if:
+            ParamPath, InputPath, ModelScriptPath are available (defined and exist)
+            Definition exists for Model, Scenario, Description, BaseYear
+            Definition exists for Years
+        If ModelStages is defined in the ModelDir, only set those up (error if any is incomplete)
+          Can explicitly define a ModelStage with name of "."
+            (which becomes "BaseStage" when we create a Results sub-directory.
+          All the remaining stages would be sub-directories.
+        If ModelStages is undefined
+          Examine non-structural sub-directories within ModelDir
+          StageDir is the subdirectory name
+          Skip QueryDir, InputDir, ParamDir, ResultsDir, Any directory matching the archive template
+          Make an entry for each sub-directory located
+        For each ModelStage (regardless of how it was located):
+          Read its visioneval.cnf for the following (only supply missing compared to explicit ModelStages definition)
+            InputDir
+            ScriptDir
+            ModelScript
+            Years (must define in ModelStages or visioneval.cnf)
+            Scenario (force to StageDir if not explicit in ModelStates/visioneval.cnf for stage)
+            Description (force to Scenario, if not explicit in ModelStates/visioneval.cnf for stage)
+          Attempt to add ModelDir/StageDir/InputDir to InputPath (if it exists)
+          Attempt to override ModelScriptPath with ModelDir/StageDir/ScriptDir/ModelScript (if it exists)
+          Check for definition of BaseYear, Region, Model, Years, Scenario, Description
+              
+Model State Components:
+  Cached Parameters
+    RunParam_ls (used to build the ModelState; includes source information)
+  Descriptive Information
+    Model
+    Region
+    Scenario
+    Description
+    BaseYear
+    Years
+  Runtime File System Locations (all are absolute paths)
+    BaseModel [Full path to BaseModel ModelDir]
+    ModelDir [Root path for model to which this model state belongs; classic="."]
+    RunDirectory [Composed from ResultsDir/StageDir; classic="."]
+    ModelScriptPath [Absolute Path to script that build this ModelState; classic="./run_model.R"]
+    ModelStatePath [Where this ModelState was built (could be copied later; not updated)]
+    ParamPath [Absolute Path Version of what is in RunParam_ls; classic="./defs"]
+    InputPath [Absolute Path Version of what is in RunParam_ls; a vector; classic="RunDirectory"]
+    RunDstore [Name (path), Dir, File (basename)]
+    LoadDstore [Name (path), Dir, File (basename)]
+  Cached Structures
+    AllSpecs_ls
+    ParsedScript
+    ModulesByPackage_df
+    DatasetsByPackage_df
+  Loaded versions of structure [At runtime]
+    Geo
+    Units
+    Deflators
+    BzoneSpecified
+    CzoneSpecified
+  Run Results
+    Datastore [Datastore index; same as Datastore/DatastoreListing.Rda]
+    LogFile [Name of log file associated with run]
+    ModelStart [Timestamp built into LogFile name; happens at start of "Run"]
+    FirstCreated [TimeStamp when ModelState was Initialized; might happen during "Load"]
+    LastChanged [TimeStamp updated with every call to setModelState]
+    RunStatus [Text code showing 
+  Environmental Structure
+    DatastoreType
+    Seed
+    DatastoreName
 
 Do the following:
   Implement the ModelStages structure (replaces old ModelState and stagePaths)

@@ -640,7 +640,7 @@ ve.model.loadModelState <- function(log="error") {
   if ( ! dir.exists(workingResultsDir) ) {
     dir.create(workingResultsDir,showWarnings=FALSE)
   }
-  ModelStateFileName <- visioneval::getRunParameter("ModelStateFileName",Param_ls=self$RunParam_ls)
+  ModelStateFileName <- visioneval::getRunParameter("ModelStateFile",Param_ls=self$RunParam_ls)
   BaseInputPath <- visioneval::getRunParameter("InputPath",Param_ls=self$RunParam_ls)
   # Almost always, the BaseInputPath should be "."
   if ( ! isAbsolutePath(BaseInputPath) ) {
@@ -724,8 +724,8 @@ ve.model.loadModelState <- function(log="error") {
         LoadDstoreDir <- dirname(Param_ls$LoadDstoreName) # Null if not set during initializeModel
         LoadEnv$ModelState_ls <- self$ModelState[[toupper(basename(LoadDstoreDir))]]
         if ( is.null(LoadEnv$ModelState_ls) ) {
-          ModelStateFileName <- getRunParameter("ModelStateFileName",Param_ls=Param_ls)
-          modelStatePath <- file.path(LoadDstoreDir,ModelStateFileName) # TODO: Unpack LoadDstoreDir from InitializeModel arguments
+          ModelStateFile <- getRunParameter("ModelStateFile",Param_ls=Param_ls)
+          modelStatePath <- file.path(LoadDstoreDir,ModelStateFile) # TODO: Unpack LoadDstoreDir from InitializeModel arguments
           visioneval::loadModelState(modelStatePath,envir=LoadEnv)
         }
         if ( "RequiredVEPackages" %in% names(LoadEnv$ModelState_ls) ) {

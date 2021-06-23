@@ -1,0 +1,84 @@
+VEModel and Framework Setup
+
+VEModel
+  load ve.runtime Param_ls
+  load model Param_ls
+    Sets model structural parameters (may be over-ridden in stages)
+  load each stage Param_ls
+    Stages may be explicitly identified in ModelStages parameter
+    Stages may be implicitly identified in subdirectories that have useful stuff in them
+    Use Start from 
+      LoadDatastore TRUE will copy/flatten the Datastore into this stage folder, otherwise it is linked
+      LoadDatastoreName will copy/flatten some other arbitrary Datastore into this stage Datastore
+        (Mutually exclusive with "Start From" parameter)
+  When opening the model:
+    Just initialize the run parameters so we know where to look
+    Use "expedited load" - run loadModel with flag to only use existing ModelState
+    If later calling VEModel functions that require a ModelState, prompt user to load if not loaded
+      (Warn that it may take a moment)
+  When loading the model (e.g. for accessing fields or results)
+    Set up ResultsDir and StageDir for each stage
+    Parse the model script (don't need to do that externally)
+    Construct the ModelState.Rda file and ModelState_ls (visioneval::loadModel) for each stage
+    VEModel::load will use cached ModelState or rebuild depending on flag
+    reset flag will delete existing stage results (respecting environment SaveDatastore)
+    save flag will save existing stage results (all archiving happens here)
+    continue flag will just load whatever is there (or build if nothing present)
+  When running a model
+    (reset will load the model stages with reset, respecting SaveDatastore run parameter)
+    (save will load the model stages forcing SaveDatastore)
+    (continue will load existing ModelState for each stage; will skip any stage with ModelState status "Run Complete", will
+      do reset on incomplete stages, archive/SaveDatastore will NOT happen)
+    Each stage that runs will receive run parameters and source the model script (running in ModelDir/ResultsDir/StageDir)
+
+Framework
+  initializeModel for backward compatibility (directly source run_model.R)
+    skip if RunParam_ls is not provided
+    calls loadModel to set up run parameters (implies reset, respecting SaveDatastore)
+      archives any existing results depending on SaveDatastore
+    calls runModel to run the model
+  loadModel
+    add a load flag to not rebuild the ModelState - use if it exists or report NA
+    uses Param_ls if provided
+    otherwise tries to fill in Param_ls from <ModelDir>/visioneval.cnf
+    then reads <ModelDir>/<ParamDir>/<ParamFile> (run_parameters.json)
+      and fills in only what is missing from Param_ls
+    builds the ModelState using Param_ls and default settings for model structure
+    works in RunDir if set (otherwise getwd()/".")
+    if StartFrom is set in RunParam_ls:
+      StartFrom is a Stage Name in the current model
+      Add StartFrom path as <ModelDir>/<StartFrom> to ModelState
+  runModel
+    If RunDirectory is set as a parameter, go there to run (otherwise getwd()/".")
+    Execute the model from the loaded ModelState_ls
+    There must be no existing Datastore (previously archived/cleared during load)
+    Clear Datastore search path
+    If StartFrom is set
+      Remove any LoadDatastoreName parameter
+        Load that ModelStage
+        Error if that stage is not yet run
+      If LoadDatastore is FALSE or not set
+        Set Datastore search path to search path from ModelStage/ModelState
+      else if LoadDatastore is TRUE
+        Move "StartFrom/Datastore" to "LoadDatastoreName"
+        Remove StartFrom parameter
+        Clear Datastore search path
+    If LoadDatastoreName is set
+      Find the ModelState in the LoadDatastoreName directory
+      Status must be "Run Complete"
+      That Datastore be FLATTENED into this stage's Datastore and the
+        resulting Datastore list will replace what is in this ModelState.
+    Add this ModelDir/ResultsDir/StageDir to the end of the Datastore search path
+    Then just do initDatastore (respecting LoadDatastore flag as currently)
+
+Need the framework "Flatten" function:
+  Uses a source Directory (finding ModelState and Datastore) and a target Datastore directory
+  Open Load ModelState and Datastore
+  Create target Datastore listing (empty)
+  Walks through the ModelState Datastore path (from first to last)
+    Use the Datastore listing
+    Copy the Datasets present in the Datastore listing
+    Add Datastore listing elements that are not already present in target Datastore listing
+      (just rbind them onto the Datastore listing)
+  Returns the Datastore listing (can then be installed in a ModelState using that Datastore)
+

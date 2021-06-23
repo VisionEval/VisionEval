@@ -144,7 +144,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL) {
   }
   newModelState_ls[ names(CheckResults_ls$Update) ] <- CheckResults_ls$Update;
 
-  # Establish the ModelState in model.env (and optionally the ModelStateFilePath)
+  # Establish the ModelState in model.env
   newModelState_ls$FirstCreated <- Sys.time() # Timestamp
   newModelState_ls$RunParam_ls <- Param_ls
 
@@ -184,7 +184,7 @@ archiveResults <- function(ArchiveDir, ResultsDir, DstoreName=NULL, ModelStateNa
   owd <- setwd(ResultsDir)
   on.exit(setwd(owd))
 
-  # Now working in existingResultsDir
+  # Now working in existing ResultsDir
 
   # remove vector if TRUE if attempting to remove
   # set to FALSE if removal is not attempted
@@ -277,7 +277,7 @@ archiveResults <- function(ArchiveDir, ResultsDir, DstoreName=NULL, ModelStateNa
 #' in memory is not unsaved (shouldn't be a problem inside a model run).
 #'
 #' @param FileName A string identifying the name of the file that contains
-#' the ModelState_ls list. The default is the ModelStateFileName in getwd().
+#' the ModelState_ls list. The default is the ModelStateFile in getwd().
 #' @param envir An environment into which to load ModelState.Rda
 #' (default ve.model)
 #' @return The RunParam_ls from the saved model state (or an empty list if not found)
@@ -385,7 +385,7 @@ setModelState <- function(ChangeState_ls=list(), FileName = NULL, Save=TRUE) {
 #' @export
 getModelStateFileName <- function(Param_ls=NULL) {
   # We'll look in envir$RunParam_ls for name and path information
-  return(basename(getRunParameter("ModelStateFileName", Param_ls=Param_ls)))
+  return(basename(getRunParameter("ModelStateFile", Param_ls=Param_ls)))
 }
 
 #READ MODEL STATE FILE

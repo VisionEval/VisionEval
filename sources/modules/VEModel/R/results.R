@@ -21,8 +21,8 @@ ve.results.valid <- function() {
   valid <- ! is.null(private$RunParam_ls) &&
            dir.exists(self$resultsPath) &&
            !is.null(self$modelIndex) && length(self$modelIndex)>0
-  modelStateFile <- file.path(self$resultsPath,visioneval::getRunParameter("ModelStateFileName",Param_ls=private$RunParam_ls))
-  valid <- valid && all(file.exists(modelStateFile))
+  modelStatePath <- file.path(self$resultsPath,visioneval::getRunParameter("ModelStateFile",Param_ls=private$RunParam_ls))
+  valid <- valid && all(file.exists(modelStatePath))
   return(valid)
 }
 
@@ -795,7 +795,7 @@ VESelection <- R6::R6Class(
 #'   document on the VisionEval website (also in the VisionEval installer).
 #'
 #' The path provided as a parameter needs to contain ModelState.Rda and Datastore, using the names
-#'   for those elements in the VisionEval run parameters ModelStateFileName and DatastoreName
+#'   for those elements in the VisionEval run parameters ModelStateFile and DatastoreName
 #'   respectively. Generally, it is most reliable to open an output using the model object returned
 #'   by VEModel::openModel, since that will ensure that the same run environment is used to find the
 #'   result files as when those results were created. The openResults file does not load any

@@ -111,6 +111,8 @@ initDataset <- function(Spec_ls, Group) ve.model$initDataset(Spec_ls, Group)
 #' the TYPE attribute.
 #' @export
 readFromTable <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, ModelState_ls = NULL) {
+  # TODO: Iterate over DatastorePath if defined in current ModelState. If NA is returned
+  #       for the current path, move on to the next path.
   ve.model$readFromTable(Name, Table, Group, Index, ReadAttr, ModelState_ls)
 }
 
@@ -236,12 +238,22 @@ assignDatastoreFunctions <- function(DstoreType,FunctionName=NULL,Package=NULL) 
 #' name - the name of the data item (directory or dataset);
 #' groupname - the full path to the data item relative to the Datastore root;
 #' attributes - a list containing the named attributes of the data item.
+#' @param ModelStateFile is the path to an alternate ModelState
 #' @return TRUE if the listing is successfully read from the datastore and
 #' written to the model state file.
 #' @export
-listDatastoreRD <- function(DataListing_ls = NULL) {
+listDatastoreRD <- function(DataListing_ls = NULL, ModelStateFile = NULL) {
   #Load the model state file
-  G <- getModelState()
+  if ( missing(ModelStateFile) || is.null(ModelStateFile) ) {
+    G <- getModelState()
+  } else {
+    G <- readModelState(FileName=ModelStateFile,envir=new.env())
+    ms.dir <- dirname(ModelStateFile)
+    if ( nzchar(ms.dir) ) {
+      owd <- setwd(ms.dir)
+      on.exit(setwd(owd))
+    }
+  }
 
   #If no Datastore component, get from DatastoreListing.Rda
   if (is.null(G$Datastore)) {
@@ -300,7 +312,6 @@ listDatastoreRD <- function(DataListing_ls = NULL) {
 #' model state file.
 #' @import stats utils
 initDatastoreRD <- function(AppendGroups = NULL) {
-  G <- getModelState()
   DatastoreName <- G$DatastoreName;
   # If 'AppendGroups' is NULL initialize a new datastore
   if (is.null(AppendGroups)) {
@@ -515,7 +526,7 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
     G <- ModelState_ls
   }
   # If DstoreLoc is NULL get the name of the datastore from the model state
-  # If DstoreLoc is not NULL, it should be the absolute path to the Datastore associated with ModelState_ls
+  # If DstoreLoc is not NULL, it should be the absolute path to the directory containing Datastore and ModelState_ls
   # TODO: make sure ModelState_ls, if supplied, includes the full path to the Datastore as well
   #   Then we don't pass DstoreLoc, we just pass the ModelState_ls and get the model results path + Datastore name
   if ( is.null(DstoreLoc) ) DstoreLoc <- G$DatastoreName; # presume it's in the working directory
