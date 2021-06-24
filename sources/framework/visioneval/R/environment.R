@@ -393,7 +393,7 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
     rewrite <- FALSE
     if ( length(Param_ls)>0 ) {
       # Do not override any existing source for an item
-      src.df <- attr(Param_ls,"source)
+      src.df <- attr(Param_ls,"source")
       if ( is.null(src.df) ) {
         src.df <- data.frame(Source=Source,Name=names(Param_ls))
         row.names(src.df) <- src.df$Name

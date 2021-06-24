@@ -86,6 +86,33 @@ testStep <- function(msg) {
   cat("",paste(msg,collapse="\n"),"",sep="\n")
 }
 
+test_classic <- function(modelName="CLASSIC") {
+  modelPath <- file.path("models",modelName)
+  owd <- getwd()
+  on.exit(setwd(owd))
+
+  if ( dir.exists(modelPath) ) {
+    testStep("Clearing runtime environment")
+    unlink(modelPath,recursive=TRUE)
+  }
+
+  testStep(paste("Installing VERSPM model from package as",modelName))
+  rs <- installModel("VERSPM",modelName,log=log,confirm=FALSE)
+  rm(rs)  # Don't keep the VEModel around
+
+  testStep(paste("Running",rs$modelName,"by sourcing run_model.R"))
+  setwd(rs$modelPath)
+  source("run_model.R")
+
+  testStep("Reviewing model status")
+  setwd(owd)
+  rs <- openModel(modelName)
+  print(rs$runStatus)
+
+  return(rs)
+}
+  
+
 test_run <- function(modelName="JRSPM",reset=FALSE,log="warn") {
   if ( ! reset ) {
     testStep(paste("Attempting to re-open existing",modelName))

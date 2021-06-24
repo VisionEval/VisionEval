@@ -147,24 +147,26 @@ VEPackageRunParameters <- function(Param_ls=list()) {
 #' version up to date). See \code{visioneval::loadConfiguration} for more details.
 #'
 #' @param ParamDir is the directory in which to seek visioneval.cnf
+
 #' @param ParamFile is a specific file to seek (rather than looking for one of the default file
 #'   names). Note that an error will be raised if that file is specified but does not exist.
-#' @return The updated runtime parameters list (which is also modified in place)
+#' @param Param_ls is a set of run_parameters that will "underlay" the loaded ones
+#' @return The updated runtime parameters list
 #' @export
-loadRuntimeConfig <- function(ParamDir=NULL,ParamFile=NULL) {
+loadRuntimeConfig <- function(ParamDir=NULL,ParamFile=NULL,Param_ls=list()) {
   # Function loads configuration from ParamDir/VisionEval.cnf
-  # ParamDir defaults to:
-  #    ve.runtime/config if ve.runtime defined and "config" exists
-  #    else ve.runtime (possibly itself defaulted) if "config" does not exist
+  # ParamDir defaults to ve.runtime
   ve.env <- runtimeEnvironment()
   if ( is.null(ve.env$ve.runtime) ) setRuntimeDirectory() # VE_RUNTIME or getwd()
-  if ( is.null(ParamDir) ) {
-    ParamDir <- file.path(ve.env$ve.runtime,"config")
-    if ( ! dir.exists(ParamDir) ) ParamDir <- ve.env$ve.runtime
-  }
-  if ( ! exists("RunParam_ls",envir=ve.env,inherits=FALSE) ) ve.env$RunParam_ls <- list()
-  ve.env$RunParam_ls <- visioneval::loadConfiguration(ParamDir=ParamDir,ParamFile=ParamFile,override=ve.env$RunParam_ls)
-  invisible( ve.env$RunParam_ls )
+  if ( is.null(ParamDir) ) ParamDir <- ve.env$ve.runtime
+  return(
+    invisible(
+      visioneval::loadConfiguration(
+        ParamDir=ParamDir,ParamFile=ParamFile,
+        override=Param_ls
+      )
+    )
+  )
 }
 
 #GET RUNTIME SETUP
@@ -172,16 +174,24 @@ loadRuntimeConfig <- function(ParamDir=NULL,ParamFile=NULL) {
 #' Return runtime base RunParam_ls (loading it if not present)
 #'
 #' \code{getSetup} gets a subset of the current runParameters by name. It does NOT
-#' supply default values. It returns the ones that are defined.
+#' supply default values. It returns only the ones that are defined.
 #'
 #' @param paramNames is a character vector of parameter names identifying a subset of runParameters
 #'   to retrieve. If not provided, return all defined parameters (but not any that are defaulted).
 #' @return A list of defined run parameters (possibly empty, if no parameters are defined)
 #' @export
 getSetup <- function(paramNames=NULL) {
-  RunParams_ls <- if ( ! is.null(ve.env$RunParam_ls) ) ve.env$RunParam_ls else loadRuntimeConfig()
-  if ( is.character(paramNames) ) RunParams_ls <- RunParams_ls[names(RunParams_ls) %in% paramNames]
-  return(RunParams_ls)
+  RunParam_ls <- if ( ! is.null(ve.env$RunParam_ls) ) {
+    ve.env$RunParam_ls
+  } else {
+    loadRuntimeConfig()
+  }
+  if ( is.character(paramNames) ) {
+    RunParam_ls <- RunParam_ls[names(RunParam_ls) %in% paramNames]
+  } else {
+    ve.env$RunParam_ls <- RunParam_ls
+  }
+  return(RunParam_ls)
 }
 
 #' Set the VisionEval runtime directory for model management

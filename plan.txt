@@ -2,19 +2,19 @@ Immediate Next:
 
 Runtime Setup (in VEModel)
   Locate run parameters as follows:
-    ve.runtime (loaded from visioneval.cnf in that directory)
+    ve.runtime (loaded from visioneval.cnf in that directory) (ve.env$RunParam_ls)
       DatastoreType
       QueryDir
       ParamDir
     ModelDir (loaded from visioneval.cnf in that directory)
       if BaseModel provided, load BaseModel elements from BaseModelStage
         BaseModel information accessed later by VEModel
-          Base$ModelDir/Base$QueryDir
+          Base$QueryPath <- Base$ModelDir/Base$QueryDir
         Runtime File Locations that replace local path
-          InputPath
-          ModelScriptPath
-          RunDstore (transformed to LoadDstore if loading)
-          ParamPath
+          Base$InputPath
+          Base$ModelScriptPath
+          Base$RunDstore (transformed to LoadDstore if loading)
+          Best$ParamPath
       Rebuild locations always:
         ModelDir (default is ".")
         ResultsDir (default is "results" inside ".")
@@ -27,10 +27,12 @@ Runtime Setup (in VEModel)
         ScriptsDir
         ModelScript
       Rebuild locations optionally
-        ParamDir (if defined here, or ParamPath undefined -> rebuild ParamPath)
-        InputPath (if defined to anything here or undefined anywhere -> reset to location; "." == ModelDir)
-        ModelScriptPath (if ScriptsDir defined, or ModelScript defined, or if ModelScriptPath is undefined)
-          Only define if ModelScript exists - may defer to subsequent stages
+        ParamDir (if defined in this folder -> rebuild ParamPath)
+        InputPath (if defined to anything here or undefined anywhere -> reset to character(0))
+        ModelScriptPath (if ScriptsDir defined here or if ModelScriptPath is undefined)
+          Set to script root if ModelScript undefined or does not exist in this directory: ModelDir/ScriptsDir
+          Otherwise set to ModelDir/ScriptsDir/ModelScript (may still be overridden in stages)
+          May add ModelScript from individual stage below (referring into this path)
       Add ModelDir to InputPath, if InputDir is present in ModelDir
         Remove from InputPath any directory that is not present or does not have InputDir in it
       Examine run_parameters.json for missing stuff
@@ -71,6 +73,7 @@ Runtime Setup (in VEModel)
           Skip QueryDir, InputDir, ParamDir, ResultsDir, Any directory matching the archive template
           Make an entry for each sub-directory located
         For each ModelStage (regardless of how it was located):
+          Examine the StartFrom parameter and construct DatastorePath for this Stage
           Read its visioneval.cnf for the following (only supply missing compared to explicit ModelStages definition)
             InputDir
             ScriptDir
