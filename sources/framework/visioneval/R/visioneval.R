@@ -73,7 +73,7 @@ initializeModel <- function(
   LoadDatastore = FALSE,
   DatastoreName = NULL, # WARNING: different from "DatastoreName" loaded as a run parameter
   SimulateRun = FALSE,
-  Param_ls = NULL,
+  Param_ls = list(),
   ...
 ) {
   # Initialize ve.model$ModelState_ls and ve.model$RunParam_ls
@@ -144,7 +144,19 @@ getModelParameters <- function(Param_ls=list(), DotParam_ls=list(),DatastoreName
   # New style model will already have loaded those from visioneval.cnf in the model root
   # We'll keep the "safe" runtime parameters (see above)
   ParamPath <- findRuntimeInputFile("run_parameters.json","ParamDir",Param_ls=RunParam_ls,StopOnError=FALSE)
-  if ( ! is.na(ParamPath) ) RunParam_ls <- loadConfiguration(ParamPath=ParamPath,keep=RunParam_ls)
+  if ( ! is.na(ParamPath) ) {
+    RunParam_ls <- loadConfiguration(ParamPath=ParamPath,keep=RunParam_ls)
+    ParamPath <- dirname(ParamPath) # It will include run_parameters.json
+  } else {
+    ParamPath <- file.path(ModelDir,getRunParameter("ParamDir",Default="defs",Param_ls=RunParam_ls))
+  }
+  # Make sure ParamPath is set (location for Geo.csv, Units.csv, Deflators.csv)
+  if ( ! "ParamPath" %in% names(RunParam_ls) ) {
+    RunParam_ls <- mergeParameters(
+      RunParam_ls,
+      addParamPath_ls <- addParameterSource(list(ParamPath=ParamPath),"initializeModel(...)")
+    )
+  }
 
   # If ResultsDir is not present in RunParam_ls, set it to the current directory (classic version)
   if ( ! "ResultsDir" %in% names(RunParam_ls) ) RunParam_ls[["ResultsDir"]] <- "."
@@ -442,11 +454,6 @@ loadModel <- function(
         )
       )
     }
-  } else if ( SaveDatastore ) { # RunDstore does not exist and trying to save
-    InfoMsg <- "Ignored run parameter SaveDatastore=TRUE, as there is no Datastore to save."
-    writeLog(InfoMsg,Level="warn")
-    # Update the SaveDatastore parameter because there is nothing to save
-    RunParam_ls <- addRunParameter(RunParam_ls, SaveDatastore=FALSE, Source="Rewrite: No Datasource")
   }
 
   #=====================================

@@ -137,17 +137,24 @@ readFromTable <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, Dst
 
   # Attempt to read the Table from current Datastore
   table <- ve.model$readFromTable(Name, Table, Group, Index, ReadAttr, DstoreLoc=NULL, ModelState_ls=G)
-  if ( is.na(table) ) {
+  writeLog(
+    paste(class(table),"(",length(table),") returned from ve.model$readFromTable(",Name,",",Table,",",Group,")"),
+    Level="info"
+  )
+  if ( length(table)==1 && is.null(attributes(table)) ) {
+    # table might legitimately be NA of length 1. Attributes are non-null if it is "for real"
     # Failed to find - try upstream Datastore locations
     paths <- G$DatastorePath[-1] # first one is the default for G that we just checked
+
     if ( length(paths)>0 ) {     # if G$DatastorePath exists and has additional locations
+      writeLog(c("Datastore Paths:",paths),Level="info")
       # Iterate over remaining elements in G$DatastorePath looking for the Dataset
       for ( path in paths ) {
         table <- ve.model$readFromTable(Name, Table, Group, Index, ReadAttr, DstoreLoc=path, ModelState_ls=NULL)
-        if ( !is.na(table) ) break
+        if ( ! is.null(attributes(table)) ) break
       }
     }
-    if ( is.na(table) ) {
+    if ( is.null(attributes(table)) ) {
       Message <- paste("Dataset", Name, "in table", Table, "in group", Group, "could not be located.")
       stop( writeLog(Message,Level="error") )
     }
@@ -559,14 +566,28 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
 
   # Load the model state file
   if ( is.null(ModelState_ls) ) {
-    G <- getModelState()
+    if ( ! is.null(DstoreLoc) ) {
+      path <- file.path(DstoreLoc,getModelStateFileName())
+      if ( file.exists(path) ) {
+        G.env <- new.env()
+        loadModelState(FileName=path,envir=G.env)
+        if ( length(G.env$ModelState_ls) > 0 ) {
+          G <- ModelState_ls <- G.env$ModelState_ls
+        }
+      }
+    } else {
+      G <- getModelState()
+    }
   } else {
+    # ModelState overrides DstoreLoc
     G <- ModelState_ls
+    DstoreLoc <- file.path(G$ModelStatePath,G$DatastoreName)
   }
 
-  # NOTE: if called from the framework dispatcher function, DstoreLoc will always be NULL
   if ( is.null(DstoreLoc) ) {
     DstoreLoc <- file.path(G$ModelStatePath,G$DatastoreName)
+  } else {
+    # TODO: Reconcile ModelState location and DstoreLoc
   }
 
   #Check that dataset exists to read from and if so get path to dataset
@@ -582,13 +603,16 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
   if ( ! file.exists(DatasetPath) ) return(NA)
   load(DatasetPath)
 
-  #Save the attributes
-  Attr_ls <- attributes(Dataset)
   #Convert NA values
+  # This happens with H5, but not RD (where we can save suitable NA values directly)
   # NAValue <- as.vector(attributes(Dataset)$NAVALUE)
   # Dataset[Dataset == NAValue] <- NA
+
   #If there is an Index, check, and use to subset the dataset
   if (!is.null(Index)) {
+    #Save the attributes
+    Attr_ls <- attributes(Dataset)
+    # TableAttr_ should be identical to Attr_ls !!
     TableAttr_ <-
       unlist(G$Datastore$attributes[G$Datastore$groupname == file.path(Group, Table)])
     AllowedLength <- TableAttr_["LENGTH"]
@@ -604,10 +628,14 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
       writeLog(Message,Level="error")
       stop(Message)
     } else {
+      # Re-apply attributes to the requested subset
       Dataset <- Dataset[Index]
+      attributes(Dataset) <- Attr_ls
     }
   }
   #Return results
+  # TODO: Caution that non-null attributes are how the standard read table wrapper detects
+  #   whether a Dataset exists in the Datastore Group/Table
   if (!ReadAttr) {
     attributes(Dataset) <- NULL
   }
@@ -970,6 +998,7 @@ initDatasetH5 <- function(Spec_ls, Group) {
 #' @export
 #' @import rhdf5
 readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, DstoreLoc = NULL, ModelState_ls = NULL) {
+  # TODO: change DstoreLoc / ModelState_ls to parallel ReadFromTableRD
   #Expects to find the Datastore in the working directory
   #Load the model state file
   if ( is.null(ModelState_ls) ) {

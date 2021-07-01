@@ -809,9 +809,9 @@ checkUnits <- function(DataType, Units) {
   }
   #Define function to split units from compound type
   splitUnits <- function(Units){
-    OperatorLoc_ <- str_locate_all(Units, "[*/]")[[1]][,1]
+    OperatorLoc_ <- stringr::str_locate_all(Units, "[*/]")[[1]][,1]
     Operators_ <- sapply(OperatorLoc_, function(x) substr(Units, x, x))
-    UnitParts_ <- unlist(str_split(Units, "[*/]"))
+    UnitParts_ <- unlist(stringr::str_split(Units, "[*/]"))
     list(units = unname(UnitParts_),
          types = unname(findTypeFromUnit(UnitParts_)),
          operators = unname(Operators_))

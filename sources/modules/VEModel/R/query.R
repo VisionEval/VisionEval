@@ -653,7 +653,6 @@ ve.query.run <- function(
 
   # Construct the OutputFile name
   # Default QueryOutputTemplate = "%queryname%_Results_%timestamp%.csv"
-  browser()
   if ( save ) {
     OutputFileToWrite <- stringr::str_replace(OutputFile,"%queryname%",self$QueryName)
     TimeStamp <- visioneval::fileTimeStamp(Sys.time())

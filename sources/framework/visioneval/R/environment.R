@@ -440,7 +440,7 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
 addRunParameter <- function(Param_ls=list(),Source="Interactive",...) {
   newParams_ls <- list(...)
   # I think ... must have names; we'll drop any items that sneak into ... without names
-  if ( !is.null(names(newParams_ls)) ) newParam_ls <- newParam_ls[!is.na(names(newParams_ls))]
+  if ( !is.null(names(newParams_ls)) ) newParams_ls <- newParams_ls[!is.na(names(newParams_ls))]
   # Add the source to the new parameter list
   newParams_ls <- addParameterSource(newParams_ls,Source)
   # Merge new list into the base parameter list
@@ -467,30 +467,55 @@ mergeParameters <- function(Param_ls,Keep_ls) {
   # Error here mostly means one of the lists was not properly prepared
   #   You should make sure it's a list with all elements named
   #   You should call addParameterSource on it
-  if (
-    ! is.list(Param_ls) ||
+
+  merge.error <- FALSE
+  if ( ! is.list(Param_ls) ) {
+    error.reason <- "Param_ls is not a list"
+    merge.error <- TRUE
+  } else if (
     ( length(Param_ls)>0 &&
       (
         is.null(attr(Param_ls,"source")) ||
         is.null(names(Param_ls)) ||
         any(is.na(names(Param_ls)))
       )
-    ) ||
-    ! is.list(Keep_ls) ||
-    ( length(Keep_ls)>0 &&
-      (
-        is.null(attr(Keep_ls,"source")) ||
-        is.null(names(Keep_ls)) ||
-        any(is.na(names(Keep_ls)))
-      )
     )
   ) {
+    error.reason <- paste(
+      "Param_ls",
+      "Source Null:",is.null(attr(Param_ls,"source")),
+      "Names Null:",is.null(names(Param_ls)),
+      "Names NA:",any(is.na(names(Param_ls)))
+    )
+    merge.error <- TRUE
+  } else if ( ! is.list(Keep_ls) ) {
+    error.reason <- "Keep_ls is not a list"
+    merge.error <- TRUE
+  } else if (
+    length(Keep_ls)>0 &&
+    (
+      is.null(attr(Keep_ls,"source")) ||
+      is.null(names(Keep_ls)) ||
+      any(is.na(names(Keep_ls)))
+    )
+  ) {
+    error.reason <- paste(
+      "Keep_ls",
+      "Source Null:",is.null(attr(Keep_ls,"source")),
+      "Names Null:",is.null(names(Keep_ls)),
+      "Names NA:",any(is.na(names(Keep_ls)))
+    )
+    merge.error <- TRUE
+  }
+  if ( merge.error ) {
     stop(
       "\n",
       paste( collapse="\n",
         writeLog(
-          c("mergeParameters has invalid arguments."),
-          deparse(.traceback(1)[[1]]),
+          c("mergeParameters has invalid arguments.",
+            error.reason,
+            deparse(.traceback(5))
+          ),
           Level="error"
         )
       )

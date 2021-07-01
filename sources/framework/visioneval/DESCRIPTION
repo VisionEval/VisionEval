@@ -23,7 +23,7 @@ Description: This package defines all of the functions used to implement the
     datastore, and running modules.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 2.10)
+Depends: R (>= 3.5)
 Imports:
     jsonlite,
     yaml,
@@ -31,6 +31,8 @@ Imports:
     rhdf5,
     knitr,
     futile.logger
+Suggests:
+    pkgload
 Encoding: UTF-8
 Roxygen: list(load='source')
 RoxygenNote: 7.1.1

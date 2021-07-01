@@ -68,16 +68,41 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL) {
   ParamPath <- getRunParameter("ParamPath",Param_ls=Param_ls)
   DeflatorsFile <- getRunParameter("DeflatorsFile",Param_ls=Param_ls)
   DeflatorsFilePath <- file.path(ParamPath,DeflatorsFile)
+  DeflatorsFilePath <- DeflatorsFilePath[file.exists(DeflatorsFilePath)][1] # Allow ParamPath to be a vector of Paths
+  if ( is.na(DeflatorsFilePath) || length(DeflatorsFilePath)!=1 ) {
+    stop(
+      writeLog(
+        paste("Deflators File",DeflatorsFile,"does not exist in",ParamPath),
+        Level="error"
+      )
+    )
+  }
   newModelState_ls$Deflators <- read.csv(DeflatorsFilePath, as.is = TRUE)
-  # NOTE: no error-checking on deflators
 
   UnitsFile <- getRunParameter("UnitsFile",Param_ls=Param_ls)
   UnitsFilePath <- file.path(ParamPath,UnitsFile)
+  UnitsFilePath <- UnitsFilePath[file.exists(UnitsFilePath)][1] # Allow ParamPath to be a vector of Paths
+  if ( is.na(UnitsFilePath) || length(UnitsFilePath)!=1 ) {
+    stop(
+      writeLog(
+        paste("Units File",UnitsFile,"does not exist in",ParamPath),
+        Level="error"
+      )
+    )
+  }
   newModelState_ls$Units <- read.csv(UnitsFilePath, as.is = TRUE)
-  # NOTE: no error-checking on units
 
   GeoFile <- getRunParameter("GeoFile",Param_ls=Param_ls)
   GeoFilePath <- file.path(ParamPath,GeoFile)
+  GeoFilePath <- GeoFilePath[file.exists(GeoFilePath)][1] # Allow ParamPath to be a vector of Paths
+  if ( is.na(GeoFilePath) || length(GeoFilePath)!=1 ) {
+    stop(
+      writeLog(
+        paste("Geography File",GeoFile,"does not exist in",ParamPath),
+        Level="error"
+      )
+    )
+  }
   Geo_df <- read.csv(GeoFilePath, colClasses="character")
   CheckResults_ls <- checkGeography(Geo_df)
   Messages_ <- CheckResults_ls$Messages
@@ -146,7 +171,7 @@ archiveResults <- function(RunParam_ls,RunDir=getwd(),SaveDatastore=NULL) {
 
   ModelStatePath <- file.path(RunDir,ModelStateName)
 
-  if ( !exists(ModelStatePath) ) {
+  if ( ! file.exists(ModelStatePath) ) {
     writeLog("No previous model state or information to save.",Level="warn")
     return(invisible(character(0)))
   }
