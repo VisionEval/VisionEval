@@ -560,7 +560,7 @@ Initialize <- function(L) {
   #Check region and marea base year heavy truck DVMT and light-duty DVMT
   #---------------------------------------------------------------------
   #Identify which year values correspond to base year in Get data
-  IsBaseYear <- L$Get$Year$Marea$Year == getModelState("BaseYear")
+  IsBaseYear <- L$Get$Year$Marea$Year == getModelState()$BaseYear
   #Make a data frame of Marea data to use in checks and calculations
   Marea_df <- data.frame(
     Name = L$Data$Global$Marea$Geo,

@@ -40,10 +40,12 @@ setup <- function(ve.runtime=NULL) {
   } else {
     ve.env <- as.environment("ve.env")
   }
-  ve.env$ve.runtime <- ve.runtime; # override default from package load (working directory)
+  ve.env$ve.runtime <- ve.runtime # override default from package load (working directory)
   setwd(ve.env$ve.runtime)
 
   if ( ! dir.exists("models") ) dir.create("models")
+  message("Available Test Functions:")
+  print(ls(pattern="^test_",envir=parent.frame(2)))
 }
 
 ve.packages <- c(
@@ -127,7 +129,7 @@ testStep <- function(msg) {
   cat("",paste(msg,collapse="\n"),"",sep="\n")
 }
 
-test_classic <- function(modelName="CLASSIC",save=TRUE) {
+test_classic <- function(modelName="Classic",save=TRUE) {
   modelPath <- file.path("models",modelName)
   owd <- getwd()
   on.exit(setwd(owd))
@@ -141,9 +143,9 @@ test_classic <- function(modelName="CLASSIC",save=TRUE) {
   }
 
   if ( !save || ! dir.exists(modelPath) ) {
-    testStep(paste("Copying VERSPM model from package as",modelName))
+    testStep(paste("Copying CLASSIC model from package as",modelName))
     dir.create(modelPath)
-    file.copy(dir(file.path(start.dir,"../..","models","VERSPM"),full.names=TRUE),modelPath,recursive=TRUE)
+    file.copy(dir(file.path(start.dir,"tests","models","TestModel"),full.names=TRUE),modelPath,recursive=TRUE)
   }
 
   testStep("Run the model...")
@@ -155,6 +157,42 @@ test_classic <- function(modelName="CLASSIC",save=TRUE) {
     message("Directories after:\n")
     for ( f in dir() ) message(f)
   }
+
+  invisible(NULL)
+}
+
+test_load_datastore <- function(modelName="Staged",clear=FALSE) {
+  modelPath <- file.path("models",modelName)
+  owd <- getwd()
+  on.exit(setwd(owd))
+
+  if ( clear && dir.exists(modelPath) ) {
+    testStep("Clearing runtime environment")
+    unlink(modelPath,recursive=TRUE)
+  }
+  if ( ! dir.exists(modelPath) ) dir.create(modelPath)
+
+  testStep("Setting up stages...")
+  modelPath.1 <- normalizePath(file.path(modelPath,"Stage-1"),winslash="/",mustWork=FALSE)
+  modelPath.2 <- normalizePath(file.path(modelPath,"Stage-2"),winslash="/",mustWork=FALSE)
+
+  testStep("Preparing Stage 1...")
+  if ( ! dir.exists(modelPath.1) ) {
+    dir.create(modelPath.1,recursive=TRUE)
+    file.copy(dir(file.path(start.dir,"tests","models","StagedModel","Stage-1"),full.names=TRUE),modelPath.1,recursive=TRUE)
+    testStep("Running Stage 1...")
+    setwd(modelPath.1)
+    source("run_model.R")
+  }
+
+  testStep("Preparing Stage 2...")
+  if ( dir.exists(modelPath.2) ) unlink(modelPath.2,recursive=TRUE)
+  dir.create(modelPath.2)
+  file.copy(dir(file.path(start.dir,"tests","models","StagedModel","Stage-2"),full.names=TRUE),modelPath.2,recursive=TRUE)
+
+  testStep("Running Stage 2 (Load Stage 1 Datastore)...")
+  setwd(modelPath.2)
+  source("run_model.R")
 
   invisible(NULL)
 }

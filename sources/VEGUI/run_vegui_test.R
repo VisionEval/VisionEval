@@ -58,7 +58,7 @@ myapp <- readLines("global.R.tmp")
 #============================================
 if(dir.exists(tests_dir)){
   test_that("Application Runs",{
-    source(file.path(tests_dir,"open_test.R")); # open the app test
+    source(file.path(tests_dir,"open_test.R")) # open the app test
 
     # Change the model directory in the app.R to the project directory of the
     # model intended to run

@@ -269,7 +269,7 @@ ve.model.setupRunEnvironment <- function(
   # Set up ve.model environment with run parameters
   ve.model <- visioneval::modelEnvironment(Clear=Owner)
   ve.model$RunModel <- RunModel
-  ve.model$ModelStateStages <- PreviousState; # previously loaded model states
+  ve.model$ModelStateStages <- PreviousState # previously loaded model states
   addParams_ls <- list(
     ResultsDir      = ResultsDir,
     ModelDir        = ModelDir,

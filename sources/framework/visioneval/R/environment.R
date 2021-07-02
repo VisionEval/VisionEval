@@ -24,7 +24,7 @@ ve.model <- new.env()
 modelEnvironment <- function(Clear=NULL) {
   # export this function since it can be useful in the VEModel
   # package
-  if ( is.character(Clear) ) {
+  if ( ! missing(Clear) && is.character(Clear) ) {
     if ( nzchar(Clear) ) { # optionally set owner flag
       rm(list=ls(ve.model),envir=ve.model)
       ve.model$Owner <- Clear

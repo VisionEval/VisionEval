@@ -746,7 +746,7 @@ ve.spec.init <- function(other=NULL) {
     # A bare VEQuerySpec can be filled in with VEQuerySpec$update
     if ( "VEQuerySpec" %in% class(other) ) {
       # Get the list from the QuerySpec
-      self$QuerySpec <- other$QuerySpec; # it's just a standard R list
+      self$QuerySpec <- other$QuerySpec # it's just a standard R list
       self$check()
     } else if ( is.list(other) ) {
       # If it's a list, assume it's a list of specifications
@@ -961,7 +961,7 @@ ve.spec.update <- function(
   )
   override <- override[ ! sapply(override,is.null) ]
   if ( length(override)>0 ) {
-    QuerySpec[ names(override) ] <- override; # replace list elements with named arguments
+    QuerySpec[ names(override) ] <- override # replace list elements with named arguments
   }
 
   # Now evaluate the sub-types (Summarize and Function)
@@ -983,7 +983,7 @@ ve.spec.update <- function(
     override <- override[ ! sapply(override,is.null) ]
     if ( length(override)>0 ) {
       summarize_ls <- QuerySpec$Summarize
-      summarize_ls[ names(override) ] <- override; # replace list elements
+      summarize_ls[ names(override) ] <- override # replace list elements
       QuerySpec$Summarize <- summarize_ls
     }
   }

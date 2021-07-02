@@ -56,10 +56,14 @@
 #'   The datastore will have a 'Global' group established in it as well as a group for each year
 #'   identified in the model run years. If append is a character vector of group names, the groups
 #'   identified in the character string will be added to the datastore.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return TRUE if datastore initialization is successful. Calls the listDatastore function which
 #'   adds a listing of the datastore contents to the model state file.
 #' @export
-initDatastore <- function(AppendGroups=NULL) ve.model$initDatastore(AppendGroups)
+initDatastore <- function(AppendGroups=NULL,envir=modelEnvironment()) {
+  envir$initDatastore(AppendGroups,envir=envir)
+}
 
 #' Initialize Table
 #'
@@ -70,13 +74,17 @@ initDatastore <- function(AppendGroups=NULL) ve.model$initDatastore(AppendGroups
 #' subdirectory the table is to be created in (i.e. either 'Global' or the name
 #' of the year).
 #' @param Length a number identifying the table length.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return The value TRUE is returned if the function is successful at creating
 #'   the table. In addition, the listDatastore function is run to update the
 #'   inventory in the model state file. The function stops if the group in which
 #'   the table is to be placed does not exist in the datastore and a message is
 #'   written to the log.
 #' @export
-initTable <- function(Table, Group, Length) ve.model$initTable(Table, Group, Length)
+initTable <- function(Table, Group, Length, envir=modelEnvironment()) {
+  envir$initTable(Table, Group, Length, envir=envir)
+}
 
 #' Initialize dataset.
 #'
@@ -87,72 +95,78 @@ initTable <- function(Table, Group, Length) ve.model$initTable(Table, Group, Len
 #' @param Group a string representation of the name of the top-level
 #' subdirectory the table is to be created in (i.e. either 'Global' or the name
 #' of the year).
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return TRUE if dataset is successfully initialized. If the identified table
 #' does not exist, the function throws an error.
 #' @export
-initDataset <- function(Spec_ls, Group) ve.model$initDataset(Spec_ls, Group)
+initDataset <- function(Spec_ls, Group, envir=modelEnvironment()) {
+  envir$initDataset(Spec_ls, Group, envir=envir)
+}
 
 #' Read from datastore table.
 #'
-#' This function reads a dataset from a datastore table.
+#' \code{readFromTable} reads a dataset from a datastore table, dispatching through
+#' the ModelState environment to linked Datastores from other model stages.
 #'
 #' @param Name A string identifying the name of the dataset to be read from.
 #' @param Table A string identifying the complete name of the table where the
 #' dataset is located.
 #' @param Group a string representation of the name of the datastore group the
 #' data is to be read from.
-#' @param ModelState_ls an alternative ModelState_ls (for ad hoc retrieval of
-#'    a Dataset - getwd() must contain the Datastore)
 #' @param Index A numeric vector identifying the positions the data is to be
 #' written to. NULL if the entire dataset is to be read.
 #' @param ReadAttr A logical identifying whether to return the attributes of
 #' the stored dataset. The default value is FALSE.
-#' @param DstoreLoc Path to a directory containing Datastore and ModelState.Rda
-#' @param ModelState_ls A pre-loaded ModelState structure, possibly from another model
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
 #' @return A vector of the same type stored in the datastore and specified in
 #' the TYPE attribute.
 #' @export
-readFromTable <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, DstoreLoc=NULL, ModelState_ls = NULL) {
+readFromTable <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, envir=modelEnvironment()) {
 
-  # ModelState_ls and DstoreLoc are mutually exclusive
-  if ( ! is.null(DstoreLoc) ) {
-    if ( is.null(ModelState_ls) ) {
-      path <- file.path(DstoreLoc,getModelStateFileName())
-      if ( file.exists(path) ) {
-        G.env <- new.env()
-        loadModelState(FileName=path,envir=G.env)
-        if ( length(G.env$ModelState_ls) > 0 ) {
-          ModelState_ls <- G.env$ModelState_ls
-        }
-      }
-    }
-    DstoreLoc <- NULL # We just turned DstoreLoc into a "ModelStateLoc"
-  }
-
-  if ( is.null(ModelState_ls) ) {
-    G <- getModelState()
-  } else {
-    G <- ModelState_ls
-  }
+  G <- getModelState(envir)
 
   # Attempt to read the Table from current Datastore
-  table <- ve.model$readFromTable(Name, Table, Group, Index, ReadAttr, DstoreLoc=NULL, ModelState_ls=G)
+  table <- envir$readFromTable(Name, Table, Group, Index, ReadAttr, envir=envir)
   writeLog(
-    paste(class(table),"(",length(table),") returned from ve.model$readFromTable(",Name,",",Table,",",Group,")"),
+    paste(class(table),"(",length(table),") returned from readFromTable(",Name,",",Table,",",Group,")"),
     Level="info"
   )
-  if ( length(table)==1 && is.null(attributes(table)) ) {
+  if ( length(table)==1 && is.null(attributes(table)) && length(G$DatastorePath)>1 ) {
     # table might legitimately be NA of length 1. Attributes are non-null if it is "for real"
-    # Failed to find - try upstream Datastore locations
-    paths <- G$DatastorePath[-1] # first one is the default for G that we just checked
-
-    if ( length(paths)>0 ) {     # if G$DatastorePath exists and has additional locations
+    # If failed to find, then try upstream Datastore locations
+    # DatastorePath holds absolute path to Datastore
+    if ( is.null(envir$ModelStateList) ) { # Check for ModelState cache from earlier stages
+      paths <- G$DatastorePath[-1]     # By definition, first DatastorePath is for the current stage
       writeLog(c("Datastore Paths:",paths),Level="info")
-      # Iterate over remaining elements in G$DatastorePath looking for the Dataset
-      for ( path in paths ) {
-        table <- ve.model$readFromTable(Name, Table, Group, Index, ReadAttr, DstoreLoc=path, ModelState_ls=NULL)
-        if ( ! is.null(attributes(table)) ) break
+      dsPaths <- lapply(paths, # Create environments that describe the source Datastore/ModelState
+        function(dstore) {
+          path <- file.path(dstore,getModelStateFileName())
+          if ( file.exists(path) ) {
+            G.env <- new.env()
+            loadModelState(FileName=path,envir=G.env)
+            if ( length(G.env$ModelState_ls) > 0 ) {
+              assignDatastoreFunctions(envir=G.env)
+            }
+            return(G.env)
+          } else return(NULL)
+        }
+      )
+      if ( any(bad <- sapply(dsPaths,is.null)) ) {
+        stop( writeLog(
+          c("Could not open ModelState for paths:",paths[bad]),
+          Level="error"
+        ))
       }
+      envir$ModelStateList <- dsPaths
+    } else {
+      writeLog("Using cached DatastorePath/ModelStates",Level="info")
+    }
+    # Iterate over additional ModelStates in prior model stages
+    for ( ms.env in envir$ModelStateList ) {
+      # Note that we readFromTable via the ModelState (so we don't recurse into the paths)
+      table <- ms.env$readFromTable(Name, Table, Group, Index, ReadAttr, envir=ms.env)
+      if ( ! is.null(attributes(table)) ) break
     }
     if ( is.null(attributes(table)) ) {
       Message <- paste("Dataset", Name, "in table", Table, "in group", Group, "could not be located.")
@@ -177,25 +191,41 @@ readFromTable <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, Dst
 #' data is to be written to.
 #' @param Index A numeric vector identifying the positions the data is to be
 #'   written to.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return TRUE if data is sucessfully written.
 #' @export
-writeToTable  <- function(Data_, Spec_ls, Group, Index = NULL) {
-  ve.model$writeToTable(Data_, Spec_ls, Group, Index)
+writeToTable  <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvironment()) {
+  envir$writeToTable(Data_, Spec_ls, Group, Index, envir=envir)
 }
 
 #' List datastore contents.
 #'
 #' Lists the contents of a datastore.
 #'
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return TRUE if the listing is successfully read from the datastore.
 #' @export
-listDatastore <- function() {
-  ve.model$listDatastore()
+listDatastore <- function(envir=NULL) {
+  if ( is.null(envir) ) envir <- ve.model
+  envir$listDatastore(envir=envir)
 }
 
 DatastoreFunctionNames <-
     c("initDatastore", "initTable", "initDataset", "readFromTable",
       "writeToTable", "listDatastore")
+
+#REPORT ALLOWED DATASTORE TYPES
+#==============================
+#' Return a list of valid Datastore types
+#'
+#' \code{getAllowedDstoreTypes} a visioneval framework control function that
+#' returns the list of supported Datastore types.
+#' 
+#' @return a character vector of valid Datastore types
+#' @export
+getAllowedDstoreTypes <- function() c("RD", "H5")
 
 #ASSIGN DATASTORE INTERACTION FUNCTIONS
 #======================================
@@ -212,40 +242,33 @@ DatastoreFunctionNames <-
 #' assigns the common datastore interaction functions the values of the
 #' functions for the declared datastore type.
 #'
-#' @param DstoreType A string identifying the datastore type.
+#' @param DstoreType A string identifying the datastore type (get from envir$ModelState_ls if NULL
 #' @param FunctionName A character vector identifyin a single function to find for the indicated
 #'   DstoreType
-#' @param Package A string identifying a package name that contains the functions
-#'   implementing DstoreType; default for other than 'RD' type is to seek a package
-#'   called 'VEDatastore<DStoreType>' (archetypally, "VEDatastoreH5").
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return If FunctionName is provided and found, the function. Otherwise, invisibly
 #'   return the list of all functions
 #' @export
-assignDatastoreFunctions <- function(DstoreType,FunctionName=NULL,Package=NULL) {
-  # TODO: Move the H5 implementation into a separate package
-  # Allow other types by finding available packages with a name like "VEDatastoreXXXXX"
-  # where the is the listed DstoreType. If the package has another name
+assignDatastoreFunctions <- function(DstoreType=NULL, FunctionName=NULL, envir=modelEnvironment()) {
 
-  # If type is not "RD", seek package "VEDatastore<DstoreType>" and see if it has
-  # necessary functions. Require its namespace, check that it exports all the functions,
-  # and then place the function from that namespace into modelEnvironment()
+  if ( is.null(DstoreType) ) DstoreType <- envir$ModelState_ls$DatastoreType
 
-  # TODO: move HDF5 dependencies to VEDatastoreH5 package. Create a config just to build
-  # that package and its dependencies (create a ve-lib, ve-pkg, etc. that just has that
-  # package and its dependencies. Need to beef up the config so we can link to visioneval
-  # without building it.
-  if ( !is.null(Package) ) {
-    cat("Not implemented: Datastore functions from another package")
-  }
-  
-  AllowedDstoreTypes_ <- c("RD", "H5")
-  if ( ! DstoreType %in% AllowedDstoreTypes_) {
-    # TODO: list available VEDatastore packages
+  if ( ! DstoreType %in% getAllowedDstoreTypes()) {
     Msg <- paste0("Unknown 'DatastoreType': ", DstoreType)
-    writeLog(c(Msg,"\nRecognized Types:",paste(AllowedDstoreTypes_, collapse = ", ")),Level="error")
+    writeLog(c(Msg,"\nRecognized Types:",paste(getAllowedDstoreTypes(), collapse = ", ")),Level="error")
     stop(Msg)
   } else {
-    DstoreFuncs_ <- lapply(paste0(DatastoreFunctionNames,DstoreType),function(x) get(x) ) # make a list of function objects
+    DstoreFuncs_ <- lapply(
+      paste0(DatastoreFunctionNames,DstoreType),
+      function(x) return(
+        if ( exists(x,envir=envir) ) {
+          get(x,envir=envir) # make a list of function objects
+        } else {
+          NA
+        }
+      )
+    )
     names(DstoreFuncs_) <- DatastoreFunctionNames
   }
   if ( ! is.null(FunctionName) ) {
@@ -257,7 +280,7 @@ assignDatastoreFunctions <- function(DstoreType,FunctionName=NULL,Package=NULL) 
       return(DstoreFuncs_[[FunctionName]])
     }
   } else {
-    invisible( lapply(DatastoreFunctionNames,function(n) assign(n,DstoreFuncs_[[n]],envir=modelEnvironment())) )
+    invisible( lapply(DatastoreFunctionNames,function(n) assign(n,DstoreFuncs_[[n]],envir=envir)) )
   }
 }
 
@@ -285,35 +308,41 @@ assignDatastoreFunctions <- function(DstoreType,FunctionName=NULL,Package=NULL) 
 #' groupname - the full path to the data item relative to the Datastore root;
 #' attributes - a list containing the named attributes of the data item.
 #' @param ModelStateFile is the path to an alternate ModelState
-#' @return TRUE if the listing is successfully read from the datastore and
-#' written to the model state file.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
+#' @return the datastore listing (invisibly) after writing to the model state file.
 #' @export
-listDatastoreRD <- function(DataListing_ls = NULL, ModelStateFile = NULL) {
+listDatastoreRD <- function(DataListing_ls = NULL, ModelStateFile = NULL, envir=modelEnvironment()) {
   #Load the model state file
-  if ( missing(ModelStateFile) || is.null(ModelStateFile) ) {
-    G <- getModelState()
+  G <- if ( ! is.null(ModelStateFile) ) {
+    readModelState(FileName=ModelStateFile,envir=envir)
   } else {
-    G <- readModelState(FileName=ModelStateFile,envir=new.env())
-    ms.dir <- dirname(ModelStateFile)
-    if ( nzchar(ms.dir) ) {
-      owd <- setwd(ms.dir)
-      on.exit(setwd(owd))
-    }
+    getModelState(envir)
   }
 
-  #If no Datastore component, get from DatastoreListing.Rda
+  #If no Datastore component, get from DatastoreListing.RData
+  listingPath <- file.path(G$ModelStatePath, G$DatastoreName, "DatastoreListing.Rda")
   if (is.null(G$Datastore)) {
-    load(file.path(G$DatastoreName, "DatastoreListing.Rda"))
-    Datastore_df <- data.frame(
-      group = DatastoreListing_ls$group,
-      name = DatastoreListing_ls$name,
-      groupname = DatastoreListing_ls$groupname,
-      stringsAsFactors = FALSE
-    )
-    Datastore_df$attributes <- DatastoreListing_ls$attributes
+    if ( ! file.exists(listingPath) ) {
+      # TODO: if DatastoreListing.Rda - rebuild from Datastore file system...
+      stop(
+        writeLog(paste("listDatastoreRD: Missing",listingPath),Level="error")
+      )
+    } else {
+      loadEnv <- new.env()
+      load(listingPath,envir=loadEnv)
+      Datastore_df <- data.frame(
+        group = loadEnv$DatastoreListing_ls$group,
+        name = loadEnv$DatastoreListing_ls$name,
+        groupname = loadEnv$DatastoreListing_ls$groupname,
+        stringsAsFactors = FALSE
+      )
+      Datastore_df$attributes <- loadEnv$DatastoreListing_ls$attributes
+    }
   } else {
     Datastore_df <- G$Datastore
   }
+
   #Update the datastore listing
   if (!is.null(DataListing_ls)) {
     NewDatastore_df <-
@@ -325,11 +354,12 @@ listDatastoreRD <- function(DataListing_ls = NULL, ModelStateFile = NULL) {
   } else {
     NewDatastore_df <- Datastore_df
   }
+
   #Update model state and datastore listing
-  setModelState(list(Datastore = NewDatastore_df))
+  setModelState(list(Datastore = NewDatastore_df),envir=envir)
   DatastoreListing_ls <- as.list(NewDatastore_df)
-  save(DatastoreListing_ls, file = file.path(G$DatastoreName, "DatastoreListing.Rda"))
-  TRUE
+  save(DatastoreListing_ls, file = file.path(listingPath))
+  invisible(DatastoreListing_ls)
 }
 
 #INITIALIZE DATASTORE
@@ -353,21 +383,26 @@ listDatastoreRD <- function(DataListing_ls = NULL, ModelStateFile = NULL) {
 #'   identified in the model run years. If append is a character vector of group
 #'   names, the groups identified in the character string will be added to the
 #'   datastore.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return TRUE if datastore initialization is successful. Calls the
 #' listDatastore function which adds a listing of the datastore contents to the
 #' model state file.
 #' @import stats utils
-initDatastoreRD <- function(AppendGroups = NULL) {
-  G <- getModelState()
+initDatastoreRD <- function(AppendGroups = NULL, envir=modelEnvironment()) {
+
+  G <- getModelState(envir)
   DatastoreName <- G$DatastoreName;
+  dsPath <- file.path(G$ModelStatePath,DatastoreName)
+
   # If 'AppendGroups' is NULL initialize a new datastore
   if (is.null(AppendGroups)) {
     #If datastore exists, delete
-    if (file.exists(DatastoreName)) {
-      unlink(DatastoreName,recursive=TRUE)
+    if (dir.exists(dsPath)) {
+      unlink(dsPath,recursive=TRUE)
     }
     #Create datastore
-    dir.create(DatastoreName)
+    dir.create(dsPath)
     #Initialize the DatastoreListing
     Datastore_df <-
       data.frame(
@@ -377,28 +412,30 @@ initDatastoreRD <- function(AppendGroups = NULL) {
         attributes = NA,
         stringsAsFactors = FALSE)
     Datastore_df$attributes <- as.list(Datastore_df$attributes)
-    setModelState(list(Datastore = Datastore_df))
+    setModelState(list(Datastore = Datastore_df),envir=envir)
     #Create global group which stores data that is constant for all geography and
     #all years
-    dir.create(file.path(DatastoreName, "Global"))
+    dir.create(file.path(dsPath, "Global"))
     listDatastoreRD(
       list(group = "/", name = "Global", groupname = "Global",
-           attributes = list(NA))
+           attributes = list(NA)),
+      envir=envir
     )
     #Create groups for years
-    Years <- getYears()
+    Years <- getYears(envir=envir)
     for (year in Years) {
       YearGroup <- year
-      dir.create(file.path(DatastoreName, YearGroup))
+      dir.create(file.path(dsPath, YearGroup))
       listDatastoreRD(
         list(group = "/", name = YearGroup, groupname = YearGroup,
-             attributes = list(NA))
+             attributes = list(NA)),
+        envir=envir
       )
     }
     #If 'AppendGroups' is not NULL add listed groups to existing datastore
   } else {
     #If the datastore exists add the groups
-    if (file.exists(DatastoreName)) {
+    if (file.exists(dsPath)) {
       #Identify existing groups in the datastore
       DstoreGroups_ <- local({
         DstoreGroups_ls <- strsplit(G$Datastore$group, "/")
@@ -409,14 +446,15 @@ initDatastoreRD <- function(AppendGroups = NULL) {
       #Add groups listed in 'AppendGroups' if none are present in datastore
       if (!any(AppendGroups %in% DstoreGroups_)) {
         for (Grp in AppendGroups) {
-          dir.create(file.path(DatastoreName, Grp))
+          dir.create(file.path(dsPath, Grp))
           listDatastoreRD(
             list(group = "/", name = Grp, groupname = Grp,
-                 attributes = list(NA))
+                 attributes = list(NA)),
+            envir=envir
           )
         }
       } else {
-        #Error if groups listed in 'AppendGroups' are present in datastore
+        #Error if any ups listed in 'AppendGroups' are present in datastore
         DupGrp <- AppendGroups[AppendGroups %in% DstoreGroups_]
         stop(paste(
           "The following groups listed in the 'AppendGroups' argument are",
@@ -436,7 +474,6 @@ initDatastoreRD <- function(AppendGroups = NULL) {
       ))
     }
   }
-  #Return TRUE if successful
   TRUE
 }
 #initDatastoreRD()
@@ -456,26 +493,31 @@ initDatastoreRD <- function(AppendGroups = NULL) {
 #' subdirectory the table is to be created in (i.e. either 'Global' or the name
 #' of the year).
 #' @param Length a number identifying the number of rows the table is allowed to have
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return The value TRUE is returned if the function is successful at creating
 #'   the table. In addition, the listDatastore function is run to update the
 #'   inventory in the model state file. The function stops if the group in which
 #'   the table is to be placed does not exist in the datastore and a message is
 #'   written to the log.
 #' @export
-initTableRD <- function(Table, Group, Length) {
-  G <- getModelState()
+initTableRD <- function(Table, Group, Length, envir=modelEnvironment()) {
+  G <- getModelState(envir)
   DatastoreName <- G$DatastoreName;
+  dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
+
   #Create a directory for the table
   # TODO: warn (lightly) if Table exists and do not update anything
-  dir.create(file.path(DatastoreName, Group, Table))
+  result <- dir.create(file.path(dsPath, Group, Table))
+  browser(expr=!result)
   #Update the datastore listing and model state
   listDatastoreRD(
     list(group = paste0("/", Group), name = Table,
          groupname = paste(Group, Table, sep = "/"),
          attributes = list(LENGTH = Length)
-    )
+    ),
+    envir=envir
   )
-  #Return true is successful
   TRUE
 }
 #initTableRD("Azone", "2010", 3)
@@ -495,11 +537,16 @@ initTableRD <- function(Table, Group, Length) {
 #' @param Group a string representation of the name of the top-level
 #' subdirectory the dataset is to be created in (i.e. either 'Global' or the name
 #' of the year).
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return TRUE if dataset is successfully initialized. If the identified group or table
 #' does not exist, the function throws an error.
 #' @export
-initDatasetRD <- function(Spec_ls, Group) {
-  G <- getModelState()
+initDatasetRD <- function(Spec_ls, Group, envir=modelEnvironment()) {
+  G <- getModelState(envir)
+  DatastoreName <- G$DatastoreName;
+  dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
+
   Table <- paste(Group, Spec_ls$TABLE, sep = "/")
   Name <- Spec_ls$NAME
   DatasetName <- paste(Table, Name, sep = "/")
@@ -524,15 +571,15 @@ initDatasetRD <- function(Spec_ls, Group) {
   attributes(Dataset) <- Spec_ls
   #Save the initialized dataset
   DatasetName <- paste(Spec_ls$NAME, "Rda", sep = ".")
-  save(Dataset, file = file.path(G$DatastoreName, Table, DatasetName))
+  save(Dataset, file = file.path(dsPath, Table, DatasetName))
   #Update the datastore listing and model state
   listDatastoreRD(
     list(group = paste0("/", Table), name = Spec_ls$NAME,
          groupname = paste(Table, Spec_ls$NAME, sep = "/"),
          attributes = Spec_ls
-    )
+    ),
+    envir=envir
   )
-  #Return TRUE if successful
   TRUE
 }
 #source("data/test_spec.R")
@@ -557,51 +604,31 @@ initDatasetRD <- function(Spec_ls, Group) {
 #' read from. NULL if the entire dataset is to be read.
 #' @param ReadAttr A logical identifying whether to return the attributes of
 #' the stored dataset. The default value is TRUE (return the attributes)
-#' @param DstoreLoc Path to a directory containing Datastore and ModelState.Rda
-#' @param ModelState_ls A pre-loaded ModelState structure, possibly from another model
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return A vector of the same type stored in the datastore and specified in
 #' the TYPE attribute.
 #' @export
-readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, DstoreLoc=NULL, ModelState_ls = NULL) {
+readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, envir=modelEnvironment()) {
 
-  # Load the model state file
-  if ( is.null(ModelState_ls) ) {
-    if ( ! is.null(DstoreLoc) ) {
-      path <- file.path(DstoreLoc,getModelStateFileName())
-      if ( file.exists(path) ) {
-        G.env <- new.env()
-        loadModelState(FileName=path,envir=G.env)
-        if ( length(G.env$ModelState_ls) > 0 ) {
-          G <- ModelState_ls <- G.env$ModelState_ls
-        }
-      }
-    } else {
-      G <- getModelState()
-    }
-  } else {
-    # ModelState overrides DstoreLoc
-    G <- ModelState_ls
-    DstoreLoc <- file.path(G$ModelStatePath,G$DatastoreName)
-  }
-
-  if ( is.null(DstoreLoc) ) {
-    DstoreLoc <- file.path(G$ModelStatePath,G$DatastoreName)
-  } else {
-    # TODO: Reconcile ModelState location and DstoreLoc
-  }
-
+  G <- getModelState(envir)
+  DatastoreName <- G$DatastoreName;
+  dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
+  
   #Check that dataset exists to read from and if so get path to dataset
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if (DatasetExists) {
     FileName <- paste(Name, "Rda", sep = ".")
-    Location <- DstoreLoc
-    DatasetPath <- file.path(Location, Group, Table, FileName)
+    DatasetPath <- file.path(dsPath, Group, Table, FileName)
   } else {
     return(NA)
   }
   #Load the dataset
   if ( ! file.exists(DatasetPath) ) return(NA)
-  load(DatasetPath)
+  loadEnv <- new.env()
+  load(DatasetPath,envir=loadEnv)
+  Dataset <- loadEnv$Dataset
+  # TODO: trap error if ( is.null(Dataset) )
 
   #Convert NA values
   # This happens with H5, but not RD (where we can save suitable NA values directly)
@@ -635,7 +662,8 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
   }
   #Return results
   # TODO: Caution that non-null attributes are how the standard read table wrapper detects
-  #   whether a Dataset exists in the Datastore Group/Table
+  #   whether a Dataset exists in the Datastore Group/Table. Only set ReadAttr=FALSE when
+  #   reaching for unadorned data vector.
   if (!ReadAttr) {
     attributes(Dataset) <- NULL
   }
@@ -664,10 +692,13 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
 #' data is to be written to.
 #' @param Index A numeric vector identifying the positions the data is to be
 #'   written to.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return TRUE if data is sucessfully written.
 #' @export
-writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL) {
-  G <- getModelState()
+writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvironment()) {
+  G <- getModelState(envir)
+  dsPath <- file.path(G$ModelStatePath, G$DatastoreName)
   Name <- Spec_ls$NAME
   Table <- Spec_ls$TABLE
   #Check that dataset exists to write to and attempt to create if not
@@ -676,14 +707,16 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL) {
     # check for actual file, in case dataset listing is obsolete
     # It is fine to re-write a missing file
     DatasetName <- paste0(Name, ".Rda")
-    DatasetPath <- file.path(G$DatastoreName, Group, Table, DatasetName)
+    DatasetPath <- file.path(dsPath, Group, Table, DatasetName)
     DatasetExists <- file.exists(DatasetPath)
   }
 
   if (!DatasetExists) {
+    # Add to Datastore listing
     GroupName <- paste(Group, Spec_ls$TABLE, sep = "/")
     Length <-
-      G$Datastore$attributes[G$Datastore$groupname == GroupName][[1]]$LENGTH
+      try(G$Datastore$attributes[G$Datastore$groupname == GroupName][[1]]$LENGTH)
+    browser(expr=!is.numeric(Length))
     Dataset <-
       switch(Types()[[Spec_ls$TYPE]]$mode,
              character = character(Length),
@@ -695,12 +728,14 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL) {
       list(group = paste0("/", GroupName), name = Name,
            groupname = paste(GroupName, Name, sep = "/"),
            attributes = Spec_ls
-      )
+      ),
+      envir=envir
     )
   } else {
-    Dataset <- readFromTableRD(Name, Table, Group, ReadAttr = TRUE)
+    Dataset <- readFromTableRD(Name, Table, Group, ReadAttr = TRUE, envir=envir)
     Attr_ls <- attributes(Dataset)
   }
+
   #Modify the loaded dataset
   if (is.null(Index)) {
     Dataset <- Data_
@@ -720,7 +755,7 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL) {
   #Save the dataset
   attributes(Dataset) <- Attr_ls
   DatasetName <- paste0(Name, ".Rda")
-  save(Dataset, file = file.path(G$DatastoreName, Group, Table, DatasetName))
+  save(Dataset, file = file.path(dsPath, Group, Table, DatasetName))
   TRUE
 }
 
@@ -757,13 +792,16 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL) {
 #' This function lists the contents of a datastore for an HDF5 (H5) type
 #' datastore.
 #'
-#' @return TRUE if the listing is successfully read from the datastore and
-#' written to the model state file.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
+#' @return the datastore listing (invisibly) after writing to the model state file.
 #' @export
 #' @import rhdf5
-listDatastoreH5 <- function() {
-  G <- getModelState()
-  H5File <- H5Fopen(G$DatastoreName)
+listDatastoreH5 <- function(envir=modelEnvironment()) {
+  G <- getModelState(envir)
+  dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
+
+  H5File <- H5Fopen(dsPath)
   DS_df <- h5ls(H5File, all = TRUE)
   DS_df$groupname <- paste(DS_df$group, DS_df$name, sep = "/")
   DS_df$groupname <- gsub("^/+", "", DS_df$groupname)
@@ -775,15 +813,15 @@ listDatastoreH5 <- function() {
       Attr_ls[[i]] <- NA
     } else {
       Item <- paste(DS_df$group[i], DS_df$name[i], sep = "/")
-      #Attr_ls[[i]] <- unlist(h5readAttributes(H5File, Item))
       Attr_ls[[i]] <- h5readAttributes(H5File, Item)
     }
   }
   DS_df$attributes <- Attr_ls
   H5Fclose(H5File)
   AttrToWrite_ <- c("group", "name", "groupname", "attributes")
-  setModelState(list(Datastore = DS_df[, AttrToWrite_]))
-  TRUE
+  dsListing <- DS_df[, AttrToWrite_]
+  setModelState(list(Datastore = dsListing),envir=envir)
+  invisible(dsListing)
 }
 
 
@@ -808,27 +846,29 @@ listDatastoreH5 <- function() {
 #'   identified in the model run years. If append is a character vector of group
 #'   names, the groups identified in the character string will be added to the
 #'   datastore.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return TRUE if datastore initialization is successful. Calls the
 #' listDatastore function which adds a listing of the datastore contents to the
 #' model state file.
 #' @export
 #' @import rhdf5
-initDatastoreH5 <- function(AppendGroups = NULL) {
-  G <- getModelState()
-  DatastoreName <- G$DatastoreName
+initDatastoreH5 <- function(AppendGroups = NULL, envir=modelEnvironment()) {
+  G <- getModelState(envir)
+  dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
   #If 'AppendGroups' is NULL initialize a new datastore
   if (is.null(AppendGroups)) {
     #If data store exists, delete
-    if (file.exists(DatastoreName)) {
-      file.remove(DatastoreName)
+    if (file.exists(dsPath)) {
+      file.remove(dsPath)
     }
     #Create data store file
-    H5File <- H5Fcreate(DatastoreName)
+    H5File <- H5Fcreate(dsPath)
     #Create global group which stores data that is constant for all geography and
     #all years
     h5createGroup(H5File, "Global")
     #Create groups for years
-    for (year in as.character(G$Years)) {
+    for ( year in as.character(getYears(envir=envir)) ) {
       YearGroup <- year
       h5createGroup(H5File, YearGroup)
     }
@@ -836,7 +876,7 @@ initDatastoreH5 <- function(AppendGroups = NULL) {
     #If 'AppendGroups' is not NULL add listed groups to existing datastore
   } else {
     #If the datastore exists add the groups
-    if (file.exists(DatastoreName)) {
+    if (file.exists(dsPath)) {
       #Identify existing groups in the datastore
       DstoreGroups_ <- local({
         DstoreGroups_ls <- strsplit(G$Datastore$group, "/")
@@ -847,7 +887,7 @@ initDatastoreH5 <- function(AppendGroups = NULL) {
       #Add groups listed in 'AppendGroups' if none are present in datastore
       if (!any(AppendGroups %in% DstoreGroups_)) {
         for (Grp in AppendGroups) {
-          h5createGroup(DatastoreName, Grp)
+          h5createGroup(dsPath, Grp)
         }
         #Error if groups listed in 'AppendGroups' are present in datastore
       } else {
@@ -863,14 +903,14 @@ initDatastoreH5 <- function(AppendGroups = NULL) {
       #Error if the datastore does not exist
     } else {
       stop(paste(
-        "The datastore -", DatastoreName, "- identified in the model",
+        "The datastore -", G$DatastoreName, "- identified in the model",
         "'run_parameters.json' file does not exist.",
         "In order for a datastore to be initialized with appended groups,",
         "this datastore must be present."
       ))
     }
   }
-  listDatastoreH5()
+  listDatastoreH5(envir=envir)
   return(TRUE)
 }
 
@@ -888,22 +928,25 @@ initDatastoreH5 <- function(AppendGroups = NULL) {
 #' @param Group a string representation of the name of the group the table is to
 #' be created in.
 #' @param Length a number identifying the table length.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return The value TRUE is returned if the function is successful at creating
 #'   the table. In addition, the listDatastore function is run to update the
 #'   inventory in the model state file. The function will create any
 #'   missing Group as it creates the Table.
 #' @export
 #' @import rhdf5
-initTableH5 <- function(Table, Group, Length) {
-  G <- getModelState()
+initTableH5 <- function(Table, Group, Length, envir=envir) {
+  G <- getModelState(envir=envir)
+  dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
   NewTable <- paste(Group, Table, sep = "/")
-  H5File <- H5Fopen(G$DatastoreName)
+  H5File <- H5Fopen(dsPath)
   h5createGroup(H5File, NewTable)
   H5Group <- H5Gopen(H5File, NewTable)
   h5writeAttribute(Length, H5Group, "LENGTH")
   H5Gclose(H5Group)
   H5Fclose(H5File)
-  listDatastoreH5()
+  listDatastoreH5(envir=envir)
   TRUE
 }
 
@@ -921,16 +964,21 @@ initTableH5 <- function(Table, Group, Length) {
 #'   described in the model system design documentation.
 #' @param Group a string representation of the name of the group the table is to
 #' be created in.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return TRUE if dataset is successfully initialized. If the dataset already
 #' exists the function throws an error and writes an error message to the log.
 #' Updates the model state file.
 #' @export
 #' @import rhdf5
-initDatasetH5 <- function(Spec_ls, Group) {
-  G <- getModelState()
+initDatasetH5 <- function(Spec_ls, Group, envir=modelEnvironment()) {
+  G <- getModelState(envir)
+  dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
+
   Table <- paste(Group, Spec_ls$TABLE, sep = "/")
   Name <- Spec_ls$NAME
   DatasetName <- paste(Table, Name, sep = "/")
+
   #Read SIZE specification or throw error if doesn't exist
   if (!is.null(Spec_ls$SIZE)) {
     Size <- Spec_ls$SIZE
@@ -941,10 +989,10 @@ initDatasetH5 <- function(Spec_ls, Group) {
     stop(Message)
   }
   #Create the dataset
-  Length <- unlist(h5readAttributes(G$DatastoreName, Table))["LENGTH"]
+  Length <- unlist(h5readAttributes(dsPath, Table))["LENGTH"]
   Chunk <- ifelse(Length > 1000, 100, 1)
   StorageMode <- Types()[[Spec_ls$TYPE]]$mode
-  H5File <- H5Fopen(G$DatastoreName)
+  H5File <- H5Fopen(dsPath)
   h5createDataset(
     H5File, DatasetName, dims = Length,
     storage.mode = StorageMode, size = Size + 1,
@@ -968,7 +1016,7 @@ initDatasetH5 <- function(Spec_ls, Group) {
   H5Dclose(H5Data)
   H5Fclose(H5File)
   #Update datastore inventory
-  listDatastoreH5()
+  listDatastoreH5(envir=envir)
   TRUE
 }
 
@@ -991,26 +1039,21 @@ initDatasetH5 <- function(Spec_ls, Group) {
 #'   written to. NULL if the entire dataset is to be read.
 #' @param ReadAttr A logical identifying whether to return the attributes of
 #' the stored dataset. The default value is TRUE.
-#' @param DstoreLoc Path to a directory containing Datastore and ModelState.Rda
-#' @param ModelState_ls A pre-loaded ModelState structure, possibly from another model
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return A vector of the same type stored in the datastore and specified in
 #'   the TYPE attribute.
 #' @export
 #' @import rhdf5
-readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, DstoreLoc = NULL, ModelState_ls = NULL) {
+readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, envir=envir) {
   # TODO: change DstoreLoc / ModelState_ls to parallel ReadFromTableRD
   #Expects to find the Datastore in the working directory
   #Load the model state file
-  if ( is.null(ModelState_ls) ) {
-    G <- getModelState()
-  } else {
-    G <- ModelState_ls
-  }
+  G <- getModelState(envir)
+
   #If DstoreLoc is NULL get the name of the datastore from the model state
   # NOTE: if called from the framework dispatcher function, DstoreLoc will always be NULL
-  if ( is.null(DstoreLoc) ) {
-    DstoreLoc <- file.path(G$ModelStatePath,G$DatastoreName)
-  }
+  dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
 
   #Check that dataset exists to read from
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
@@ -1038,10 +1081,10 @@ readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
   }
   #Read data
   if (is.null(Index)) {
-    Data_ <- h5read(DstoreLoc, DatasetName, read.attributes = ReadAttr)
+    Data_ <- h5read(dsPath, DatasetName, read.attributes = ReadAttr)
   } else {
     Data_ <-
-      h5read(DstoreLoc, DatasetName, index = list(Index), read.attributes = ReadAttr)
+      h5read(dsPath, DatasetName, index = list(Index), read.attributes = ReadAttr)
   }
   #Convert NA values
   NAValue <- as.vector(attributes(Data_)$NAVALUE)
@@ -1059,13 +1102,13 @@ readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
 
 #WRITE TO TABLE
 #==============
-#' Write to an RData (RD) type datastore table.
+#' Write to an HDF5 (H5) type datastore table.
 #'
-#' \code{writeToTableRD} a visioneval framework datastore connection function
-#' that writes data to an RData (RD) type datastore table and initializes
+#' \code{writeToTableH5} a visioneval framework datastore connection function
+#' that writes data to an HDF5 type datastore table and initializes
 #' dataset if needed.
 #'
-#' This function writes a dataset file to an RData (RD) type datastore table. It
+#' This function writes a dataset file to an hdf5 (H5) type datastore table. It
 #' initializes the dataset if the dataset does not exist. Enables data to be
 #' written to specific location indexes in the dataset.
 #'
@@ -1076,18 +1119,21 @@ readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, D
 #' data is to be written to.
 #' @param Index A numeric vector identifying the positions the data is to be
 #'   written to.
+#' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#'   (see assignDatastoreFunctions)
 #' @return TRUE if data is sucessfully written. Updates model state file.
 #' @export
 #' @import rhdf5
-writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL) {
-  G <- getModelState()
+writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvironment()) {
+  G <- getModelState(envir)
+  dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
   Name <- Spec_ls$NAME
   Table <- Spec_ls$TABLE
+
   #Check that dataset exists to write to and attempt to create if not
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if (!DatasetExists) {
     initDatasetH5(Spec_ls, Group)
-    G <- getModelState()
   }
   #Write the dataset
   if (is.null(Data_)) {
@@ -1101,12 +1147,12 @@ writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL) {
   Data_[is.na(Data_)] <- Spec_ls$NAVALUE
   DatasetName <- file.path(Group, Table, Name)
   if (is.null(Index)) {
-    h5write(Data_, file = G$DatastoreName, name = DatasetName)
+    h5write(Data_, file = dsPath, name = DatasetName)
   } else {
-    h5write(Data_, file = G$DatastoreName, name = DatasetName, index = list(Index))
+    h5write(Data_, file = dsPath, name = DatasetName, index = list(Index))
   }
   #Update datastore inventory
-  listDatastoreH5()
+  listDatastoreH5(envir=envir)
   TRUE
 }
 
@@ -1607,3 +1653,137 @@ inputsToDatastore <- function(Inputs_ls, ModuleSpec_ls, ModuleName) {
     }
     TRUE
   }
+
+#COPY A DATASTORE
+#================
+#' Copy a Datastore and ModelState_ls from one location to another
+#'
+#' \code{copyDatastore} a visioneval framework datastore function that copies the
+#' Datastore associated with a ModelState_ls to another location.
+#'
+#' Use cases for this functionn are: (1) standalone copying of a Datastore (copies associated
+#'   ModelState and updates Datastore listing); (2) archiveDatastore (copies ModelState for item
+#'   being archived); (3) loadDatastore from BaseModel (uses ModelState whose Datastore is being
+#''  updated).
+#'
+#' This function supports "flattening" the Datastore and also changing the Datastore type (from RD
+#' to H5 or vice versa). Linked and Loaded Datastores in BaseModel and prior model stages must be
+#' the same DatastoreType, so type conversion helps link a base model run using one DatastoreType to
+#' a child model with a different DatastoreType.
+#'
+#' 'Flattening' the Datastore will convert a linked Datastore into a copy in which all the Datasets
+#' are realized in the targetDatastore. That supports loading the Datastore from a BaseModel, or
+#' preparing a copy of a Datastore for transmission as "bare results."
+#'
+#' Note that this function is used to perform LoadDatastore (forcing flattening) when linking
+#' models by copyign a pre-existing Datastore. It is NOT used by archiveDatastore, which always
+#' just makes a file system snapshot of the stages in ResultsDir.
+#' 
+#' @param ToDir a file path in which to create the Datastore copy (named
+#'   ModelState_ls$DatastoreName)
+#' @param envir Environment containing ModelState_ls (and implicitly, a Datastore)
+#' @param Flatten a logical indicating whether to merge all Datasets from the DatastorePath
+#'   (default is TRUE). If Flatten is c(TRUE,TRUE), force use of Flatten machinery even if not
+#'   necessary.
+#' @param DatastoreType is one of "RD" or "H5". If it is not the same as what is in the source
+#'   ModelState, convert the Datastore by flattening it into the requested DatastoreType.
+#' @return A logical indicating successful completion.
+#' @export
+copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelEnvironment() ) {
+
+  if ( ! dir.exists(ToDir) ) {
+    Msg <- c("Target directory does not exist for copyDatastore:",ToDir)
+    Msg <- writeLog(Msg,Level="error")
+    stop(Msg)
+  }
+
+  ModelState_ls <- getModelState(envir)
+  
+  if ( is.null(DatastoreType) ) DatastoreType <- ModelState_ls$DatastoreType
+  convertDatastoreType <- DatastoreType != ModelState_ls$DatastoreType
+
+  AllowedDstoreTypes_ <- getAllowedDstoreTypes()
+  if ( ! DatastoreType %in% AllowedDstoreTypes_ ) {
+    Msg <- paste0("Unknown 'DatastoreType': ", DatastoreType)
+    writeLog(c(Msg,"\nRecognized Types:",paste(AllowedDstoreTypes_, collapse = ", ")),Level="error")
+    stop(Msg)
+   }
+
+  paths <- character(0)
+  success <- FALSE
+  Flatten <- Flatten[1] && ( length(ModelState_ls$DatastorePath) > 1 || isTRUE(Flatten[2]) )
+  # Always use Flatten machinery if source model is internally staged, or if Flatten is c(TRUE,TRUE)
+
+  # Don't flatten if already flat
+  if ( ! Flatten ) {
+    if ( ! convertDatastoreType ) {
+      success <- file.copy(file.path(ModelState_ls$ModelStatePath,ModelState_ls$DatastoreName),ToDir,recursive=TRUE,copy.date=TRUE)
+      writeLog(paste0("Copying Flat Datastore ",ifelse(success,"Succeeded","Failed"),"."),Level="warn")
+    }
+    if ( ! success ) {
+      paths <- ModelState_ls$DatastorePath[1] # Only copy proximate Datastore (why this would work but not file.copy is mysteriaus...
+    }
+  } else {
+    paths <- rev(ModelState_ls$DatastorePath) # Copy all the elements from back up the path
+  }
+
+  if ( length(paths) > 0 ) { # if we did file.copy above, length(paths) will be zero - already done
+    writeLog("Flattening and/or Converting Datastore takes time...",Level="warn")
+
+    # Construct target ModelState_ls:
+    #   Same as ModelState being copied, but ModelStatePath is updated and Datastore listing removed
+    toModelState_ls <- ModelState_ls[ ! names(ModelState_ls) %in% "Datastore" ]
+    toModelState_ls$ModelStatePath <- ToDir
+    toModelState_ls$DatastoreType <- DatastoreType # May differ from ModelState_ls$DatastoreType if converting
+
+    # Set up model state environment for writing the target Datastore
+    writeDS <- new.env()
+    writeDS$ModelState_ls <- toModelState_ls
+    assignDatastoreFunctions(envir=writeDS)
+    
+    # Create the required basic elements: Datastore structure and geography from the source
+    # Do this rather than copying to ensure that the DatastoreListing is correct
+    initDatastore(envir=writeDS)          # Create core datastore structure
+    initDatastoreGeography(envir=writeDS) # Create basic geography tables
+
+    for ( path in paths ) {
+
+      # Open ModelState$Datastore from the source path
+      readDS <- new.env()
+      ms <- readModelState( FileName=file.path(path,getModelStateFileName()), envir=readDS )
+      assignDatastoreFunctions(envir=readDS)
+      ds <- ms$Datastore
+      
+      gtn <- strsplit(ds$groupname,"/") # May need to revise if groupname starts with /
+
+      # Since target model state began from original, all groups should be present...
+      # Otherwise may need to add Years with initDatastore(AppendGroups)
+
+      # Copy the datasets
+      indices <- which(sapply(gtn,length,simplify=TRUE)==3) # Get Dataset entries
+      for ( i in indices ) {
+        item <- gtn[[i]]
+        names(item) <- c("Group","Table","Name")
+        Attr_ <- ds$attributes[[i]]
+
+        # Read from source Datastore
+        dataset <- readFromTable(item["Name"],item["Table"],item["Group"],envir=readDS)
+
+        # Check that table exists in target and create if necessary
+        TableName <- file.path(item["Group"], item["Table"])
+        if ( ! TableName %in% writeDS$ModelState_ls$Datastore$groupname ) { # in target?
+          TableEntry <- which(ds$groupname == TableName)[1]                 # check source
+          Length <- ds$attributes[[TableEntry]]$LENGTH                      # Get Length parameter
+          browser(expr=is.null(Length))
+          initTable(item["Table"], item["Group"], Length, envir=writeDS)    # Initialize the Table
+        }
+
+        # Write to target Datastore
+        writeToTable(dataset,attributes(dataset),item["Group"],envir=writeDS)
+      }
+    }
+    success <- TRUE
+  }
+    
+  return(success)
+}

@@ -157,7 +157,7 @@ function(ModuleName,Param_ls=NULL,...) {
   #-------------------------------------------------------
   if (LoadDatastore) {
     writeLog("Attempting to load datastore.", Level="warn")
-    DatastoreName <- getModelState()[["DatastoreName"]]
+    DatastoreName <- getModelState()$DatastoreName
     if (!file.exists(DatastoreName)) {
       Msg <-
       paste0("LoadDatastore argument is TRUE but the datastore file ",

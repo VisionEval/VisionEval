@@ -1,5 +1,40 @@
 Immediate Next:
 
+Continue working to get VEModel running
+  Initially, don't look for stages - just create the ModelDir as first stage
+    So it will run a simple, classic model
+    Opening the model builds its RunParam_ls structure.
+    Loading the model will open or create the ModelState_ls in the model's ResultsDir
+    Running the model will save/reset the Results
+  Skip initializeModel if ModelState is present and a runtime flag is set ("InitComplete")
+    New style model run from VEModel does not need initializeModel in the run_model.R script
+    Probably need some back-stopping in RunModule and RunScript to ensure the ModelState and
+      Datastore are ready for action.
+  Load, Save and Run operations are disaggregated into VEModel
+    Save/archiveResults does the same step as inside initalizeModel (after Load, before Run)
+    Load visits the stages and expands a ModelState from the configurated RunParam_ls
+      Parses all the specifications
+    Run will build the Datastore and process the run_model.R script
+  Verify other functions like "dir", "clear", "archive", "results", etc.
+    Will need to review the VEModel R6 structure
+  First approach to stages is to make sure we can run the old-style staged models (using
+    LoadDatastore, and treating each stage essentially as a distinct model, placing its
+    results in ResultsDir/StageDir)
+
+Expand VEModel to run stages
+  Consider BaseModel as a way of reaching outside the current model structure
+    Essentially an automatic way to do LoadDatastore/LoadDatastoreName with a local
+    run_model.R, inputs, etc - elements of the BaseModel can be used or discarded.
+    A "pure" BaseModel supplies everything except ModelDir (which is used to update
+    the RunDir). We can add additional stages on to that afterwards...
+  "StartFrom" stage directive (or "BuildOn" or perhaps "BaseStage").
+    Could create "StartFrom" and "EndAt" run arguments to use stage names/positions
+  Need a "stages" command for VEModel to list and explore the stages
+    Option on "print" to list out all stages (otherwise just their names)
+    Separate commend to enumerate the stages and their relationship
+      Stage directory, Run Status, StartFrom, Load/Linked
+  VEModel sets up parameters from configuration - finding model stages
+
 Runtime Setup (in VEModel)
   Locate run parameters as follows:
     ve.runtime (loaded from visioneval.cnf in that directory) (ve.env$RunParam_ls)

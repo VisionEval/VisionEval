@@ -30,15 +30,11 @@
 #' part of.
 #' @param DstoreListing_df a dataframe which lists the contents of the datastore
 #'   as contained in the model state file.
-#' @param DstoreDir directory to seek dataset (not used here, just reported). If
-#'   provided, it is returned as an attribute, otherwise it is read from the
-#'   DstoreListing_df if available, otherwise it is NULL (which implies using
-#'   the Datastore in the working directory.
 #' @return A logical identifying whether the dataset is in the datastore. It has
 #' an attribute that is a string of the full path to where the dataset should be
 #' in the datastore.
 #' @export
-checkDataset <- function(Name, Table, Group, DstoreListing_df, DstoreDir=NULL) {
+checkDataset <- function(Name, Table, Group, DstoreListing_df) {
   # TODO: DatasetName should include virtual location (local, base)
   Name <- as.character(Name)
   Table <- as.character(Table)
@@ -47,13 +43,7 @@ checkDataset <- function(Name, Table, Group, DstoreListing_df, DstoreDir=NULL) {
   DatasetName <- file.path(Group, Table, Name)
   DatasetExists <- DatasetName %in% DstoreListing_df$groupname
   Result <- ifelse (DatasetExists, TRUE, FALSE)
-  if ( is.null(DstoreDir) ) {
-    if ( "DstoreDir" %in% names(DstoreListing_df) ) {
-      DstoreDir <- DstoreListing_df$DstoreDir[ DstoreListing_df$groupname %in% DatasetName ]
-      if ( is.na(DstoreDir) ) DstoreDir <- NULL
-    }
-  }
-  attributes(Result) <- list(DatasetName=DatasetName, DstoreDir=DstoreDir)
+  attributes(Result) <- list(DatasetName=DatasetName)
   Result
 }
 

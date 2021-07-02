@@ -50,12 +50,11 @@ attributeGet <- function(variable, attr_name){
 
 ve.results.index <- function() {
   # Load model state from self$resultsPath
-  ve.model <- new.env()
   FileName=normalizePath( file.path(
     self$resultsPath, # Should already include ResultsDir
-    visioneval::getModelStateFileName(Param_ls=private$RunParam_ls)
+    visioneval::getModelStateFileName()
   ), winslash="/", mustWork=FALSE)
-  ms <- self$ModelState <- try(visioneval::readModelState(FileName=FileName))
+  ms <- self$ModelState <- try(visioneval::readModelState(FileName=FileName,envir=new.env()))
   if ( ! is.list(ms) ) {
     ms <- self$ModelState <- NULL
     visioneval::writeLog(Level="error",paste("Cannot load ModelState from:",FileName))
@@ -64,6 +63,8 @@ ve.results.index <- function() {
   if ( is.null(private$RunParam_ls) && is.list( ms ) ) {
     private$RunParam_ls <-ms$RunParam_ls
   }
+
+  # TODO: use explicit file paths rather than changing working directory?
   owd <- setwd(self$resultsPath)
   on.exit(setwd(owd))
 
@@ -630,7 +631,7 @@ ve.select.parse <- function(select) {
       if ( is.na(name[1]) || ! nzchar(name[1]) ) group <- NULL else group=name[1]
       build <- union( build, self$find(Name=field,Group=group,Table=table,as.object=FALSE) )
     }
-    select <- build; # should be a vector of integers
+    select <- build # should be a vector of integers
   }
   
   # if select is a numeric vector, validate its range and return it
@@ -670,7 +671,7 @@ ve.select.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,as.objec
     if ( !is.null(pattern ) ) {
       fld <- grepl(pattern,Name,ignore.case=TRUE)     # RegEx search for name
     } else if ( !is.null(searchName) ) {
-      fld <- Name %in% searchName;                    # Exact name match
+      fld <- Name %in% searchName                     # Exact name match
     } else {
       fld <- rep(TRUE,nrow(self$results$modelIndex))  # Start with all selected
     }

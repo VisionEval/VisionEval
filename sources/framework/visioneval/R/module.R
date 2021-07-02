@@ -4,8 +4,6 @@
 
 #This script defines functions related to the development and use of modules.
 
-utils::globalVariables(c("readFromTable","initDatastore"))
-
 #DEFINE LIST ALIAS
 #=================
 #' Alias for list function.
