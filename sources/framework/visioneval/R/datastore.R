@@ -1654,6 +1654,41 @@ inputsToDatastore <- function(Inputs_ls, ModuleSpec_ls, ModuleName) {
     TRUE
   }
 
+#MERGE TWO DATASTORE LISTINGS
+#' Merge two Datastore listings
+#'
+#' \code{mergeDatastoreListings} a visioneval framework control function that combines
+#' multiple Datastore listings (e.g. from different places in a DatastorePath)
+#'
+#' @param baseListing The datastore listing to be augmented
+#' @param addListing The listing with elements that will override or augment the base
+#' @return a new datastore listing with updated elements
+#' @export
+mergeDatastoreListings <- function(baseListing, addListing) {
+  # The structure of the Datastore listing (ModelState_ls$Datastore) is as follows:
+  #   group            # character vector
+  #   name             # character vector
+  #   groupname        # character vector
+  #   attributes       # list
+  # The listing is presented as either a data.frame or a list; we can access the elements
+  #   the same way just by using baseListing$group etc.
+  if ( ! is.list(baseListing) || !is.list(newListing) ) {
+    stop(
+      writeLog("Invalid listing types presented to mergeDatastoreListings",Level="error")
+    )
+  }
+  asDF <- is.data.frame(baseListing) # if not a data.frame, it should be a list
+  newListing <- as.list(baseListing) # drop data.frame class
+  newItems <- which( ! addListing$groupname %in% baseListing$groupname ) # indexes into newListing
+  newListing$group <- c(baseListing$group,addListing$group[newItems])
+  newListing$name <- c(baseListing$name,addListing$name[newItems])
+  newListing$groupname <- c(baseListing$groupname,addListing$groupname[newItems])
+  newListing$attributes <- c(baseListing$attributes,addListing$attributes[newItems])
+
+  if ( asDF ) newListing <- as.data.frame(newListing)
+  return(newListing)
+}
+
 #COPY A DATASTORE
 #================
 #' Copy a Datastore and ModelState_ls from one location to another
@@ -1784,6 +1819,5 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
     }
     success <- TRUE
   }
-    
   return(success)
 }

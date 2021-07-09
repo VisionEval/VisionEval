@@ -64,6 +64,14 @@ ve.results.index <- function() {
     private$RunParam_ls <-ms$RunParam_ls
   }
 
+  # TODO: if the modelpath has a DatastorePath, compile the index and inputs from
+  #       each element of the path (from back to front), and keep track of the
+  #       stage name where that element is physically present.
+  # Once we know those datasets are out there, reading the dataset will "just work"
+
+  # TODO: Use mergeDatastoreListings function to combine add Datastore listings into a consolidated
+  #       List
+
   # TODO: use explicit file paths rather than changing working directory?
   owd <- setwd(self$resultsPath)
   on.exit(setwd(owd))

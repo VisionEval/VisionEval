@@ -25,14 +25,15 @@ modelEnvironment <- function(Clear=NULL) {
   # export this function since it can be useful in the VEModel
   # package
   if ( ! missing(Clear) && is.character(Clear) ) {
-    if ( nzchar(Clear) ) { # optionally set owner flag
+    if ( nzchar(Clear) ) { # Clear is a non-empty string: set owner flag and remove everything
       rm(list=ls(ve.model),envir=ve.model)
       ve.model$Owner <- Clear
     } else {
       # suppress ve.model initialization if "owned"
       if ( is.null(ve.model$Owner) ) { # probably called initializeModel from "source"
-        rm(list=ls(ve.model),envir=ve.model)
+        rm(list=ls(ve.model),envir=ve.model) # clear environment
       } else {
+        # pre-existing model environment is retained
         writeLog(paste0("ve.model NOT cleared due to Owner: ",ve.model$Owner),Level="debug")
         rm("Owner",envir=ve.model) # Owner protection is now over.
       }
@@ -51,11 +52,7 @@ modelEnvironment <- function(Clear=NULL) {
 #' @return TRUE if ve.model$RunModel is TRUE, otherwise FALSE
 #' @export
 modelRunning <- function() {
-#   if ( ! "ve.model" %in% search() ) { # have not performed initializeModel
-#     return(FALSE)
-#   } else {
-#     ve.model <- as.environment("ve.model")
-    if ( "RunModel" %in% ls(ve.model) ) { # VEModel will set during "open" or "run" model
+    if ( "RunModel" %in% names(ve.model) ) { # VEModel or initializeModel will set
       return(ve.model$RunModel)
     } else { # The model is running in backward-compatible mode
       return(ve.model$RunModel <- TRUE)
@@ -429,7 +426,7 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
 #=============
 #' Convenience function for adding or updating a parameter to Param_ls
 #'
-#' \code{mergeParameters} a visioneval developer function that adds an arbitrary parameter to a
+#' \code{addRunParameter} a visioneval developer function that adds an arbitrary parameter to a
 #' RunParam_ls.
 #'
 #' @param Param_ls the list whose parameters will be changed/added to

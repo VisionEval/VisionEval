@@ -139,7 +139,7 @@ test_classic <- function(modelName="Classic",save=TRUE) {
     unlink(modelPath,recursive=TRUE)
   } else {
     testStep("Should save previous Datastore")
-    print(dir(modelPath))
+    print(list.dirs(modelPath))
   }
 
   if ( !save || ! dir.exists(modelPath) ) {
@@ -155,7 +155,7 @@ test_classic <- function(modelName="Classic",save=TRUE) {
   source("run_model.R")
   if ( save) {
     message("Directories after:\n")
-    for ( f in dir() ) message(f)
+    for ( f in list.dirs() ) message(f)
   }
 
   invisible(NULL)

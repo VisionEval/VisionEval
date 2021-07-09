@@ -1,5 +1,67 @@
 Immediate Next:
 
+A question about "Results":
+
+  When we open a "ResultsDir", there will be a Log and a series of stage sub-directories with
+  (perhaps) their own logs and (definitely) ModelState and Datastore. We can open a single Results
+  path (with ModelState/Datastore) to extract or query just that Datastore (which may include upstream
+  linked Datastores, if those are available). The default for a Model will be generate a list of
+  "Reportable" modelStage results (those whose Name does not appear as the name of a "StartFrom"
+  model).
+
+Functions to work out in VEModel:
+  "addBaseModel"
+    To copy over structural parameters from another model (probably near done)
+  standard models
+    Make them complete new-style models (versus the classic ones distributed)
+  "ve.model.copy" copyResults (or not)
+    Takes a snapshot of the Model without Results
+    Note that VEResults should have a "copy" function to copy/flatten results (keeping
+      the RunPath consistent so we can find stuff...
+  "ve.model.rename"
+    The use case was for altering model descriptors in a model copy
+    May not need that any more. Need a deeper ability to edit model or stage settings
+  "ve.model.loadModelState"
+    Reimplement this just to open or create model states for each model stage
+    Called automatically before "run" if model state is not on disk (based on
+      save/continue/reset instruction)
+  "ve.model.set"
+    Inspect parameters for the model, or for a particular stage
+    Need to indicate which stage to show (or the overall model)
+    Perhaps need to simplify
+  "ve.model.list"
+    This should describe model/module inputs, outputs, things in the Datastore
+    Uses summarizeSpecs function to generate the database
+    Should return results for each stage separately (must ask for a stage)
+    if we have linked stages (e.g. StartFrom) it should compile specs for the
+      entire set of earlier stages
+  "Stages"
+    Need some functions to explore and navigate model stages
+    We get a modelStage description and can inspect it in various ways
+      (e.g. a modelStage is just a model...)
+    Need to print, get results, etc.
+  "ve.model.save"
+    Part of the function set to edit and save model configurations
+  "ve.model.run"
+    Can be dramatically simplified - just runs the separate stages after
+    loading them, using framework functions
+  "ve.model.log"
+    Report the log file for a stage (not just the final one).
+  "ve.model.dir"
+    This one may work, but needs to be properly updated for Stages
+  "ve.model.clear"
+    This one may work, but should be updated for stage structure...
+  "ve.model.print"
+    Needs better options and more descriptive elements
+  "ve.model.resultspath"
+    Update for model stages...
+  "ve.model.results"
+    Update to get results objects
+    Needs particular work for "StartFrom" models (to keep the results all
+      lined up).
+  "ve.model.query"
+    Update to get query objects (list) or to open one
+
 Continue working to get VEModel running
   Initially, don't look for stages - just create the ModelDir as first stage
     So it will run a simple, classic model

@@ -74,7 +74,7 @@ ve.env$RunParam_ls <- list()
 #'
 #'   \item{ModelRoot}{Where to search in ve.runtime for model directories (default "models")}
 #'   \item{ModelSetup}{File name for 'new style' model (default "model_setup.yml")}
-#'   \item{ModelScript}{Regular expression for run_model file name (default "run_model\\.R")}
+#'   \item{ModelScript}{Regular expression for run_model file name (default "run_model.R")}
 #'   \item{ScriptsDir}{Directory within a model to search for run_model.R or RunStep scripts
 #'   (default "scripts")}
 #'   \item{ResultsDir}{Directory within a model to place the current results, and to provide a
@@ -100,7 +100,6 @@ runtimeEnvironment <- function() { ve.env }
 
 default.parameters.table = list(
   ModelRoot           = "models",
-  ModelScript         = "run_model\\.R",
   ScriptsDir          = "scripts", # Will collapse to '.' if not already present
   ResultsDir          = "results", # Will create if not already present
   OutputDir           = "output",  # Will create if not already present
