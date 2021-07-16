@@ -1,13 +1,30 @@
 Immediate Next:
 
+Re-verify that the framework model run (classic) still works
+Re-verify that the classic model can still run within VEModel
+  Make sure we can re-open the model afterwards and that it has a suitable RunStatus applied
+    ("Classic Run")
+
 A question about "Results":
 
-  When we open a "ResultsDir", there will be a Log and a series of stage sub-directories with
-  (perhaps) their own logs and (definitely) ModelState and Datastore. We can open a single Results
-  path (with ModelState/Datastore) to extract or query just that Datastore (which may include upstream
-  linked Datastores, if those are available). The default for a Model will be generate a list of
-  "Reportable" modelStage results (those whose Name does not appear as the name of a "StartFrom"
-  model).
+When we open a "ResultsDir", there will be a Log and a series of stage sub-directories with
+(perhaps) their own logs and (definitely) ModelState and Datastore. We can open a single Results
+path (with ModelState/Datastore) as a VERresult to extract or query just that Datastore (which may
+include upstream linked Datastores, if those are available). The default for a Model will be
+generate a list of "Reportable" modelStage results (those whose Name does not appear as the name of
+a "StartFrom" model).
+
+Can now open a new-style model successfully (single stage VERSPM)
+  Test loading the multi-stage standard models (All stages present and runnable? Correct reportable?)
+    VERSPM-pop
+    VERSPM-years
+    VE-State-base
+    VE-State-staged
+    VERPAT
+  Test that we can open a "classic" VERSPM (from sources/models)
+  Test that we can open VE-Stage-staged (from sources/models)
+
+Then go to work on making each model run: 
 
 Functions to work out in VEModel:
   "addBaseModel"

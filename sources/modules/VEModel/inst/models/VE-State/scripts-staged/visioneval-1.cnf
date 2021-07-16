@@ -1,0 +1,6 @@
+# Stage configuration
+
+# Scenario description
+ModelScript    : run_stage_1.R
+Scenario       : VE-Stage First Horizontal Stage
+Description    : Population Synthesis for Base (2010) and Future (2038)

@@ -1,0 +1,42 @@
+# Variant is selected when installing
+# Sample data is also installed
+# Eventually need to document or provide helper function for reducing to template
+variants:
+  base:
+    # "description" is used to echo back what is being installed
+    description: VERSPM 3.0
+    # Configuration is all in the model root directory
+    config: visioneval-base.cnf
+    scripts: scripts-base
+    inputs: inputs-base
+    defs: defs
+    queries: queries
+  classic: # no config, standard run_model.R script
+    scripts: scripts-classic
+    inputs: inputs-base
+    defs: defs-classic
+    # queries: queries
+  year:
+    # inputs differ by stage
+    # script is common to all years
+    description: VERSPM 3.0 Staged by Year
+    config: visioneval-year.cnf
+    inputs: inputs-base # Some files are overridden in stages
+    defs: defs
+    scripts: scripts-base # uses standard VERSPM script
+    queries: queries
+    stages: # copied as they are
+        - stage-year-2010
+        - stage-year-2038
+  pop:
+    # scripts, inputs and years all differ by stage
+    description: VERSPM 3.0 Staged Population Synthesis
+    scripts: scripts-pop
+    config: visioneval-pop.cnf
+    inputs: inputs-base # Some files are overridden in stages
+    defs: defs
+    queries: queries
+    stages: # copied as they are
+        - stage-pop-synth
+        - stage-pop-2010
+        - stage-pop-2038

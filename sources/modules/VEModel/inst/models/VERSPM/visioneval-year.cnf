@@ -1,0 +1,23 @@
+# VisionEval.cnf for VERSPM with "vertical" stages by Year
+
+# Model description
+Model       : VERSPM 3.0 ("Vertical" stages/Years)
+Region      : RVMPO
+State       : OR
+
+# Model Structural Parameters
+ModelStages : # specify explicitly to avoid processing base scenario
+    "stage-year-2010":
+      Dir: stage-year-2010
+      Reportable: true
+    "stage-year-2038":
+      Dir: stage-year-2038
+      Reportable: true
+ScriptsDir  : scripts # Uses standard model script
+InputDir    : inputs # model_parameters.json is located here
+    # Full set of model inputs is included in model base directory
+    # InputPath in stages will read year data from there
+    # Stages include just the input data they need for their year to run
+
+# Same seed used for each scenario
+Seed        : 1

@@ -1,0 +1,7 @@
+# Stage configuration
+
+# Scenario description
+ModelScript    : run_stage_3.R
+Scenario       : VE-Stage Third Horizontal Stage
+Description    : Carbon Intensity/Powertrains for Base (2010) and Future (2038)
+StartFrom      : Stage-2

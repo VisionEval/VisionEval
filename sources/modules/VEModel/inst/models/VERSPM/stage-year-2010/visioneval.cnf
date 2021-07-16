@@ -1,0 +1,7 @@
+# Base Year stage for vertical staging (by Year)
+
+# Scenario description
+Scenario    : VERSPM RVMPO Base Year only
+Description : Base Year Scenario (2010)
+BaseYear    : 2010
+Years       : [ 2010 ]

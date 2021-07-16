@@ -1,0 +1,7 @@
+# Stage configuration
+
+# Scenario description
+ModelScript    : run_stage_2.R
+Scenario       : VE-Stage Second Horizontal Stage
+Description    : Core Transport Metrics for Base (2010) and Future (2038)
+StartFrom      : Stage-1

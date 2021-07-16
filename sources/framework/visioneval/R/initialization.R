@@ -24,12 +24,13 @@
 #' @param Param_ls A named list of model run parameters
 #' @param RunPath (default getwd()) is the directory in which ModelState, Datastore and log
 #'   are being stored.
+#' @param envir The environment in which to create the ModelState_ls
 #' @return The updated RunParam_ls with ModelState parameters fleshed out
 #' @export
-initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL) {
+initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvironment()) {
 
   # Load model environment (should have RunParam_ls already loaded, furnishing ...)
-  model.env <- modelEnvironment()
+  model.env <- envir
   if ( ! is.list(Param_ls) ) {
     Param_ls <- model.env$RunParam_ls;
   }
@@ -172,7 +173,11 @@ archiveResults <- function(RunParam_ls,RunDir=getwd(),SaveDatastore=NULL) {
   ModelDir <- getRunParameter("ModelDir",Param_ls=RunParam_ls)
   ResultsName <- getRunParameter("ArchiveResultsName",Param_ls=RunParam_ls)
 
-  if ( RunDir != ModelDir ) {
+  if ( RunDir != ModelDir ) { # Requires them to be equivalently normalized paths
+
+    # Do nothing if there is no directory to archive
+    if ( ! file.exists(RunDir) ) return(character(0))
+
     # RunDir is a sub-directory
     owd <- setwd(ModelDir)
     on.exit(setwd(owd))
@@ -353,12 +358,11 @@ loadModelState <- function(FileName=getModelStateFileName(),envir=NULL) {
   if (file.exists(FileName)) {
     load(FileName,envir=envir)
   }
-  Param_ls <- get0( "RunParam_ls", envir=envir, ifnotfound=list() )
-  if ( length(Param_ls) == 0 ) {
-    ModelState_ls <- get0( "ModelState_ls", envir=envir, ifnotfound=list() )
-    if ( length(ModelState_ls) > 0 ) {
-      Param_ls <- ModelState_ls$RunParam_ls
-    }
+  ModelState_ls <- get0( "ModelState_ls", envir=envir, ifnotfound=list() )
+  if ( length(ModelState_ls) > 0 ) {
+    Param_ls <- ModelState_ls$RunParam_ls
+  } else {
+    Param_ls <- get0( "RunParam_ls", envir=envir, ifnotfound=list() )
   }
   return ( Param_ls )
 }
@@ -1818,7 +1822,8 @@ parseModelScript <- function(FilePath) {
     )
   )
 
-  InitParams_ls      <- lapply(extractElement("initializeModel"),function(x)x$initializeModel)[[1]] # Ignore more than one
+  InitParams_ls      <- lapply(extractElement("initializeModel"),function(x)x$initializeModel)
+  if ( length(InitParams_ls) > 0 ) InitParams_ls <- InitParams_ls[[1]] # Ignore more than one
   RequiredVEPackages <- sapply(extractElement("requirePackage"),function(x)x$requirePackage$Package) # Vector of package names
 
   writeLog("Done parsing model script",Level="info")

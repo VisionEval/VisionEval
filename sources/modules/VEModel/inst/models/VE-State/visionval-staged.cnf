@@ -1,0 +1,35 @@
+# VisionEval.cnf for VERSPM (single stage)
+
+# Model description
+Model          : VE-State 3.0
+Region         : Oregon
+Stage          : OR
+
+# Model Structural Parameters
+ScriptsDir     : scripts
+InputDir       : inputs  # Each stage shares the same input files
+ParamDir       : defs    # Each stage shares the same defs files
+ModelStages    :
+  Stage-1 : 
+    Dir : Stage-1
+    Config : scripts/config-stage-1.cnf
+    Reportable: false
+  Stage-2 : 
+    Dir : Stage-2
+    Config : scripts/config-stage-2.cnf
+    Reportable: false
+  Stage-3 : 
+    Dir : Stage-3
+    Config : scripts/config-stage-3.cnf
+    Reportable: false
+  Stage-4 : 
+    Dir : Stage-4
+    Config : scripts/config-stage-4.cnf
+    Reportable: true
+
+# Scenario description
+Seed           : 1
+Scenario       : VE-State Oregon Sample
+Description    : Base Year 2010 + Future 2040
+BaseYear       : 2010
+Years          : [ 2010, 2040 ]

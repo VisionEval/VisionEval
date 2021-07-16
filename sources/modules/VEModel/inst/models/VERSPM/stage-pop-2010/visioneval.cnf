@@ -1,0 +1,8 @@
+# Descriptive elements of this stage (Years)
+
+# Scenario description
+Scenario    : VERSPM RVMPO Base Year Using Pre-Built Population
+Description : Base Year Scenario (2010)
+BaseYear    : 2010
+Years       : [ 2010 ]
+StartFrom   : stage-pop-synth

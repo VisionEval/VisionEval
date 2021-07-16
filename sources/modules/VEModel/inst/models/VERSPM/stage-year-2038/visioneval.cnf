@@ -1,0 +1,18 @@
+# Future Year stage for vertical staging (by Year)
+# Stamp out additional future years by copying this scenario
+# Give it a different "Scenario Description"
+# Change the input files that reflect a different future
+
+# Scenario description
+Scenario    : VERSPM RVMPO Future Year
+Description : Future Year Scenario (2038)
+BaseYear    : 2010
+Years       : [ 2038 ]
+
+StartFrom   : stage-year-2010 # Refer to Global/Base Year results
+
+# Could also change the "StartFrom" to an earlier future year, rather
+# than using the base year - that puts the earlier year on the input
+# path, so all you need to include in the variant future year are the
+# input files that differ (any that are the same can just stay in the
+# original future year stage).

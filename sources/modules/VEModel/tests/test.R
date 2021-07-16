@@ -86,34 +86,74 @@ testStep <- function(msg) {
   cat("",paste(msg,collapse="\n"),"",sep="\n")
 }
 
-test_classic <- function(modelName="CLASSIC") {
+# Check that we can source run_model.R to run a classic model
+test_classic <- function(modelName="VERSPM-Classic",clear=TRUE,log="info") {
   modelPath <- file.path("models",modelName)
   owd <- getwd()
   on.exit(setwd(owd))
 
-  if ( dir.exists(modelPath) ) {
-    testStep("Clearing runtime environment")
+  if ( dir.exists(modelPath) && clear ) {
+    testStep("Clearing model to start from scratch")
     unlink(modelPath,recursive=TRUE)
+  } else {
+    testStep("Re-running existing installation")
   }
 
-  testStep(paste("Installing VERSPM model from package as",modelName))
-  rs <- installModel("VERSPM",modelName,log=log,confirm=FALSE)
-  rm(rs)  # Don't keep the VEModel around
+  if ( ! dir.exists(modelPath) ) {
+    testStep(paste("Installing classic VERSPM model from package as",modelName))
+    rs <- installModel("VERSPM",variant="classic",modelName,log=log,confirm=FALSE)
+    modelName <- rs$modelName
+    rm(rs)  # Don't keep the VEModel around
+  }
 
-  testStep(paste("Running",rs$modelName,"by sourcing run_model.R"))
-  setwd(rs$modelPath)
+  testStep(paste("Running",modelName,"by sourcing scripts/run_model.R"))
+
+  setwd(modelPath)
+  require(visioneval) # Put it on the search path for GetYears, RunModule, etc
   source("run_model.R")
+  detach("package:visioneval") # But leave the namespace loaded
 
   testStep("Reviewing model status")
+
   setwd(owd)
   rs <- openModel(modelName)
-  print(rs$runStatus)
-
+  cat("Model Status:",rs$printStatus(),"\n")
   return(rs)
 }
   
+test_install <- function(modelName="VERSPM",variant="base",installAs=NULL,run=FALSE,log="warn") {
 
-test_run <- function(modelName="JRSPM",reset=FALSE,log="warn") {
+  if ( ! nzchar(variant) ) variant <- ""
+  if ( missing(installAs) || is.null(installAs) ) {
+    if ( nzchar(variant) && nzchar(modelName) ) {
+      installAs <- paste0("test-",modelName,"-",variant)
+    }
+  }
+
+  if ( nzchar(installAs) ) {
+    if ( dir.exists(file.path("models",installAs)) ) {
+      testStep(paste0("Clearing previous installation at ",installAs))
+      unlink(file.path("models",installAs), recursive=TRUE)
+    }
+
+    testStep(paste("Installing",modelName,"model from package as",installAs))
+    rs <- installModel("VERSPM",installAs,variant,log=log,confirm=FALSE)
+  } else {
+    if ( nzchar(modelName) ) {
+      testStep(paste0("Directory of available variants for ",modelName))
+    } else {
+      testStep("Directory of available models")
+    }
+    rs <- installModel(modelName,"")
+  }
+  if ( ! "VEModel" %in% class(rs) ) {
+    # It's not a model, so it is probably a diagnostic showing available models or variants
+    if ( is.character(rs) ) cat(paste(rs,collapse="\n")) else print(rs)
+  }
+  return(rs)
+}
+
+test_run <- function(modelName="TEST-RUN",baseModel="VERSPM",variant="base",reset=FALSE,log="warn") {
   if ( ! reset ) {
     testStep(paste("Attempting to re-open existing",modelName))
     rs <- openModel(modelName)
@@ -135,8 +175,8 @@ test_run <- function(modelName="JRSPM",reset=FALSE,log="warn") {
           testStep("Clearing runtime environment")
           unlink(modelPath,recursive=TRUE)
         }
-        testStep(paste("Installing VERSPM model from package as",modelName))
-        rs <- installModel("VERSPM",modelName,log=log,confirm=FALSE)
+        testStep(paste("Installing",baseModel,"model from package as",modelName))
+        rs <- installModel(baseModel,modelName,variant=variant,log=log,confirm=FALSE)
 
         testStep("Running model...")
         rs$run(run="reset",log=log) # clears results directory
