@@ -58,6 +58,11 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
     stop( writeLog(Message,Level="error") )
   }
 
+  # Reformat BaseYear and Years if they were entered as numbers
+  # Classically, they went in as strings. Numbers are more natural to write.
+  if ( is.numeric(Param_ls$BaseYear) ) Param_ls$BaseYear <- as.character(Param_ls$BaseYear)
+  if ( is.numeric(Param_ls$Years) ) Param_ls$Years <- as.character(Param_ls$Years)
+
   # Install the parameters that do exist - the required parameters become the foundation for
   # ModelState_ls. Other parameters are placed in newModelState_ls$RunParameters,
   # (including things like ParamDir, UnitsFile, etc.)
@@ -127,7 +132,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   }
   newModelState_ls$DatastorePath <- Param_ls$DatastorePath
 
-  model.env$ModelState_ls <- newModelState_ls
+  model.env$ModelState_ls <- newModelState_ls # Replace whatever is already there
   model.env$RunParam_ls <- Param_ls # Includes all the run Parameters, including "required"
 
   # Note that the ModelState is saved in the working directory
@@ -431,6 +436,8 @@ setModelState <- function(ChangeState_ls=list(), FileName = NULL, Save=TRUE, env
 
   if ( Save ) {
     if ( is.null(FileName) ) FileName <- file.path(envir$ModelState_ls$ModelStatePath,getModelStateFileName())
+    writeLog(paste0("Saving ",paste(names(ChangeState_ls),collapse=",")),Level="trace")
+    writeLog(paste0("To file: ",FileName),Level="trace")
     result <- try(save("ModelState_ls",envir=envir,file=FileName))
     if ( class(result) == 'try-error' ) {
       Msg <- paste('Could not write ModelState:', FileName)
@@ -440,7 +447,7 @@ setModelState <- function(ChangeState_ls=list(), FileName = NULL, Save=TRUE, env
     }
   } else if ( length(ChangeState_ls)==0 ) {
     writeLog("I'm just sitting here watching the wheels go round and round...",Level="trace")
-    writeLogMessage(traceback(1),Level="trace")
+    writeLogMessage(.traceback(1),Level="trace")
   }
   invisible(TRUE)
 }
@@ -1814,14 +1821,6 @@ parseModelScript <- function(FilePath) {
     )
   )
 
-  Stages_df <- do.call(
-    rbind.data.frame,
-    lapply(
-      extractElement("Stage"),
-      function(x) normalizeElementFields(x$Stage,StageCallNames)
-    )
-  )
-
   InitParams_ls      <- lapply(extractElement("initializeModel"),function(x)x$initializeModel)
   if ( length(InitParams_ls) > 0 ) InitParams_ls <- InitParams_ls[[1]] # Ignore more than one
   RequiredVEPackages <- sapply(extractElement("requirePackage"),function(x)x$requirePackage$Package) # Vector of package names
@@ -1832,7 +1831,6 @@ parseModelScript <- function(FilePath) {
       AllCalls_ls        = Elements,
       ModuleCalls_df     = ModuleCalls_df,
       ScriptCalls_df     = ScriptCalls_df,
-      Stages_df          = Stages_df,
       RequiredVEPackages = RequiredVEPackages,
       InitParams_ls      = InitParams_ls
     )
@@ -1844,14 +1842,12 @@ ModelElementNames <- c(
   "runModule",
   "runScript",
   "initializeModel",
-  "requirePackage",
-  "modelStage"
+  "requirePackage"
 )
 ModelElementsRegex <- paste(ModelElementNames,collapse="|")
 
 ModuleCallNames <- c("ModuleName","PackageName","RunFor")
 ScriptCallNames <- c("Module","Specification","RunFor","ModuleType")
-StageCallNames  <- c("Name","Sequence")
 
 normalizeElementFields <- function(Elements_ls,NeededNames) {
   missingNames <- setdiff(NeededNames,names(Elements_ls)) # names needed but not found
@@ -1882,9 +1878,14 @@ screenTypes <- function(x) {
 #    Additional arguments destined for ... will be expanded to their name or position
 extractModelElements <- function(test.expr,depth=0) {
   # use 'grep' to find the calls to VE Model Elements in test.expr
-  ve.elements <- grep(ModelElementsRegex,sapply(test.expr,function(s) all.names(s)))
+  ve.elements <- grep(ModelElementsRegex,sapply(test.expr,function(s) all.names(s),simplify=FALSE))
 
   parsed.calls <- list()
+#   if ( length(test.expr)==1 && any(ve.elements>1) ) {
+#       for ( deeper.call in Recall(test.expr[[1]],depth=depth+1) ) {
+#         parsed.calls[[length(parsed.calls)+1]] <- deeper.call
+#       }
+#   }
   for ( v in ve.elements ) { # iterate through matching elements
     r <- test.expr[[v]]
     r.char <- as.character(r)

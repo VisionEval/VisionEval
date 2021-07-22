@@ -49,13 +49,14 @@ modelEnvironment <- function(Clear=NULL) {
 #' \code{modelRunning} returns TRUE if the model is running; otherwise
 #' the run_model.R script is executed as a "dry run".
 #'
+#' @param envir The environment in which the model is running (default visioneval::ve.model)
 #' @return TRUE if ve.model$RunModel is TRUE, otherwise FALSE
 #' @export
-modelRunning <- function() {
-    if ( "RunModel" %in% names(ve.model) ) { # VEModel or initializeModel will set
-      return(ve.model$RunModel)
+modelRunning <- function(envir=modelEnvironment()) {
+    if ( "RunModel" %in% names(envir) ) { # VEModel or initializeModel will set
+      return(envir$RunModel)
     } else { # The model is running in backward-compatible mode
-      return(ve.model$RunModel <- TRUE)
+      return(envir$RunModel <- TRUE)
     }
 }
 
@@ -84,11 +85,12 @@ modelRunning <- function() {
 #' @param Param_ls a list of run parameters to look within (otherwise RunParam_ls from
 #' "ve.model" environment if it exists, and if not just an empty list.
 #' @param Default is the value to provide if Parameter is not found in RunParam_ls
+#' @param Source re-add the parameter source to the value returned (see \code{addRunParameter})
 #' @param logSource a logical (default=FALSE); if TRUE, write an info-level log message reporting the
 #' source for the parameter value
 #' @return A parameter value or its default if not set
 #' @export
-getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,logSource=FALSE) {
+getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,Source=FALSE,logSource=FALSE) {
   param.source <- NULL
   defaultParams_ls <- list()
   defaultMissing <- missing(Default)
@@ -110,6 +112,7 @@ getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,logSource=FALSE) 
     }
     Param_ls <- addParameterSource(Param_ls,param.source)
   }
+
   if ( length(Param_ls)==0 || ! Parameter %in% names(Param_ls) ) {
     if ( logSource ) writeLog(
       paste(Parameter,"using Default, called from:",as.character(.traceback(2)),collapse=", "),
@@ -118,10 +121,11 @@ getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,logSource=FALSE) 
     if ( defaultMissing && Parameter %in% names(defaultParams_ls) ) {
       Default <- defaultParams_ls[[Parameter]]
     }
-    return( Default )
+    sources <- attr(defaultParams_ls,"source")
+    paramVal <- Default
+    attr(paramVal,"source") <- sources[Parameter,]
   } else {
     if ( logSource ) {
-      sources <- attr(Param_ls,"source")
       if ( is.null(sources) ) {
         writeLog(
           paste("Unknown source for",Parameter,"at",as.character(.traceback(2)),collapse=", "),
@@ -134,8 +138,13 @@ getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,logSource=FALSE) 
         )
       }
     }
-    return( Param_ls[[Parameter]] )
+    paramVal <- Param_ls[[Parameter]]
+    if ( Source ) {
+      sources <- attr(Param_ls,"source")
+      attr(paramVal,"source") <- sources[Parameter,]
+    }
   }
+  return( paramVal )
 }
 
 # These are default parameters used by the framework functions
@@ -235,7 +244,7 @@ defaultVERunParameters <- function(Param_ls=list()) {
 #' The returned list also has a "source" attribute, which is a dataframe with columns "Name" and
 #' "Source" and a row for each run parameter that is included in the returned list. See
 #' \code{updateParameterSource}. Inspecting this attribute will help debug wrong parameter settings
-#' (e.g. if a run parameter is overridden by an unexpected value). If you run the initializeModel
+#' (e.g. if ag run parameter is overridden by an unexpected value). If you run the initializeModel
 #' function with the RunModel=FALSE option, the ModelState_ls that is generated will contain a
 #' complete set of run parameters, and you can inspect their source.
 #'
@@ -433,8 +442,15 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
 #' @param ... Named arguments to be added to Param_ls
 #' @return The updated Param_ls
 #' @export
-addRunParameter <- function(Param_ls=list(),Source="Interactive",...) {
+addRunParameter <- function(Param_ls=list(),Source=NULL,...) {
   newParams_ls <- list(...)
+  # if source not supplied, check if first item in newParams_ls has a source and use that
+  if ( missing(Source) || is.null(Source) ) {
+    item.source <- attr(newParams_ls,"source")
+    if ( ! is.null(item.source) ) Source <- item.source
+  }
+  if ( is.null(Source) ) Source <- "Interactive"
+
   # I think ... must have names; we'll drop any items that sneak into ... without names
   if ( !is.null(names(newParams_ls)) ) newParams_ls <- newParams_ls[!is.na(names(newParams_ls))]
   # Add the source to the new parameter list
@@ -442,6 +458,25 @@ addRunParameter <- function(Param_ls=list(),Source="Interactive",...) {
   # Merge new list into the base parameter list
   return( mergeParameters(Param_ls,newParams_ls) )
 }
+
+#EXTRACT PARAMETER LIST
+#' Extract a subset of a parameter list, preserving source
+#'
+#' \code{extractParameters} a visioneval framework control function that extracts
+#' a subset of a parameter list, including their "source" attribute (see \code{readConfigurationFile}
+#'
+#' @param ParamNames a character vector of names to extract (if empty, just return a copy of the
+#' list)
+#' @param Param_ls the list from which to extract parameters
+#' @return The subset of Param_ls with the sources preserved
+#' @export
+extractParameters <- function(ParamNames=NULL,Param_ls=list()) {
+  if ( ! is.character(ParamNames) || length(ParamNames)==0 ) return(Param_ls)
+  newSources <- attr(Param_ls,"source")[ParamNames,]
+  newParam_ls <- Param_ls[ ParamNames ]
+  attr(newSources,"source") <- newSources
+  return(newParam_ls)
+}  
 
 #MERGE PARAMETER LISTS
 #=====================
@@ -730,16 +765,26 @@ fileTimeStamp <- function( TimeStamp, Prefix=NULL ) {
 #' @param Prefix A character string appended to the file name for the log file. For example, if the
 #' Prefix is 'CreateHouseholds', the log file is named 'Log_CreateHouseholds_<date>_<time>.txt'. The
 #' default value is NULL in which case the Prefix is the date and time.
+#' @param Clear a logical (default=FALSE); if FALSE, use existing LogStatus (output file and
+#'   threshold)
 #' @param Quiet a logical (default=TRUE); if FALSE, write initialization parameters as a log message
 #' @param envir The enviroment in which to track the log status
 #' @return A list containing the name of the constructed log file and the time stamp
 #' @import futile.logger
 #' @export
-initLog <- function(TimeStamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL, Quiet=TRUE, envir=modelEnvironment()) {
+initLog <- function(TimeStamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL,
+  Clear=FALSE, Quiet=TRUE,
+  envir=modelEnvironment()) {
 
   # Don't touch the log if it is already initialized
   ve.model <- envir
-  if ( "LogStatus" %in% names(ve.model) ) return(invisible(ve.model$LogStatus))
+  if ( "LogStatus" %in% names(ve.model) ) {
+    if ( ! Clear ) {
+      return(invisible(ve.model$LogStatus))
+    } else {
+      rm("LogStatus",envir=ve.model)
+    }
+  }
 
   if (is.null(TimeStamp)) {
     TimeStamp <- Sys.time()

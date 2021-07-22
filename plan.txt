@@ -1,18 +1,50 @@
-Immediate Next:
+The path to completion:
 
-Re-verify that the framework model run (classic) still works
-Re-verify that the classic model can still run within VEModel
-  Make sure we can re-open the model afterwards and that it has a suitable RunStatus applied
-    ("Classic Run")
+Run the staged models (using LoadDatastore - VE-State-Staged)
+Run without LoadDatastore (DatastorePath)
+Run with a BaseModel (LoadDatastore implied)
 
-A question about "Results":
+Check the list function and other status items
+Work on dir, clear, rename, etc.
+Work on settings (how to make that more transparent?)
+  Look at defaults, runtime environment, model, stage
+  So we can ask for a particular one of those, and see what values are pulled out
+  Be able to compare at different levels (which items were over-ridden)
+    Show applied value
+    Show overridden values (all the way back up to Defaults)
 
-When we open a "ResultsDir", there will be a Log and a series of stage sub-directories with
-(perhaps) their own logs and (definitely) ModelState and Datastore. We can open a single Results
-path (with ModelState/Datastore) as a VERresult to extract or query just that Datastore (which may
-include upstream linked Datastores, if those are available). The default for a Model will be
-generate a list of "Reportable" modelStage results (those whose Name does not appear as the name of
-a "StartFrom" model).
+Add a helper function for VEModel, which is "openResults" (taking a model name, or a path to a
+results directory, defaulting to the current directory).
+
+VEModel$results will generate VEResults from all its reportable stages (or specific names can be
+supplied).
+
+Opening a path fills in a VEResults. A list of paths makes a list of VEResults (if valid).
+
+Could still keep the VEResults as it is now, and inject it as an element of the ModelStage.
+So a VEModel contains one or more ModelStages, one or more of which are Runnable, and one or
+more of which are Reportable. A runnable model stage builds a VEResults object when it is run
+(plus the actual run results in the file system). A query works on a list of VEResults objects
+(as it does currently), and gives back a list of vectors of metrics. It can also query a single
+VEResult object.
+
+Can VEResults itself always be a list of results? Perhaps what we really need to do is create
+a VEModelStage class that will accumulate the results, and what we really get in VEResults is a list
+of the stages. Then we have the path, the ModelState_ls and everything else we need, already open.
+If we open a path from the file system, we find the ModelState_ls and expand that into a
+VEModelStage object.
+
+VEQuery will take a list of VEResults and operate on those. If we give it a VEModel, it pulls out
+the Reportable stages (unless a specific stage is named: only one in that case, especially if not
+Reportable) and builds a list of their results. Then we run the low-level query on each VEResults
+and assemble a named list of query results (e.g. via lapply) and readily convert that list into a
+data.frame.
+
+Need to work on extract function: resultsdir/output/extract-timestamp/stage/{metadata.csv,results.csv}.
+  Flatten or not to flatten? Answer is "flatten" so all available data shows up in the .csv, but option not to Flatten
+Need to be able to re-read metadata.csv and do the same extract again.
+
+Likewise with queries: resutsdir/outputs/query-timestamp/{queryspec,scenarios (results paths), output table}
 
 Can now open a new-style model successfully (single stage VERSPM)
   Test loading the multi-stage standard models (All stages present and runnable? Correct reportable?)

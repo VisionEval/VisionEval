@@ -130,7 +130,7 @@ readFromTable <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, env
   table <- envir$readFromTable(Name, Table, Group, Index, ReadAttr, envir=envir)
   writeLog(
     paste(class(table),"(",length(table),") returned from readFromTable(",Name,",",Table,",",Group,")"),
-    Level="info"
+    Level="trace"
   )
   if ( length(table)==1 && is.null(attributes(table)) && length(G$DatastorePath)>1 ) {
     # table might legitimately be NA of length 1. Attributes are non-null if it is "for real"
@@ -138,7 +138,7 @@ readFromTable <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, env
     # DatastorePath holds absolute path to Datastore
     if ( is.null(envir$ModelStateList) ) { # Check for ModelState cache from earlier stages
       paths <- G$DatastorePath[-1]     # By definition, first DatastorePath is for the current stage
-      writeLog(c("Datastore Paths:",paths),Level="info")
+      writeLog(c("Datastore Paths:",paths),Level="trace")
       dsPaths <- lapply(paths, # Create environments that describe the source Datastore/ModelState
         function(dstore) {
           path <- file.path(dstore,getModelStateFileName())
@@ -160,7 +160,7 @@ readFromTable <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, env
       }
       envir$ModelStateList <- dsPaths
     } else {
-      writeLog("Using cached DatastorePath/ModelStates",Level="info")
+      writeLog("Using cached DatastorePath/ModelStates",Level="trace")
     }
     # Iterate over additional ModelStates in prior model stages
     for ( ms.env in envir$ModelStateList ) {

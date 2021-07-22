@@ -265,8 +265,8 @@ getModelParameters <- function(DotParam_ls=list(),DatastoreName=NULL,LoadDatasto
 #'
 #' @param RunParam_ls is returned from \code{getModelParameters}
 #' @param Message a character string to report why we're waiting...
-#' @param ifExists a logical - if TRUE and not modelRunning(), simply load an existing model state.
-#'   if FALSE, create a new model state in memory if there is no
+#' @param onlyExisting a logical - if TRUE and not modelRunning(), simply load an existing model state.
+#'   if FALSE, create a new model state in memory if there is not one already
 #' existing model state. Ignored if modelRunning().
 #' @param RunDir the directory in which to seek/create the model run
 #' @param envir The environment into which to load the ModelState
@@ -275,7 +275,7 @@ getModelParameters <- function(DotParam_ls=list(),DatastoreName=NULL,LoadDatasto
 loadModel <- function(
   RunParam_ls,
   Message = "Initializing Model. This may take some time...",
-  ifExists = FALSE,
+  onlyExisting = FALSE,
   RunDir = getwd(),
   envir = modelEnvironment()
 ) {
@@ -321,23 +321,17 @@ loadModel <- function(
   if ( ! RunModel ) {
     if ( file.exists(envir$ModelStatePath) ) {
       RunParam_ls <- loadModelState(envir$ModelStatePath)
-      if ( "ModelState_ls" %in% names(envir) ) {
-        if ( ! "RunStatus" %in% names(envir$ModelState_ls) ) {
-          # VEModel run function will set RunStatus in the ModelState_Ls
-          # Classic model run doesn't know what the RunStatus is...
-          setModelState(RunStatus=1,Save=TRUE,envir=envir) # 1 == "Unknown" run status (see VEModel)
-        }
-      }
+      if ( onlyExisting ) {
+        # Stop here if we don't want to build a new model state (used in VEModel FindModel)
+        writeLog("Opened existing ModelState_ls ",Level="info")
+        return(envir$ModelState_ls) # Returns empty list if no ModelState_ls
+      } 
     }
-    # Stop here if we don't want to build a new model state (used in VEModel FindModel)
-    if ( ifExists ) {
-      return(envir$ModelState_ls) # Returns NULL if no ModelState_ls
-    }
-  } else {
-    # Initialize a fresh model state - update later if loading existing datastore
-    RunParam_ls <- initModelState(Save=FALSE,Param_ls=RunParam_ls,envir=envir)
   }
-#  RunParam_ls <- envir$RunParam_ls # Don't need this - using Param_ls returned from model state access functions
+
+  # Initialize a fresh model state - update later if loading existing datastore
+  writeLog("Initializing new ModelState_ls",Level="info")
+  RunParam_ls <- initModelState(Save=FALSE,Param_ls=RunParam_ls,envir=envir)
 
   #==========================================================
   #PARSE RUN SCRIPT FOR MODULE CALLS, CHECK AND COMBINE SPECS
@@ -400,7 +394,6 @@ loadModel <- function(
   LoadDatastore  <- getRunParameter("LoadDatastore",Default=FALSE,Param_ls=RunParam_ls)
 
   # Set up load datastore parameters
-  # TODO: Might have relayed LoadDstore from the RunDstore element of BaseModel
   LoadDstore <- getRunParameter("LoadDstore",Default=list(),Param_ls=RunParam_ls)
   if ( ! ( is.list(LoadDstore) && all(c("Name","Dir") %in% LoadDstore) ) ) {
     LoadDstore <- list()

@@ -12,6 +12,7 @@ variants:
     defs: defs
     queries: queries
   classic: # no config, standard run_model.R script
+    description: Classic VERSPM (run_model.R)
     scripts: scripts-classic
     inputs: inputs-base
     defs: defs-classic
