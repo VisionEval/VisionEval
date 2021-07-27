@@ -93,7 +93,7 @@ initializeModel <- function(
   # Valid log levels (from least to most important) [ see environment.R ]
   #   trace, debug, info, warn, error, fatal
   LogLevel <- getRunParameter("LogLevel",Param_ls=RunParam_ls)
-  initLog(Threshold=LogLevel) # Does nothing if logger is already active in ve.model
+  initLog(Threshold=LogLevel,Clear=TRUE)
 
   # Build the model state from RunParam_ls
   # Model will run in the current directory...

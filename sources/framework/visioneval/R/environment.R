@@ -773,8 +773,7 @@ fileTimeStamp <- function( TimeStamp, Prefix=NULL ) {
 #' @import futile.logger
 #' @export
 initLog <- function(TimeStamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL,
-  Clear=FALSE, Quiet=TRUE,
-  envir=modelEnvironment()) {
+  Clear=FALSE, Quiet=TRUE, envir=modelEnvironment()) {
 
   # Don't touch the log if it is already initialized
   ve.model <- envir
@@ -786,10 +785,14 @@ initLog <- function(TimeStamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL
     }
   }
 
-  if (is.null(TimeStamp)) {
-    TimeStamp <- Sys.time()
+  if ( Save ) {
+    if (is.null(TimeStamp)) {
+      TimeStamp <- Sys.time()
+    }
+    LogFile <- paste0(fileTimeStamp(TimeStamp,Prefix=c("Log",Prefix)),".txt")
+  } else {
+    LogFile <- "console"
   }
-  LogFile <- paste0(fileTimeStamp(TimeStamp,Prefix=c("Log",Prefix)),".txt")
 
   # Create and provision the ve.logger
   th <- which( log.threshold %in% toupper(Threshold) )
@@ -804,9 +807,7 @@ initLog <- function(TimeStamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL
   futile.logger::flog.threshold("WARN",name="stderr")
   futile.logger::flog.layout( log.layout.visioneval, name="stderr")
 
-  if ( Save ) saveLog(LogFile) # Can always do so later...
-  # If not Save, we stash the TimeStamp and LogFile in ve.model environment
-  # and use them later to start file logging with an explicit call to saveLog
+  if ( Save ) saveLog(LogFile,envir) # Can always do so later...
 
   if ( ! Quiet && interactive() ) {
     startMsg <- paste("Logging started at",TimeStamp,"for",toupper(Threshold),"to",LogFile)
@@ -829,18 +830,19 @@ initLog <- function(TimeStamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL
 #'
 #' @param LogFile the file into which to save the log. If the specific value "console", then do
 #'   not log to a file. If NULL, look in ve.model environment, and fall back to "console"
+#' @param envir The environment holding LogFile and/or ModelState_ls
 #' @return TRUE if saving to a file, else FALSE
 #' @import futile.logger
 #' @export
-saveLog <- function(LogFile=NULL) {
-  writeLog(paste("Logging to",LogFile),Level="info")
+saveLog <- function(LogFile=NULL,envir=modelEnvironment()) {
   if ( is.null(LogFile) ) {
-    ve.model <- modelEnvironment()
+    ve.model <- envir
     if ( "LogStatus" %in% ls(ve.model) ) LogFile <- ve.model$LogStatus$LogFile
     if ( is.null(LogFile) ) { # if still null, it wasn't in ve.model$LogStatus...
       LogFile <- "console"
     }
   }
+  writeLog(paste("Logging to",LogFile),Level="info")
   Save <- LogFile != "console"
   if ( Save ) {
     if ( interactive() ) {

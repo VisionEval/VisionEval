@@ -327,10 +327,13 @@ test_model <- function(modelName="JRSPM", oldstyle=TRUE, test.copy=FALSE, log="i
     Description="This run will save prior results"
   )
   bare$run(run="save") # should generate a results archive
-  print(bare$dir(results=TRUE))
+  print(bare$dir(root=TRUE,results=TRUE))
   cat("Log path should be different from the previous run:\n")
+  debug(bare$log)
   print(bare$log())
 
+  stopTest("Was the model saved?")
+  
   testStep("run (really DON'T run) the bare model again with 'continue'")
 
   bare$set(

@@ -612,9 +612,6 @@ ve.query.run <- function(
     stop( visioneval::writeLog("No results provided to query",Level="error") )
   }
 
-  # Set up default logging
-  visioneval::initLog(Save=FALSE,Threshold=log)
-
   if ( ! is.character(Geography) || ! Geography %in% c("Region", "Azone","Marea") )
   {
     visioneval::writeLog("Geography must be one of 'Region','Marea' or 'Azone'",Level="error")

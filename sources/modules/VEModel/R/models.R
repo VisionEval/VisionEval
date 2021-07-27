@@ -39,11 +39,12 @@ NULL
 #' mdl$list(inputs=FALSE,outputs=FALSE,details=NULL)
 #' mdl$log()
 #' mdl$set(show="values", src=NULL, namelist=NULL, pattern=NULL,Param_ls=NULL)
+#' mdl$setting()
 #' mdl$save(FileName="visioneval.cnf")
 #' mdl$copy(newName=NULL,newPath=NULL,copyResults=TRUE)
 #' mdl$rename(Name=NULL,Scenario=NULL,Description=NULL,Save=TRUE)
-#' mdl$results(stage,Param_ls=NULL)
-#' mdl$resultspath(stage,Param_ls=NULL)
+#' mdl$results(stage)
+#' mdl$findstage(stage)
 #' mdl$query(QueryName=NULL,FileName=NULL,load=TRUE)
 #' 
 #' print(mdl)
@@ -555,9 +556,6 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
 #  if it is a relative path.
 ve.model.init <- function(modelPath, log="error") {
 
-  # Load system model configuration (clear the log status)
-  visioneval::initLog(Save=FALSE,Threshold=log, Clear=TRUE)
-
   # Opportunity to override names of ModelState, run_model.R, Datastore, etc.
   # Also to establish standard model directory structure (inputs, results)
 
@@ -632,7 +630,7 @@ ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE) {
 
 # Archive results directory
 ve.model.archive <- function(SaveDatastore=TRUE) {
-  failToArchive <- archiveResults(
+  failToArchive <- visioneval::archiveResults(
     RunParam_ls=self$RunParam_ls,
     RunDir=file.path(self$modelPath,self$setting("ResultsDir")),
     SaveDatastore=SaveDatastore
@@ -730,7 +728,7 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
     stagePaths <- c( stagePaths, self$setting("RunPath",stage=stage) )
   }
 
-  ResultsInRoot <- ( root && baseResultsDir==self$modelPath )
+  ResultsInRoot <- ( root && baseResults==self$modelPath )
   if ( results || ResultsInRoot  ) {
     # Handle the old-style case where ResultsDir==modelPath
     # ResultsDir is already normalized
@@ -1153,7 +1151,7 @@ ve.stage.run <- function(log="warn") {
     {
       # Initialize Log, create new ModelState
       ve.model$RunModel <- TRUE
-      visioneval::initLog(Threshold=log,Save=TRUE) # Log stage
+      visioneval::initLog(Threshold=log,Save=TRUE,envir=ve.model) # Log stage
       # Create new ModelState_ls (ignore existing)
       visioneval::loadModel(self$RunParam_ls)
       visioneval::setModelState()                       # Save ModelState.Rda
@@ -1167,6 +1165,7 @@ ve.stage.run <- function(log="warn") {
     },
     silent=TRUE
   )
+  visioneval::saveLog(LogFile="console",envir=ve.model)
 
   # Process results (or errors)
   if ( ! is.numeric(RunStatus) ) {
@@ -1550,7 +1549,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
   } else {
     toRun <- 1 # Start at first stage
   }
-  if ( toRun == 1 ) run <- "reset" # If starting over, process SaveDatastore as needed
+  if ( toRun == 1 && run != "save" ) run <- "reset" # If starting over, process SaveDatastore as needed
 
   # Save existing results if we're restarting or resetting
   SaveDatastore = NULL # ignore any pre-configured value for SaveDatastore
@@ -1560,6 +1559,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
     unlink(dir(workingResultsDir,full.names=TRUE),recursive=TRUE)
   } else if ( run == "save" ) {
     SaveDatastore <- TRUE
+    run <- "reset"
   } else {
     SaveDatastore <- visioneval::getRunParameter("SaveDatastore",Param_ls=self$RunParam_ls)
   }
@@ -1703,17 +1703,18 @@ ve.model.setting <- function(setting=NULL,stage=NULL,defaults=TRUE,shorten=TRUE,
 
 # Report the model results path (used to creat a VEResults object and
 # to retrieve the LogFile)
-ve.model.resultspath <- function(stage) {
+ve.model.findstage <- function(stage=NULL) {
   # TODO: Update to new model stage structure
+  if ( ! private$p.valid ) return( NULL )
+
   if ( missing(stage) || !is.character(stage) ) {
     stage <- tail(names(self$modelStages),1)
   }
   if ( length(stage)>1 ) {
     stage <- names(self$modelStages)[stage[length(stage)]] # use last one listed
   }
-  stage <- stage[[1]] # get the stage object from the sliced stage list
-  visioneval::writeLog(paste("Loading Results for Model Stage:",stage$Name),Level="info")
-  return(stage$RunPath)
+  stage <- self$modelStages[[stage]] # get the stage object from the sliced stage list (may be NULL)
+  return(stage)
 }
 
 ################################################################################
@@ -1722,8 +1723,7 @@ ve.model.resultspath <- function(stage) {
 
 # create a VEResults object (possibly invalid/empty) based on the current model
 #   run or a particular model stage. Default is the last model stage.
-ve.model.results <- function(stage) {
-  # TODO: Update to new model stage structure.
+ve.model.results <- function(stage=NULL) {
   # Create a results object wrapping the directory that contains the model
   # results for the given stage (or last stage if not given)
   if ( ! private$p.valid ) {
@@ -1731,27 +1731,20 @@ ve.model.results <- function(stage) {
     return( NULL )
   }
 
-  if ( missing(stage) || !is.numeric(stage) ) {
-    stage <- self$stageCount
-  } else if ( length(stage)>1 ) {
-    stage <- stage[length(stage)] # use last one listed
-  }
-
-  Param_ls <- self$ModelState[[stage]]$RunParam_ls
-  resultsPath <- self$resultspath(stage,Param_ls=Param_ls)
-  results <- VEResults$new(resultsPath)
+  stg <- self$findstage(stage)
+  if ( is.null(stg) ) stop(
+    visioneval::writeLog(paste("Model stage not found:",stage),Level="error")
+  )
+  results <- VEResults$new(stg$RunPath)
   if ( ! results$valid() ) {
-    private$lastResults <- list()
-    if (stage!=self$stageCount) {
-      visioneval::writeLog("There are no results for stage ",stage," of this model yet.",Level="warn")
+    if (!is.null(stage)) {
+      visioneval::writeLog(
+        paste("There are no results for stage ",paste(stage,collapse=", ")," of this model yet."),
+        Level="warn"
+      )
     } else {
       visioneval::writeLog("There are no results for this model yet.",Level="warn")
     }
-  } else {
-    private$lastResults <- list(
-      results=results,
-      stage=stage
-    )
   }
   return(results)
 }
@@ -1824,7 +1817,7 @@ VEModel <- R6::R6Class(
     copy=ve.model.copy,                     # copy a self$modelPath to another path (ignore results/outputs)
     archive=ve.model.archive,               # apply framework archive function if results exist
     results=ve.model.results,               # Create a VEResults object (if model is run); option to open a past result
-    resultspath=ve.model.resultspath,       # Report the path to the model results for a stage
+    findstage=ve.model.findstage,           # Report the path to the model results for a stage
     query=ve.model.query                    # Create a VEQuery object (or show a list of queries).
   ),
   active = list(                            # Object interface to "set" function; "set" called explicitly has additional options
@@ -1891,6 +1884,7 @@ openModel <- function(modelPath="",log="error") {
       )
     )
   } else {
+    visioneval::initLog(Console=TRUE,Threshold=log, envir=new.env())
     return( VEModel$new(modelPath = modelPath,log=log) )
   }
 }
@@ -1987,8 +1981,6 @@ installStandardModel <- function( modelName, modelPath, confirm, variant="base",
   #   If dirname(modelPath) also does not exist, tell user dirname(modelPath) does not exist and
   #     they have to try again
 
-  visioneval::initLog(Save=FALSE,Threshold=log)
-  
   model <- findStandardModel( modelName, variant )
   if ( ! "Description" %in% names(model) ) model$Description <- paste(modelName,variant,sep="-")
   if ( ! is.list(model) ) {
@@ -2086,6 +2078,8 @@ installStandardModel <- function( modelName, modelPath, confirm, variant="base",
 #' @return A VEModel object of the model that was just installed
 #' @export
 installModel <- function(modelName=NULL, modelPath=NULL, variant="base", confirm=TRUE, log="error") {
+  # Load system model configuration (clear the log status)
+  visioneval::initLog(Console=TRUE,Threshold=log, envir=new.env())
   model <- installStandardModel(modelName, modelPath, confirm=confirm, variant=variant, log=log)
   if ( is.list(model) ) {
     return( VEModel$new( modelPath=model$modelPath, log=log ) )
