@@ -293,7 +293,7 @@ loadModel <- function(
   # SET FLAG IF MODEL RUNNING
   #==========================
 
-  RunModel <- modelRunning()
+  RunModel <- modelRunning(envir=envir)
   owd <- setwd(RunDir)
   on.exit(setwd(owd))
 
@@ -320,7 +320,7 @@ loadModel <- function(
   # We'll start saving the model state later
   if ( ! RunModel ) {
     if ( file.exists(envir$ModelStatePath) ) {
-      RunParam_ls <- loadModelState(envir$ModelStatePath)
+      RunParam_ls <- loadModelState(envir$ModelStatePath,envir=envir)
       if ( onlyExisting ) {
         # Stop here if we don't want to build a new model state (used in VEModel FindModel)
         writeLog("Opened existing ModelState_ls ",Level="info")

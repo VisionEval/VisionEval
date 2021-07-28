@@ -578,14 +578,14 @@ ve.model.init <- function(modelPath, log="error") {
 #                      Model Management: copy, rename, dir                     #
 ################################################################################
 
-# TODO: Copy a model from one modelPath to another
+# Copy a model to a new directory
 # Use the newName to create the model's new directory
 # Update directory locations
 #   Change the ModelDir in the model's RunParams_ls
 #   Update RunPath for each stage in its RunParams_ls and ModelState_ls if copyResults
 #   Identify other elements of ModelState and RunParams that will change if the
 #     the ModelDir changes (everything built from ModelDir)
-ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE) {
+ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchives=FALSE) {
   # Copy the current model to NewName (in ModelDir, unless newPath is also provided)
   if ( ! private$p.valid ) {
     visioneval::writeLog(paste0("Invalid model: ",self$printStatus()),level="error")
@@ -611,7 +611,7 @@ ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE) {
 
   dir.create(newModelPath,showWarnings=FALSE)
   # check that the directory produces the right results files
-  model.files <- self$dir(root=TRUE,results=copyResults)
+  model.files <- self$dir(root=TRUE,results=copyResults,archive=copyArchives)
   copy.subdir <- dirname(model.files)
   unique.dirs <- unique(copy.subdir)
   for ( d in unique.dirs ) {
@@ -650,11 +650,14 @@ ve.model.archive <- function(SaveDatastore=TRUE) {
 #   is shown is relative to ve.runtime.
 # Parameters control elements of the display (if all are FALSE, make them all TRUE):
 #   root==TRUE   : show "root" elements (config, scripts/run_model.R) plus InputPath and ParamPath
+#   archive=TRUE : show archived results directories (these are also found and removed from "root")
 #   inputs=TRUE  : show files in "inputs" and "defs" locations for the model
 #   results=TRUE : show result sets
 #   outputs=TRUE : show "outputs" (extracts and query results)
 # if all.files, list inputs and outputs as files, otherwise just directories
-ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,outputs=FALSE,inputs=FALSE,shorten=TRUE, all.files=FALSE) {
+ve.model.dir <- function(
+  pattern=NULL,stage=NULL,shorten=TRUE, all.files=FALSE,
+  root=FALSE,results=FALSE,outputs=FALSE,inputs=FALSE,archive=FALSE) {
   # We're going to report contents of these directories
   #   self$modelPath (root)
   #   self$modelPath/ResultsDir (results)
@@ -675,9 +678,9 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
     private$p.valid <- FALSE
   }
 
-  # inputDetails will list the files; otherwise only list InputPath
-  if ( all(missing(root),missing(results),missing(outputs),missing(inputs)) ) {
-    root <- results <- outputs <- inputs <- TRUE
+  # 
+  if ( all(missing(root),missing(results),missing(outputs),missing(inputs),missing(archive)) ) {
+    root <- results <- outputs <- inputs <- archive <- TRUE
   }
 
   if ( missing(shorten) || shorten ) shorten <- self$modelPath
@@ -686,7 +689,7 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
   if ( inputs ) {
     inputPath <- file.path(self$setting("InputPath",shorten=FALSE),self$setting("InputDir"))
     for ( stage in self$modelStages ) {
-      inputPath <- c(InputPath,
+      inputPath <- c(inputPath,
         file.path(
           self$setting("InputPath",stage=stage,shorten=FALSE),
           self$setting("InputDir",stage=stage)
@@ -723,9 +726,21 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
     }
   } else outputFiles <- character(0)
 
+  # Find RunPath for each stage
   stagePaths <- character(0)
   for ( stage in self$modelStages ) {
-    stagePaths <- c( stagePaths, self$setting("RunPath",stage=stage) )
+    stagePaths <- c( stagePaths, self$setting("RunPath",stage=stage,shorten=FALSE) )
+  }
+
+  # Find archiveDirs (and if asked for, archiveFiles)
+  archiveNamePattern <- paste0("^",self$setting("ArchiveResultsName"),"_")
+  archiveDirs <- dir(self$modelPath,pattern=archiveNamePattern,full.names=TRUE)
+  archiveDirs <- archiveDirs[dir.exists(archiveDirs)] # remove non-directories
+  archiveFiles <- archiveDirs
+  if ( archive && all.files ) {
+    archiveFiles <- dir(archiveDirs,full.names=TRUE,recursive=TRUE)
+  } else {
+    archiveFiles <- archiveDirs
   }
 
   ResultsInRoot <- ( root && baseResults==self$modelPath )
@@ -749,6 +764,17 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
       rootFiles <- setdiff(rootFiles,resultFiles) # Drop Log and ModelState
     }
     rootFiles <- setdiff(rootFiles, stagePaths) # Leave out Stage result sub-directories
+    rootFiles <- setdiff(rootFiles, archiveDirs)
+
+    if ( all.files ) {
+      paramPaths <- self$setting("ParamPath",shorten=FALSE)
+      for ( st in names(self$modelStages) ) paramPaths <- c(paramPaths,self$setting("ParamPath",stage=st,shorten=FALSE))
+      paramPaths <- unique(paramPaths)
+      rootFiles <- c( rootFiles, dir(paramPaths,full.names=TRUE) )
+    }
+    
+    # TODO: get parameter paths from stages, collapse to unique subset
+    # if all.files, list the contents of those directories
   } else rootFiles <- character(0)
 
   files <- sort(unique(c(
@@ -756,7 +782,7 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
     # So force the type for files by providing an empty string to add to NULL/nothing
     character(0), 
     unlist(
-      list(inputFiles,outputFiles,resultFiles,rootFiles)[c(inputs,outputs,results,root)]
+      list(inputFiles,outputFiles,resultFiles,rootFiles,archiveFiles)[c(inputs,outputs,results,root,archive)]
     )
   )))
   if ( nzchar(shorten) ) files <- sub(paste0(shorten,"/"),"",files,fixed=TRUE)
@@ -764,26 +790,33 @@ ve.model.dir <- function(pattern=NULL,stage=NULL,root=FALSE,results=FALSE,output
 }
 
 # Function to interactively remove prior model runs or extracts
-ve.model.clear <- function(force=FALSE,outputOnly=NULL,stage=NULL,show=10) {
-  # Remove outputs and/or results, either interactivel or in batch
+ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL,show=10) {
+  # Remove outputs and/or results, either interactively or in batch
   # 'show' controls maximum number of outputs to display
-  # Can limit to outputs in a certain 'stage'
+  # Can limit to outputs or results in a certain 'stage'
   # outputOnly will show results as well as outputs for deletion;
   #   if outputs exist, we only show those by default
-  # force says "just go ahead and delete everything", respecting outputOnly,
+  # "archives" TRUE will offer to delete results archives
+  #   archives FALSE will ignore results archives
+  # force says "just go ahead and delete everything", respecting outputOnly and archives,
   #   so the default is to delete the outputs and leave the results, but if
   #   called a second time, will delete the results.
+  # Result archives are always untouched, unless archives==TRUE, in which case
+  #   all of them are deleted too.
 
   if ( ! private$p.valid ) {
     visioneval::writeLog(self$printStatus(),Level="error")
     return( invisible(FALSE) )
   }
   
-  to.delete <- self$dir(outputs=TRUE)
+  to.delete <- self$dir(outputs=TRUE,stage=stage)
   if ( missing( outputOnly ) ) {
     outputOnly <- length(to.delete)>0
   }
   if ( ! isTRUE(outputOnly) ) to.delete <- c(to.delete,self$dir(results=TRUE))
+
+  # Only offer archives to delete if we're looking at all stages
+  if ( isTRUE(archives) && is.null(stage) ) to.delete <- c(to.delete,self$dir(archive=TRUE))
 
   # note, by default $dir shortens by removing self$modelPath
   # so deletion will only work if getwd()==self$modelPath
@@ -793,14 +826,14 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,stage=NULL,show=10) {
   }
 
   # "stage" could be any vector of intermediate sub-directory names
-  if ( is.character(stage) ) {
+  if ( is.character(stage) && ! isTRUE(archives) ) {
     # keep only files in subdirectories matching stage$Dir
     stageDirs <- sapply(self$modelStages,function(s) s$Dir)
     stage <- stage[ stage!="." & stage %in% stageDirs ]
     if ( any(stages) ) {
       stages <- paste("/",stages,"/")
       for ( stg in stages ) {
-        to.delete <- to.delete[ grep(stg,to.delete) ] # keep the non-matching files
+        to.delete <- to.delete[ grep(stg,to.delete) ] # keep the matching files
       }
     }
   }
@@ -870,6 +903,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,stage=NULL,show=10) {
     }
   }
   if ( ! force ) cat("Nothing else to delete.\n")
+  self$load(onlyExisting=TRUE,reset=TRUE) # Reload cached model state
   return(invisible(force))
 }
 
@@ -1101,7 +1135,9 @@ ve.stage.runnable <- function(priorStages) {
 
 # Load the model state for the stage
 # Create it if onlyExisting=FALSE (that's a time-consuming operation)
-ve.stage.load <- function(onlyExisting=TRUE) {
+# if reset==TRUE, 
+ve.stage.load <- function(onlyExisting=TRUE,reset=FALSE) {
+  if ( reset ) self$ModelState_ls <- NULL
   if ( is.null(self$ModelState_ls) ) {
     envir = visioneval::modelEnvironment(Clear="ve.stage.load")
     envir$RunModel <- FALSE
@@ -1111,11 +1147,11 @@ ve.stage.load <- function(onlyExisting=TRUE) {
       setwd(self$RunPath)
     } else setwd(self$RunParam_ls$ModelDir)
     on.exit(setwd(owd))
-    ms <- visioneval::loadModel(self$RunParam_ls,onlyExisting=onlyExisting)
+    ms <- visioneval::loadModel(self$RunParam_ls,onlyExisting=onlyExisting,Message=paste("Loading Model",self$modelName))
     if ( is.list(ms) && length(ms)>0 ) { # Stash the ModelState if created successfully
       self$ModelState_ls <- ms
       if ( ! "RunStatus" %in% names(self$ModelState_ls) ) {
-        self$ModelState_ls$RunStatus <- codeStatus("Unknown")
+        self$ModelState_ls$RunStatus <- codeStatus("Loaded")
       }
       self$RunStatus <- self$ModelState_ls$RunStatus
       return(TRUE)
@@ -1165,7 +1201,6 @@ ve.stage.run <- function(log="warn") {
     },
     silent=TRUE
   )
-  visioneval::saveLog(LogFile="console",envir=ve.model)
 
   # Process results (or errors)
   if ( ! is.numeric(RunStatus) ) {
@@ -1180,7 +1215,9 @@ ve.stage.run <- function(log="warn") {
     # Success: Assemble the runResults
     self$RunStatus <- RunStatus
     visioneval::setModelState(list(RunStatus=self$RunStatus),envir=ve.model)
+    visioneval::writeLog(printStatus(self$RunStatus),Level="warn")
   }
+  visioneval::saveLog(LogFile="console",envir=ve.model)
   self$ModelState_ls <- ve.model$ModelState_ls # The story of the run...
   return(invisible(self$ModelState_ls))
 }
@@ -1214,7 +1251,7 @@ VEModelStage <- R6::R6Class(
     # Public data
     Name = NULL,                 # Name of stage (used e.g. in another stage's StartFrom)
     # May not need to save some of the following (build into RunParam_ls)
-    Dir = NULL,                  # 
+    Dir = NULL,                  # basename of stage subdirectory (for inputs and results)
     Path = NULL,                 # Normalized path to folder holding InputDir and ParamDir
     Config = NULL,               # File relative to ModelDir (optional); 
     StartFrom = "",              # Name of another model stage to extend
@@ -1299,7 +1336,7 @@ summarizeSpecs <- function(AllSpecs_ls,stage) {
   return(specFrame)
 }
 
-# List the model contents, using parsedScript and specSummary from ve.model.load
+# List the model contents
 ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=character(0)) {
   # "inputs" lists the input files (Inp) by package and module (details = field attributes)
   # "outputs" lists the fields that are Set in the Datastore (details = field attributes)
@@ -1323,6 +1360,7 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
     visioneval::writeLog("Loading model specifications (may take some time)...",Level="warn")
     self$load(onlyExisting=FALSE) # Create new model states if they are not present in the file system
     for ( stage in self$modelStages ) {
+      visioneval::writeLog(paste("Loading Stage specs for",stage$Name),Level="info")
       AllSpecs_ls <- stage$ModelState_ls$AllSpecs_ls
       if ( ! is.null( AllSpecs_ls ) ) {
         specFrame <- summarizeSpecs(AllSpecs_ls,stage$Name)
@@ -1331,12 +1369,14 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
         } else {
           rbind(self$specSummary,specFrame)
         }
+      } else {
+        visioneval::writeLog(paste("No specifications for",stage$Name),Level="warn")
       }
     }
+    visioneval::writeLog(paste("Loaded",nrow(self$specSummary),"Specifications"),Level="info")
   }
 
   # which rows to return
-  print(class(self$specSummary))
   inputRows <- if ( inputs ) which(self$specSummary$SPEC=="Inp") else integer(0)
   outputRows <- if ( outputs ) which(self$specSummary$SPEC=="Set") else integer(0)
   usedRows <- if ( inputs == outputs ) which(self$specSummary$SPEC=="Get") else integer(0)
@@ -1381,7 +1421,8 @@ ve.model.print <- function(details=FALSE) {
   private$p.valid
 }
 
-ve.model.log <- function() {
+# Return the log file location (shorten=FALSE appends full model path)
+ve.model.log <- function(shorten=TRUE) {
   # Report log files for each model stage (a vector)
   logs <- character(0)
   for ( s in self$modelStages ) {
@@ -1392,6 +1433,7 @@ ve.model.log <- function() {
       logFile <- dir(p,pattern="\\.log$",full.names=TRUE)
     }
     if ( is.character(logFile) && length(logFile)>0 ) {
+      if ( ! shorten ) logFile <- normalizePath(file.path(s$RunPath,logFile))
       logs <- c(logs,logFile)
     }
   }
@@ -1464,7 +1506,7 @@ ve.model.updateStatus <- function() {
 #      everything is where it needs to be - unintrusive
 # Second step will not be performed if "onlyExisting" is TRUE (the default)
 
-ve.model.load <- function(onlyExisting=TRUE) {
+ve.model.load <- function(onlyExisting=TRUE,reset=FALSE) {
 
   if ( ! self$valid() ) {
     stop(
@@ -1472,9 +1514,12 @@ ve.model.load <- function(onlyExisting=TRUE) {
     )
   }
 
-  # Load or Create the ModelState_ls for each stage if not already loaded
+  # Un-cache the specSummary (things may have changed)
+  self$specSummary <- NULL
+
+  # Load or Create the ModelState_ls for each stage
   for ( index in seq_along(self$modelStages) ) {
-    self$modelStages[[index]]$load(onlyExisting=onlyExisting)
+    self$modelStages[[index]]$load(onlyExisting=onlyExisting,reset=reset)
   }
   # Update self$status
   self$updateStatus()
@@ -1537,7 +1582,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
 
   # Determine which stages need to be-rerun
   if ( run=="continue" ) {
-    self$load(onlyExisting=TRUE) # Open any existing ModelState_ls to see which may be complete
+    self$load(onlyExisting=TRUE,reset=TRUE) # Open any existing ModelState_ls to see which may be complete
     alreadyRun <- ( sapply( self$modelStages, function(s) s$RunStatus ) == codeStatus("Run Complete") )
     if ( all(alreadyRun) ) {
       self$status <- codeStatus("Run Complete")
@@ -1651,7 +1696,7 @@ ve.model.set <- function(stage=NULL,modelState=FALSE,Source="Interactive",Param_
           ms.names <- names(s$ModelState_ls)
           to.change <- ms.names[ ms.names %in% names(Param_ls) ]
           if ( length(to.change) > 0 ) {
-            s$ModelState_ls[ ms.names ] <- Param_ls[ ms.names ]
+            s$ModelState_ls[ to.change ] <- Param_ls[ to.change ]
           }
         }
         self$modelStages[[stgname]] <- s
@@ -1884,7 +1929,7 @@ openModel <- function(modelPath="",log="error") {
       )
     )
   } else {
-    visioneval::initLog(Console=TRUE,Threshold=log, envir=new.env())
+    visioneval::initLog(Save=FALSE,Threshold=log, envir=new.env())
     return( VEModel$new(modelPath = modelPath,log=log) )
   }
 }
@@ -2079,7 +2124,7 @@ installStandardModel <- function( modelName, modelPath, confirm, variant="base",
 #' @export
 installModel <- function(modelName=NULL, modelPath=NULL, variant="base", confirm=TRUE, log="error") {
   # Load system model configuration (clear the log status)
-  visioneval::initLog(Console=TRUE,Threshold=log, envir=new.env())
+  visioneval::initLog(Save=FALSE,Threshold=log, envir=new.env())
   model <- installStandardModel(modelName, modelPath, confirm=confirm, variant=variant, log=log)
   if ( is.list(model) ) {
     return( VEModel$new( modelPath=model$modelPath, log=log ) )

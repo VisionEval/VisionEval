@@ -1,16 +1,6 @@
 The path to completion:
 
-Adjustments made to the logging to keep things at the console unless we are
-actually running a model. Consider when to start logging if we're working with
-queries.
-
-Need to get the LogFile from the ve.model environment when we initialize the
-ModelState. LogFile should be saved into that environment during initLog
-
-Check all the other helpers.
-Get test_model to run all the way through (requires reworking VEResults, extract, etc).
-
-Then get test_results to work.
+Then get test_results and test_query to work.
 
 Run the staged models (using LoadDatastore - VE-State-Staged)
 Run without LoadDatastore (DatastorePath)
