@@ -283,8 +283,8 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
 #' @export
 readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
   #Select datastore read function
-  # TODO: new API let's us assign functions to an arbitrary environment
   readFromTable <- assignDatastoreFunctions(QueryPrep_ls$DstoreType,FunctionName="readFromTable",envir=new.env())
+
   #Extract the datastore listings
   MS_ls <- QueryPrep_ls$Listing;
   #Datastore locations
@@ -295,22 +295,23 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
 
   owd <- getwd()
   on.exit(setwd(owd))
+
   query.env <- new.env()
 
   for (tb in Tb) {
     Out_ls[[tb]] <- list()
     Ds <- names(Tables_ls[[tb]])
     for (Loc in DstoreLocs_) { # Though written for a vector, currently only supporting one Datastore
-      ModelState_ls <- MS_ls[[Loc]]
-      HasTable <- checkTableExistence(tb, Group, ModelState_ls$Datastore)
+      query.env$ModelState_ls <- MS_ls[[Loc]
+      HasTable <- checkTableExistence(tb, Group, query.env$ModelState_ls$Datastore)
       if (HasTable) {
         for (ds in Ds) {
-          HasDataset <- checkDataset(ds, tb, Group, ModelState_ls$Datastore)
+          HasDataset <- checkDataset(ds, tb, Group, query.env$ModelState_ls$Datastore)
           if (HasDataset) {
             if (is.null(Out_ls[[tb]][[ds]])) {
               setwd(dirname(Loc)) # Work in Datastore parent directory
               Dset_ <-
-                readFromTable(ds, tb, Group, ReadAttr = TRUE, ModelState_ls=ModelState_ls)
+                readFromTable(ds, tb, Group, ReadAttr = TRUE, envir=query.env)
               if ( !is.na(Tables_ls[[tb]][ds]) && Tables_ls[[tb]][ds] != "" ) { # NA or "" means use default units
                 DsetType <- attributes(Dset_)$TYPE
                 DsetUnits <- attributes(Dset_)$UNITS
