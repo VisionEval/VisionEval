@@ -2,18 +2,59 @@ The path to completion:
 
 Then get test_results and test_query to work.
 
+Add a model function to save a visioneval.cnf for a stage, or for the
+  model itself. If we dicked with the in-memory version, save whatver
+  is current.
+How to easily decide what to push into the stage (don't want to push
+everything, just what should be in that particular configuration)
+
+Test all the models again with restructured visioneval::loadModel
+and supporting stuff in VEModel package.
+
 Run the staged models (using LoadDatastore - VE-State-Staged)
 Run without LoadDatastore (DatastorePath)
 Run with a BaseModel (LoadDatastore implied)
 
-Check the list function and other status items
-Work on dir, clear, rename, etc.
-Work on settings (how to make that more transparent?)
-  Look at defaults, runtime environment, model, stage
-  So we can ask for a particular one of those, and see what values are pulled out
-  Be able to compare at different levels (which items were over-ridden)
-    Show applied value
-    Show overridden values (all the way back up to Defaults)
+It would be great to develop a "debug dump" tool:
+  Generate a zip file with a stripped-down version of the Datastore
+  Consists of all (and only) the inputs (from "Get") used by listed modules
+  Plus all the input files (from "Inp") used by listed modules
+    Not just the inputs in the Datastore, but the input files themselves
+    Use the INPUTDIR and FILE attributes to located
+  Plus the log and ModelState_ls from that run.
+  All of that should be zipped into a single file that can be delivered to us.
+
+The use case is not just for a post-mortem, but also for developing a test harness for a particular
+module that is expected to run with certain inputs from earlier in a model stream.
+
+Steps:
+  0. Open a model
+  1. User supplies names of packages and modules
+     User supplies name for the resulting model slice (default 'PostMortem')
+  2. Default is last package/module listed in the log file listed before the [Error]
+     Option to bundle an entire runnable model (plus the Datastore)
+  4. Pull out just the group/table/name for that listed module(s)'s "Get" specifications.
+  5. Make a new Datastore with DatastoreListing.Rda in a PostMortem directory
+     That should result from flattening the Datastore (but filtering its contents by
+     Group/Table/Name). Can use the Datastore copy operation but with a specific
+     list of Datastore elements.
+  6. Include the ModelState_ls and the log file; include the "defs" directory and an
+     inputs directory that only includes the "Inp" files for the package/modules.
+
+On the other side, have an openPostMortem function that will build a mini-model to run
+the module that may have crashed.
+  0. Expand out into a PostMortem model.
+  1. Create a run_model.R and a visioneval.cnf (dump the ModelState_ls$RunParam_ls)
+     Make sure the directories map into the PostMortem model... (adjust many RunParam_ls
+     entries like ParamPath, etc.).
+  2. Put the inputs and defs directories in place.
+  3. Do LoadDatastore=TRUE and set the path to the PostMortem Datastore directory
+     Does the Datastore name have to include getRunParameter("DatastoreName")?
+  4. Should have a runnable model with one stage that loads the PostMortem datastore
+     and runs just the modules that were used to generate the PostMortem.
+
+PostMortem need not be run on a failed model - it can be used to create a testbed for
+any module, even if one that is working correctly.
 
 Add a helper function for VEModel, which is "openResults" (taking a model name, or a path to a
 results directory, defaulting to the current directory).

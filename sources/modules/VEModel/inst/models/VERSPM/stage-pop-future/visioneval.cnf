@@ -1,6 +1,7 @@
 # Descriptive elements of this stage (Years)
 
 # Scenario description
+ModelScript : run_scenario.R
 Scenario    : VERSPM RVMPO Future Year Using Pre-Built Population
 Description : Future Year Scenario (2038)
 BaseYear    : 2010

@@ -333,3 +333,9 @@ normalizePath <- function(
   }
   return( base::normalizePath(elements,winslash=winslash,mustWork=mustWork) )
 }
+
+# MOVE LOG FUNCTIONS INTO VEModel NAMESPACE
+# =========================================
+writeLog <- visioneval::writeLog
+writeLogMessage <- visioneval::writeLogMessage
+initLog <- visioneval::initLog

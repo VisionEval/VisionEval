@@ -46,8 +46,8 @@ ve.query.init <- function(
     if ( "VEQuerySpec" %in% class(QuerySpec) ) {
       QuerySpec <- list(QuerySpec) # a single query spec becomes a list of one
     } else if ( !is.null(QuerySpec) ) {
-      visioneval::writeLogMessage("Unrecognized QuerySpec:")
-      visioneval::writeLogMessage(deparse(QuerySpec))
+      writeLogMessage("Unrecognized QuerySpec:")
+      writeLogMessage(deparse(QuerySpec))
       QuerySpec <- NULL # Invalid query spec
     }
   }
@@ -73,7 +73,7 @@ ve.query.init <- function(
     }
   }
   if ( ! otherValid ) {
-    stop(visioneval::writeLogMessage(paste("Could not make a VEQuery from OtherQuery:",class(OtherQuery))))
+    stop(writeLogMessage(paste("Could not make a VEQuery from OtherQuery:",class(OtherQuery))))
   }
 
   # Add remaining defaults for saving the query out again
@@ -153,7 +153,7 @@ ve.query.save <- function(saveTo=TRUE,overwrite=TRUE) {
       number <- number + 1
     }
     if ( file.exists(actualFile) && number>=10 ) {
-      visioneval::writeLog(
+      writeLog(
         c(
           paste("Too many files piled up trying not to overwrite",saveTo),
           "You should save with overwrite=TRUE and/or remove some of them."
@@ -252,7 +252,7 @@ ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
     # NOTE: if obj is already a VEQuery, it is returned as is. It is NOT copied.
     if ( ! qry$valid() ) {
       msg <- c("Cannot add to query:",qry$checkResults)
-      visioneval::writeLogMessage( c(msg,deparse(obj)) )
+      writeLogMessage( c(msg,deparse(obj)) )
       stop(msg)
     }
     spec <- qry$getlist() # Clone the spec list from obj
@@ -268,7 +268,7 @@ ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
   } else {
     if ( is.character(location) ) {
       if ( ! location %in% currentNames ) {
-        stop(visioneval::writeLogMessage("Location is not in current QuerySpec"))
+        stop(writeLogMessage("Location is not in current QuerySpec"))
       } else {
         location <- which(currentNames %in% location)[1] # first instance of name in specification
       }
@@ -328,7 +328,7 @@ ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
 
   self$check() # probably all we catch here are pre-existing errors and function order problems
   if ( length(self$checkResults)>0 ) {
-    visioneval::writeLogMessage("QuerySpec contains errors")
+    writeLogMessage("QuerySpec contains errors")
     print(self$checkResults) # a named character string
   }
   return(self)
@@ -338,16 +338,16 @@ ve.query.update <- function(obj) {
   # If it's not already in the QuerySpec, ignore it with a warning
   qry <- VEQuery$new(OtherQuery=obj,QueryName="Temp-Query") # obj is anything we can turn into a VEQuery
   if ( ! qry$valid() ) {
-    msg <- visioneval::writeLogMessage("Invalid VEQuerySpec:")
-    visioneval::writeLogMessage(deparse(obj))
-    visioneval::writeLogMessage(qry$checkResults)
+    msg <- writeLogMessage("Invalid VEQuerySpec:")
+    writeLogMessage(deparse(obj))
+    writeLogMessage(qry$checkResults)
     stop(msg)
   }
   q.names <- names(qry$getlist())
   s.names <- names(private$QuerySpec)
   extra.names <- ! q.names %in% s.names
   if ( any( extra.names ) ) {
-    visioneval::writeLogMessage("Warning","Names not in qry (use '$add'):",paste(q.names[extra.names],collapse=", "))
+    writeLogMessage("Warning","Names not in qry (use '$add'):",paste(q.names[extra.names],collapse=", "))
   }
   private$QuerySpec[ q.names ] <- qry$getlist() # replace list items in current spec
   self$check()
@@ -416,7 +416,7 @@ ve.query.remove <- function(SpecToRemove) {
   extract <- private$QuerySpec[SpecToRemove]
   nm.ext <- names(extract)
   if ( any(is.na(nm.ext) | is.null(nm.ext) | !nzchar(names(extract))) ) {
-    stop(visioneval::writeLogMessage("VEQuery specification list has unnamed elements."))
+    stop(writeLogMessage("VEQuery specification list has unnamed elements."))
   }
   private$QuerySpec[nm.ext] <- NULL
   invisible(
@@ -435,7 +435,7 @@ ve.query.assign <- function(obj) {
     private$QuerySpec <- qry$getlist() # just replace what's there with copy of other
   } else {
     msg <- "Cannot assign invalid query"
-    visioneval::writeLogMessage( c(msg,qry$checkResults) )
+    writeLogMessage( c(msg,qry$checkResults) )
     stop(msg)
   }
   return(self)
@@ -535,8 +535,8 @@ ve.query.getlist <- function(Geography=NULL) {
     }
     if ( length(checkResults)>0 ) {
       newSpec <- newSpec[validity] # Remove any invalid elements from newSpec
-      visioneval::writeLog(paste("Specifications invalid for Geography",Geography,":"),Level="warn")
-      visioneval::writeLog(paste(checkResults,collapse="\n"),Level="warn")
+      writeLog(paste("Specifications invalid for Geography",Geography,":"),Level="warn")
+      writeLog(paste(checkResults,collapse="\n"),Level="warn")
     }
   }
   # Make sure list names are up to date
@@ -599,7 +599,7 @@ ve.query.run <- function(
       } else if ( is.character(Results) ) {
         # TODO: support this - just make a VEResults object from each
         # element of Results
-        visioneval::writeLog(msg<-"Unsupported: character list of result paths",Level="error")
+        writeLog(msg<-"Unsupported: character list of result paths",Level="error")
         stop(msg)
       } else if ( ! "VEResults" %in% class(Results[[1]]) ) {
         Results <- NULL
@@ -609,17 +609,17 @@ ve.query.run <- function(
     }
   } else Results <- NULL
   if ( is.null(Results) ) {
-    stop( visioneval::writeLog("No results provided to query",Level="error") )
+    stop( writeLog("No results provided to query",Level="error") )
   }
 
   if ( ! is.character(Geography) || ! Geography %in% c("Region", "Azone","Marea") )
   {
-    visioneval::writeLog("Geography must be one of 'Region','Marea' or 'Azone'",Level="error")
+    writeLog("Geography must be one of 'Region','Marea' or 'Azone'",Level="error")
     return(character(0))
   }
   if ( Geography %in% c("Azone","Marea") ) {
     if ( missing(GeoValue) || ! is.character(GeoValue) || length(GeoValue)>1 || ! nzchar(GeoValue) ) {
-      visioneval::writeLog("Not supported: Breaking measures by ",Geography," including all values",Level="error")
+      writeLog(paste0("Not supported: Breaking measures by ",Geography," including all values"),Level="error")
       # TODO: need to assemble proper combinations of By/GeoValues when unpacking results from
       # summarizeDatasets in makeMeasure: we end up with a 2-D matrix, not a vector or scalar, and
       # we need to transform that to a long form with suitable names for each element
@@ -630,11 +630,11 @@ ve.query.run <- function(
       # Use those by default (but we can override the break descriptions)
       return(character(0))
     } else {
-      visioneval::writeLogMessage("Evaluating measures for this ",Geography,": ",GeoValue)
+      writeLogMessage(paste0("Evaluating measures for this ",Geography,": ",GeoValue))
     }
   } else {
     GeoValue <- "" # Region has no GeoValue
-    visioneval::writeLogMessage("Evaluating measures for region")
+    writeLogMessage("Evaluating measures for region")
   }
   Geography <- c(Type=Geography,Value=GeoValue) # prepare to do the query
 
@@ -657,13 +657,13 @@ ve.query.run <- function(
     OutputFileToWrite <- normalizePath(file.path(OutputDir,OutputFileToWrite),mustWork=FALSE)
 
     # Save measure results into a file
-    visioneval::writeLog(paste("Saving measures in",basename(dirname(OutputFileToWrite)),"as",basename(OutputFileToWrite),"..."),Level="warn")
+    writeLog(paste("Saving measures in",basename(dirname(OutputFileToWrite)),"as",basename(OutputFileToWrite),"..."),Level="warn")
     utils::write.csv(Measures_df, row.names = FALSE, file = OutputFileToWrite)
 
     # Save query itself adjacent to measure results
     self$save(saveTo=sub("\\.csv$",".VEqry",OutputFileToWrite))
 
-    visioneval::writeLog("Saved\n",Level="warn")
+    writeLog("Saved\n",Level="warn")
 
     # TODO: save the query specification as metadata (as a .VEqry file in the output, with the same
     # basename as the results .csv - should be "openable").
@@ -1037,10 +1037,11 @@ ve.spec.setgeo <- function(Geography=NULL) {
       # Write the following in case more than one Table element is a small geography
       # Mostly, that would probably be a logic error in the query specification
       if ( any( geotest) && any(test.sum[["Table"]][geotest] != Geography["Type"]) ) {
-        visioneval::writeLogMessage(
-          "Skipping specification ",test.spec[["Name"]],
-          " due to Table mismatch: ",
-          Geography["Type"]," vs. Table ",paste(test.sum[["Table"]][geotest],collapse=", ")
+        writeLogMessage(
+          paste0(
+            "Skipping specification ",test.spec[["Name"]]," due to Table mismatch: ",
+            Geography["Type"]," vs. Table ",paste(test.sum[["Table"]][geotest],collapse=", ")
+          )
         )
       } else {
         # If Table is not a conflicting ve.small.geo,
@@ -1157,7 +1158,7 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
       if ( ! "By" %in% names(sumSpec) ||
            ! Geography["Type"] %in% sumSpec$By ) {
         stop(
-          visioneval::writeLogMessage(
+          writeLogMessage(
             paste("Script wants Geography Type ",Geography["Type"]," in 'By' but got ",sumSpec$By,"",sep="'")
           )
         )
@@ -1201,14 +1202,14 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
         names(measure) <- paste(measureName,c("min",breakNames),sep=".")
       } else {
         if ( length(measure) != 1 ) {
-          visioneval::writeLogMessage("Processing measure: ",measureName)
-          stop(visioneval::writeLogMessage("Program error: expected scalar measure, got vector:",measure))
+          writeLogMessage("Processing measure: ",measureName)
+          stop(writeLogMessage("Program error: expected scalar measure, got vector:",measure))
         }
         names(measure) <- measureName
       }
     }
   } else {
-    stop(visioneval::writeLogMessage("Invalid Measure Specification"))
+    stop(writeLogMessage("Invalid Measure Specification"))
   }
   
   # Stash the measure results in measureEnv
@@ -1264,7 +1265,7 @@ doQuery <- function (
     missing(Geography) ||
     missing(Specifications)
   ) {
-    visioneval::writeLogMessage("Invalid Setup for doQuery function")
+    writeLogMessage("Invalid Setup for doQuery function")
     return(character(0))
   }
     
@@ -1282,7 +1283,7 @@ doQuery <- function (
   ) {
     catGeography <- paste(catGeography,"=",paste0("'",Geography["Value"],"'"))
   }
-  visioneval::writeLog(paste("Building measures for Geography",catGeography,"\n"),Level="warn")
+  writeLog(paste("Building measures for Geography",catGeography,"\n"),Level="warn")
 
   # Create a placeholder for the Measures data.frame to accumulate the results
   Measures_df <- NULL
@@ -1298,7 +1299,7 @@ doQuery <- function (
     # TODO: If Results is a named list, use the name from the list
     #       Then do the $ModelState$Scenario as a fallback
     ScenarioName <- results$ModelState$Scenario;
-    visioneval::writeLog(paste("Building measures for Scenario",ScenarioName,"\n"),Level="warn")
+    writeLog(paste("Building measures for Scenario",ScenarioName,"\n"),Level="warn")
 
     # Gather years from the results
     Years <- results$ModelState$Years
@@ -1309,7 +1310,7 @@ doQuery <- function (
     # Iterate across the Years in the scenario
     for ( thisYear in Years ) {
 
-      visioneval::writeLog(paste("Working on Year",thisYear,"\n"),Level="warn")
+      writeLog(paste("Working on Year",thisYear,"\n"),Level="warn")
       result.env <- new.env()
 
       # Iterate over the measures, computing each one

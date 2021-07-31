@@ -321,13 +321,18 @@ loadModel <- function(
   if ( ! RunModel ) {
     if ( file.exists(envir$ModelStatePath) ) {
       RunParam_ls <- loadModelState(envir$ModelStatePath,envir=envir)
-      if ( onlyExisting ) {
-        # Stop here if we don't want to build a new model state (used in VEModel FindModel)
-        writeLog("Opened existing ModelState_ls ",Level="info")
-        return(envir$ModelState_ls) # Returns empty list if no ModelState_ls
-      } 
+      ms <- envir$ModelState_ls
+    } else {
+      ms <- list()
     }
+    if ( onlyExisting ) {
+      # Stop here if we don't want to build a new model state (used in VEModel findModel)
+      writeLog("Opened existing ModelState_ls ",Level="info")
+      return(ms) # Returns empty list if no ModelState_ls
+    } 
   }
+  # If we get here we might be running the model, or re-building an in-memory ModelState_ls
+  #   for use (e.g.) in reporting the module specifications.
 
   # Initialize a fresh model state - update later if loading existing datastore
   writeLog("Initializing new ModelState_ls",Level="info")
@@ -393,7 +398,7 @@ loadModel <- function(
   # May have been changed from function parameter by earlier call to getModelParameters
   LoadDatastore  <- getRunParameter("LoadDatastore",Default=FALSE,Param_ls=RunParam_ls)
 
-  # Set up load datastore parameters
+  # Set up load datastore parameters if we're loading the Datastore
   LoadDstore <- getRunParameter("LoadDstore",Default=list(),Param_ls=RunParam_ls)
   if ( ! ( is.list(LoadDstore) && all(c("Name","Dir") %in% LoadDstore) ) ) {
     LoadDstore <- list()
@@ -401,6 +406,10 @@ loadModel <- function(
     if (is.na(LoadDatastoreName) ) {
       if ( LoadDatastore ) {
         # null name means start with the current (existing) Datastore
+        # TODO: This use case will be retired (and may never have worked)
+        # It's intended to restart a model that is being hacked - the new
+        # VEModel framework provides better ways to do that (by explicitly
+        # staging the model) - see below
         LoadDstore$Name <- RunDstore$Name
         LoadDstore$Dir <- RunDstore$Dir
       } else { # Nothing to load
@@ -417,6 +426,8 @@ loadModel <- function(
       }
     }
   }
+
+  # Generate the model loading message
   writeLog(Message,Level="warn")
 
   #===============================================
@@ -434,8 +445,8 @@ loadModel <- function(
   #       The changed script can be set at runtime alongside LoadDatastoreName and LoadDatastore
   #       just by providing an alternate ModelScript runtime parameter (e.g. run_model_restart.R)
 
-  # Load the previous model state, if available
-  if ( LoadDatastore ) {
+  # Load the previous model state, if we've asked for LoadDatastore or StartFrom
+  if ( LoadDatastore || "StartFromModelState" %in% names(RunParam_ls) ) {
     # In the file system, use the currently configured ModelStateFile
     #  if it's not right, that other model needs to be re-run in
     #  the current environment.
@@ -457,8 +468,10 @@ loadModel <- function(
         )
       }
     } else {
+      # VEModel will set "StartFromModelState" in a staged model to the previous stage
+      #   setup (model state, parameters, run status, etc.)
       # Use pre-loaded ModelState_ls from StartFrom
-      startFrom <- getRunParameter("StartFrom",Default=list(),Param_ls=RunParam_ls);
+      startFrom <- getRunParameter("StartFromModelState",Default=list(),Param_ls=RunParam_ls);
       LoadEnv$ModelState_ls <- startFrom$ModelState_ls
     }
 
@@ -514,7 +527,7 @@ loadModel <- function(
       #  the current datastore (using its ModelState)
 
       #Get datastore type from current ModelState
-      LoadDstoreType <- (LoadEnv$ModelState_ls$DatastoreType)
+      LoadDstoreType <- (LoadDstore$ModelState_ls$DatastoreType)
       RunDstoreType <- (envir$ModelState_ls$DatastoreType)
 
       #Check that run and load datastores are of same type
@@ -527,10 +540,10 @@ loadModel <- function(
       }
 
       #Check that geography, units, deflators and base year are consistent
-      BadGeography <- !isTRUE(all.equal(envir$ModelState_ls$Geo_df, LoadEnv$ModelState_ls$Geo_df))
-      BadUnits <- !isTRUE(all.equal(envir$ModelState_ls$Units, LoadEnv$ModelState_ls$Units))
-      BadDeflators <- !isTRUE(all.equal(envir$ModelState_ls$Deflators, LoadEnv$ModelState_ls$Deflators))
-      BadBaseYear <- ! (envir$ModelState_ls$BaseYear == LoadEnv$ModelState_ls$BaseYear)
+      BadGeography <- !isTRUE(all.equal(envir$ModelState_ls$Geo_df, LoadDstore$ModelState_ls$Geo_df))
+      BadUnits <- !isTRUE(all.equal(envir$ModelState_ls$Units, LoadDstore$ModelState_ls$Units))
+      BadDeflators <- !isTRUE(all.equal(envir$ModelState_ls$Deflators, LoadDstore$ModelState_ls$Deflators))
+      BadBaseYear <- ! (envir$ModelState_ls$BaseYear == LoadDstore$ModelState_ls$BaseYear)
 
       if ( BadGeography || BadUnits || BadDeflators || BadBaseYear) {
         elements <- paste(
@@ -569,12 +582,12 @@ loadModel <- function(
   AlreadyInitialized <- character(0) # required (initialized packages) from loaded datastore
   RequiredPackages <- parsedScript$RequiredVEPackages;
 
-  if ( LoadDatastore ) {
+  if ( LoadDatastore || "ModelState_ls" %in% names(LoadDstore) ) {
     # Copy over the required packages part of the loaded model state
     # That's all we need so we can parse the current module calls successfully
-    if ( "RequiredVEPackages" %in% names(LoadEnv$ModelState_ls) ) {
-      AlreadyInitialized <- LoadEnv$ModelState_ls$RequiredVEPackages
-      RequiredPackages <- unique(c(RequiredPackages, LoadEnv$ModelState_ls$RequiredVEPackages))
+    if ( "RequiredVEPackages" %in% names(LoadDstore$ModelState_ls) ) {
+      AlreadyInitialized <- LoadDstore$ModelState_ls$RequiredVEPackages
+      RequiredPackages <- unique(c(RequiredPackages, LoadDstore$ModelState_ls$RequiredVEPackages))
     }
   }
 

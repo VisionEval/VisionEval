@@ -18,7 +18,7 @@ if ( ! requireNamespace("yaml",quietly=TRUE) ) {
 }
 
 logLevel <- function(log="info") {
-  visioneval::initLog(Save=FALSE,Threshold=log)
+  initLog(Save=FALSE,Threshold=log)
 }
 
 setup <- function(ve.runtime=NULL) {
@@ -133,7 +133,32 @@ test_classic <- function(modelName="VERSPM-Classic",clear=TRUE,log="info") {
   cat("Model Status:",rs$printStatus(),"\n")
   return(rs)
 }
+
+test_all_install <- function() {
+
+  owd <- setwd("models")
+  print(files<-list.dirs("models",full.names=TRUE,recursive=FALSE))
+  if ( length(files)>0 ) unlink(files,recursive=TRUE)
+  setwd(owd)
   
+  return (
+    list(
+      # VERSPM variants
+      vr.classic = installModel("VERSPM",variant="classic",confirm=FALSE,overwrite=TRUE),
+      vr.base = installModel("VERSPM",variant="base",confirm=FALSE,overwrite=TRUE),
+      vr.year = installModel("VERSPM",variant="year",confirm=FALSE,overwrite=TRUE),
+      vr.pop = installModel("VERSPM",variant="pop",confirm=FALSE,overwrite=TRUE),
+
+      # VERPAT variants
+      vp.base = installModel("VERPAT",variant="base",confirm=FALSE,overwrite=TRUE),
+
+      # VE-State variants
+      vs.base = installModel("VE-State",variant="base",confirm=FALSE,overwrite=TRUE),
+      vs.staged = installModel("VE-State",variant="staged",confirm=FALSE,overwrite=TRUE)
+    )
+  )
+}
+
 test_install <- function(modelName="VERSPM",variant="base",installAs=NULL,log="info") {
 
   if ( ! missing(log) ) logLevel(log)
@@ -193,7 +218,15 @@ test_run <- function(modelName="Test-VERSPM-base",baseModel="VERSPM",variant="ba
   return(rs)
 }
 
-test_model <- function(modelName="JRSPM", oldstyle=TRUE, test.copy=FALSE, log="info") {
+# Test model runs through basic model configuration
+# oldstyle creates defs/run_parameters.json; if not oldstyle, create visioneval.cnf
+# reset forces the base model to rebuild (no special reason to do that; the base model
+#  need not have been run.
+# modelName is the particular version of VERSPM to use as a base. The base model MUST
+#  be a version of VERSPM since we use its first two modules to create the "Bare" model
+# log="warn" will confine to a streamlined list of log messages like what a regular user
+#  would see. "info" gives lots of gory details.
+test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info") {
 
   if ( ! missing(log) ) logLevel(log)
 
@@ -202,19 +235,21 @@ test_model <- function(modelName="JRSPM", oldstyle=TRUE, test.copy=FALSE, log="i
 
   testStep("open (and maybe run) the full test version of VERSPM")
   jr <- openModel(modelName)
-  if ( ! jr$status == codeStatus("Run Complete") ) {
-    cat("Re-running model due to status",jr$printStatus(),"\n")
+  if ( ! jr$status == codeStatus("Run Complete") || isTRUE(reset) ) {
+    due.to <- if ( ! reset) paste("status",jr$printStatus()) else "reset request"
+    cat("Re-running model due to",due.to,"\n")
     jr <- test_run(modelName=modelName,baseModel="VERSPM",variant="base",reset=TRUE,log=log)
   }
   if (! "VEModel" %in% class(jr) ) {
     return(jr)
   } else print(jr,details=TRUE)
 
-  testStep("gather base model parameters")
+  testStep("Gather base model parameters")
   base.dir <- jr$modelPath
   cat("Base Model directory:\n")
   print(base.dir)
 
+  cat("Base model structural directories - including stages\n")
   for ( stage in jr$modelStages ) {
     cat("Stage:",stage$Name,"\n")
     jrParam_ls <- stage$RunParam_ls
@@ -224,7 +259,7 @@ test_model <- function(modelName="JRSPM", oldstyle=TRUE, test.copy=FALSE, log="i
     cat(paste("  DatastorePath:",visioneval::getRunParameter("DatastorePath",Param_ls=jrParam_ls),"\n"))
   }
 
-  testStep("construct a bare model from scratch")
+  testStep("Construct a bare model from scratch, borrowing from base model")
   bare.dir <- file.path("models","BARE")
   if ( dir.exists(bare.dir) ) {
     cat("Blowing away existing bare model.\n")
@@ -234,6 +269,7 @@ test_model <- function(modelName="JRSPM", oldstyle=TRUE, test.copy=FALSE, log="i
 
   testStep("Create minimal run_model.R")
 
+  # NOTE: VEModel does not require, but will process, the "initializeModel() function
   runModelFile <- file.path(bare.dir,"run_model.R")
   runModel_vc <- c(
     '',
@@ -247,7 +283,7 @@ test_model <- function(modelName="JRSPM", oldstyle=TRUE, test.copy=FALSE, log="i
 
   testStep("Set up model directory structure.")
 
-  # Borrow model geography, units, deflators from VERSPM
+  # Borrow model geography, units, deflators from base model
   bare.defs <- file.path(bare.dir,"defs")
   bare.inputs <- file.path(bare.dir,"inputs")
   dir.create(bare.defs)
@@ -277,7 +313,7 @@ test_model <- function(modelName="JRSPM", oldstyle=TRUE, test.copy=FALSE, log="i
     cat(readLines(configFile),sep="\n")
   } else {
     configFile <- file.path(bare.dir,"visioneval.cnf")
-    yaml::write_yaml(runConfig_ls,configFile)
+    yaml::write_yaml(runConfig_ls,configFile) # TODO: can we write the same structure to YAML?
     print(bare.dir)
     print(configFile)
     cat(readLines(configFile),sep="\n")
@@ -439,14 +475,19 @@ test_model <- function(modelName="JRSPM", oldstyle=TRUE, test.copy=FALSE, log="i
   }
   
   testStep("remove model copy")
+  cat("Directory before...\n")
   print(cp$dir(all.files=TRUE))
-  debug(cp$load)
   cp$clear(force=TRUE,outputOnly=FALSE,archives=TRUE)
+  cat("\nDirectory after...\n")
   print(cp$dir(all.files=TRUE))
 
   testStep("display what's left...")
   print(cp)
+  print(dir("models"))
+  cat("Unlinking",cp$modelName,"\n")
   unlink(file.path("models",cp$modelName),recursive=TRUE)
+  cat("Is",cp$modelName,"still present?\n")
+  print(dir("models"))
 
   testStep("directory still accessible?")
   print(cp$dir())
@@ -477,10 +518,19 @@ test_results <- function (log="info") {
   cat("Selection after clearing...\n")
   sl <- rs$select()
   print(sl)
+  rm(cp)
 
   testStep("Pull out results and selection (head 12)...")
   cat("Results...\n")
-  rs <- jr$results()
+  rs <- jr$results()  # Gets results for final Reportable stage (only)
+
+  # TODO: rs may be a list of VEResults (not just a single object)?
+  # Use case is mostly for doing queries over a set of scenarios...
+  # Return a list if jr$results(all.stages=TRUE) or jr$results(stages=c(stage1,stage2)) with
+  # length(stages)>1 : all reportable stages in that case.
+  # An individual stage can also be called out explicitly (and in that case, it does not
+  #   need to be Reportable).
+
   print(rs)
   cat("Selection...\n")
   sl <- rs$select() # Get full field list

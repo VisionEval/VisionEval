@@ -16,7 +16,8 @@ Imports:
     visioneval,
     R6,
     stringr,
-    yaml
+    yaml,
+    futile.logger
 Suggests:
     knitr,
     pkgload

@@ -12,22 +12,22 @@ ParamDir       : defs    # Each stage shares the same defs files
 ModelStages    :
   Stage-1 : 
     Dir : Stage-1
-    Config : scripts/config-stage-1.cnf
+    Config : scripts/visioneval-1.cnf
     Reportable: false
   Stage-2 : 
     Dir : Stage-2
-    Config : scripts/config-stage-2.cnf
+    Config : scripts/visioneval-2.cnf
     Reportable: false
   Stage-3 : 
     Dir : Stage-3
-    Config : scripts/config-stage-3.cnf
+    Config : scripts/visioneval-3.cnf
     Reportable: false
   Stage-4 : 
     Dir : Stage-4
-    Config : scripts/config-stage-4.cnf
+    Config : scripts/visioneval-4.cnf
     Reportable: true
 
-# Scenario description
+# Scenario description for Base Model
 Seed           : 1
 Scenario       : VE-State Oregon Sample
 Description    : Base Year 2010 + Future 2040

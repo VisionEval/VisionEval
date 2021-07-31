@@ -939,7 +939,7 @@ writeLogMessage <- function(Msg = "", Logger="ve.logger", Level="") {
     futile.logger::flog.layout( log.layout.simple, name=Logger )
     if ( nzchar(Level) ) {
       # This message won't get out if Level is below the Logger threshold
-      visioneval::writeLog(Msg,Level=Level,Logger=Logger)
+      writeLog(Msg,Level=Level,Logger=Logger)
     } else {
       # Otherwise, the message always gets out into the system log
       futile.logger::flog.fatal( Msg, name=Logger ) # "fatals" always get out...

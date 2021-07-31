@@ -1,4 +1,4 @@
-# Variant is selected when installing
+  # Variant is selected when installing
 # Sample data is also installed
 # Eventually need to document or provide helper function for reducing to template
 variants:

@@ -9,5 +9,4 @@ for(Year in getYears()) {
   runModule("AssignLifeCycle",                 "VESimHouseholds",       RunFor = "AllYears",    RunYear = Year)
   runModule("PredictIncome",                   "VESimHouseholds",       RunFor = "AllYears",    RunYear = Year)
 }
-}
 cat('VERSPM (staged population synthesis): run_model.R script complete.\n')

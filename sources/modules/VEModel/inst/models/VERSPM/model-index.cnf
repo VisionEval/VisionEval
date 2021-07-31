@@ -39,5 +39,5 @@ variants:
     queries: queries
     stages: # copied as they are
         - stage-pop-synth
-        - stage-pop-2010
-        - stage-pop-2038
+        - stage-pop-base
+        - stage-pop-future

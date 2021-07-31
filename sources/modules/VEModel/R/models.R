@@ -196,11 +196,11 @@ addBaseModel <- function(modelParam_ls) {
 
     msg <- paste0("Recursively opening BaseModel '",baseModelName,"'")
     if ( nzchar(baseStageName) ) msg <- paste(msg,paste0("at Stage '",baseStageName,"'"))
-    visioneval::writeLog(msg,Level="warn")
+    writeLog(msg,Level="warn")
     
     baseModel <- openModel(baseModelName) # Amounts to a recursive call to initialize (does that work?)
     if ( ! baseModel$valid() ) {
-      stop( visioneval::writeLog("BaseModel is not valid!",Level="error") )
+      stop( writeLog("BaseModel is not valid!",Level="error") )
     }
     if ( ! nzchar(baseStageName) ) {
       baseStageName <- utils::tail(names(baseModel$modelStages),1)
@@ -208,7 +208,7 @@ addBaseModel <- function(modelParam_ls) {
     baseParam_ls <- baseModel$modelStages[[baseStageName]]$RunParam_ls
     if ( is.na(baseParam_ls) || is.null(baseParam_ls) ) {
       stop (
-        visioneval::writeLog(
+        writeLog(
           paste0("Missing Parameters from BaseModel/BaseStage ",baseModelName,"/",baseStageName),
           Level="error"
         )
@@ -235,6 +235,7 @@ addBaseModel <- function(modelParam_ls) {
     modelParam_ls <- visioneval::addRunParameter(
       modelParam_ls,
       DatastorePath=visioneval::getRunParameter("DatastorePath",Param_ls=baseParam_ls,Source=TRUE),
+      # TODO: do we need the following if we're not loading a Datastore?
       LoadDstore=visioneval::getRunParameter("RunDstore",Param_ls=baseParam_ls,Source=TRUE)
     )
   }
@@ -275,7 +276,7 @@ addBaseModel <- function(modelParam_ls) {
       visioneval::getRunParameter("ScriptsDir",Param_ls=modelParam_ls),
       visioneval::getRunParameter("ModelScript",Param_ls=modelParam_ls)
     )
-    modelScriptSrc <- "VEModel::findModel"
+    modelScriptSrc <- "VEModel::useBaseModel"
   } else {
     # WARNING: Be careful if BaseModel is horizontally staged (different ModelScript for each stage)
     # You'll only get the script from the BaseStage extracted from the BaseModel
@@ -330,7 +331,7 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
   model_ls <- list() # Model elements built from modelDir
 
   if ( missing(modelDir) || ! is.character(modelDir) ) {
-    visioneval::writeLog("findModel: Must provide modelDir locator.",Level="warn")
+    writeLog("findModel: Must provide modelDir locator.",Level="warn")
     return( model_ls ) # An empty list...
   }
 
@@ -342,7 +343,7 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
     possiblePaths <- file.path(roots,modelDir)
     existing <- dir.exists(possiblePaths)
     if ( ! any(existing) ) {
-      visioneval::writeLog(
+      writeLog(
         paste0("Failed to find model '",modelDir,"' in these locations:\n",paste(roots,collapse="\n")),
         Level="error"
       )
@@ -354,7 +355,7 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
   } else {
     modelPath <- modelDir
     if ( ! dir.exists(modelPath) ) {
-      visioneval::writeLog(
+      writeLog(
         paste0("Model directory ",modelPath," does not exist"), Level="error"
       )
       return(model_ls)
@@ -372,7 +373,7 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
   }
 
   # Set up ModelDir and ResultsDir
-  modelParam_ls <- visioneval::addRunParameter(Param_ls=modelParam_ls,Source="VEModel::FindModel",ModelDir=modelPath)
+  modelParam_ls <- visioneval::addRunParameter(Param_ls=modelParam_ls,Source="VEModel::findModel",ModelDir=modelPath)
   if ( ! "ResultsDir" %in% names(modelParam_ls) ) {
     # Load default parameter or get from larger runtime environment
     modelParam_ls <- visioneval::addRunParameter(
@@ -419,7 +420,7 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
       visioneval::getRunParameter("ParamDir",Param_ls=modelParam_ls)
     )
     if ( file.exists(ParamPath) ) {
-      visioneval::writeLog(paste("Setting ParamPath to",ParamPath),Level="info")
+      writeLog(paste("Setting ParamPath to",ParamPath),Level="info")
       modelParam_ls <- visioneval::addRunParameter(
         modelParam_ls,
         Source="VEModel::findModel",
@@ -444,7 +445,7 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
       }
     }
   }
-  if ( nzchar(ModelScriptPath) && file.exists(ModelScriptPath) ) {
+  if ( length(ModelScriptPath)>0 && nzchar(ModelScriptPath) && file.exists(ModelScriptPath) ) {
     modelParam_ls <- visioneval::addRunParameter(
       modelParam_ls,
       Source="VEModel::findModel",
@@ -458,7 +459,7 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
   }
 
   # Locate model stages
-  visioneval::writeLog("Locating model stages",Level="info")
+  writeLog("Locating model stages",Level="info")
   if ( ! "ModelStages" %in% names(modelParam_ls) ) {
     # In general, to avoid errors with random sub-directories becoming stages
     #  it is best to explicitly set ModelStages in the model's main visioneval.cnf
@@ -474,13 +475,16 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
     stages <- stages[ ! stages %in% structuralDirs ]
     stages <- stages[ grep(paste0("^",visioneval::getRunParameter("ArchiveResultsName",Param_ls=modelParam_ls)),stages,invert=TRUE) ]
     stages <- c(".",stages) # Add model root directory
-    visioneval::writeLog(paste0("Stage directories:\n",paste(stages,collapse=",")),Level="info")
+    writeLog(paste0("Stage directories:\n",paste(stages,collapse=",")),Level="info")
     modelStages <- lapply(stages,
       function(stage) {
-        VEModelStage$new(
+        stageParam_ls <- list(
           Dir=stage,                           # Relative to modelPath
           Name=sub("^\\.$",basename(modelParam_ls$ModelDir),stage),  # Will only change root directory
-          Path=modelParam_ls$ModelDir,         # Root for stage
+          Path=modelParam_ls$ModelDir          # Root for stage
+        )
+        VEModelStage$new(
+          stageParam_ls=stageParam_ls,
           modelParam_ls=modelParam_ls          # Base parameters from model
         )
       }
@@ -490,42 +494,45 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
       # At a minimum, must provide Dir or Config
       function(stage) {
         VEModelStage$new(
-          modelParam_ls=modelParam_ls,        # Base parameters from model
-          Dir=stage$Dir,                      # Relative to modelPath
-          Name=stage$Name,                    # Will only change root directory
-          Path=stage$Path,                    # Rarely used, but available
-          Config=stage$Config                 # Config may
+          stageParam_ls=stage,
+          modelParam_ls=modelParam_ls        # Base parameters from model
         )
       }
     )
   }
   # If no stages remain, model is invalid
   if ( !is.list(modelStages) || length(modelStages)==0 ) {
-    visioneval::writeLog("No model stages found!",Level="error")
+    writeLog("No model stages found!",Level="error")
     return( model_ls )
   }
 
+  # Call the modelStages by their Names
+  stageNames <- sapply(modelStages,function(s)s$Name)
+  if ( length(stageNames) > 0 ) {
+    writeLog("Model Stages:",Level="info")
+    for ( s in stageNames ) writeLog(s,Level="info")
+  }
+
   # Loop through modelStages, completing initialization using "StartFrom" stages
-  visioneval::writeLog("Finding runnable stages",Level="info")
+  writeLog("Finding runnable stages",Level="info")
   runnableStages <- list()
   for ( stage_seq in seq_along(modelStages) ) {
     # Adjust modelState$RunParam_ls
     stage <- modelStages[[stage_seq]]      # stage is a VEModelStage object
+    writeLog(paste("Evaluating ",stage$Name),Level="info")
     if ( stage$runnable(runnableStages) ) {   # complete stage initialization
       runnableStages <- c( runnableStages, stage )
-    }
+      names(runnableStages) <- sapply(runnableStages,function(s)s$Name)
+    } 
   }
 
   # Forget the modelStages that can't run
   modelStages <- runnableStages
   stageCount <- length(modelStages)
   if ( !is.list(modelStages) || stageCount == 0 ) {
-    visioneval::writeLog("Model has no runnable stages!",Level="error")
+    writeLog("Model has no runnable stages!",Level="error")
     return( model_ls )
   }
-
-  # Call the modelStages by their Names
-  names(modelStages) <- sapply(modelStages,function(s)s$Name)
 
   # Set Reportable attribute for the stages
   if ( stageCount == 1 ) {
@@ -535,7 +542,10 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
     # Single stage model will ignore stage$Dir when constructing results or outputs
     # StageDir will still be used for InputPath
     model_ls$modelParam_ls <- modelStages[[1]]$RunParam_ls
-    modelStages[[1]]$Reportable <- TRUE
+    if ( is.null(modelStages[[1]]$Reportable) ) {
+      # do not set if already explicitly set during ve.stage.init
+      modelStages[[1]]$Reportable <- TRUE
+    }
   } else {
     # Put names on Stages and identify reportable stages
     startFromNames <- unlist(sapply(modelStages,function(s) s$StartFrom))
@@ -543,7 +553,10 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
     stageNames <- names(modelStages)
     reportable <- ! stageNames %in% startFromNames
     for ( r in seq_along(stageNames) ) {
-      modelStages[[r]]$Reportable <- reportable[r]
+      if ( ! modelStages[[r]]$Reportable ) {
+        # Can override Reportable in stage configuration (e.g. for base year)
+        modelStages[[r]]$Reportable <- reportable[r]
+      }
     }
   }
   model_ls$modelStages <- modelStages
@@ -561,7 +574,7 @@ ve.model.init <- function(modelPath, log="error") {
 
   # Identify the run_model.R root location(s)
   # Also, update self$RunParam_ls with model-specific configuration
-  visioneval::writeLog(paste("Finding",modelPath),Level="info")
+  writeLog(paste("Finding",modelPath),Level="info")
   model_ls <- findModel(modelPath)
   if ( length(model_ls) > 0 ) {
     self$modelName <- model_ls$modelName
@@ -588,7 +601,7 @@ ve.model.init <- function(modelPath, log="error") {
 ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchives=FALSE) {
   # Copy the current model to NewName (in ModelDir, unless newPath is also provided)
   if ( ! private$p.valid ) {
-    visioneval::writeLog(paste0("Invalid model: ",self$printStatus()),level="error")
+    writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
     return( NULL )
   }
   
@@ -636,7 +649,7 @@ ve.model.archive <- function(SaveDatastore=TRUE) {
     SaveDatastore=SaveDatastore
   )
   if ( length(failToArchive)>0 ) {
-    visioneval::writeLog(paste0("Failed to archive results (",paste(failToArchive,collapse=","),")"),Level="error")
+    writeLog(paste0("Failed to archive results (",paste(failToArchive,collapse=","),")"),Level="error")
     return(FALSE)
   }
   return(TRUE)
@@ -805,7 +818,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
   #   all of them are deleted too.
 
   if ( ! private$p.valid ) {
-    visioneval::writeLog(self$printStatus(),Level="error")
+    writeLog(self$printStatus(),Level="error")
     return( invisible(FALSE) )
   }
   
@@ -912,67 +925,111 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
 ################################################################################
 
 # Load the stage configuration
-ve.stage.init <- function(modelParam_ls=list(), Dir=NULL, Name=NULL, Path=NULL, Config=NULL) {
+ve.stage.init <- function(stageParam_ls=list(),modelParam_ls=list()) {
   # modelParam_ls is the base list of parameters from the Model
-  # Dir is the subdirectory for the stage, holding InputDir/ParamDir
-  #   default of NULL becomes "."
-  # ModelDir is where to seek Dir
-  #   default of NULL becomes modelParam_ls$ModelDir and if not provided, then "."
-  # Name is how we refer to the stage
-  #   default is basename(Dir)
-  # Path is the path to directory holding InputDir/ParamDir
-  #   default is ModelDir/Dir (or Dir itself if absolute path)
-  # Config is alternative path/name for "visioneval.cnf" for stage
-  #   default is Path/visioneval.cnf
-  self$Dir <- if ( is.null(Dir) ) "." else Dir
-
+  # stageParam_ls has the following elements (it's not really a RunParam_ls,
+  #   just a regular named list):
+  #
+  #   Dir is the subdirectory for the stage, holding InputDir/ParamDir
+  #     default of NULL becomes "."
+  #   ModelDir is where to seek Dir
+  #     default of NULL becomes modelParam_ls$ModelDir and if not provided, then "."
+  #   Name is how we refer to the stage
+  #     default is basename(Dir)
+  #   Path is the path to directory holding InputDir/ParamDir
+  #     default is ModelDir/Dir (or Dir itself if absolute path)
+  #   Config is alternative path/name for "visioneval.cnf" for stage
+  #     default is Path/visioneval.cnf
+  #
   if ( "ModelDir" %in% names(modelParam_ls) ) {
     ModelDir <- modelParam_ls$ModelDir
   } else ModelDir <- "."
   ModelDir <- normalizePath(ModelDir,winslash="/")
 
-  # Locate ParamDir, InputDir, ScriptsDir
-  if ( is.null(Path) ) {
-    self$Path=normalizePath(file.path(ModelDir,Dir),winslash="/")
+  # Set up stage Path if available
+  if ( is.null(stageParam_ls$Path) ) {
+    if ( ! is.null(stageParam_ls$Dir) ) {
+      testPath <- normalizePath(file.path(ModelDir,stageParam_ls$Dir),winslash="/")
+      if ( file.exists(testPath) ) {
+        writeLog(paste0("Implicit Stage Path:",self$Path),Level="info")
+        writeLog(paste0("Constructed from:",stageParam_ls$Dir),Level="info")
+        self$Path <- testPath
+      } # else self$Path stays NULL and we'll read from Config
+    }
   } else {
-    self$Path=normalizePath(Path,winslash="/")
+    self$Path <- normalizePath(stageParam_ls$Path,winslash="/")
+    writeLog(paste0("Explicit Stage Path:",self$Path),Level="info")
   }
+  # self$Path may still be NULL, in which case we need stageParam_ls$Config
+  
+  # Set self$Dir (used for input and output)
+  self$Dir <- if ( is.null(stageParam_ls$Dir) ) "." else stageParam_ls$Dir
 
-  # Set Name if not supplied
-  self$Name <- if ( is.null(Name) ) basename(self$Path) else Name
-  # If self$Dir is ".", Name will be basename of Model
+  # Construct stage configuration
+  self$RunParam_ls <- list()
 
-  # no Path for stage - abort
-  # NOTE: should rarely happen
-  if ( ! dir.exists(self$Path) ) {
-    visioneval::writeLog("ModelStage root directory not available",Level="error")
-    return(FALSE)
+  # If self$Path is NULL, leave it that way until after the Config has been located
+  if ( ! is.null(stageParam_ls$Config)) {
+    # Look for Config file, if specified
+    # Generally it's a bad idea to use an absolute path, but we'll handle it
+    writeLog(paste("Locating configuration:",stageParam_ls$Config),Level="info")
+    if ( ! isAbsolutePath(stageParam_ls$Config) ) {
+      if ( ! is.null(self$Path) ) {
+        Config <- file.path(self$Path,stageParam_ls$Config)
+      } else {
+        Config <- file.path(ModelDir,stageParam_ls$Config)
+      }
+      self$Config <- normalizePath(Config,winslash="/",mustWork=FALSE)
+    }
+    if ( is.character(self$Config) && file.exists(self$Config) ) {
+      writeLog(paste("Loading Config:",self$Config),Level="info")
+      self$RunParam_ls <- visioneval::loadConfiguration(ParamPath=self$Config,override=modelParam_ls)
+      writeLog(paste("self$RunParam_ls contains:",paste(names(self$RunParam_ls),collapse=", ")),Level="info")
+    } else {
+      writeLog(paste("Warning: No Config for",self$Name),Level="info")
+      writeLog(paste("Looked for: ",self$Config),Level="info")
+      self$Config <- NULL
+    }
+  }
+  if ( length(self$RunParam_ls) == 0 && ! is.null(self$Path) ) {
+    # if no explicit Config, and the Stage directory exists, load "visioneval.cnf" from stage directory
+    self$RunParam_ls <- visioneval::loadConfiguration(ParamDir=self$Path,override=modelParam_ls)
+  }
+  if (length(self$RunParam_ls) == 0 ) { # Still no stage parameters 
+    writeLog("Stage has no explicit configuration.",Level="info")
+    self$RunParam_ls <- modelParam_ls
+  }
+  writeLog(paste("Stage RunParam_ls:",paste(names(self$RunParam_ls),collapse=",")),Level="info")
+
+  # Now set self$Path if it is still NULL: the Config should provide locations
+  # relative to ModelDir for the structural directories in that case (probably just
+  # the ModelScript)
+  if ( is.null(self$Path) ) self$Path <- ModelDir
+
+  # Set Stage Name if not supplied
+  self$Name <- if ( is.null(stageParam_ls$Name) ) {
+    if ( "Dir" %in% names(stageParam_ls) ) {
+      if ( stageParam_ls$Dir == "." ) {
+        basename(ModelDir)
+      } else {
+        basename(stageParam_ls$Dir)
+      }
+    }
+  } else {
+    stageParam_ls$Name
+  }
+  if ( is.null(self$Name) ) {
+    writeLog( paste(names(stageParam_ls),collapse=","),Level="info" )
+    stop( writeLog("Model stage has no Name!",Level="error") )
   }
 
   # Stage Output
   self$RunPath <- file.path(
     ModelDir,
-    visioneval::getRunParameter("ResultsDir",Param_ls=modelParam_ls),
+    visioneval::getRunParameter("ResultsDir",Param_ls=self$RunParam_ls),
     self$Dir
   )
   self$RunPath <- normalizePath(self$RunPath,winslash="/",mustWork=FALSE)
-
-  # Construct stage configuration
-  self$RunParam_ls <- list()
-  if ( ! is.null(Config)) {
-    # Look for Config file, if specified
-    if ( ! isAbsolutePath(Config) ) {
-      Config <- file.path(self$Path,self$Config)
-      self$Config <- normalizePath(Config,winslash="/",mustWork=FALSE)
-    }
-    if ( is.character(self$Config) && file.exists(self$Config) ) {
-      self$RunParam_ls <- visioneval::loadConfiguration(ParamFile=Config,override=modelParam_ls)
-    } else self$Config <- NULL
-  }
-  if ( length(self$RunParam_ls) == 0 ) {
-    # if unable to read explicit Config, load "visioneval.cnf" from stage directory
-    self$RunParam_ls <- visioneval::loadConfiguration(ParamDir=self$Path,override=modelParam_ls)
-  }
 
   # Default InputPath
   if ( ! "InputPath" %in% names(self$RunParam_ls) ) {
@@ -987,6 +1044,14 @@ ve.stage.init <- function(modelParam_ls=list(), Dir=NULL, Name=NULL, Path=NULL, 
   if ( "StartFrom" %in% names(self$RunParam_ls) ) {
     self$StartFrom <- self$RunParam_ls$StartFrom
   } else self$StartFrom <- character(0)
+
+  # Override Reportable if present in stageParam_ls
+  # Default for the class is NULL: Gets set during model load based on whether
+  #   the stage is a base for another stage - if so then FALSE, otherwise TRUE)
+  # The ModelStages setting for the model may override explicitly to FALSE or TRUE
+  if ( "Reportable" %in% names(stageParam_ls) ) {
+    self$Reportable <- stageParam_ls$Reportable
+  }
 }
 
 # Prepare the stage to run in the model context
@@ -1000,12 +1065,13 @@ ve.stage.runnable <- function(priorStages) {
   if ( length(self$StartFrom) > 0 && nzchar(self$StartFrom) ) {
     errMessage <- character(0)
     if ( ! self$StartFrom %in% names(priorStages) ) {
+      writeLog(paste("priorStages: ",names(priorStages),collapse=", "),Level="info")
       errMessage <- paste("StartFrom stage,",self$StartFrom,"does not run before",self$Name)
-    } else if ( ! (priorStages[[self$StartFrom]])$runnable() ) {
+    } else if ( ! (priorStages[[self$StartFrom]])$runnable(priorStages) ) {
       errMessage <- paste("StartFrom stage is not Runnable",self$StartFrom)
     }
     if ( length(errMessage)>0 ) {
-      stop( visioneval::writeLog(errMessage,Level="error") )
+      stop( writeLog(errMessage,Level="error") )
     }
 
     startFrom     <- priorStages[[self$StartFrom]]$RunParam_ls
@@ -1030,6 +1096,7 @@ ve.stage.runnable <- function(priorStages) {
     ParamPath <- self$RunParam_ls$ParamPath   # May be NULL
     InputPath <- self$RunParam_ls$InputPath   # May be NULL
   }
+  writeLog(paste0("InputPath for ",self$Name,": ",InputPath),Level="info")
 
   # Construct InputPath
   self$RunParam_ls <- visioneval::addRunParameter(
@@ -1056,13 +1123,13 @@ ve.stage.runnable <- function(priorStages) {
         )
       } else {
         stop(
-          visioneval::writeLog(
+          writeLog(
             paste("LoadDatastore requested, but no LoadDatastoreName provided",Level="error")
           )
         )
       }
     }
-    DatastorePath <- character(0) # Path doesn't matter any more
+    DatastorePath <- character(0) # Path doesn't matter any more (copying upstream into current Datastore)
     # Existence of loaded/linked Datastore is verified when the stage runs
   } else {
     DatastorePath <- startFrom$DatastorePath # Virtual Datastore linkage
@@ -1082,20 +1149,24 @@ ve.stage.runnable <- function(priorStages) {
   self$RunParam_ls <- visioneval::loadParamFile(Param_ls=self$RunParam_ls,ModelDir=self$Path)
 
   # Set up ModelScriptPath if current stage has different ModelScript from overall model
+  # TODO: Not working for VE-State with pure configuration (no stage directory)
+  ModelDir        <- visioneval::getRunParameter("ModelDir",Param_ls=self$RunParam_ls)
   ScriptName      <- visioneval::getRunParameter("ModelScript",Param_ls=self$RunParam_ls)
   ScriptsDir      <- visioneval::getRunParameter("ScriptsDir",Param_ls=self$RunParam_ls)
-  stateModelScriptPath <- character(0)
-  for ( scriptDir in c(
+  stageModelScriptPath <- character(0)
+  for ( scriptDir in unique( c(
     file.path(self$Path,ScriptsDir),
-    file.path(self$Path)
-  ) ) {
+    file.path(self$Path),
+    file.path(ModelDir,ScriptsDir),
+    file.path(ModelDir)
+  ) ) ) {
     ScriptPath <- file.path(scriptDir,ScriptName)
     if ( file.exists(ScriptPath) ) {
       stageModelScriptPath <- normalizePath(ScriptPath,winslash="/",mustWork=FALSE)
       break
     }
   }
-  if ( nzchar(stageModelScriptPath) ) {
+  if ( length(stageModelScriptPath)>0 && nzchar(stageModelScriptPath) ) {
     self$RunParam_ls <- visioneval::addRunParameter(
       self$RunParam_ls,
       Source="VEModelStage$runnable",
@@ -1117,7 +1188,7 @@ ve.stage.runnable <- function(priorStages) {
   missingParameters <- visioneval::verifyModelParameters(self$RunParam_ls)
   private$complete <- length(missingParameters) == 0
   if ( ! private$complete ) {
-    visioneval::writeLog(
+    writeLog(
       c(
         paste("Candidate stage",self$Name,"is not Runnable"),
         paste("Missing",missingParameters,collapse=", ")
@@ -1155,11 +1226,13 @@ ve.stage.load <- function(onlyExisting=TRUE,reset=FALSE) {
       }
       self$RunStatus <- self$ModelState_ls$RunStatus
       return(TRUE)
-    } else {
-      visioneval::writeLog(
+    } else if ( ! onlyExisting) {
+      writeLog(
         paste0("Unable to build model state for stage ",self$Name,"!"),
         Level="warn"
       )
+    } else {
+      self$RunStatus <- codeStatus("Uninitialized")
     }
   }
   return(FALSE)
@@ -1187,7 +1260,7 @@ ve.stage.run <- function(log="warn") {
     {
       # Initialize Log, create new ModelState
       ve.model$RunModel <- TRUE
-      visioneval::initLog(Threshold=log,Save=TRUE,envir=ve.model) # Log stage
+      initLog(Threshold=log,Save=TRUE,envir=ve.model) # Log stage
       # Create new ModelState_ls (ignore existing)
       visioneval::loadModel(self$RunParam_ls)
       visioneval::setModelState()                       # Save ModelState.Rda
@@ -1206,7 +1279,7 @@ ve.stage.run <- function(log="warn") {
   if ( ! is.numeric(RunStatus) ) {
     # Failure: stop trapped while performing run sequence
     msg <- as.character(RunStatus) # try-error (captures "stop" message)
-    visioneval::writeLog(msg,Level="error") # possibly redundant with interior logging
+    writeLog(msg,Level="error") # possibly redundant with interior logging
     self$RunStatus <- codeStatus("Run Failed")
     if ( "ModelState_ls" %in% names(visioneval::modelEnvironment()) ) {
       visioneval::setModelState(list(RunStatus=self$RunStatus),envir=ve.model)
@@ -1215,7 +1288,7 @@ ve.stage.run <- function(log="warn") {
     # Success: Assemble the runResults
     self$RunStatus <- RunStatus
     visioneval::setModelState(list(RunStatus=self$RunStatus),envir=ve.model)
-    visioneval::writeLog(printStatus(self$RunStatus),Level="warn")
+    writeLog(printStatus(self$RunStatus),Level="warn")
   }
   visioneval::saveLog(LogFile="console",envir=ve.model)
   self$ModelState_ls <- ve.model$ModelState_ls # The story of the run...
@@ -1224,9 +1297,10 @@ ve.stage.run <- function(log="warn") {
 
 # Helper
 # List unique sources in a parameter list
-uniqueSources <- function(stage) {
-  sources <- attr(stage$RunParam_ls,"source")
+uniqueSources <- function(Param_ls) {
+  sources <- attr(Param_ls,"source")
   if ( is.null(sources) ) {
+    writeLog("'sources' attribute is null in uniqueSources",.traceback(1),Level="info")
     sources <- "NULL"
   } else {
     sources <- unique(sources$Source)
@@ -1237,11 +1311,11 @@ uniqueSources <- function(stage) {
 # Print a model stage summary
 ve.stage.print <- function(details=FALSE) {
   cat("Stage:",self$Name,"(Reportable:",self$Reportable,")\n")
-  cat("Status:",printStatus(self$RunStatus),"\n")
+  cat("   Status:",printStatus(self$RunStatus),"\n")
   if ( details ) {
-    cat("   Starts from:",self$StartFrom,"\n")
+    if ( length(self$StartFrom)>0 && nzchar(self$StartFrom) ) cat("   Starts from:",self$StartFrom,"\n")
     cat("   Configurations:\n")
-    cat(paste("   ",uniqueSources(self$RunParam_ls),"\n")) # Generates one row for each unique source
+    cat(paste0("     ",uniqueSources(self$RunParam_ls)),sep="\n") # Generates one row for each unique source
   }
 }
 
@@ -1257,7 +1331,7 @@ VEModelStage <- R6::R6Class(
     StartFrom = "",              # Name of another model stage to extend
     RunParam_ls = list(),        # RunParameters to initialize the stage
     ModelState_ls = NULL,        # ModelState constructed from RunParam_ls
-    Reportable = FALSE,          # True if stage is not a starting pont for another
+    Reportable = NULL,           # If TRUE, include in default result set for extract and queries
     RunPath = NULL,              # Typically ModelDir/ResultsDir/StageDir
     RunStatus = 1, # "Unknown"   # Indicates whether results are available
     Results = NULL,              # A VEResults object (create on demand)
@@ -1351,16 +1425,16 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
   #   Reportable stage by default).
 
   if ( ! private$p.valid ) {
-    visioneval::writeLog(paste0("Invalid model: ",self$printStatus()),level="error")
+    writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
     return( invisible(data.frame()) )
   }
 
   # Update specSummary
   if ( is.null(self$specSummary) ) {
-    visioneval::writeLog("Loading model specifications (may take some time)...",Level="warn")
+    writeLog("Loading model specifications (may take some time)...",Level="warn")
     self$load(onlyExisting=FALSE) # Create new model states if they are not present in the file system
     for ( stage in self$modelStages ) {
-      visioneval::writeLog(paste("Loading Stage specs for",stage$Name),Level="info")
+      writeLog(paste("Loading Stage specs for",stage$Name),Level="info")
       AllSpecs_ls <- stage$ModelState_ls$AllSpecs_ls
       if ( ! is.null( AllSpecs_ls ) ) {
         specFrame <- summarizeSpecs(AllSpecs_ls,stage$Name)
@@ -1370,10 +1444,10 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
           rbind(self$specSummary,specFrame)
         }
       } else {
-        visioneval::writeLog(paste("No specifications for",stage$Name),Level="warn")
+        writeLog(paste("No specifications for",stage$Name),Level="warn")
       }
     }
-    visioneval::writeLog(paste("Loaded",nrow(self$specSummary),"Specifications"),Level="info")
+    writeLog(paste("Loaded",nrow(self$specSummary),"Specifications"),Level="info")
   }
 
   # which rows to return
@@ -1409,7 +1483,7 @@ ve.model.print <- function(details=FALSE) {
     cat("Path:","\n")
     cat(self$modelPath,"\n")
     cat("Configurations:","\n")
-    cat(paste("   ",uniqueSources(self$RunParam_ls),"\n")) # Generates one row for each unique source
+    cat(paste("  ",uniqueSources(self$RunParam_ls)),sep="\n") # Generates one row for each unique source
   }
   cat("Status:", self$printStatus(),"\n")
   if ( private$p.valid ) {
@@ -1510,7 +1584,7 @@ ve.model.load <- function(onlyExisting=TRUE,reset=FALSE) {
 
   if ( ! self$valid() ) {
     stop(
-      visioneval::writeLog("Model is incomplete and cannot be loaded.",Level="error")
+      writeLog("Model is incomplete and cannot be loaded.",Level="error")
     )
   }
 
@@ -1519,7 +1593,24 @@ ve.model.load <- function(onlyExisting=TRUE,reset=FALSE) {
 
   # Load or Create the ModelState_ls for each stage
   for ( index in seq_along(self$modelStages) ) {
-    self$modelStages[[index]]$load(onlyExisting=onlyExisting,reset=reset)
+    stage <- self$modelStages[[index]]
+    if ( ! is.null( stage$RunParam_ls$StartFrom ) ) {
+      startFrom <- stage$RunParam_ls$StartFrom
+      startFromState_ls <- self$modelStages[[startFrom]]$ModelState_ls # may be NULL
+      if ( ! is.null(startFromState_ls) ) {
+        visioneval::addRunParameter(
+          stage$RunParam_ls,
+          Source="VEModelState::load",
+          StartFromModelState=startFromState_ls
+        )
+      } else {
+        stop(
+          writeLog(paste("StartFrom",startFrom,"has no ModelState_ls!"),Level="error")
+        )
+      }
+    }
+    stage$load(onlyExisting=onlyExisting,reset=reset)
+    self$modelStages[[index]] <- stage
   }
   # Update self$status
   self$updateStatus()
@@ -1560,7 +1651,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
   #   "stage" can be specified either as an index position in self$modelStages or as a named position
 
   if ( ! private$p.valid ) {
-    visioneval::writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
+    writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
     return( invisible(self$status) )
   }
   
@@ -1586,7 +1677,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
     alreadyRun <- ( sapply( self$modelStages, function(s) s$RunStatus ) == codeStatus("Run Complete") )
     if ( all(alreadyRun) ) {
       self$status <- codeStatus("Run Complete")
-      visioneval::writeLog("Model has been run.",Level="warn")
+      writeLog("Model has been run.",Level="warn")
       return(invisible(self$printStatus()))
     } else {
       toRun <- which(!alreadyRun)[1] # start from first un-run stage
@@ -1600,7 +1691,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
   SaveDatastore = NULL # ignore any pre-configured value for SaveDatastore
   if ( run == "restart" || run=="reset" ) {
     SaveDatastore <- FALSE
-    visioneval::writeLog(paste("Removing previous Results from",workingResultsDir),Level="info")
+    writeLog(paste("Removing previous Results from",workingResultsDir),Level="info")
     unlink(dir(workingResultsDir,full.names=TRUE),recursive=TRUE)
   } else if ( run == "save" ) {
     SaveDatastore <- TRUE
@@ -1612,7 +1703,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
   if ( run != "continue" && SaveDatastore && dir.exists(workingResultsDir) ) {
     # Archive previous results if SaveDatastore true in RunParam_ls and previous results exist
     if ( ! self$archive(SaveDatastore=SaveDatastore) ) {
-      visioneval::writeLog(
+      writeLog(
         paste0("Failed to save prior results; Continuing anyway..."),
         Level="error"
       )
@@ -1628,8 +1719,8 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
   # Identify stages to run
   runStages <- names(self$modelStages)
   if ( toRun > length(runStages) ) { # should never happen
-    visioneval::writeLog(paste("Stages:",runStages,collapse=","),Level="info")
-    msg <- visioneval::writeLog(paste("Starting stage",toRun,"comes after last stage",length(runStages)),Level="error")
+    writeLog(paste("Stages:",runStages,collapse=","),Level="info")
+    msg <- writeLog(paste("Starting stage",toRun,"comes after last stage",length(runStages)),Level="error")
     return( invisible(self$status) )
   }
   runStages <- runStages[toRun:length(runStages)]
@@ -1669,7 +1760,7 @@ ve.model.set <- function(stage=NULL,modelState=FALSE,Source="Interactive",Param_
   Param_ls <- c(Param_ls,list(...))
   if ( length(Param_ls)>0 ) {
     if ( ! is.character(stage) ) {
-      visioneval::writeLog(
+      writeLog(
         paste0("Changing RunParam_ls elements for model ",self$modelName),
         Level="info"
       )
@@ -1677,7 +1768,7 @@ ve.model.set <- function(stage=NULL,modelState=FALSE,Source="Interactive",Param_
         self$RunParam_ls, visioneval::addParameterSource(Param_ls,Source=Source)
       )
     } else {
-      visioneval::writeLog(
+      writeLog(
         paste0("Changing stage RunParam_ls elements for ",paste(stage,collapse=", ")),
         Level="info"
       )
@@ -1701,7 +1792,7 @@ ve.model.set <- function(stage=NULL,modelState=FALSE,Source="Interactive",Param_
         }
         self$modelStages[[stgname]] <- s
       }
-      visioneval::writeLog(paste(paste0(names(Param_ls),"=",as.character(Param_ls)),collapse=","),Level="info")
+      writeLog(paste(paste0(names(Param_ls),"=",as.character(Param_ls)),collapse=","),Level="info")
     }
   }
   return(invisible(Param_ls))
@@ -1753,7 +1844,7 @@ ve.model.findstage <- function(stage=NULL) {
   if ( ! private$p.valid ) return( NULL )
 
   if ( missing(stage) || !is.character(stage) ) {
-    stage <- tail(names(self$modelStages),1)
+    stage <- utils::tail(names(self$modelStages),1)
   }
   if ( length(stage)>1 ) {
     stage <- names(self$modelStages)[stage[length(stage)]] # use last one listed
@@ -1772,23 +1863,23 @@ ve.model.results <- function(stage=NULL) {
   # Create a results object wrapping the directory that contains the model
   # results for the given stage (or last stage if not given)
   if ( ! private$p.valid ) {
-    visioneval::writeLog(paste0("Invalid model: ",self$status),level="error")
+    writeLog(paste0("Invalid model: ",self$status),Level="error")
     return( NULL )
   }
 
   stg <- self$findstage(stage)
   if ( is.null(stg) ) stop(
-    visioneval::writeLog(paste("Model stage not found:",stage),Level="error")
+    writeLog(paste("Model stage not found:",stage),Level="error")
   )
   results <- VEResults$new(stg$RunPath)
   if ( ! results$valid() ) {
     if (!is.null(stage)) {
-      visioneval::writeLog(
+      writeLog(
         paste("There are no results for stage ",paste(stage,collapse=", ")," of this model yet."),
         Level="warn"
       )
     } else {
-      visioneval::writeLog("There are no results for this model yet.",Level="warn")
+      writeLog("There are no results for this model yet.",Level="warn")
     }
   }
   return(results)
@@ -1798,7 +1889,7 @@ ve.model.results <- function(stage=NULL) {
 #  of available queries if no QueryName is provided).
 ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
   if ( ! private$p.valid ) {
-    visioneval::writeLog(paste0("Invalid model: ",self$status),level="error")
+    writeLog(paste0("Invalid model: ",self$status),Level="error")
     return( NULL )
   }
 
@@ -1929,7 +2020,7 @@ openModel <- function(modelPath="",log="error") {
       )
     )
   } else {
-    visioneval::initLog(Save=FALSE,Threshold=log, envir=new.env())
+    initLog(Save=FALSE,Threshold=log, envir=new.env())
     return( VEModel$new(modelPath = modelPath,log=log) )
   }
 }
@@ -1943,20 +2034,21 @@ openModel <- function(modelPath="",log="error") {
 #  returns the full path to that model template
 findStandardModel <- function( model, variant="" ) {
   standardModels <- system.file("models",package="VEModel")
-  if ( ! nzchar(standardModels) ) {
-    # The following is for testing purposes...
-    standardModels <- getOption("VEStandardModels",default=normalizePath("inst/models"))
-  }
-  if (missing(model) || is.null(model) || ! nzchar(model)) {
+#   if ( ! nzchar(standardModels) ) {
+#     # The following is for testing purposes...
+#     standardModels <- getOption("VEStandardModels",default=normalizePath("inst/models"))
+#   }
+  if ( missing(model) || is.null(model) || ! nzchar(model)) {
     return( c("Available Models:",dir(standardModels)) )
   }
 
   # Locate the model
   model <- model[1]
   model_ls <- list()
+  model_ls$Name <- model
   model_ls$ModelDir <- file.path(standardModels,model)
   if ( ! dir.exists(model_ls$ModelDir) ) {
-    visioneval::writeLog(paste("No standard model called ",model),Level="error")
+    writeLog(paste("No standard model called ",model),Level="error")
     return( findStandardModel("") ) # recursive call to keep return directory in one place
   }
 
@@ -1964,8 +2056,8 @@ findStandardModel <- function( model, variant="" ) {
   confPath <- file.path(model_ls$ModelDir,"model-index.cnf")
   modelIndex <- try( yaml::yaml.load_file(confPath) )
   if ( ! "variants" %in% names(modelIndex) ) {
-    visioneval::writeLog(paste0("No model variants defined in ",confPath),Level="error")
-    visioneval::writeLog(c(class(modelIndex),names(modelIndex)),Level="error")
+    writeLog(paste0("No model variants defined in ",confPath),Level="error")
+    writeLog(c(class(modelIndex),names(modelIndex)),Level="error")
     return(c("No model variant:",variant))
   }
   if ( missing(variant) || ! nzchar(variant) || ( ! variant %in% names(modelIndex$variants) ) ) {
@@ -2015,7 +2107,7 @@ findStandardModel <- function( model, variant="" ) {
 ## install a standard model with data identified by "variant"
 #  We're still expecting to distribute standard models in the runtime (but for now, those will
 #   be the "classic" models)
-installStandardModel <- function( modelName, modelPath, confirm, variant="base", log="error" ) {
+installStandardModel <- function( modelName, modelPath, confirm, overwrite=FALSE, variant="base", log="error" ) {
   # Locate and install standard modelName into modelPath
   #   modelName says which standard model to install. If it is missing or empty, return a
   #     list of available models
@@ -2027,19 +2119,27 @@ installStandardModel <- function( modelName, modelPath, confirm, variant="base",
   #     they have to try again
 
   model <- findStandardModel( modelName, variant )
-  if ( ! "Description" %in% names(model) ) model$Description <- paste(modelName,variant,sep="-")
   if ( ! is.list(model) ) {
     return(model) # Expecting a character vector of available information about standard models
   } # Otherwise model is a list with details on the model we need to install
 
+  if ( ! "Description" %in% names(model) ) model$Description <- paste(modelName,variant,sep="-")
+
   # Set up destination modelPath (always create in the first defined root)
   root <- getModelRoots(1)
-  if ( missing(modelPath) || is.null(modelPath) ) modelPath <- model$Name
+  writeLog(paste("Root:",root),Level="info")
+  if ( missing(modelPath) || is.null(modelPath) ) modelPath <- paste(model$Name,variant,sep="-")
   if ( ! isAbsolutePath(modelPath) ) {
-    installPath <- normalizePath(file.path(root,modelPath),winslash="/",mustWork=FALSE)
-  }
+    newModelPath <- file.path(root,modelPath)
+    writeLog(paste("Model path:",newModelPath),Level="info")
+    installPath <- normalizePath(newModelPath,winslash="/",mustWork=FALSE)
+  } else installPath <- modelPath
   if ( dir.exists(installPath) ) {
-    installPath <- getUniqueName( dirname(installPath), basename(modelPath) )
+    if ( ! overwrite ) {
+      installPath <- getUniqueName( dirname(installPath), basename(installPath) )
+    } else {
+      unlink(installPath,recursive=TRUE)
+    }
   }
 
   # Confirm installation if requested
@@ -2052,9 +2152,9 @@ installStandardModel <- function( modelName, modelPath, confirm, variant="base",
   if ( ! install ) stop("Model ",modelName," not installed.",call.=FALSE)
 
   # Create the installation directory
-  visioneval::writeLog(paste("Installing from",model$ModelDir),Level="info")
-  visioneval::writeLog(model$Description,Level="info")
-  visioneval::writeLog(paste("Installing into",installPath),Level="info")
+  writeLog(paste("Installing from",model$ModelDir),Level="info")
+  writeLog(model$Description,Level="info")
+  writeLog(paste("Installing into",installPath),Level="info")
   dir.create(installPath)
 
   # Process the model directories
@@ -2062,34 +2162,34 @@ installStandardModel <- function( modelName, modelPath, confirm, variant="base",
     from.dir <- subdir$From
     to.dir <- file.path(installPath,subdir$To)
     if ( ! dir.exists(from.dir) ) {
-      visioneval::writeLog(paste0("Searching ",from.dir),Level="info")
-      visioneval::writeLog(msg<-paste0("No variant (",variant,") for ",modelName),Level="error")
-      visioneval::writeLog(c("Directory missing:",from.dir),Level="error")
+      writeLog(paste0("Searching ",from.dir),Level="info")
+      writeLog(msg<-paste0("No variant (",variant,") for ",modelName),Level="error")
+      writeLog(c("Directory missing:",from.dir),Level="error")
       stop(msg)
     }
     if ( ! dir.exists(to.dir) ) dir.create(to.dir)
-    visioneval::writeLog(paste0("Copying ",subdir$From,"..."),Level="info")
+    writeLog(paste0("Copying ",subdir$From,"..."),Level="info")
     copy.files <- dir(from.dir,full.names=TRUE)
     file.copy(copy.files,to.dir,recursive=TRUE) # Copy standard model into modelPath
   }
 
   # Copy the configuration file
   if ( "Config" %in% names(model) ) {
-    visioneval::writeLog(paste0("Copying ",model$Config," into visioneval.cnf",Level="info"))
+    writeLog(paste0("Copying ",model$Config," into visioneval.cnf"),Level="info")
     file.copy(model$Config,file.path(installPath,"visioneval.cnf"))
   } else {
     # Hack for classic model - no Config
     # Elevate content "scripts" directory to installPath then remove scriptPath
     if ( dir.exists( scriptPath<-file.path(installPath,"scripts") ) ) {
-      visioneval::writeLog("No config: promoting 'scripts' directory",Level="info")
+      writeLog("No config: promoting 'scripts' directory",Level="info")
       file.copy(dir(scriptPath,full.names=TRUE),installPath)
       unlink(scriptPath,recursive=TRUE)
     } else {
-      stop( visioneval::writeLog(paste0("No configuration file available for ",modelName),Level="error") )
+      stop( writeLog(paste0("No configuration file available for ",modelName),Level="error") )
     }
   }
 
-  visioneval::writeLog(paste0("Installed ",modelName," in ",installPath),Level="info")
+  writeLog(paste0("Installed ",modelName," in ",installPath),Level="info")
   return( list(modelName=modelName,modelPath=installPath) )
 }
 
@@ -2122,10 +2222,10 @@ installStandardModel <- function( modelName, modelPath, confirm, variant="base",
 #' @param log a string describing the minimum level to display
 #' @return A VEModel object of the model that was just installed
 #' @export
-installModel <- function(modelName=NULL, modelPath=NULL, variant="base", confirm=TRUE, log="error") {
+installModel <- function(modelName=NULL, modelPath=NULL, variant="base", confirm=TRUE, overwrite=FALSE, log="info") {
   # Load system model configuration (clear the log status)
-  visioneval::initLog(Save=FALSE,Threshold=log, envir=new.env())
-  model <- installStandardModel(modelName, modelPath, confirm=confirm, variant=variant, log=log)
+  initLog(Save=FALSE,Threshold=log, envir=new.env())
+  model <- installStandardModel(modelName, modelPath, confirm=confirm, overwrite=overwrite, variant=variant, log=log)
   if ( is.list(model) ) {
     return( VEModel$new( modelPath=model$modelPath, log=log ) )
   } else {

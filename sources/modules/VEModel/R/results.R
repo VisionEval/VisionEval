@@ -57,7 +57,7 @@ ve.results.index <- function() {
   ms <- self$ModelState <- try(visioneval::readModelState(FileName=FileName,envir=new.env()))
   if ( ! is.list(ms) ) {
     ms <- self$ModelState <- NULL
-    visioneval::writeLog(Level="error",paste("Cannot load ModelState from:",FileName))
+    writeLog(Level="error",paste("Cannot load ModelState from:",FileName))
     return(list())
   }
   if ( is.null(private$RunParam_ls) && is.list( ms ) ) {
@@ -112,7 +112,7 @@ ve.results.index <- function() {
 
   maxLength <- max(unlist(lapply(splitGroupTableName, length)))
   if ( maxLength != 3 ) {
-    visioneval::writeLog(Level="warn",paste0("Model state at ",self$resultsPath," is incomplete (",maxLength,")"))
+    writeLog(Level="warn",paste0("Model state at ",self$resultsPath," is incomplete (",maxLength,")"))
     return(list())
   }
   splitGroupTableName <- lapply(splitGroupTableName , function(x) c(x, rep(NA, maxLength-length(x))))
@@ -197,7 +197,7 @@ addDisplayUnits <- function(GTN_df,Param_ls) {
 
   existing <- file.exists(DisplayUnitsFile)
   if ( ! any(existing) ) {
-    visioneval::writeLog( Level="info",
+    writeLog( Level="info",
       c("Specified DisplayUnits file does not exist (using default units):",paste(DisplayUnitsFile,collapse="; "))
     )
     return( cbind(GTN_df,DisplayUnits=NA,DisplayUnitsFile="None") )
@@ -208,7 +208,7 @@ addDisplayUnits <- function(GTN_df,Param_ls) {
 #   print(DisplayUnitsFile)
   displayUnits <- try(utils::read.csv(DisplayUnitsFile),silent=TRUE)   # May fail for various reasons
   if ( ! "data.frame" %in% class(displayUnits) ) {
-    visioneval::writeLog( Level="warn",
+    writeLog( Level="warn",
       c(
         "Error reading DisplayUnits file:",
         DisplayUnitsFile,
@@ -218,7 +218,7 @@ addDisplayUnits <- function(GTN_df,Param_ls) {
     return( cbind(GTN_df,DisplayUnits=NA, DisplayUnitsFile="None") )
   }
   if ( ! all( c("Group","Table","Name","DisplayUnits") %in% names(displayUnits) ) ) {
-    visioneval::writeLog( Level="warn",
+    writeLog( Level="warn",
       c("Specified DisplayUnits file does not have correct columns:",DisplayUnitsFile,
         paste("Columns:",names(displayUnits),collapse=", ")
       )
@@ -236,7 +236,7 @@ addDisplayUnits <- function(GTN_df,Param_ls) {
     } else {
       displayUnits <- conditionMessage(attr(displayUnits,"condition"))
     }
-    visioneval::writeLog( Level="warn",
+    writeLog( Level="warn",
       c(
         "Error reading DisplayUnits file:",
         DisplayUnitsFile,
@@ -324,7 +324,7 @@ ve.results.extract <- function(
     dir.create(outputPath,showWarnings=FALSE,recursive=TRUE)
     if ( ! dir.exists(outputPath) ) {
       stop(
-        visioneval::writeLog( Level="error",
+        writeLog( Level="error",
           c( "Output directory not available:",outputPath )
         )
       )
@@ -446,7 +446,7 @@ ve.results.extract <- function(
         fn <- file.path(outputPath,paste0(prefix,Files[table]))
         disp.fn <- sub(paste0(self$resultsPath,"/"),"",fn,fixed=TRUE)
         df2w <- Data_ls$Data[[table]]
-        visioneval::writeLog(paste("Extracting",sub("\\.[^.]*$","",disp.fn),paste0("(",nrow(df2w)," rows)")),Level="warn")
+        writeLog(paste("Extracting",sub("\\.[^.]*$","",disp.fn),paste0("(",nrow(df2w)," rows)")),Level="warn")
         utils::write.csv(df2w,file=fn,row.names=FALSE)
         utils::write.csv(Metadata_ls[[table]],file=sub("\\.csv$",".metadata.csv",fn),row.names=FALSE)
       }

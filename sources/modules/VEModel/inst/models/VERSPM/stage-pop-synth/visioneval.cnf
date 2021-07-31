@@ -1,6 +1,7 @@
 # Stage configuration
 
 # Scenario description
+ModelScript    : run_popsyn.R
 Scenario       : VERSPM RVMPO Sample Stage Population Synthesis
 Description    : Population Synthesis for Base (2010) and Future (2038)
 BaseYear       : 2010
