@@ -327,7 +327,11 @@ loadModel <- function(
     }
     if ( onlyExisting ) {
       # Stop here if we don't want to build a new model state (used in VEModel findModel)
-      writeLog("Opened existing ModelState_ls ",Level="info")
+      if ( length(ms)>0 ) {
+        writeLog(paste("Opened existing ModelState_ls",length(ms)),Level="info")
+      } else {
+        writeLog("No existing ModelState_ls",Level="info")
+      }
       return(ms) # Returns empty list if no ModelState_ls
     } 
   }

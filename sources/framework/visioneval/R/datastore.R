@@ -126,52 +126,46 @@ readFromTable <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, env
 
   G <- getModelState(envir)
 
-  # Attempt to read the Table from current Datastore
+  # Attempt to read the Table from current Datastore using its associated function
   table <- envir$readFromTable(Name, Table, Group, Index, ReadAttr, envir=envir)
-  writeLog(
-    paste(class(table),"(",length(table),") returned from readFromTable(",Name,",",Table,",",Group,")"),
-    Level="trace"
-  )
   if ( length(table)==1 && is.null(attributes(table)) && length(G$DatastorePath)>1 ) {
     # table might legitimately be NA of length 1. Attributes are non-null if it is "for real"
     # If failed to find, then try upstream Datastore locations
     # DatastorePath holds absolute path to Datastore
-    if ( is.null(envir$ModelStateList) ) { # Check for ModelState cache from earlier stages
-      paths <- G$DatastorePath[-1]     # By definition, first DatastorePath is for the current stage
-      writeLog(c("Datastore Paths:",paths),Level="trace")
-      dsPaths <- lapply(paths, # Create environments that describe the source Datastore/ModelState
-        function(dstore) {
-          path <- file.path(dstore,getModelStateFileName())
-          if ( file.exists(path) ) {
-            G.env <- new.env()
-            loadModelState(FileName=path,envir=G.env)
-            if ( length(G.env$ModelState_ls) > 0 ) {
-              assignDatastoreFunctions(envir=G.env)
-            }
-            return(G.env)
-          } else return(NULL)
-        }
-      )
-      if ( any(bad <- sapply(dsPaths,is.null)) ) {
-        stop( writeLog(
-          c("Could not open ModelState for paths:",paths[bad]),
-          Level="error"
-        ))
-      }
-      envir$ModelStateList <- dsPaths
-    } else {
-      writeLog("Using cached DatastorePath/ModelStates",Level="trace")
-    }
+    msPaths <- getModelStatePaths(envir) # Does not return first element (currently writable Datastore)
+
     # Iterate over additional ModelStates in prior model stages
-    for ( ms.env in envir$ModelStateList ) {
-      # Note that we readFromTable via the ModelState (so we don't recurse into the paths)
+    # ms.env contains an upstream ModelState_ls
+    for ( ms.env in msPaths ) {
+      # Use the read function associated with the upstream Datastore
       table <- ms.env$readFromTable(Name, Table, Group, Index, ReadAttr, envir=ms.env)
-      if ( ! is.null(attributes(table)) ) break
+      if ( ! is.null(attributes(table)) ) {
+        writeLog(
+          paste0(
+            "Found ",file.path(Name,Table,Group)," in ",
+            file.path(ms.env$ModelState_ls$ModelStatePath, ms.env$ModelState_ls$DatastoreName)
+          ), Level="trace"
+        )
+        break
+      }
     }
     if ( is.null(attributes(table)) ) {
-      Message <- paste("Dataset", Name, "in table", Table, "in group", Group, "could not be located.")
-      stop( writeLog(Message,Level="error") )
+      writeLog(
+        paste0(file.path(Name,Table,Group)," ",class(table)," (",length(table),") not found on DatastorePath"),
+        Level="info"
+      )
+    } else {
+      # Only "trace" - caller will report at LogLevel "info"
+      writeLog(
+        paste0(file.path(Name,Table,Group)," ",class(table)," (",length(table),") not found in current Datastore"),
+        Level="trace"
+      )
     }
+  } else {
+    writeLog(
+      paste0(file.path(Name,Table,Group)," ",class(table)," (",length(table),") returned from current Datastore"),
+      Level="trace"
+    )
   }
   return(table)
 }
@@ -509,7 +503,6 @@ initTableRD <- function(Table, Group, Length, envir=modelEnvironment()) {
   #Create a directory for the table
   # TODO: warn (lightly) if Table exists and do not update anything
   result <- dir.create(file.path(dsPath, Group, Table))
-  browser(expr=!result)
   #Update the datastore listing and model state
   listDatastoreRD(
     list(group = paste0("/", Group), name = Table,
@@ -610,13 +603,13 @@ initDatasetRD <- function(Spec_ls, Group, envir=modelEnvironment()) {
 #' the TYPE attribute.
 #' @export
 readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, envir=modelEnvironment()) {
-
+  # This function does NOT process the DatastorePath - the overall interface does that
   G <- getModelState(envir)
   DatastoreName <- G$DatastoreName;
   dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
   
   #Check that dataset exists to read from and if so get path to dataset
-  DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
+  DatasetExists <- checkDataset(Name, Table, Group, G$Datastore) # do not pass envir - path already checked
   if (DatasetExists) {
     FileName <- paste(Name, "Rda", sep = ".")
     DatasetPath <- file.path(dsPath, Group, Table, FileName)
@@ -628,7 +621,10 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, e
   loadEnv <- new.env()
   load(DatasetPath,envir=loadEnv)
   Dataset <- loadEnv$Dataset
-  # TODO: trap error if ( is.null(Dataset) )
+  if ( is.null(Dataset) ) {
+    msg <- writeLog(paste("Failed to load",DatasetPath),Level="error")
+    stop(msg)
+  }
 
   #Convert NA values
   # This happens with H5, but not RD (where we can save suitable NA values directly)
@@ -639,7 +635,6 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, e
   if (!is.null(Index)) {
     #Save the attributes
     Attr_ls <- attributes(Dataset)
-    # TableAttr_ should be identical to Attr_ls !!
     TableAttr_ <-
       unlist(G$Datastore$attributes[G$Datastore$groupname == file.path(Group, Table)])
     AllowedLength <- TableAttr_["LENGTH"]
@@ -661,9 +656,10 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, e
     }
   }
   #Return results
-  # TODO: Caution that non-null attributes are how the standard read table wrapper detects
+  # WARNING: Non-null attributes are how the standard read table wrapper detects
   #   whether a Dataset exists in the Datastore Group/Table. Only set ReadAttr=FALSE when
-  #   reaching for unadorned data vector.
+  #   reaching for unadorned data vector (i.e. you're sure it exists, or don't care if it
+  #   doesn't)
   if (!ReadAttr) {
     attributes(Dataset) <- NULL
   }
@@ -702,6 +698,7 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvir
   Name <- Spec_ls$NAME
   Table <- Spec_ls$TABLE
   #Check that dataset exists to write to and attempt to create if not
+  #Do NOT pass envir to checkDataset here...
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if ( DatasetExists ) {
     # check for actual file, in case dataset listing is obsolete
@@ -713,10 +710,12 @@ writeToTableRD <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvir
 
   if (!DatasetExists) {
     # Add to Datastore listing
-    GroupName <- paste(Group, Spec_ls$TABLE, sep = "/")
-    Length <-
-      try(G$Datastore$attributes[G$Datastore$groupname == GroupName][[1]]$LENGTH)
-    browser(expr=!is.numeric(Length))
+    GroupName <- file.path(Group, Spec_ls$TABLE)
+    Length <- G$Datastore$attributes[G$Datastore$groupname == GroupName][[1]]$LENGTH
+    if ( !is.numeric(Length) ) {
+      msg <- writeLog(paste("WriteTableRD: Table",GroupName,"has not been created in the current Datastore"),Level="error")
+      stop(msg)
+    }
     Dataset <-
       switch(Types()[[Spec_ls$TYPE]]$mode,
              character = character(Length),
@@ -1046,7 +1045,6 @@ initDatasetH5 <- function(Spec_ls, Group, envir=modelEnvironment()) {
 #' @export
 #' @import rhdf5
 readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, envir=envir) {
-  # TODO: change DstoreLoc / ModelState_ls to parallel ReadFromTableRD
   #Expects to find the Datastore in the working directory
   #Load the model state file
   G <- getModelState(envir)
@@ -1056,6 +1054,7 @@ readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, e
   dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
 
   #Check that dataset exists to read from
+  #Do NOT pass envir to checkDataset - we're looking just within this Datastore
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if (DatasetExists) {
     DatasetName <- file.path(Group, Table, Name)
@@ -1093,11 +1092,11 @@ readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, e
   if (ReadAttr) {
     #If single value array, convert to vector but preserve attributes
     if (all(dim(Data_) == 1)) dim(Data_) <- NULL
-    Data_
   } else {
     #Remove attributes
-    as.vector(Data_)
+    Data_ <- as.vector(Data_)
   }
+  return(Data_)
 }
 
 #WRITE TO TABLE
@@ -1131,6 +1130,7 @@ writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvir
   Table <- Spec_ls$TABLE
 
   #Check that dataset exists to write to and attempt to create if not
+  #Do NOT pass envir to checkDataset - we're just looking in this Datastore
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if (!DatasetExists) {
     initDatasetH5(Spec_ls, Group)
@@ -1162,6 +1162,208 @@ writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvir
 #                                                                             #
 ###############################################################################
 
+# GET DATASTORE PATH FROM ModelState_ls
+#======================================
+#' Build and return ModelState_ls objects on virtual Datastore path
+#'
+#' TODO: Full description of \code{getModelStatePaths}
+#'
+#' @param envir environment containing the model state and cached path list
+#' @return A list of ModelState_ls objects to search for DatasetName's
+#' @export
+getModelStatePaths <- function(envir=modelEnvironment()) {
+  
+  if ( is.null(envir$ModelStateList) ) { # Check for ModelState cache from earlier stages
+    paths <- envir$ModelState_ls$DatastorePath[-1]
+    if ( length(paths) > 0 ) {
+      writeLog(c("Datastore Paths:",paths),Level="trace")
+      msList <- lapply(paths, # Create environments that describe the source Datastore/ModelState
+        function(dstore) {
+          path <- file.path(dstore,getModelStateFileName())
+          if ( file.exists(path) ) {
+            G.env <- new.env()
+            loadModelState(FileName=path,envir=G.env)
+            if ( length(G.env$ModelState_ls) > 0 ) {
+              assignDatastoreFunctions(envir=G.env) # Each datastore can have a different type
+            }
+            return(G.env)
+          } else return(NULL)
+        }
+      )
+      if ( any(bad <- sapply(msList,is.null)) ) {
+        stop( writeLog(
+          c("Could not open ModelState for paths:",paths[bad]),
+          Level="error"
+        ))
+      }
+      envir$ModelStateList <- msList
+    }
+  } else {
+    writeLog("Using cached DatastorePath/ModelStates",Level="trace")
+  }
+
+  return(envir$ModelStateList)
+}
+
+#LOCATE DATASET
+#==============
+#' Find virtual Datastore containing Dataset
+#'
+#' @param DatasetName Group/Table/Name string describing Dataset to locate
+#' @param DstoreListing_df a dataframe which lists the contents of the datastore
+#'   as contained in the model state file (ignored if envir is supplied)
+#' @param envir Alternate source for ModelState_ls / Model State Paths
+#' @return a DatastoreListing_df which contains the Group/Table/Name (NULL if not found)
+#' @export
+findDataset <- function(DatasetName, DstoreListing_df=NULL, envir=modelEnvironment()) {
+  if ( is.null(DstoreListing_df) ) {
+    G <- getModelState(envir=envir)
+    msPaths <- getModelStatePaths(envir) # Does not return current model state, might be zero length
+    if ( length(msPaths) > 0 ) {
+      basePath <- list(dsPath=G$Datastore)
+      dsPaths <- lapply(msPaths,function(m) m$ModelState_ls$Datastore)
+      dsPaths <- c(basePath,dsPaths) # Look into current model state first
+    } else {
+      dsPaths <- list(dsPath=G$Datastore)
+    }
+  } else {
+    dsPaths <- list(dsPath=DstoreListing_df)
+  }
+
+  FoundIn_df <- NULL
+  for ( ds in dsPaths ) {
+    browser(
+      expr=(
+        class(DatasetName)!= "character" ||
+        class(ds$groupname)!="character" ||
+        length(ds$groupname) == 0 || length(DatasetName)==0
+      )
+    )
+    if ( DatasetName %in% ds$groupname ) {
+      FoundIn_df <- ds
+      break
+    }
+  }
+  if ( is.null(FoundIn_df) ) writeLog(paste("Could not find",DatasetName),Level="trace")
+  return(FoundIn_df)
+}
+
+#CHECK DATASET EXISTENCE
+#=======================
+#' Check dataset existence
+#'
+#' \code{checkDataset} a visioneval framework control function that checks
+#' whether a dataset exists in the datastore and returns a TRUE or FALSE value
+#' with an attribute of the full path to where the dataset should be located in
+#' the datastore.
+#'
+#' This function checks whether a dataset exists. The dataset is identified by
+#' its name and the table and group names it is in. If the dataset is not in the
+#' datastore listing, an error is thrown. If it is located in the datastore, the
+#' full path name to the dataset is returned.
+#'
+#' @param Name a string identifying the dataset name.
+#' @param Table a string identifying the table the dataset is a part of.
+#' @param Group a string or numeric representation of the group the table is a
+#' part of.
+#' @param DstoreListing_df a dataframe which lists the contents of the datastore
+#'   as contained in the model state file.
+#' @param envir Alternate source for ModelState_ls / Model State Paths
+#' @return A logical identifying whether the dataset is in the datastore. It has
+#' an attribute that is a string of the full path to where the dataset should be
+#' in the datastore.
+#' @export
+checkDataset <- function(Name, Table, Group, DstoreListing_df=NULL, envir=modelEnvironment()) {
+
+  Name <- as.character(Name)
+  Table <- as.character(Table)
+  Group <- as.character(Group)
+  DatasetName <- file.path(Group, Table, Name)
+
+  DstoreListing_df <- findDataset(DatasetName, DstoreListing_df, envir)
+  DatasetExists <- ! is.null(DstoreListing_df)
+  attributes(DatasetExists) <- list(DatasetName=DatasetName,DstoreListing_df=DstoreListing_df)
+  DatasetExists
+}
+
+#GET ATTRIBUTES OF A DATASET
+#===========================
+#' Get attributes of a dataset
+#'
+#' \code{getDatasetAttr} a visioneval framework control function that retrieves
+#' the attributes for a dataset in the datastore.
+#'
+#' This function extracts the listed attributes for a specific dataset from the
+#' datastore listing.
+#'
+#' @param Name a string identifying the dataset name.
+#' @param Table a string identifying the table the dataset is a part of.
+#' @param Group a string or numeric representation of the group the table is a
+#' part of.
+#' @param DstoreListing_df a dataframe which lists the contents of the datastore
+#'   as contained in the model state file.
+#' @param envir Alternate source for ModelState_ls / Model State Paths
+#' @return A named list of the dataset attributes.
+#' @export
+getDatasetAttr <- function(Name=NULL, Table=NULL, Group=NULL, DstoreListing_df=NULL, envir=modelEnvironment()) {
+  # Warning: should call checkDataset first if the missing Dataset error needs to
+  #   be accepted.
+
+  if ( missing(Table) || is.null(Table) || missing(Group) || is.null(Group) ) {
+    stop(writeLog("getDatasetAttr: must provide Group and Table",Level="error"))
+  }
+  if ( missing(Name) || is.null(Name) ) {
+    DatasetName <- file.path(Group, Table)
+  } else {
+    DatasetName <- file.path(Group, Table, Name)
+  }
+  DstoreListing_df <- findDataset(DatasetName, DstoreListing_df, envir)
+  if ( !is.null(DstoreListing_df) ) {
+    DatasetIdx <- which(DstoreListing_df$groupname == DatasetName)
+    if ( length(DatasetIdx)>1 ) {
+      stop(
+        writeLog(
+          Level="error",
+          paste(
+            "Dataset",DatasetName,"appears more than once in listing",
+            paste(DatasetIdx,collapse=",")
+          )
+        )
+      )
+    }
+    return(DstoreListing_df$attributes[[DatasetIdx]])
+  } else {
+    browser()
+    stop(
+      writeLog(paste("Dataset",DatasetName,"does not exist for attributes."),Level="error")
+    )
+  }
+}
+
+
+#CHECK WHETHER TABLE EXISTS
+#==========================
+#' Check whether table exists in the datastore
+#'
+#' \code{checkTableExistence} a visioneval framework control function that
+#' checks whether a table is present in the datastore.
+#'
+#' This function checks whether a table is present in the datastore.
+#'
+#' @param Table a string identifying the table.
+#' @param Group a string or numeric representation of the group the table is a
+#' part of.
+#' @param DstoreListing_df a dataframe which lists the contents of the datastore
+#'   as contained in the model state file.
+#' @param envir Alternate source for ModelState_ls / Model State Paths
+#' @return A logical identifying whether a table is present in the datastore.
+#' @export
+checkTableExistence <- function(Table, Group, DstoreListing_df=NULL,envir=modelEnvironment()) {
+  DatasetName <- file.path(Group, Table)
+  DstoreListing_df <- findDataset(DatasetName, DstoreListing_df, envir)
+  return ( ! is.null(DstoreListing_df) )
+}
+
 #CREATE A DATASTORE INDEX LIST
 #=============================
 #' Create a list of geographic indices for all tables in a datastore.
@@ -1178,63 +1380,63 @@ writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvir
 #' @param Specs_ls A 'Get' or 'Set' specifications list for a module.
 #' @param RunBy The value of the RunBy specification for a module.
 #' @param RunYear A string identifying the model year that is being run.
+#' @param envir An environment from which to extract G / ModelState_ls
 #' @return A list that contains a component for each table identified in the
 #' specifications in which each component includes all the geographic datasets
 #' for the table represented by the component.
 #' @export
-createGeoIndexList <- function(Specs_ls, RunBy, RunYear) {
-    G <- getModelState()
-    #Make data frame of all tables and groups
-    TablesToIndex_df <-
-      do.call(
-        rbind,
-        lapply(Specs_ls, function(x) {
-          data.frame(Table = x$TABLE, Group = x$GROUP, stringsAsFactors = FALSE)
-        })
-      )
-    #Replace Group name with appropriate year if necessary
-    TablesToIndex_df$Group[TablesToIndex_df$Group == "Year"] <- RunYear
-    TablesToIndex_df$Group[TablesToIndex_df$Group == "BaseYear"] <- G$BaseYear
-    #Remove duplicates
-    TablesToIndex_df <- unique(TablesToIndex_df)
-    #Don't create and index for any global tables that are not geographic
-    DoCreateIndex_ <-
-      !(
-        TablesToIndex_df$Group == "Global" &
-          !(TablesToIndex_df$Table %in% c("Marea", "Azone", "Bzone", "Czone"))
-        )
-    TablesToIndex_df <- TablesToIndex_df[DoCreateIndex_,]
-    #Turn data frame in list by group
-    TablesToIndex_ls <- split(TablesToIndex_df$Table, TablesToIndex_df$Group)
-    TablesToIndex_ls <- lapply(TablesToIndex_ls, function(x) {
-      if (!(RunBy %in% x)) x <- c(RunBy, x)
-      x
+createGeoIndexList <- function(Specs_ls, RunBy, RunYear,envir=modelEnvironment()) {
+  G <- getModelState(envir=envir)
+  #Make data frame of all tables and groups
+  TablesToIndex_df <-
+  do.call(
+    rbind,
+    lapply(Specs_ls, function(x) {
+      data.frame(Table = x$TABLE, Group = x$GROUP, stringsAsFactors = FALSE)
     })
-    #Iterate through groups and tables and create indexes
-    Index_ls <- list()
-    for (nm in names(TablesToIndex_ls)) {
-      Index_ls[[nm]] <- list()
-      for(tab in TablesToIndex_ls[[nm]]) {
-        Index_ls[[nm]][[tab]] <- list()
-        if (!(tab %in% c("Marea", "Region"))) {
-          Index_ls[[nm]][[tab]]$Marea <- readFromTable("Marea", tab, nm)
-          Index_ls[[nm]][[tab]]$Azone <- readFromTable("Azone", tab, nm)
-        } else {
-          if (tab == "Marea") {
-            Index_ls[[nm]]$Marea$Marea <- readFromTable("Marea", "Marea", nm)
-          }
+  )
+  #Replace Group name with appropriate year if necessary
+  TablesToIndex_df$Group[TablesToIndex_df$Group == "Year"] <- RunYear
+  TablesToIndex_df$Group[TablesToIndex_df$Group == "BaseYear"] <- G$BaseYear
+  #Remove duplicates
+  TablesToIndex_df <- unique(TablesToIndex_df)
+  #Don't create and index for any global tables that are not geographic
+  DoCreateIndex_ <-
+  !(
+    TablesToIndex_df$Group == "Global" &
+    !(TablesToIndex_df$Table %in% c("Marea", "Azone", "Bzone", "Czone"))
+  )
+  TablesToIndex_df <- TablesToIndex_df[DoCreateIndex_,]
+  #Turn data frame in list by group
+  TablesToIndex_ls <- split(TablesToIndex_df$Table, TablesToIndex_df$Group)
+  TablesToIndex_ls <- lapply(TablesToIndex_ls, function(x) {
+    if (!(RunBy %in% x)) x <- c(RunBy, x)
+    x
+  })
+  #Iterate through groups and tables and create indexes
+  Index_ls <- list()
+  for (nm in names(TablesToIndex_ls)) {
+    Index_ls[[nm]] <- list()
+    for(tab in TablesToIndex_ls[[nm]]) {
+      Index_ls[[nm]][[tab]] <- list()
+      if (!(tab %in% c("Marea", "Region"))) {
+        Index_ls[[nm]][[tab]]$Marea <- readFromTable("Marea", tab, nm, envir=envir)
+        Index_ls[[nm]][[tab]]$Azone <- readFromTable("Azone", tab, nm, envir=envir)
+      } else {
+        if (tab == "Marea") {
+          Index_ls[[nm]]$Marea$Marea <- readFromTable("Marea", "Marea", nm, envir=envir)
         }
-        # if (tab == "Marea") {
-        #   Index_ls[[nm]]$Marea$Marea <- readFromTable("Marea", "Marea", nm)
-        # } else {
-        #   Index_ls[[nm]][[tab]]$Marea <- readFromTable("Marea", tab, nm)
-        #   Index_ls[[nm]][[tab]]$Azone <- readFromTable("Azone", tab, nm)
-        # }
       }
+      # if (tab == "Marea") {
+      #   Index_ls[[nm]]$Marea$Marea <- readFromTable("Marea", "Marea", nm)
+      # } else {
+      #   Index_ls[[nm]][[tab]]$Marea <- readFromTable("Marea", tab, nm)
+      #   Index_ls[[nm]][[tab]]$Azone <- readFromTable("Azone", tab, nm)
+      # }
     }
-    Index_ls
   }
-
+  Index_ls
+}
 
 #CREATE A DATASTORE INDEX
 #========================
@@ -1284,7 +1486,6 @@ createGeoIndex <- function(Table, Group, RunBy, Geo, GeoIndex_ls) {
   Idx_
 }
 
-
 #GET DATA SETS IDENTIFIED IN MODULE SPECIFICATIONS FROM DATASTORE
 #================================================================
 #' Retrieve data identified in 'Get' specifications from datastore
@@ -1307,15 +1508,16 @@ createGeoIndex <- function(Table, Group, RunBy, Geo, GeoIndex_ls) {
 #' Geo would be the name of a particular Azone.
 #' @param GeoIndex_ls a list of geographic indices used to determine the
 #' positions to extract from a dataset corresponding to the specified geography.
+#' @param envir An environment from which to extract G / ModelState_ls
 #' @return A list containing all the data sets specified in the module's
 #' 'Get' specifications for the identified geographic area.
 #' @export
-getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = NULL) {
+getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = NULL,envir=modelEnvironment()) {
   GetSpec_ls <- ModuleSpec_ls$Get
   #Make a list to hold the retrieved data
   L <- initDataList()
   #Add the model state and year to the list
-  G <- getModelState()
+  G <- getModelState(envir=envir)
   G$Year <- RunYear
   L$G <- G
   #Get data specified in list
@@ -1331,36 +1533,35 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
     }
     if (Group == "BaseYear") {
       DstoreGroup <- G$BaseYear;
-      if (G$BaseYear %in% G$Years) {
-        Files_ <- G$DatastoreName
-      } else {
-        stop( writeLog("BaseYear not in Datastore Years",Level="error") )
-      }
     }
     if (Group == "Year") {
       DstoreGroup <- RunYear;
-      Files_ <- G$DatastoreName;
     }
     #Add table component to list if does not exist
     if (is.null(L[[Group]][[Table]])) {
       L[[Group]][[Table]] <- list()
-      # attributes(L[[Group]][[Table]]) <-
-      #   list(LENGTH = getTableLength(Table, DstoreGroup, G$Datastore))
+      Length <- getDatasetAttr(Name=NULL, Table, DstoreGroup, envir=envir)$LENGTH
+      if ( ! is.numeric(Length) ) {
+        msg <- writeLog(paste("getFromDatastore: Table length not available for",file.path(Group,Table)),Level="error")
+        stop(msg)
+      }
+      attributes(L[[Group]][[Table]]) <- list(LENGTH = Length)
     }
     #Make an index to the data
-    DoCreateIndex <-
-    !is.null(Geo) &
-    !(Group == "Global" & !(Table %in% c("Marea", "Azone", "Bzone", "Czone")))
+    DoCreateIndex <- (
+      !is.null(Geo) &&
+      !(Group == "Global" && !(Table %in% c("Marea", "Azone", "Bzone", "Czone")))
+    )
     if (DoCreateIndex) {
       Index <-
       createGeoIndex(Table, DstoreGroup, ModuleSpec_ls$RunBy, Geo, GeoIndex_ls)
     } else {
       Index <- NULL
     }
-    DstoreListing_ls <- G$Datastore
-    DatasetExists <- checkDataset(Name, Table, DstoreGroup, DstoreListing_ls)
-    if (DatasetExists) {
-      Data_ <- readFromTable(Name, Table, DstoreGroup, Index)
+
+    # Pass envir and search DatastorePath if present
+    Data_ <- readFromTable(Name, Table, DstoreGroup, Index,envir=envir)
+    if (any(!is.na(Data_))) {
       #Convert currency
       if (Type == "currency") {
         FromYear <- G$BaseYear
@@ -1370,6 +1571,7 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
         }
       }
       #Convert units
+      #  when getting the target units: BaseYear may not be present, for example.
       SimpleTypes_ <- c("integer", "double", "character", "logical")
       ComplexTypes_ <- names(Types())[!(names(Types()) %in% SimpleTypes_)]
       if (Type %in% ComplexTypes_) {
@@ -1379,14 +1581,26 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
           BaseYear = G$BaseYear,
           Global = "Global"
         )
-        Conversion_ls <-
-        convertUnits(Data_, Type,
-          getDatasetAttr(Name, Table, AttrGroup, DstoreListing_ls)$UNITS,
-          Spec_ls$UNITS)
+        writeLog(
+          paste(
+            "Converting units for",file.path(DstoreGroup,Table,Name)
+          ), Level="trace"
+        )
+        # Note: Pass envir rather than G$Datastore to getDatasetAttr because the target
+        #  Dataset may exist on virtual Datastore Path rooted at G (current ModelState_ls)
+        Conversion_ls <- convertUnits(
+          Data_, Type,
+          getDatasetAttr(Name, Table, AttrGroup, envir=envir)$UNITS,
+          Spec_ls$UNITS
+        )
         Data_ <- Conversion_ls$Values
       }
       #Convert magnitude
       Data_ <- convertMagnitude(Data_, 1, Spec_ls$MULTIPLIER)
+    }
+    if ( is.null(attributes(Data_)) ) {
+      writeLog(paste("Does not exist:",file.path(DstoreGroup,Table,Name)),Level="info")
+    } else {
       #Add data to list
       L[[Group]][[Table]][[Name]] <- Data_
     }
@@ -1394,7 +1608,6 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
   #Return the list
   return( L )
 }
-
 
 #SAVE DATA SETS RETURNED BY A MODULE IN THE DATASTORE
 #====================================================
@@ -1421,96 +1634,114 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
 #' @param Geo a string identifying the name of the geographic area to get the
 #' data for. For example, if the module is specified to be run by Azone, then
 #' Geo would be the name of a particular Azone.
+#' @param envir An environment from which to extract G / ModelState_ls
 #' @return A logical value which is TRUE if the data are successfully saved to
 #' the datastore.
-#' @export
-setInDatastore <- function(Data_ls, ModuleSpec_ls, ModuleName, Year, Geo = NULL, GeoIndex_ls = NULL) {
-    #Get the model state
-    G <- getModelState()
-    #Make any specified tables
-    if (!is.null(ModuleSpec_ls$NewSetTable)) {
-      TableSpec_ls <- ModuleSpec_ls$NewSetTable
-      for (i in 1:length(TableSpec_ls)) {
-        Table <- TableSpec_ls[[i]]$TABLE
-        Group <- TableSpec_ls[[i]]$GROUP
-        if (Group == "Global") DstoreGroup <- "Global"
-        if (Group == "Year") DstoreGroup <- Year
-        TableExists <- checkTableExistence(Table, DstoreGroup, G$Datastore)
-        if (!TableExists) {
-          Length <- attributes(Data_ls[[Group]][[Table]])$LENGTH
-          initTable(Table, DstoreGroup, Length)
-          rm(Table, Group, DstoreGroup, TableExists, Length)
-        } else {
-          rm(Table, Group, DstoreGroup, TableExists)
-        }
-      }
-    }
-    #Process module Set specifications
-    SetSpec_ls <- ModuleSpec_ls$Set
-    for (i in 1:length(SetSpec_ls)) {
-      #Identify datastore save location from specifications
-      Spec_ls <- SetSpec_ls[[i]]
-      Spec_ls$MODULE <- ModuleName
-      Group <- Spec_ls$GROUP
-      Table <- Spec_ls$TABLE
-      Name <- Spec_ls$NAME
-      Type <- Spec_ls$TYPE
+#' @exports
+setInDatastore <- function(Data_ls, ModuleSpec_ls, ModuleName, Year, Geo = NULL, GeoIndex_ls = NULL, envir=modelEnvironment()) {
+  # Note: since we're writing, we'll look directly at G$Datastore rather than environment in
+  # functions like checkTableExistence... DatastorePath is only used when reading...
+  
+  #Get the model state
+  G <- getModelState(envir=envir)
+  BaseYear <- G$BaseYear
+
+  # Make any specified tables
+  # This strategy saves work in a single-stage model but won't work for a multi-stage
+  #   model where tables may have been created in an earlier stage (when we first saw
+  #   NewSetTable) but have not yet been created in the new stage.
+  if (!is.null(ModuleSpec_ls$NewSetTable)) {
+    # First time table creation
+    TableSpec_ls <- ModuleSpec_ls$NewSetTable
+    for (i in 1:length(TableSpec_ls)) {
+      Table <- TableSpec_ls[[i]]$TABLE
+      Group <- TableSpec_ls[[i]]$GROUP
       if (Group == "Global") DstoreGroup <- "Global"
       if (Group == "Year") DstoreGroup <- Year
-      #Make an index to the data
-      DoCreateIndex <-
-        !is.null(Geo) &
-        !(Group == "Global" & !(Table %in% c("Marea", "Azone", "Bzone", "Czone")))
-      if (DoCreateIndex) {
-        Index <-
-          createGeoIndex(Table, DstoreGroup, ModuleSpec_ls$RunBy, Geo, GeoIndex_ls)
-      } else {
-        Index <- NULL
+      if (! checkTableExistence(Table, DstoreGroup, G$Datastore) ) {
+        Length <- attributes(Data_ls[[Group]][[Table]])$LENGTH
+        initTable(Table, DstoreGroup, Length, envir=envir) # DO pass envir here (place to write)
       }
-      #Transform and save the data
-      Data_ <- Data_ls[[Group]][[Table]][[Name]]
-      if (!is.null(Data_)) {
-        #Convert currency
-        if (Type == "currency") {
-          FromYear <- Spec_ls$YEAR
-          ToYear <- G$BaseYear
-          if (FromYear != ToYear) {
-            Data_ <- deflateCurrency(Data_, FromYear, ToYear)
-            rm(FromYear, ToYear)
-          }
-        }
-        #Convert units
-        SimpleTypes_ <- c("integer", "double", "character", "logical")
-        ComplexTypes_ <- names(Types())[!(names(Types()) %in% SimpleTypes_)]
-        if (Type %in% ComplexTypes_) {
-          FromUnits <- Spec_ls$UNITS
-          Conversion_ls <- convertUnits(Data_, Type, FromUnits)
-          Data_ <- Conversion_ls$Values
-          #Change units specification to reflect default datastore units
-          Spec_ls$UNITS <- Conversion_ls$ToUnits
-          rm(FromUnits, Conversion_ls)
-        }
-        rm(SimpleTypes_, ComplexTypes_)
-        #Convert magnitude
-        Data_ <- convertMagnitude(Data_, Spec_ls$MULTIPLIER, 1)
-      } else {
-        Message <-
-          paste0(
-            "setInDatastore got NULL Data_ with arguments Group: ",
-            Group, ", Table: ", Table, ", Name: ", Name
-          )
-        writeLog(Message,Level="error")
-        stop(Message)
-      }
-      if (!is.null(attributes(Data_)$SIZE)) {
-        Spec_ls$SIZE <- attributes(Data_)$SIZE
-      }
-      writeToTable(Data_, Spec_ls, DstoreGroup, Index)
-      rm(Spec_ls, Group, Table, Name, Data_)
     }
-    TRUE
   }
 
+  #Process module Set specifications
+  SetSpec_ls <- ModuleSpec_ls$Set
+  for (Spec_ls in SetSpec_ls) {
+    Spec_ls$MODULE <- ModuleName
+    Group <- Spec_ls$GROUP
+    if (Group == "Global") DstoreGroup <- "Global"
+    if (Group == "Year") DstoreGroup <- Year
+    Table <- Spec_ls$TABLE
+    Name <- Spec_ls$NAME
+    Type <- Spec_ls$TYPE
+    # Table has not been created in current stage - get table length from earlier stage
+    if ( ! checkTableExistence( Table, DstoreGroup, getModelState(envir=envir)$Datastore ) ) {
+      Length <- getDatasetAttr( Name=NULL, Table, DstoreGroup, envir=envir )$LENGTH
+      if ( ! is.numeric(Length) ) { # Table is not created anywhere up the DatastorePath
+        msg <- writeLog(paste(file.path(DstoreGroup,Table),"has not been created in any model stage"),Level="error")
+        stop(msg)
+      }
+      initTable(Table, DstoreGroup, Length, envir=envir) # DO pass envir here (place to write)
+    }
+
+    #Identify datastore save location from specifications
+    #Make an index to the data
+    DoCreateIndex <- (
+      ! is.null(Geo) &&
+      ! (
+        Group == "Global" &&
+        ! (Table %in% c("Marea", "Azone", "Bzone", "Czone"))
+      )
+    )
+    if (DoCreateIndex) {
+      Index <- createGeoIndex(Table, DstoreGroup, ModuleSpec_ls$RunBy, Geo, GeoIndex_ls)
+    } else {
+      Index <- NULL
+    }
+    #Transform and save the data
+    Data_ <- Data_ls[[Group]][[Table]][[Name]]
+    if (!is.null(Data_)) {
+      #Convert currency
+      if (Type == "currency") {
+        FromYear <- Spec_ls$YEAR
+        ToYear <- BaseYear
+        if (FromYear != ToYear) {
+          Data_ <- deflateCurrency(Data_, FromYear, ToYear)
+          rm(FromYear, ToYear)
+        }
+      }
+      #Convert units
+      SimpleTypes_ <- c("integer", "double", "character", "logical")
+      ComplexTypes_ <- names(Types())[!(names(Types()) %in% SimpleTypes_)]
+      if (Type %in% ComplexTypes_) {
+        FromUnits <- Spec_ls$UNITS
+        Conversion_ls <- convertUnits(Data_, Type, FromUnits)
+        Data_ <- Conversion_ls$Values
+        #Change units specification to reflect default datastore units
+        Spec_ls$UNITS <- Conversion_ls$ToUnits
+        rm(FromUnits, Conversion_ls)
+      }
+      rm(SimpleTypes_, ComplexTypes_)
+      #Convert magnitude
+      Data_ <- convertMagnitude(Data_, Spec_ls$MULTIPLIER, 1)
+    } else {
+      Message <-
+      paste0(
+        "setInDatastore got NULL Data_ with arguments Group: ",
+        Group, ", Table: ", Table, ", Name: ", Name
+      )
+      writeLog(Message,Level="error")
+      stop(Message)
+    }
+    if (!is.null(attributes(Data_)$SIZE)) {
+      Spec_ls$SIZE <- attributes(Data_)$SIZE
+    }
+    # Do pass envir here: write to first element of DatastorePath
+    writeToTable(Data_, Spec_ls, DstoreGroup, Index, envir=envir)
+  }
+  TRUE
+}
 
 #WRITE PROCESSED INPUTS TO DATASTORE
 #===================================
@@ -1531,128 +1762,129 @@ setInDatastore <- function(Data_ls, ModuleSpec_ls, ModuleName, Year, Geo = NULL,
 #' the VisionEval requirements.
 #' @param ModuleName a string identifying the name of the module (used to
 #' document the dataset in the datastore).
+#' @param envir An environment from which to extract G / ModelState_ls
 #' @return A logical indicating successful completion. Most of the outputs of
 #' the function are the side effects of writing data to the datastore.
 #' @export
-inputsToDatastore <- function(Inputs_ls, ModuleSpec_ls, ModuleName) {
-    G <- getModelState()
-    #Make sure the inputs are error free
-    if (length(Inputs_ls$Errors) != 0) {
-      Msg <-
+inputsToDatastore <- function(Inputs_ls, ModuleSpec_ls, ModuleName, envir=modelEnvironment()) {
+  G <- getModelState(envir=envir)
+  #Make sure the inputs are error free
+  if (length(Inputs_ls$Errors) != 0) {
+    Msg <-
+    paste0(
+      "Unable to write module inputs for module '", ModuleName, "'. ",
+      "There are one or more errors in the inputs or input specifications."
+    )
+    stop(Msg)
+  }
+  #Set up processing
+  Errors_ <- character(0)
+  Data_ls <- Inputs_ls$Data
+  InpSpec_ls <- processModuleSpecs(ModuleSpec_ls)$Inp
+  #Set up new tables
+  if (!is.null(ModuleSpec_ls$NewInpTable)) {
+    TableSpec_ls <- ModuleSpec_ls$NewInpTable
+    for (i in 1:length(TableSpec_ls)) {
+      Table <- TableSpec_ls[[i]]$TABLE
+      Group <- TableSpec_ls[[i]]$GROUP
+      if (Group != "Global") {
+        Msg <-
         paste0(
-          "Unable to write module inputs for module '", ModuleName, "'. ",
-          "There are one or more errors in the inputs or input specifications."
+          "NewInpTable specification error for module '", ModuleName, "'. ",
+          "New input tables can only be made in the 'Global' group. "
         )
-      stop(Msg)
-    }
-    #Set up processing
-    Errors_ <- character(0)
-    Data_ls <- Inputs_ls$Data
-    InpSpec_ls <- processModuleSpecs(ModuleSpec_ls)$Inp
-    #Set up new tables
-    if (!is.null(ModuleSpec_ls$NewInpTable)) {
-      TableSpec_ls <- ModuleSpec_ls$NewInpTable
-      for (i in 1:length(TableSpec_ls)) {
-        Table <- TableSpec_ls[[i]]$TABLE
-        Group <- TableSpec_ls[[i]]$GROUP
-        if (Group != "Global") {
-          Msg <-
-            paste0(
-              "NewInpTable specification error for module '", ModuleName, "'. ",
-              "New input tables can only be made in the 'Global' group. "
-            )
-          Errors_ <- c(Errors_, Msg)
-        }
-        Length <- length(Data_ls[[Group]][[Table]][[1]])
-        initTable(Table, Group, Length)
+        Errors_ <- c(Errors_, Msg)
       }
+      Length <- length(Data_ls[[Group]][[Table]][[1]])
+      initTable(Table, Group, Length, envir=envir)
     }
-    #Write Global group tables to datastore
-    if (length(Data_ls[["Global"]]) > 0) {
-      for (Table in names(Data_ls[["Global"]])) {
-        if (Table %in% c("Azone", "Bzone", "Czone", "Marea")) {
-          Data_df <-
-            data.frame(Data_ls[["Global"]][[Table]], stringsAsFactors = FALSE)
-          Units_ls <- lapply(Data_df, function(x) unname(attributes(x)$UNITS))
-          SortData_df <- sortGeoTable(Data_df, Table, "Global")
-          FieldsToSave_ <-
-            names(SortData_df)[!(names(SortData_df) %in% "Geo")]
-          for (Name in FieldsToSave_) {
-            Spec_ls <- findSpec(InpSpec_ls, Name, Table, "Global")
-            Spec_ls$MODULE <- ModuleName
-            #Modify units spec to reflect units consistent with defaults for
-            #datastore
-            Spec_ls$UNITS <- Units_ls[[Name]]
-            writeToTable(SortData_df[[Name]], Spec_ls, "Global")
-            rm(Spec_ls)
-          }
-          rm(SortData_df, FieldsToSave_, Data_df, Units_ls)
-        } else {
-          for (Name in names(Data_ls[["Global"]][[Table]])) {
-            Data_ <- Data_ls[["Global"]][[Table]][[Name]]
-            Spec_ls <- findSpec(InpSpec_ls, Name, Table, "Global")
-            Spec_ls$MODULE <- ModuleName
-            #Modify units spec to reflect units consistent with defaults for
-            #datastore
-            Spec_ls$UNITS <- attributes(Data_)$UNITS
-            writeToTable(Data_, Spec_ls, "Global")
-          }
-        }
-      }
-    }
-    #Write BaseYear group tables to datastore
-    if (length(Data_ls[["BaseYear"]]) > 0) {
-      for (Table in names(Data_ls[["BaseYear"]])) {
+  }
+  #Write Global group tables to datastore
+  if (length(Data_ls[["Global"]]) > 0) {
+    for (Table in names(Data_ls[["Global"]])) {
+      if (Table %in% c("Azone", "Bzone", "Czone", "Marea")) {
         Data_df <-
-          data.frame(Data_ls[["BaseYear"]][[Table]], stringsAsFactors = FALSE)
+        data.frame(Data_ls[["Global"]][[Table]], stringsAsFactors = FALSE)
         Units_ls <- lapply(Data_df, function(x) unname(attributes(x)$UNITS))
-        Year <- G$BaseYear
-        SortData_df <- sortGeoTable(Data_df, Table, Year)
+        SortData_df <- sortGeoTable(Data_df, Table, "Global", envir=envir)
         FieldsToSave_ <-
-          names(SortData_df)[!(names(SortData_df) %in% "Geo")]
+        names(SortData_df)[!(names(SortData_df) %in% "Geo")]
         for (Name in FieldsToSave_) {
-          Spec_ls <- findSpec(InpSpec_ls, Name, Table, "BaseYear")
+          Spec_ls <- findSpec(InpSpec_ls, Name, Table, "Global")
           Spec_ls$MODULE <- ModuleName
           #Modify units spec to reflect units consistent with defaults for
           #datastore
           Spec_ls$UNITS <- Units_ls[[Name]]
-          writeToTable(SortData_df[[Name]], Spec_ls, Year)
+          writeToTable(SortData_df[[Name]], Spec_ls, "Global",envir=envir)
           rm(Spec_ls)
         }
-        rm(Year, SortData_df, FieldsToSave_, Data_df, Units_ls)
-      }
-    }
-    #Write Year group tables to datastore
-    if (length(Data_ls[["Year"]]) > 0) {
-      for (Table in names(Data_ls[["Year"]])) {
-        Data_df <-
-          data.frame(Data_ls[["Year"]][[Table]], stringsAsFactors = FALSE)
-        Units_ls <- lapply(Data_df, function(x) unname(attributes(x)$UNITS))
-        for (Year in unique(as.character(Data_df$Year))) {
-          YrData_df <- Data_df[Data_df$Year == Year,]
-          if (Table != "Region") {
-            SortData_df <- sortGeoTable(YrData_df, Table, Year)
-          } else {
-            SortData_df <- YrData_df
-          }
-          FieldsToSave_ <-
-            names(SortData_df)[!(names(SortData_df) %in% c("Year", "Geo"))]
-          for (Name in FieldsToSave_) {
-            Spec_ls <- findSpec(InpSpec_ls, Name, Table, "Year")
-            Spec_ls$MODULE <- ModuleName
-            #Modify units spec to reflect units consistent with defaults for
-            #datastore
-            Spec_ls$UNITS <- Units_ls[[Name]]
-            writeToTable(SortData_df[[Name]], Spec_ls, Year)
-            rm(Spec_ls)
-          }
-          rm(YrData_df, SortData_df, FieldsToSave_)
+        rm(SortData_df, FieldsToSave_, Data_df, Units_ls)
+      } else {
+        for (Name in names(Data_ls[["Global"]][[Table]])) {
+          Data_ <- Data_ls[["Global"]][[Table]][[Name]]
+          Spec_ls <- findSpec(InpSpec_ls, Name, Table, "Global")
+          Spec_ls$MODULE <- ModuleName
+          #Modify units spec to reflect units consistent with defaults for
+          #datastore
+          Spec_ls$UNITS <- attributes(Data_)$UNITS
+          writeToTable(Data_, Spec_ls, "Global",envir=envir)
         }
-        rm(Data_df)
       }
     }
-    TRUE
   }
+  #Write BaseYear group tables to datastore
+  if (length(Data_ls[["BaseYear"]]) > 0) {
+    for (Table in names(Data_ls[["BaseYear"]])) {
+      Data_df <-
+      data.frame(Data_ls[["BaseYear"]][[Table]], stringsAsFactors = FALSE)
+      Units_ls <- lapply(Data_df, function(x) unname(attributes(x)$UNITS))
+      Year <- G$BaseYear
+      SortData_df <- sortGeoTable(Data_df, Table, Year, envir=envir)
+      FieldsToSave_ <-
+      names(SortData_df)[!(names(SortData_df) %in% "Geo")]
+      for (Name in FieldsToSave_) {
+        Spec_ls <- findSpec(InpSpec_ls, Name, Table, "BaseYear")
+        Spec_ls$MODULE <- ModuleName
+        #Modify units spec to reflect units consistent with defaults for
+        #datastore
+        Spec_ls$UNITS <- Units_ls[[Name]]
+        writeToTable(SortData_df[[Name]], Spec_ls, Year,envir=envir)
+        rm(Spec_ls)
+      }
+      rm(Year, SortData_df, FieldsToSave_, Data_df, Units_ls)
+    }
+  }
+  #Write Year group tables to datastore
+  if (length(Data_ls[["Year"]]) > 0) {
+    for (Table in names(Data_ls[["Year"]])) {
+      Data_df <-
+      data.frame(Data_ls[["Year"]][[Table]], stringsAsFactors = FALSE)
+      Units_ls <- lapply(Data_df, function(x) unname(attributes(x)$UNITS))
+      for (Year in unique(as.character(Data_df$Year))) {
+        YrData_df <- Data_df[Data_df$Year == Year,]
+        if (Table != "Region") {
+          SortData_df <- sortGeoTable(YrData_df, Table, Year, envir=envir)
+        } else {
+          SortData_df <- YrData_df
+        }
+        FieldsToSave_ <-
+        names(SortData_df)[!(names(SortData_df) %in% c("Year", "Geo"))]
+        for (Name in FieldsToSave_) {
+          Spec_ls <- findSpec(InpSpec_ls, Name, Table, "Year")
+          Spec_ls$MODULE <- ModuleName
+          #Modify units spec to reflect units consistent with defaults for
+          #datastore
+          Spec_ls$UNITS <- Units_ls[[Name]]
+          writeToTable(SortData_df[[Name]], Spec_ls, Year,envir=envir)
+          rm(Spec_ls)
+        }
+        rm(YrData_df, SortData_df, FieldsToSave_)
+      }
+      rm(Data_df)
+    }
+  }
+  TRUE
+}
 
 #MERGE TWO DATASTORE LISTINGS
 #' Merge two Datastore listings
@@ -1691,7 +1923,7 @@ mergeDatastoreListings <- function(baseListing, addListing) {
 
 #COPY A DATASTORE
 #================
-#' Copy a Datastore and ModelState_ls from one location to another
+#' Copy a Datastore and ModelState_ls from current directory to another location
 #'
 #' \code{copyDatastore} a visioneval framework datastore function that copies the
 #' Datastore associated with a ModelState_ls to another location.
@@ -1705,6 +1937,9 @@ mergeDatastoreListings <- function(baseListing, addListing) {
 #' to H5 or vice versa). Linked and Loaded Datastores in BaseModel and prior model stages must be
 #' the same DatastoreType, so type conversion helps link a base model run using one DatastoreType to
 #' a child model with a different DatastoreType.
+#'
+#' Important: the working directory must contain the ModelState.Rda and Datastore that the function
+#' will copy (can't work currently from a different directory than that).
 #'
 #' 'Flattening' the Datastore will convert a linked Datastore into a copy in which all the Datasets
 #' are realized in the targetDatastore. That supports loading the Datastore from a BaseModel, or
@@ -1756,10 +1991,10 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
       writeLog(paste0("Copying Flat Datastore ",ifelse(success,"Succeeded","Failed"),"."),Level="warn")
     }
     if ( ! success ) {
-      paths <- ModelState_ls$DatastorePath[1] # Only copy proximate Datastore (why this would work but not file.copy is mysteriaus...
+      paths <- ModelState_ls$DatastorePath[1] # Only copy proximate Datastore (why this would work but not file.copy is mysteriaus...)
     }
   } else {
-    paths <- rev(ModelState_ls$DatastorePath) # Copy all the elements from back up the path
+    paths <- rev(ModelState_ls$DatastorePath) # Copy all the elements from back up the path (overlay onto the oldest path element)
   }
 
   if ( length(paths) > 0 ) { # if we did file.copy above, length(paths) will be zero - already done
@@ -1782,6 +2017,7 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
     initDatastoreGeography(envir=writeDS) # Create basic geography tables
 
     for ( path in paths ) {
+      writeLog(paste("Copying Datastore from path:",path),Level="info")
 
       # Open ModelState$Datastore from the source path
       readDS <- new.env()
@@ -1791,12 +2027,13 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
       
       gtn <- strsplit(ds$groupname,"/") # May need to revise if groupname starts with /
 
-      # Since target model state began from original, all groups should be present...
+      # TODO: See how this works when a later path creates a new Group or Table
       # Otherwise may need to add Years with initDatastore(AppendGroups)
 
       # Copy the datasets
       indices <- which(sapply(gtn,length,simplify=TRUE)==3) # Get Dataset entries
       for ( i in indices ) {
+        writeLog(paste("Reading Dataset:",ds$groupname[i]),Level="info")
         item <- gtn[[i]]
         names(item) <- c("Group","Table","Name")
         Attr_ <- ds$attributes[[i]]
@@ -1814,6 +2051,8 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
         }
 
         # Write to target Datastore
+        writeLog(paste("Writing dataset to Group",item["Group"]),Level="info")
+        writeLog(paste("Spec:",paste(names(attributes(dataset)),collapse=",")),Level="info")
         writeToTable(dataset,attributes(dataset),item["Group"],envir=writeDS)
       }
     }

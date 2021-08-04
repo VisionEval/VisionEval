@@ -3,7 +3,7 @@
 #===========
 
 #This script demonstrates the VisionEval framework for the RSPM model.
-cat('VERSPM (single stage): run_VERSPM.R script entered\n')
+cat('VERSPM (full stage): run_VERSPM.R script entered\n')
 
 #Run all demo module for all years
 #---------------------------------
@@ -47,4 +47,4 @@ for(Year in getYears()) {
   runModule("CalculateComEnergyAndEmissions",   "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   runModule("CalculatePtranEnergyAndEmissions", "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
 }
-cat('VERSPM (single stage): run complete.\n')
+cat('VERSPM (full stage): run complete.\n')

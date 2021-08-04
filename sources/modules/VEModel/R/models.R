@@ -1594,6 +1594,7 @@ ve.model.load <- function(onlyExisting=TRUE,reset=FALSE) {
   # Load or Create the ModelState_ls for each stage
   for ( index in seq_along(self$modelStages) ) {
     stage <- self$modelStages[[index]]
+    writeLog(paste("Loading stage",stage$Name),Level="info")
     if ( ! is.null( stage$RunParam_ls$StartFrom ) ) {
       startFrom <- stage$RunParam_ls$StartFrom
       startFromState_ls <- self$modelStages[[startFrom]]$ModelState_ls # may be NULL
@@ -1603,7 +1604,9 @@ ve.model.load <- function(onlyExisting=TRUE,reset=FALSE) {
           Source="VEModelState::load",
           StartFromModelState=startFromState_ls
         )
-      } else {
+      } else if ( ! onlyExisting ) {
+        # Expect if we're loading a ModelState that the earlier stage has a
+        # ModelState_ls, which might be newly intialized.
         stop(
           writeLog(paste("StartFrom",startFrom,"has no ModelState_ls!"),Level="error")
         )
@@ -1738,7 +1741,12 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
 
   # Set up the model runtime environment
   for ( ms in runStages ) { # iterate over names of stages to run
+    writeLog(paste("Running stage:",ms),Level="warn")
     self$modelStages[[ms]]$run(log=LogLevel)
+    if ( self$modelStages[[ms]]$RunStatus != codeStatus("Run Complete") ) {
+      msg <- writeLog(paste("Model failed with status ",self$modelStages[[ms]]$RunStatus),Level="error")
+      stop(msg)
+    }
   }
 
   # Update overall model status

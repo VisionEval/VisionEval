@@ -296,17 +296,19 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
   owd <- getwd()
   on.exit(setwd(owd))
 
-  query.env <- new.env()
-
   for (tb in Tb) {
     Out_ls[[tb]] <- list()
     Ds <- names(Tables_ls[[tb]])
-    for (Loc in DstoreLocs_) { # Though written for a vector, currently only supporting one Datastore
+    for (Loc in DstoreLocs_) {
+      # Though written for a vector, currently only supporting one Datastore
+      # Streamline this to use DatastorePath from within root.
+      # ModelState; DstoreLoc will then no longer be a list.
+      query.env <- new.env()
       query.env$ModelState_ls <- MS_ls[[Loc]]
-      HasTable <- checkTableExistence(tb, Group, query.env$ModelState_ls$Datastore)
+      HasTable <- checkTableExistence(tb, Group, envir=query.env)
       if (HasTable) {
         for (ds in Ds) {
-          HasDataset <- checkDataset(ds, tb, Group, query.env$ModelState_ls$Datastore)
+          HasDataset <- checkDataset(ds, tb, Group, envir=query.env)
           if (HasDataset) {
             if (is.null(Out_ls[[tb]][[ds]])) {
               setwd(dirname(Loc)) # Work in Datastore parent directory
@@ -387,7 +389,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
 #' versa. So in some instances, a measure needs to be calculated in a different
 #' way for VE-State and VE-RSPM models.
 #'
-#' @param Dataset a string identifying the name of the dataset to check the
+#' @param Name a string identifying the name of the dataset to check the
 #' presence of.
 #' @param Table a string identifying the name of the table where the dataset may
 #' be located.
@@ -398,15 +400,18 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
 #' functions for listing and read the datastore(s).
 #' @return TRUE if the dataset is present and FALSE if it is not present.
 #' @export
-isDatasetPresent <- function(Dataset, Table, Group, QueryPrep_ls) {
-  DstoreLocs_ <- QueryPrep_ls$Dir
-  DatasetPresent_ <- logical(length(DstoreLocs_))
-  for (i in 1:length(DstoreLocs_)) {
-    ModelState_ls <- QueryPrep_ls$Listing[[DstoreLocs_[i]]]
-    DatasetPresent_[i] <-
-      checkDataset(Dataset, Table, Group, ModelState_ls$Datastore)
+isDatasetPresent <- function(Name, Table, Group, QueryPrep_ls) {
+  # TODO: inefficient implementation: should cache the DatastorePath list in
+  #  the QueryPrep_ls.
+  MS_ls <- QueryPrep_ls$Listing;
+  DstoreLocs <- QueryPrep_ls$Dir # Change so we only process one
+  DatasetPresent_ <- FALSE
+  for (loc in DstoreLocs) {
+    query.env <- new.env()
+    query.env$ModelState_ls <- MS_ls[[loc]]
+    DatasetPresent <- DatasetPresent || checkDataset(Name, Table, Group, envir=query.env)
   }
-  any(DatasetPresent_)
+  return( DatasetPresent )
 }
 
 #----------------------------

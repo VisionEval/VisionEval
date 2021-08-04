@@ -1,5 +1,38 @@
 The path to completion:
 
+1. Can we get the virtual stages models to work?
+
+  Hung up trying to deal with missing groups/tables for a new stage.
+  Trouble getting the table length to check how many rows...
+
+2. Can we add LoadDatastore to the RunParams_ls and also have that work
+   (Datastore from startFrom is copied to current Datastore)
+
+3. Can we make the BaseModel work - a new scenario with just a few input
+   files, perhaps originating from VERSPM-year (straight up from the BaseYear)
+   or VERSPM-pop (which will force a "Flatten" as the Datastore is copied
+   over). In both cases, we will use LoadDatastore to get the base model data
+
+4. Also try a BaseModel that does not copy the data (just the setup - model
+   script, inputs, params/defs) - simplest implementation just takes
+   everything and puts the results in its own ResultsDir. May override
+   some of the scenario descriptors.
+
+Check that we can run successfully (and copy) a LoadDatastore when
+we're using an earlier stage (using StartFrom).
+
+Build the function to do the debug dump (should use CopyDatastore
+function, same as loading and perhaps archiving).
+
+Handle the BaseModel LoadDatastore as well (can try that with a
+debug version of a model). 
+
+Run the staged models (using LoadDatastore - VE-State-Staged)
+Run without LoadDatastore (DatastorePath)
+Run with a BaseModel (LoadDatastore implied)
+
+Does LoadDatastore properly copy the Datastore (with flattening)?
+
 Then get test_results and test_query to work.
 
 Add a model function to save a visioneval.cnf for a stage, or for the
@@ -11,22 +44,27 @@ everything, just what should be in that particular configuration)
 Test all the models again with restructured visioneval::loadModel
 and supporting stuff in VEModel package.
 
-Run the staged models (using LoadDatastore - VE-State-Staged)
-Run without LoadDatastore (DatastorePath)
-Run with a BaseModel (LoadDatastore implied)
-
 It would be great to develop a "debug dump" tool:
-  Generate a zip file with a stripped-down version of the Datastore
-  Consists of all (and only) the inputs (from "Get") used by listed modules
-  Plus all the input files (from "Inp") used by listed modules
-    Not just the inputs in the Datastore, but the input files themselves
-    Use the INPUTDIR and FILE attributes to located
-  Plus the log and ModelState_ls from that run.
-  All of that should be zipped into a single file that can be delivered to us.
+  Copy the full model plus ResultsDir into a temp dir
+  If the model has a BaseModel, include that model too
+    Proceed recursively to a model without a BaseModel
+  Amounts to a snapshot of the "models" tree
+    But ignore archives
+    May include ResultsDir or ignore (force debugger to run it all)
+  Zip the temp dir
+  Send to some large file recipient address (could use SLFTS to receive)
+    These outputs can get truly huge!
+  Perhaps create a new model with the crash as "BaseModel" using LoadDatastore
+    Need to know where to pick up (can adjust later)
+    Build by inspecting crashed log...
+    Also write the run_model.R and the visioneval.cnf
 
-The use case is not just for a post-mortem, but also for developing a test harness for a particular
-module that is expected to run with certain inputs from earlier in a model stream.
+Also need instructions for setting up on the receiving end:
+  Create a fresh bare runtime environment
+  Place the post-mortem model into that runtime environment
+  Then just open and run it (reaching back into the earlier results)
 
+Here's a slightly more elaborate approach
 Steps:
   0. Open a model
   1. User supplies names of packages and modules
@@ -37,7 +75,7 @@ Steps:
   5. Make a new Datastore with DatastoreListing.Rda in a PostMortem directory
      That should result from flattening the Datastore (but filtering its contents by
      Group/Table/Name). Can use the Datastore copy operation but with a specific
-     list of Datastore elements.
+     list of Datastore elements (new implementation).
   6. Include the ModelState_ls and the log file; include the "defs" directory and an
      inputs directory that only includes the "Inp" files for the package/modules.
 

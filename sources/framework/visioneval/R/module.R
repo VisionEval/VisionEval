@@ -1129,10 +1129,11 @@ getRegisteredGetSpecs <- function(Names_, Tables_, Groups_, NameRegistryDir = NU
 #' @param Geo a string identifying the geography to retrieve the data for if
 #' the module's 'RunBy' specification is not 'Region'. This argument is
 #' omitted if the 'RunBy' specification is 'Region'.
+#' @param envir environment containing the ModelState_ls
 #' @return A list in standardized form containing all the datasets required by
 #' a module to run.
 #' @export
-fetchModuleData <- function(ModuleName, PackageName, Year, Geo = NULL) {
+fetchModuleData <- function(ModuleName, PackageName, Year, Geo = NULL, envir=modelEnvironment()) {
 
   #Load the package and module
   #---------------------------
@@ -1152,7 +1153,7 @@ fetchModuleData <- function(ModuleName, PackageName, Year, Geo = NULL) {
       Function <- M$Specs$Call[[Alias]]
       #Called module function when only module is specified
       if (length(unlist(strsplit(Function, "::"))) == 1) {
-        Pkg_df <- getModelState()$ModulesByPackage_df
+        Pkg_df <- getModelState(envir=envir)$ModulesByPackage_df
         Function <-
           paste(Pkg_df$Package[Pkg_df$Module == Function], Function, sep = "::")
         rm(Pkg_df)

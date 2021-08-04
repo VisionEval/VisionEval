@@ -9,93 +9,6 @@
 #functions don't directly interact with the datastore. Instead, they rely on the
 #datastore listing (Datastore) that is maintained in the model state file.
 
-
-#CHECK DATASET EXISTENCE
-#=======================
-#' Check dataset existence
-#'
-#' \code{checkDataset} a visioneval framework control function that checks
-#' whether a dataset exists in the datastore and returns a TRUE or FALSE value
-#' with an attribute of the full path to where the dataset should be located in
-#' the datastore.
-#'
-#' This function checks whether a dataset exists. The dataset is identified by
-#' its name and the table and group names it is in. If the dataset is not in the
-#' datastore listing, an error is thrown. If it is located in the datastore, the
-#' full path name to the dataset is returned.
-#'
-#' @param Name a string identifying the dataset name.
-#' @param Table a string identifying the table the dataset is a part of.
-#' @param Group a string or numeric representation of the group the table is a
-#' part of.
-#' @param DstoreListing_df a dataframe which lists the contents of the datastore
-#'   as contained in the model state file.
-#' @return A logical identifying whether the dataset is in the datastore. It has
-#' an attribute that is a string of the full path to where the dataset should be
-#' in the datastore.
-#' @export
-checkDataset <- function(Name, Table, Group, DstoreListing_df) {
-  # TODO: DatasetName should include virtual location (local, base)
-  Name <- as.character(Name)
-  Table <- as.character(Table)
-  Group <- as.character(Group)
-  #TableName <- checkTable(Table, Group, DstoreListing_df)[[2]]
-  DatasetName <- file.path(Group, Table, Name)
-  DatasetExists <- DatasetName %in% DstoreListing_df$groupname
-  Result <- ifelse (DatasetExists, TRUE, FALSE)
-  attributes(Result) <- list(DatasetName=DatasetName)
-  Result
-}
-
-
-#GET ATTRIBUTES OF A DATASET
-#===========================
-#' Get attributes of a dataset
-#'
-#' \code{getDatasetAttr} a visioneval framework control function that retrieves
-#' the attributes for a dataset in the datastore.
-#'
-#' This function extracts the listed attributes for a specific dataset from the
-#' datastore listing.
-#'
-#' @param Name a string identifying the dataset name.
-#' @param Table a string identifying the table the dataset is a part of.
-#' @param Group a string or numeric representation of the group the table is a
-#' part of.
-#' @param DstoreListing_df a dataframe which lists the contents of the datastore
-#'   as contained in the model state file.
-#' @return A named list of the dataset attributes.
-#' @export
-getDatasetAttr <- function(Name, Table, Group, DstoreListing_df) {
-  DatasetName <- file.path(Group, Table, Name)
-  #checkDataset(Name, Table, Group, DstoreListing_df)[[2]]
-  DatasetIdx <- which(DstoreListing_df$groupname == DatasetName)
-  DstoreListing_df$attributes[[DatasetIdx]]
-}
-
-
-#CHECK WHETHER TABLE EXISTS
-#==========================
-#' Check whether table exists in the datastore
-#'
-#' \code{checkTableExistence} a visioneval framework control function that
-#' checks whether a table is present in the datastore.
-#'
-#' This function checks whether a table is present in the datastore.
-#'
-#' @param Table a string identifying the table.
-#' @param Group a string or numeric representation of the group the table is a
-#' part of.
-#' @param DstoreListing_df a dataframe which lists the contents of the datastore
-#'   as contained in the model state file.
-#' @return A logical identifying whether a table is present in the datastore.
-#' @export
-checkTableExistence <- function(Table, Group, DstoreListing_df) {
-  TableName <- file.path(Group, Table)
-  TableName %in% DstoreListing_df$groupname
-}
-
-
 #CHECK SPECIFICATION CONSISTENCY
 #===============================
 #' Check specification consistency
@@ -1434,10 +1347,11 @@ findSpec <- function(Specs_ls, Name, Table, Group) {
 #' of the geographic areas to sort by and any number of additional data fields.
 #' @param Table a string for the table that is to be matched against.
 #' @param Group a string for the generic group that the table resides in.
+#' @param envir An environment from which to extract G / ModelState_ls
 #' @return The data frame which has been sorted to match the order of geography
 #' in the specified table in the datastore.
 #' @export
-sortGeoTable <- function(Data_df, Table, Group) {
+sortGeoTable <- function(Data_df, Table, Group, envir=modelEnvironment()) {
   if (!("Geo" %in% names(Data_df))) {
     Msg <-
       paste0(
@@ -1447,7 +1361,8 @@ sortGeoTable <- function(Data_df, Table, Group) {
       )
     stop(Msg)
   }
-  DstoreNames_ <- readFromTable(Table, Table, Group)
+  # readFromTable will search DatastorePath
+  DstoreNames_ <- readFromTable(Table, Table, Group, envir=envir)
   Order_ <- match(DstoreNames_, Data_df$Geo)
   Data_df[Order_,]
 }
