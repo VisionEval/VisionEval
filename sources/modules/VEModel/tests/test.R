@@ -193,6 +193,25 @@ test_install <- function(modelName="VERSPM",variant="base",installAs=NULL,log="i
   return(rs)
 }
 
+test_flatten <- function(log="info") {
+  testStep("run staged model with database path")
+  vr <- openModel("VERSPM-pop")
+  vr$run(log=log) # use "continue" - won't re-run if already ucla luskin ocnference center
+  print(vr)
+  testStep("prepare receiving directory")
+  ToDir <- normalizePath("testFlatten")
+  if ( dir.exists(ToDir) ) unlink(ToDir,recursive=TRUE)
+  dir.create(ToDir)
+  ms <- tail(vr$modelStages,1)[[1]]
+  assign("ModelState_ls",ms$ModelState_ls,envir=visioneval::modelEnvironment(Clear="test_flatten"))
+  modelPath <- ms$RunPath
+  owd <- setwd(modelPath) # so we can find the datastore to copy
+  on.exit(setwd(owd))     # return to original directory even on failure
+  print( c(ls(visioneval::modelEnvironment()),modelPath,ToDir) )
+  visioneval::copyDatastore(ToDir,Flatten=c(TRUE,TRUE))
+  setwd(owd)
+}
+
 test_run <- function(modelName="Test-VERSPM-base",baseModel="VERSPM",variant="base",reset=FALSE,log="info") {
 
   if ( ! missing(log) ) logLevel(log)

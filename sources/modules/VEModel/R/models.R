@@ -1122,11 +1122,10 @@ ve.stage.runnable <- function(priorStages) {
           LoadDatastoreName=startFrom$DatastorePath[1]
         )
       } else {
-        stop(
-          writeLog(
-            paste("LoadDatastore requested, but no LoadDatastoreName provided",Level="error")
-          )
+        writeLog(
+          paste("LoadDatastore requested, but no LoadDatastoreName provided",Level="warn")
         )
+        self$RunParam_ls[["LoadDatastore"]] <- FALSE
       }
     }
     DatastorePath <- character(0) # Path doesn't matter any more (copying upstream into current Datastore)

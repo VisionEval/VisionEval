@@ -1,37 +1,42 @@
 The path to completion:
 
-1. Can we get the virtual stages models to work?
+3. (Set up as test) Do a version of VERSPM-pop in which LoadDatastore is TRUE and see that it copies
+the entire Datastore into place before running each stage. LoadDatastore when it executes just
+copies the Datastore from the immediately prior stage (it should NOT work the entire tree, or we'll
+redundantly copy stages earlier than the immediately preceding one).
 
-  Hung up trying to deal with missing groups/tables for a new stage.
-  Trouble getting the table length to check how many rows...
+What should happen:
+  Once we have the stage parameters set up (with propagation from the parent), evaluate
+    LoadDatastore and set LoadDatastoreName (which must be set for everything to work)
+  Only include it where it makes sense:
+    1. If there is a BaseModel
+       Look up BaseStage - set to last Reportable by default
+       Find Datastore in ResultsDir for that stage and set into LoadDatastoreName
+    2. If there is an explicit LoadDatastoreName
+       Just use that path (relative to ModelDir, not the stage's RunPath?)
+    3. If there is a StartFrom stage
+       Find the most recent element of DatastorePath and copy that to LoadDatastoreName
+    4. If none of the above, set LoadDatastore to FALSE
+  In all cases, if no candidate for LoadDatastoreName is found, set LoadDatastore to FALSE
 
-2. Can we add LoadDatastore to the RunParams_ls and also have that work
-   (Datastore from startFrom is copied to current Datastore)
+4. Create the BaseModel setup, one starting from VERSPM-year (set up as test)
+    a. With no changes at all (new ResultsDir only; everything else pulled
+       across.
+    b. Do the same with VERSPM-year
+    c. Do the same with VERSPM-pop, but lightly change one input file
+    d. Try with LoadDatastore (e.g. BaseModel is VERSPM-pop, but with
+       the BaseStage being the base year scenario, then run the future year).
 
-3. Can we make the BaseModel work - a new scenario with just a few input
-   files, perhaps originating from VERSPM-year (straight up from the BaseYear)
-   or VERSPM-pop (which will force a "Flatten" as the Datastore is copied
-   over). In both cases, we will use LoadDatastore to get the base model data
+4. Also try a BaseModel that does not copy the data (just the setup - model script, inputs,
+params/defs) - simplest implementation just takes everything and puts the results in its own
+ResultsDir. May override some of the scenario descriptors.
 
-4. Also try a BaseModel that does not copy the data (just the setup - model
-   script, inputs, params/defs) - simplest implementation just takes
-   everything and puts the results in its own ResultsDir. May override
-   some of the scenario descriptors.
-
-Check that we can run successfully (and copy) a LoadDatastore when
-we're using an earlier stage (using StartFrom).
-
-Build the function to do the debug dump (should use CopyDatastore
-function, same as loading and perhaps archiving).
+Build the function to do the debug dump (should use CopyDatastore function, same as loading and
+perhaps archiving). Also create a convenience "copy results" (member of VEResults?) that will
+copy and flatten a Datastore.
 
 Handle the BaseModel LoadDatastore as well (can try that with a
 debug version of a model). 
-
-Run the staged models (using LoadDatastore - VE-State-Staged)
-Run without LoadDatastore (DatastorePath)
-Run with a BaseModel (LoadDatastore implied)
-
-Does LoadDatastore properly copy the Datastore (with flattening)?
 
 Then get test_results and test_query to work.
 

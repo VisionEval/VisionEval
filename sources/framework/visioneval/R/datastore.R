@@ -2024,11 +2024,15 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
       ms <- readModelState( FileName=file.path(path,getModelStateFileName()), envir=readDS )
       assignDatastoreFunctions(envir=readDS)
       ds <- ms$Datastore
-      
-      gtn <- strsplit(ds$groupname,"/") # May need to revise if groupname starts with /
 
-      # TODO: See how this works when a later path creates a new Group or Table
-      # Otherwise may need to add Years with initDatastore(AppendGroups)
+      # Make sure all the groups area present and accounted for
+      gtn <- strsplit(ds$groupname,"/") # May need to revise if groupname starts with /
+      groups <- unlist(gtn[which(sapply(gtn,length)==1)])
+      groupNotInDatastore <- ! groups %in% writeDS$ModelState_ls$Datastore$groupname
+      if ( any( groupNotInDatastore  ) ) { # in target?
+        AppendGroups <- groups[ groupNotInDatastore ]
+        initDatastore(AppendGroups=AppendGroups,envir=writeDS)
+      }
 
       # Copy the datasets
       indices <- which(sapply(gtn,length,simplify=TRUE)==3) # Get Dataset entries

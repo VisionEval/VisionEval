@@ -41,3 +41,15 @@ variants:
         - stage-pop-synth
         - stage-pop-base
         - stage-pop-future
+  load:
+    # scripts, inputs and years all differ by stage
+    description: VERSPM 3.0 Staged Population Synthesis
+    scripts: scripts-pop
+    config: visioneval-load.cnf
+    inputs: inputs-base # Some files are overridden in stages
+    defs: defs
+    queries: queries
+    stages: # copied as they are
+        - stage-pop-synth
+        - stage-pop-base
+        - stage-pop-future

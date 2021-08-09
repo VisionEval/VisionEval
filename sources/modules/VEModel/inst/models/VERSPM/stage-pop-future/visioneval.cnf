@@ -6,7 +6,7 @@ Scenario    : VERSPM RVMPO Future Year Using Pre-Built Population
 Description : Future Year Scenario (2038)
 BaseYear    : 2010
 Years       : [ 2038 ]
-StartFrom   : stage-pop-synth # If we don't need base year scenario results
+StartFrom   : stage-pop-base # Certain values are needed from BaseYear
 
 # Could also StartFrom: stage-pop-2010 if base year need for future computations
 # Queries done on the full model will not show columns of base year results in that
