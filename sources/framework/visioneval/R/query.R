@@ -265,25 +265,25 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
 #' \code{readDatastoreTables} a visioneval framework query user function that reads datasets
 #' from one or more tables in a specified group in one or more datastores
 #'
-#' This function can read multiple datasets in one or more tables in a group.
-#' More than one datastore my be specified so that if datastore references are
-#' used in a model run, datasets from the referenced datastores may be queried
-#' as well. Note that the capability for querying multiple datastores is only
-#' for the purpose of querying datastores for a single model scenario. This
-#' capability should not be used to compare multiple scenarios. The function
-#' does not segregate datasets by datastore. Attempting to use this function to
-#' compare multiple scenarios could produce unpredictable results.
+#' This function can read multiple datasets in one or more tables in a group. More than
+#' one datastore my be specified so that if datastore references are used in a model run,
+#' datasets from the referenced datastores may be queried as well. Note that the
+#' capability for querying multiple datastores is only for the purpose of querying
+#' datastores for a single model scenario. This capability should not be used to compare
+#' multiple scenarios. The function does not segregate datasets by datastore. Attempting
+#' to use this function to compare multiple scenarios could produce unpredictable results.
 #'
-#' @param Tables_ls a named list where the name of each component is the name of
-#' a table in a datastore group and the value is a named string vector where the
-#' names are the names of the datasets to be retrieved and the values are the
-#' units of measure to be used for the retrieved values or NULL if the values
-#' are to be retrieved in the units they are in in the datastore.
+#' @param Tables_ls a named list where the name of each component is the name of a table
+#' in a datastore group and the value is a named list where the names are the names of the
+#' datasets to be retrieved and the values strings specifying the units of measure to be
+#' used for the retrieved values or an empty string ("") if the values are to be retrieved
+#' in the units they are in in the datastore.
 #' @param Group a string that is the name of the group to retrieve the table
 #' datasets from.
 #' @param QueryPrep_ls a list created by calling the prepareForDatastoreQuery
 #' function which identifies the datastore location(s), listing(s), and
 #' functions for listing and read the datastore(s).
+
 #' @return A named list having two components. The 'Data' component is a list
 #' containing the datasets from the datastores where the name of each component
 #' of the list is the name of a table from which identified datasets are
