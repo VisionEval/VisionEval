@@ -94,6 +94,7 @@ want to change them. They are documented here so you won't worry.
 # on the command line or export them from your environment
 # ve.build() handles useful defaults
 VE_CONFIG?=config/VE-config.yml
+VE_VERSION?=2.0
 VE_RUNTESTS?=Default
 VE_EXPRESS?=YES # should be NO, or unset, for standard use
 VE_BRANCH?=$(shell git branch --show-current 2>/dev/null || echo visioneval)
@@ -228,23 +229,23 @@ targets will call them).
 reset: build-reset
 
 configure-reset build-reset all-reset dev-reset clean-reset repository-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -rf $(VE_LOGS)/*
-	rm -f $(VE_MAKEVARS)
+	[[ -n "$(VE_LOGS)" ]] && rm -rf "$(VE_LOGS)"/*
+	rm -f "$(VE_MAKEVARS)"
 
 lib-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/velib.built
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)/velib.built"
 
 modules-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/modules.built
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/modules.built
 
 runtime-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/runtime.built
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/runtime.built
 
 docs-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/docs.built
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/docs.built
 
 installer-reset installer-bin-reset installer-full-reset:
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/installer*.built
 ~~~
 
 The following 'clean' targets will blow away various artifacts of previous builds and
@@ -256,32 +257,32 @@ force make to start again. In general, the only one of these you'll need is `bui
 configure-clean build-clean: build-reset # Resets the built status of all the targets (but doesn't touch outputs)
 
 modules-clean: $(VE_MAKEVARS) modules-reset # Reset all VE modules for complete rebuild
-	[[ -n "$(VE_REPOS)" ]] && rm -rf $(VE_REPOS)/*
-	[[ -n "$(VE_SRC)" ]] && rm -rf $(VE_SRC)/*
-	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/VE* $(VE_LIB)/visioneval
+	[[ -n "$(VE_REPOS)" ]] && rm -rf "$(VE_REPOS)"/*
+	[[ -n "$(VE_SRC)" ]] && rm -rf "$(VE_SRC)"/VE*
+	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/VE*
 
 lib-clean: $(VE_MAKEVARS) lib-reset # Reset installed package library for complete rebuild
-	[[ -n "$(VE_LIB)" ]] && rm -rf $(VE_LIB)/*
+	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/*
 
 runtime-clean: $(VE_MAKEVARS) runtime-reset # Reset all models and scripts for complete rebuild
-	[[ -n "$(VE_RUNTIME)" ]] && rm -rf $(VE_RUNTIME)/* && rm -rf $(VE_RUNTIME)/.Rprofile $(VE_RUNTIME)/.Rprof.user
+	[[ -n "$(VE_RUNTIME)" ]] && rm -rf "$(VE_RUNTIME)"/* && rm -rf "$(VE_RUNTIME)"/.Rprofile "$(VE_RUNTIME)"/.Rprof.user
 
 docs-clean: $(VE_MAKEVARS) docs-reset # Clear the docs
-	[[ -n "$(VE_DOCS)" ]] && rm -rf $(VE_DOCS)/*
+	[[ -n "$(VE_DOCS)" ]] && rm -rf "$(VE_DOCS)"/*
 
 installer-clean: $(VE_MAKEVARS) installer-reset # remove the installers for rebuild (installers always imply "clean")
 	# installers have the R version coded in their .zip name
-	[[ -n "$(VE_ZIPOUT)" ]] && rm -f $(VE_ZIPOUT)/*.zip
-	[[ -n "$(VE_LOGS)" ]] && rm -f $(VE_LOGS)/installer*.built
+	[[ -n "$(VE_ZIPOUT)" ]] && rm -f "$(VE_ZIPOUT)"/*.zip
+	[[ -n "$(VE_LOGS)" ]] && rm -f "$(VE_LOGS)"/installer*.built
 
 repository-clean: # Reset the CRAN, BioConductor and Github dependency packages for fresh download
-	[[ -n "$(VE_DEPS)" ]] && rm -rf $(VE_DEPS)/*
+	[[ -n "$(VE_DEPS)" ]] && rm -rf "$(VE_DEPS)"/*
 
 dev-clean: $(VE_MAKEVARS) build-reset # Reset the developer packages for VE-Installer itself
-	[[ -n "$(VE_DEVLIB)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_DEVLIB)/*
+	[[ -n "$(VE_DEVLIB)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf "$(VE_DEVLIB)"/*
 
 clean all-clean: $(VE_MAKEVARS) build-clean docs-clean # Reset everything except developer packages
-	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_BRANCH)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf $(VE_OUTPUT)/$(VE_BRANCH)/$(VE_R_VERSION)
+	[[ -n "$(VE_OUTPUT)" ]] && [[ -n "$(VE_BRANCH)" ]] && [[ -n "$(VE_R_VERSION)" ]] && rm -rf "$(VE_OUTPUT)/$(VE_BRANCH)/$(VE_R_VERSION)"
 
 clean-clean: all-clean dev-clean # Scorched earth: reset all installer artifacts
 
@@ -370,9 +371,7 @@ modules: modules-reset modules-build
 
 modules-build: $(VE_LOGS)/modules.built
 
-$(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built \
-        scripts/build-modules.R scripts/build-framework.R
-	$(RSCRIPT) scripts/build-framework.R
+$(VE_LOGS)/modules.built: $(VE_LOGS)/repository.built $(VE_LOGS)/velib.built scripts/build-modules.R
 	$(RSCRIPT) scripts/build-modules.R
 	@touch $(VE_LOGS)/modules.built
 
