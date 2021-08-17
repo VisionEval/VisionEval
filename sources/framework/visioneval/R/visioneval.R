@@ -395,7 +395,7 @@ loadModel <- function(
   RunDstore$Name <- getRunParameter("DatastoreName",Param_ls=RunParam_ls)
   RunDstore$Name <- normalizePath(RunDstore$Name, winslash = "/", mustWork = FALSE)
   RunDstore$Dir  <- dirname(RunDstore$Name)
-  RunParam_ls$RunDstore <- RunDstore # for use if this model becomes a VEModel BaseModel
+  RunParam_ls$RunDstore <- RunDstore # TODO: check that this structure still has a purpose
   setModelState(list(RunDstore=RunDstore),Save=FALSE,envir=envir) # for use in this model run
 
   # Allow explicit function parameter to be overridden from RunParam_ls if defined there
@@ -407,7 +407,7 @@ loadModel <- function(
   if ( ! ( is.list(LoadDstore) && all(c("Name","Dir") %in% LoadDstore) ) ) {
     LoadDstore <- list()
     LoadDatastoreName <- getRunParameter("LoadDatastoreName",Default=NA,Param_ls=RunParam_ls)
-    if (is.na(LoadDatastoreName) ) {
+    if ( is.na(LoadDatastoreName) ) {
       if ( LoadDatastore ) {
         # null name means start with the current (existing) Datastore
         # TODO: This use case will be retired (and may never have worked)
@@ -726,7 +726,9 @@ prepareModelRun <- function(
     # HANDLE USE CASE WHERE SOME YEARS ALREADY DEFINED
     #=================================================
     # TODO: Key feature is to make sure all the geography is present for the new
-    #  year. This will probably work for both BaseModel and LoadDatastore variations.
+    #  year. This will probably work for both virtual DatastorePath
+    #  and LoadDatastore
+    #  variations.
 
     # Each ModelStage needs to have groups available locally (i.e. materialized in its own
     # Datastore) for the years it is evaluating (even if those years might also be

@@ -237,25 +237,21 @@ test_run <- function(modelName="Test-VERSPM-base",baseModel="VERSPM",variant="ba
   return(rs)
 }
 
-# Test model runs through basic model configuration
-# oldstyle creates defs/run_parameters.json; if not oldstyle, create visioneval.cnf
-# reset forces the base model to rebuild (no special reason to do that; the base model
-#  need not have been run.
-# modelName is the particular version of VERSPM to use as a base. The base model MUST
-#  be a version of VERSPM since we use its first two modules to create the "Bare" model
-# log="warn" will confine to a streamlined list of log messages like what a regular user
-#  would see. "info" gives lots of gory details.
-test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info") {
-
-  if ( ! missing(log) ) logLevel(log)
-
-  cat("*** Test Model Management Functions ***\n")
-  options(warn=2) # Make warnings into errors...
-
+# Prep model (make sure there's one to work with)
+prepModel <- function(modelName,reset,log) {
   testStep("open (and maybe run) the full test version of VERSPM")
-  jr <- openModel(modelName)
-  if ( ! jr$status == codeStatus("Run Complete") || isTRUE(reset) ) {
-    due.to <- if ( ! reset) paste("status",jr$printStatus()) else "reset request"
+  due.to <- "reset request"
+  if ( modelName %in% openModel() ) {
+    jr <- openModel(modelName)
+    if ( ! jr$status == codeStatus("Run Complete") ) {
+      reset = TRUE
+      due.to = paste("status",jr$printStatus())
+    }
+  } else {
+    reset = TRUE
+    due.to = paste(modelName,"doesn't exist")
+  }
+  if ( isTRUE(reset) ) {
     cat("Re-running model due to",due.to,"\n")
     jr <- test_run(modelName=modelName,baseModel="VERSPM",variant="base",reset=TRUE,log=log)
   }
@@ -277,6 +273,25 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
     cat("  InputDir     :",visioneval::getRunParameter("InputDir",Param_ls=jrParam_ls),"\n")
     cat(paste("  DatastorePath:",visioneval::getRunParameter("DatastorePath",Param_ls=jrParam_ls),"\n"))
   }
+  return(jr)
+}
+
+# Test model runs through basic model configuration
+# oldstyle creates defs/run_parameters.json; if not oldstyle, create visioneval.cnf
+# reset forces the base model to rebuild (no special reason to do that; the base model
+#  need not have been run.
+# modelName is the particular version of VERSPM to use as a base. The base model MUST
+#  be a version of VERSPM since we use its first two modules to create the "Bare" model
+# log="warn" will confine to a streamlined list of log messages like what a regular user
+#  would see. "info" gives lots of gory details.
+test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info", brief=FALSE) {
+
+  if ( ! missing(log) ) logLevel(log)
+
+  cat("*** Test Model Management Functions ***\n")
+  options(warn=2) # Make warnings into errors...
+
+  jr <- prepModel(modelName,reset=reset,log=log)
 
   testStep("Construct a bare model from scratch, borrowing from base model")
   bare.dir <- file.path("models","BARE")
@@ -399,6 +414,12 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   testStep("run the bare model")
 
   bare$run() # no results yet - it will try to 'continue' then 'reset' if not 'Complete'
+
+  if ( brief ) {
+    testStep("Skipping deeper tests")
+    return(bare)
+  }
+
   print(bare$dir(results=TRUE))
   cat("Log path for the initial bare model run:\n")
   print(bare$log(shorten=FALSE))
@@ -413,7 +434,7 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
     Description="This run will save prior results"
   )
   bare$run(run="save") # should generate a results archive
-  print(bare$dir(root=TRUE,results=TRUE))
+  print(bare$dir(root=TRUE,results=TRUE,archive=TRUE))
   cat("Log path should be different from the previous run:\n")
   print(bare$log())
 
@@ -484,7 +505,8 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   runModel_vc[4] <- 'runModule("BorrowHouseholds","VESimHouseholds",RunFor="AllYears",RunYear=Year)'
   cat(runModelFile,paste(runModel_vc,collapse="\n"),sep="\n")
   writeLines(runModel_vc,con=runModelFile)
-  cp$run() # Should throw error message about missing module...
+  result <- try( cp$run() ) # Should throw error message about missing module...
+  print(result)
 
   testStep("Display log from failed run...")
   logs <- cp$log(shorten=FALSE)
@@ -493,14 +515,14 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
     cat(readLines(log),sep="\n")
   }
   
-  testStep("remove model copy")
+  testStep("remove model results")
   cat("Directory before...\n")
   print(cp$dir(all.files=TRUE))
   cp$clear(force=TRUE,outputOnly=FALSE,archives=TRUE)
   cat("\nDirectory after...\n")
   print(cp$dir(all.files=TRUE))
 
-  testStep("display what's left...")
+  testStep("Delete model in file system")
   print(cp)
   print(dir("models"))
   cat("Unlinking",cp$modelName,"\n")
@@ -514,6 +536,93 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
 
   testStep("return bare model")
   return(bare)
+}
+
+test_load <- function(model=NULL, log="info" ) {
+  # Tests the LoadModel functionality (pre-load Datastore and then
+  #   execute additional steps from the copied data.all
+  testStep("Finding model template")
+  if ( is.null(model) ) {
+    model <- test_model("JRSPM",brief=TRUE,log=log) # skip the deeper tests
+    model$run(log=log)                      # run it anyway (default="continue" does nothing)
+  }
+  testStep("Copy base model...")
+  modelPath <- file.path("models","LOAD-test")
+  if ( dir.exists(modelPath) ) unlink(modelPath,recursive=TRUE)
+  # TODO: despite copyResults=FALSE, still copying results, which
+  # screws up everything in the ModelState, paths, etc. when model is
+  # reloaded.
+  loadModel <- model$copy("LOAD-test",copyResults=FALSE)
+  print(loadModel)
+  testStep("Set up load script...")
+  baseModelPath <- loadModel$setting("ModelDir",shorten=FALSE)
+  runModelFile <- file.path(
+    baseModelPath,
+    loadModel$setting("ModelScript")
+  )
+  runModel_vc <- c(
+    '',
+    'for(Year in getYears()) {',
+    'runModule("AssignLifeCycle","VESimHouseholds",RunFor = "AllYears",RunYear = Year)',
+    'runModule("PredictIncome", "VESimHouseholds", RunFor = "AllYears", RunYear = Year)',
+    'runModule("PredictHousing", "VELandUse", RunFor = "AllYears", RunYear = Year)',
+    'runModule("LocateEmployment", "VELandUse", RunFor = "AllYears", RunYear = Year)',
+    'runModule("AssignLocTypes", "VELandUse", RunFor = "AllYears", RunYear = Year)',
+    '}'
+  )
+  cat(runModelFile,paste(runModel_vc,collapse="\n"),sep="\n")
+  writeLines(runModel_vc,con=runModelFile)
+
+  testStep("Configure LoadModel")
+  # We'll just do it from scratch rather than reading/modifying
+  # Region, BaseYear and Years don't change
+  runConfig_ls <-  list(
+    Model       = jsonlite::unbox("LOAD Model Test"),
+    Scenario    = jsonlite::unbox("Test LoadModel / LoadDatastore"),
+    Description = jsonlite::unbox("Add a step onto a different previous model"),
+    Region      = jsonlite::unbox(model$setting("Region")),
+    BaseYear    = jsonlite::unbox(model$setting("BaseYear")),
+    Years       = loadModel$setting("Years"),
+    LoadModel   = jsonlite::unbox(model$modelPath) # could be any form accepted by openModel
+  )
+  configFile <- file.path(baseModelPath,"visioneval.cnf")
+  yaml::write_yaml(runConfig_ls,configFile)
+
+  testStep("Reload model with LoadDatastore")
+  loadModel <- openModel(basename(loadModel$modelPath),log=log)
+
+  testStep("Copy additional inputs")
+  base.model <- openModel("JRSPM")
+  base.inputs <- file.path(
+    base.model$setting("InputPath",shorten=FALSE),
+    base.model$setting("InputDir")
+  )
+  cat("Base Inputs",base.inputs,"\n")
+  inputs <- loadModel$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
+  required.files <- unique(file.path(base.inputs,inputs[,"FILE"]))
+  required.files <- required.files[which(file.exists(required.files))]
+  cat("Required Files:\n")
+  print(basename(required.files))
+
+  testStep("Copying additional input files")
+  bare.inputs <- file.path(
+    loadModel$setting("InputPath",shorten=FALSE),
+    loadModel$setting("InputDir")
+  )
+  testStep("Remove base model inputs - will just have new ones")
+  unlink(bare.inputs,recursive=TRUE)
+  dir.create(bare.inputs)
+  from <- required.files
+  file.copy(from=from, to=bare.inputs )
+
+  testStep("Copy model parameters to 'inputs' - could also be in 'defs')")
+  from <- file.path(base.inputs,"model_parameters.json")
+  file.copy(from=from,to=bare.inputs) # or copy to bare.defs...
+  print(dir(bare.inputs))
+
+  testStep("Run model, loading datasore")
+  loadModel$run("reset",log=log)
+  return(loadModel)
 }
 
 test_results <- function (log="info") {

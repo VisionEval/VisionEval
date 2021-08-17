@@ -1,80 +1,22 @@
 The path to completion:
 
-So what if LoadDatastore/LoadDatastoreName is the route to a base model. We just pull over its
-Datastore and check structural consistency and do that instead of building a new Datastore.
-That's basically what it does now. Workflow:
-
-  1. Copy the BaseModel
-  2. Make adjustments to its visioneval.cnf and run_model.
-  3. Set LoadDatastore/LoadDatastoreName in the new model's top level visioneval.cnf
-     That must include the path to the Stage results in the BaseModel
-  4. LoadDatastore/LoadDatastoreName will be processed in the first stage of the
-     the new model instead of initializing a new Datastore.
-  5. We can do that by propagating it from the overall model setup. If the Load is set,
-     then add it to the model's first stage when we first construct it - and unset the
-     Load (in memory) before constructing any subsequent stages.
-
-LoadDatastore ignores whether the BaseModel ran successfully: it just takes the Datastore as it
-is. So that provides an entry point for debugging.
-
-3. (Set up as test) Do a tag-on to VERSPM-pop which loads the Datastore from VERSPM-pop's earlier
-stages (or its last stage). Should flatten that Datastore and install it into that current model.
-So the ModelScript for that tag-on really just prints a message about containing the flattened
-Datastore for the VERSPM-pop model.
-
-The "BaseModel/BaseStage" applies to a model stage. If provided for a Model, it applies (only) to
-the first stage of that model. "LoadDatastore" only applies in the model if there is a
-BaseModel/BaseStage and will be ignored otherwise.
-
-LoadDatastore is what triggers use of a BaseModel's results - otherwise we just use its structural
-parameters (Scripts, Inputs, Defs).
-
-Interior stages ("StartFrom") never do LoadDatastore - always virtual. You can always do
-copyDatastore on a Reportable stage to flatten it.
-
-LoadDatastoreName will be set to the RunPath of the BaseModel/BaseStage.
-
-4. Also try a BaseModel that does not copy the data (just the setup - model script, inputs,
-params/defs) - simplest implementation just takes everything and puts the results in its own
-ResultsDir. May override some of the scenario descriptors.
-
-Build the function to do the debug dump (should use CopyDatastore function, same as loading and
-perhaps archiving). Also create a convenience "copy results" (member of VEResults?) that will
-copy and flatten a Datastore.
-
-Handle the BaseModel LoadDatastore as well (can try that with a
-debug version of a model). 
-
-Then get test_results and test_query to work.
-
-Add a model function to save a visioneval.cnf for a stage, or for the
-  model itself. If we dicked with the in-memory version, save whatver
-  is current.
-How to easily decide what to push into the stage (don't want to push
-everything, just what should be in that particular configuration)
-
 Test all the models again with restructured visioneval::loadModel
 and supporting stuff in VEModel package.
 
+Get test_results and test_query to work.
+
 It would be great to develop a "debug dump" tool:
-  Copy the full model plus ResultsDir into a temp dir
-  If the model has a BaseModel, include that model too
-    Proceed recursively to a model without a BaseModel
-  Amounts to a snapshot of the "models" tree
-    But ignore archives
-    May include ResultsDir or ignore (force debugger to run it all)
+  Copy and zip the full model plus ResultsDir into a temp dir
   Zip the temp dir
   Send to some large file recipient address (could use SLFTS to receive)
     These outputs can get truly huge!
-  Perhaps create a new model with the crash as "BaseModel" using LoadDatastore
-    Need to know where to pick up (can adjust later)
-    Build by inspecting crashed log...
-    Also write the run_model.R and the visioneval.cnf
-
-Also need instructions for setting up on the receiving end:
-  Create a fresh bare runtime environment
-  Place the post-mortem model into that runtime environment
-  Then just open and run it (reaching back into the earlier results)
+  Then there's a setup for a new model using the provided one:
+    Copy the crashed model to a new model directory
+    Adjust run_model.R to pick up where it crashed (from Log)
+    Use LoadModel/LoadStage to identify model and stage for LoadDatastore
+      Important to set LoadStage since it may have crashed in an earlier stage
+      that was not reportable. The default is the previous model's final stage.
+    Rewrite the run_model.R and the visioneval.cnf
 
 Here's a slightly more elaborate approach
 Steps:

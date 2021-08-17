@@ -1232,13 +1232,14 @@ findDataset <- function(DatasetName, DstoreListing_df=NULL, envir=modelEnvironme
 
   FoundIn_df <- NULL
   for ( ds in dsPaths ) {
-    browser(
-      expr=(
+    if (
         class(DatasetName)!= "character" ||
         class(ds$groupname)!="character" ||
         length(ds$groupname) == 0 || length(DatasetName)==0
-      )
-    )
+      ) {
+      writeLog("Failed to find path element; entering debug browser (Q to quit)",Level="error")
+      browser()
+    }
     if ( DatasetName %in% ds$groupname ) {
       FoundIn_df <- ds
       break
@@ -1333,9 +1334,8 @@ getDatasetAttr <- function(Name=NULL, Table=NULL, Group=NULL, DstoreListing_df=N
     }
     return(DstoreListing_df$attributes[[DatasetIdx]])
   } else {
-    browser()
     stop(
-      writeLog(paste("Dataset",DatasetName,"does not exist for attributes."),Level="error")
+      writeLog(paste("datastore.R circa #1338: Dataset",DatasetName,"does not exist for attributes."),Level="error")
     )
   }
 }
@@ -1930,19 +1930,19 @@ mergeDatastoreListings <- function(baseListing, addListing) {
 #'
 #' Use cases for this functionn are: (1) standalone copying of a Datastore (copies associated
 #'   ModelState and updates Datastore listing); (2) archiveDatastore (copies ModelState for item
-#'   being archived); (3) loadDatastore from BaseModel (uses ModelState whose Datastore is being
+#'   being archived); (3) loadDatastore / LoadModel (uses ModelState whose Datastore is being
 #''  updated).
 #'
-#' This function supports "flattening" the Datastore and also changing the Datastore type (from RD
-#' to H5 or vice versa). Linked and Loaded Datastores in BaseModel and prior model stages must be
-#' the same DatastoreType, so type conversion helps link a base model run using one DatastoreType to
-#' a child model with a different DatastoreType.
+#' This function supports "flattening" the Datastore and also changing the Datastore type (from RD '
+#' to H5 or vice versa). Linked and Loaded Datastores in LoadModel or prior model stages must be ' the
+#' same DatastoreType, so type conversion helps load results from a run using one DatastoreType to ' a
+#' child model with a different DatastoreType.
 #'
 #' Important: the working directory must contain the ModelState.Rda and Datastore that the function
 #' will copy (can't work currently from a different directory than that).
 #'
 #' 'Flattening' the Datastore will convert a linked Datastore into a copy in which all the Datasets
-#' are realized in the targetDatastore. That supports loading the Datastore from a BaseModel, or
+#' are realized in the targetDatastore. That supports loading the Datastore from another model, or
 #' preparing a copy of a Datastore for transmission as "bare results."
 #'
 #' Note that this function is used to perform LoadDatastore (forcing flattening) when linking
@@ -2050,7 +2050,11 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
         if ( ! TableName %in% writeDS$ModelState_ls$Datastore$groupname ) { # in target?
           TableEntry <- which(ds$groupname == TableName)[1]                 # check source
           Length <- ds$attributes[[TableEntry]]$LENGTH                      # Get Length parameter
-          browser(expr=is.null(Length))
+          if ( is.null(Length) ) {
+            writeLog("datastore.R circa #2054: Table LENGTH attribute is NULL",Level="error")
+            writeLog("enter debug browser (Q to quit)",Level="error")
+            browser()
+          }
           initTable(item["Table"], item["Group"], Length, envir=writeDS)    # Initialize the Table
         }
 
