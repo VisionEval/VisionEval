@@ -553,71 +553,88 @@ ve.query.results <- function() {
 }
 
 # @return A character vector with the names of the .csv files containing the computed measures.
+# OutputDir and OutputFile use global (runtime) settings. Set them explicitly when calling
+# VEQuery$run if you want them to be something else.
 ve.query.run <- function(
   Results,   # May be a vector of file locations, a VEResults or VEModel object, or a list of such objects
   Geography  ="Region",
   GeoValue   = NULL,   # optional - if Geography is not Region, only compute for this list
+  OutputRoot = NULL,   # optional - if not set, attempt to deduce
   OutputDir  = visioneval::getRunParameter("OutputDir"),
   OutputFile = visioneval::getRunParameter("QueryOutputTemplate"),
   save       = TRUE,  # Send to file
   log        = "error"  # Only show errors during run...
   )
 {
-  if ( ! missing(Results) ) {
-    # TODO: Add VEScenario class for new scenario API
-    if ( "VEModel" %in% class(Results) ) {
-      Results <- list(Results$results())
-    } else if ( "VEResults" %in% class(Results) ) {
-      Results <- list(Results)
-    } else if ( is.character(Results) ) {
-      # Assume it's a list of directories, which must exist
-      ExistingResults <- Results[dir.exists(Results)] # Trim to existing files
-      if ( length(ExistingResults)==0 ) {
-        ExistingResults <- Results[Results %in% openModel()]
-        if ( length(ExistingResults)>0 ) {
-          Results <- lapply(ExistingResults,
-            function(m) {
-              model <- openModel(m)
-              results <- model$results()
-              if ( ! results$valid() ) results <- NA
-              return(results)
-            }
-          )
-          Results <- Results[ ! sapply(Results,is.na) ]
-          if ( length(Results)==0 ) {
-            Results <- NULL
-          }
-        } else {
-          Results <- NULL
+  if ( missing(Results) || is.null(Results) ) {
+    stop( writeLog("No results provided to query",Level="error") )
+  }
+  
+  if ( "VEModel" %in% class(Results) ) {
+    Results <- Results$results() # Convert model into a VEResults or list of VEResults
+  }
+  if ( "VEResultsList" %in% class(Results) ) {
+    if ( is.null(OutputRoot) ) OutputRoot <- Results[[1]]$resultsPath
+  } else if ( "VEResults" %in% class(Results) ) {
+    if ( is.null(OutputRoot) ) OutputRoot <- Results$resultsPath
+    Results <- list(Results)
+  } else if ( is.character(Results) ) {
+    # Assume it's a list of models, which must exist
+    ExistingResults <- Results[Results %in% openModel()]
+    if ( length(ExistingResults)>0 ) {
+      Results <- lapply(ExistingResults,
+        function(m) {
+          model <- openModel(m)
+          results <- model$results()
+          if ( ! all( sapply(results,function(r) r$valid()) ) ) results <- NA
+          return(results)
         }
-      } else {
-        Results <- lapply( ExistingResults, function(r) VEResults$new(r) )
-      }
-    } else if ( is.list(Results) ) {
-      if ( "VEModel" %in% class(Results[[1]]) ) {
-        Results <- lapply( Results, function(m) m$results() )
-      } else if ( is.character(Results) ) {
-        # TODO: support this - just make a VEResults object from each
-        # element of Results
-        writeLog(msg<-"Unsupported: character list of result paths",Level="error")
-        stop(msg)
-      } else if ( ! "VEResults" %in% class(Results[[1]]) ) {
+      )
+      invalid <- sapply(Results,is.na)
+      Results <- Results[ ! invalid ]
+      if ( length(Results)==0 ) {
         Results <- NULL
+      } else {
+        if ( is.null(OutputRoot) ) OutputRoot <- dirname(Results[[1]]$resultsPath)
       }
     } else {
       Results <- NULL
     }
-  } else Results <- NULL
-  if ( is.null(Results) ) {
-    stop( writeLog("No results provided to query",Level="error") )
+  } else if ( is.list(Results) && "VEModel" %in% class(Results[[1]]) ) {
+    modelResults <- list()
+    for ( m in Results ) { # series of VEModels
+      newResults <- m$results()
+      names(newResults) <- paste(m$modelName,names(newResults),sep=".")
+      modelResults <- c( modelResults, newResults )
+    }
+    Results <- modelResults
+    if ( is.null(OutputRoot) ) OutputRoot <- dirname(Results[[1]]$resultsPath)
+  }
+  if ( is.null(Results) ) { # May have been nullified...
+    stop( writeLog("Cannot interpret results provided to query",Level="error") )
   }
 
-  if ( ! is.character(Geography) || ! Geography %in% c("Region", "Azone","Marea") )
+  if ( save ) {
+    # Check OutputRoot
+    if ( ! dir.exists(OutputRoot) ) {
+      writeLog(paste("OutputRoot does not exist:",OutputRoot),Level="warn")
+      dir.create(OutputRoot)
+    }
+    # CheckOutputDir
+    OutputRoot <- file.path(OutputRoot,OutputDir)
+    if ( ! dir.exists(OutputRoot) ) {
+      writeLog(paste("OutputRoot does not exist:",OutputRoot),Level="warn")
+      dir.create(OutputRoot)
+    }
+  }
+ 
+  # TODO: review Brian Gregor's example of grouping by Bzone - may also be legitimate
+  if ( ! is.character(Geography) || ! Geography %in% c("Region", "Marea","Azone","Bzone") )
   {
-    writeLog("Geography must be one of 'Region','Marea' or 'Azone'",Level="error")
+    writeLog("Geography must be one of 'Region','Marea', 'Azone', or 'Bzone'",Level="error")
     return(character(0))
   }
-  if ( Geography %in% c("Azone","Marea") ) {
+  if ( Geography %in% c("Azone","Bzone","Marea") ) {
     if ( missing(GeoValue) || ! is.character(GeoValue) || length(GeoValue)>1 || ! nzchar(GeoValue) ) {
       writeLog(paste0("Not supported: Breaking measures by ",Geography," including all values"),Level="error")
       # TODO: need to assemble proper combinations of By/GeoValues when unpacking results from
@@ -650,23 +667,19 @@ ve.query.run <- function(
 
   # Construct the OutputFile name
   # Default QueryOutputTemplate = "%queryname%_Results_%timestamp%.csv"
-  if ( save ) {
+  if (save) {
     OutputFileToWrite <- stringr::str_replace(OutputFile,"%queryname%",self$QueryName)
     TimeStamp <- visioneval::fileTimeStamp(Sys.time())
     OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%timestamp%",TimeStamp)
-    OutputFileToWrite <- normalizePath(file.path(OutputDir,OutputFileToWrite),mustWork=FALSE)
-
+    OutputFileToWrite <- normalizePath(file.path(OutputRoot,OutputFileToWrite),mustWork=FALSE)
     # Save measure results into a file
-    writeLog(paste("Saving measures in",basename(dirname(OutputFileToWrite)),"as",basename(OutputFileToWrite),"..."),Level="warn")
+    writeLog(paste("Saving measures to",OutputFileToWrite,"..."),Level="warn")
     utils::write.csv(Measures_df, row.names = FALSE, file = OutputFileToWrite)
 
     # Save query itself adjacent to measure results
     self$save(saveTo=sub("\\.csv$",".VEqry",OutputFileToWrite))
 
     writeLog("Saved\n",Level="warn")
-
-    # TODO: save the query specification as metadata (as a .VEqry file in the output, with the same
-    # basename as the results .csv - should be "openable").
   }
 
   return(invisible(Measures_df))
@@ -992,11 +1005,13 @@ ve.spec.update <- function(
 }
     
 # data helper
-ve.small.geo <- c("Marea","Azone")
+ve.small.geo <- c("Marea","Azone","Bzone")
 
 ve.spec.setgeo <- function(Geography=NULL) {
-  # Return a new, geography adjusted VEQuerySpec
+  # Return a new geography-adjusted VEQuerySpec
   # TODO: this is not especially robust yet...
+  # In particular, we're not checking that fields are avalilable at that level
+  #   and joining may or may not work right...
 
   test.spec <- self$copy()
   if ( ! is.null(Geography) && test.spec$type() == "Summarize" ) {
@@ -1025,7 +1040,7 @@ ve.spec.setgeo <- function(Geography=NULL) {
           test.sum["Units"] <- NULL # Single brackets - remove element entire
         } # else leave "Units" untouched
       }
-    } else { # Summarizing by geography ("Azone" or "Marea")
+    } else { # Summarizing by geography ("Azone", "Bzone" or "Marea")
       # TODO: Geography "Value" should eventually be screened against model's 'defs/geo.csv'
       # TODO: If "Table" is the same as "By" and not GeographyType, skip that specification
       # with a message (or we could use Require). So any dip into the Marea table or the
@@ -1293,16 +1308,17 @@ doQuery <- function (
     # Scenario is a VEResults object (with ModelState, etc all available)
 
     # Move to results directory
+    browser(expr=(!is.character(results$resultsPath)))
     setwd(results$resultsPath)
 
     # Scenario Name for reporting / OutputFile
     # TODO: If Results is a named list, use the name from the list
     #       Then do the $ModelState$Scenario as a fallback
-    ScenarioName <- results$ModelState$Scenario;
+    ScenarioName <- results$ModelState()$Scenario;
     writeLog(paste("Building measures for Scenario",ScenarioName,"\n"),Level="warn")
 
     # Gather years from the results
-    Years <- results$ModelState$Years
+    Years <- results$ModelState()$Years
 
     # Set up model state and datastore for query processing
     QPrep_ls <- results$queryprep()

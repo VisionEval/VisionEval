@@ -44,7 +44,7 @@ NULL
 #' mdl$copy(newName=NULL,newPath=NULL,copyResults=TRUE)
 #' mdl$rename(Name=NULL,Scenario=NULL,Description=NULL,Save=TRUE)
 #' mdl$results(stage)
-#' mdl$findstage(stage)
+#' mdl$findstages(stage)
 #' mdl$query(QueryName=NULL,FileName=NULL,load=TRUE)
 #' 
 #' print(mdl)
@@ -257,13 +257,21 @@ ve.model.configure <- function(modelPath=NULL, Param_ls=getSetup()) {
     # Load default parameter or get from larger runtime environment
     modelParam_ls <- visioneval::addRunParameter(
       Param_ls=modelParam_ls,
-      visioneval::getRunParameter("ResultsDir",Param_ls,Source=TRUE)
+      visioneval::getRunParameter("ResultsDir",Param_ls=Param_ls,Source=TRUE)
     )
   }
 
+  # Cache the results path (for saving query results that may span multiple stages)
+  self$modelResults <- normalizePath(
+    file.path(
+      self$modelPath,
+      resultsDir <- visioneval::getRunParameter("ResultsDir",Param_ls=modelParam_ls)
+    )
+  )
+
   # Check for LoadModel and LoadStage in model parameters
   if ( "LoadModel" %in% names(modelParam_ls ) ) {
-    baseModel <- VEModel$new( modelPath=modelParam_ls$LoadModel, log=log )
+    baseModel <- VEModel$new( modelPath=modelParam_ls$LoadModel )
     if ( baseModel$valid() ) {
       if ( ! "LoadStage" %in% names(modelParam_ls) ) {
         loadStage <- names(baseModel$modelStages)[length(baseModel$modelStages)]
@@ -291,6 +299,8 @@ ve.model.configure <- function(modelPath=NULL, Param_ls=getSetup()) {
       InputPath=modelParam_ls$ModelDir
     )
   } else {
+    # expand default InputPath if necessary
+    if ( modelParam_ls$InputPath == "." ) modelParam_ls$InputPath <- modelParam_ls$ModelDir
     modelParam_ls <- visioneval::addRunParameter(
       Param_ls=modelParam_ls,
       Source="VEModel::findModel",
@@ -400,6 +410,7 @@ ve.model.configure <- function(modelPath=NULL, Param_ls=getSetup()) {
   # If no stages remain, model is invalid
   if ( !is.list(modelStages) || length(modelStages)==0 ) {
     writeLog("No model stages found!",Level="error")
+    self$RunParam_ls <- modelParam_ls
     return(self)
   }
 
@@ -434,6 +445,7 @@ ve.model.configure <- function(modelPath=NULL, Param_ls=getSetup()) {
   stageCount <- length(modelStages)
   if ( !is.list(modelStages) || stageCount == 0 ) {
     writeLog("Model has no runnable stages!",Level="error")
+    self$RunParam_ls <- modelParam_ls
     return(self)
   }
 
@@ -450,6 +462,9 @@ ve.model.configure <- function(modelPath=NULL, Param_ls=getSetup()) {
       modelStages[[1]]$Reportable <- TRUE
     }
   } else {
+    # Save the model RunParam_ls
+    self$RunParam_ls <- modelParam_ls
+
     # Put names on Stages and identify reportable stages
     startFromNames <- unlist(sapply(modelStages,function(s) s$StartFrom))
     startFromNames <- startFromNames[ nzchar(startFromNames) ]
@@ -470,7 +485,7 @@ ve.model.configure <- function(modelPath=NULL, Param_ls=getSetup()) {
 # Initialize a VEModel from modelPath
 # modelPath may be a full path, and will be expanded into known model directories
 #  if it is a relative path.
-ve.model.init <- function(modelPath, log="error") {
+ve.model.init <- function(modelPath) {
 
   # Opportunity to override names of ModelState, run_model.R, Datastore, etc.
   # Also to establish standard model directory structure (inputs, results)
@@ -478,7 +493,7 @@ ve.model.init <- function(modelPath, log="error") {
   # Identify the run_model.R root location(s)
   # Also, update self$RunParam_ls with model-specific configuration
   writeLog(paste("Finding",modelPath),Level="info")
-  modelPath <- findModel(modelPath) # expland to disk location
+  modelPath <- findModel(modelPath) # expand to disk location
   if ( nzchar(modelPath) ) {
     self$configure(modelPath)
   }
@@ -1722,50 +1737,66 @@ ve.model.setting <- function(setting=NULL,stage=NULL,defaults=TRUE,shorten=TRUE,
 
 # Report the model results path (used to creat a VEResults object and
 # to retrieve the LogFile)
-ve.model.findstage <- function(stage=NULL) {
-  # TODO: Update to new model stage structure
-  if ( ! private$p.valid ) return( NULL )
-
-  if ( missing(stage) || !is.character(stage) ) {
-    stage <- utils::tail(names(self$modelStages),1)
+ve.model.findstages <- function(stage=character(0),Reportable=TRUE) {
+  if ( ! private$p.valid ) return( list() )
+  stages <- self$modelStages
+  if ( ! missing(stage) && length(stage)>0 ) {
+    if ( is.integer(stage) ) {
+      stages <- stages[ stage ]         # list slice by index
+    } else if ( is.character(stage) ) {   # list slice by stage name
+      stages <- stages[ names(stages) %in% stage ]
+    }
   }
-  if ( length(stage)>1 ) {
-    stage <- names(self$modelStages)[stage[length(stage)]] # use last one listed
+  if ( Reportable ) {
+    stages <- stages[ sapply(stages,function(s) s$Reportable) ] # Only return reportable stages
   }
-  stage <- self$modelStages[[stage]] # get the stage object from the sliced stage list (may be NULL)
-  return(stage)
+  return(stages)
 }
 
 ################################################################################
 #                                Model Results                                 #
 ################################################################################
 
-# create a VEResults object (possibly invalid/empty) based on the current model
-#   run or a particular model stage. Default is the last model stage.
-ve.model.results <- function(stage=NULL) {
-  # Create a results object wrapping the directory that contains the model
-  # results for the given stage (or last stage if not given)
+# create a VEResults object or list of VEResults objects (possibly invalid/empty) from the model's
+# Reportable stages. Provide a vector of stage names or indices to filter the list.
+ve.model.results <- function(stage=character(0)) {
   if ( ! private$p.valid ) {
     writeLog(paste0("Invalid model: ",self$status),Level="error")
     return( NULL )
   }
-
-  stg <- self$findstage(stage)
-  if ( is.null(stg) ) stop(
-    writeLog(paste("Model stage not found:",stage),Level="error")
+  stages <- self$findstages(stage)
+  if ( length(stages)==0 ) {
+    writeLog(paste("Available stages:",names(self$modelStages),collapse=", "),Level="error")
+    stop(
+      writeLog(paste("Model stage(s) not found:",stage,collapse=","),Level="error")
+    )
+  }
+  results <- lapply(
+    stages,
+    function(stg) VEResults$new(stg$RunPath)
   )
-  results <- VEResults$new(stg$RunPath)
-  if ( ! results$valid() ) {
-    if (!is.null(stage)) {
-      writeLog(
-        paste("There are no results for stage ",paste(stage,collapse=", ")," of this model yet."),
-        Level="warn"
-      )
-    } else {
-      writeLog("There are no results for this model yet.",Level="warn")
-    }
+  names(results) <- names(stages)
+  valid <- sapply( results, function(r) r$valid() )
+  if ( any( ! valid ) ) {
+    writeLog(
+      paste("No results yet for stage(s): ",names(results)[!valid],collapse=", "),
+      Level="warn"
+    )
+    writeLog("Have you run the model?",Level="warn")
+  }
+  if ( length(results)>1 ) {
+    class(results) <- "VEResultsList" # print function defined below
+  } else if ( length(results)==1 ) {
+    results <- results[[1]]              # Just return the single VEResults object
+#    names(results) <- names(results)[1]  # Carry over the name
   }
   return(results)
+}
+
+print.VEResultsList <- function(results,...) {
+  for ( nm in names(results)) {
+    print(results[[nm]],name=nm,...)
+  }
 }
 
 # open a Query object for the model from its QueryDir (or report a list
@@ -1775,7 +1806,6 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
     writeLog(paste0("Invalid model: ",self$status),Level="error")
     return( NULL )
   }
-
   # Get the Query directory for the model
   QueryDir <- visioneval::getRunParameter("QueryDir",Param_ls=self$RunParam_ls)
   if ( all(is.null(c(QueryName,FileName))) ) {
@@ -1815,6 +1845,7 @@ VEModel <- R6::R6Class(
     modelName=NULL,                         # Model identifier
     modelPath=NULL,                         # Also as RunParam_ls$ModelDir
     modelStages=NULL,                       # list of VEModelStage objects
+    modelResults=NULL,                      # Absolute path == modelPath/ResultsDir
     RunParam_ls=NULL,                       # Run parameters from the model root
     specSummary=NULL,                       # List of inputs, gets and sets from master module spec list  
     status=codeStatus("Uninitialized"),     # Where are we in opening or running the model?
@@ -1837,7 +1868,7 @@ VEModel <- R6::R6Class(
     copy=ve.model.copy,                     # copy a self$modelPath to another path (ignore results/outputs)
     archive=ve.model.archive,               # apply framework archive function if results exist
     results=ve.model.results,               # Create a VEResults object (if model is run); option to open a past result
-    findstage=ve.model.findstage,           # Report the path to the model results for a stage
+    findstages=ve.model.findstages,         # Report the path to the model results for a stage
     query=ve.model.query                    # Create a VEQuery object (or show a list of queries).
   ),
   active = list(                            # Object interface to "set" function; "set" called explicitly has additional options
@@ -1905,7 +1936,7 @@ openModel <- function(modelPath="",log="error") {
     )
   } else {
     initLog(Save=FALSE,Threshold=log, envir=new.env())
-    return( VEModel$new(modelPath = modelPath,log=log) )
+    return( VEModel$new(modelPath = modelPath) )
   }
 }
 
@@ -2113,7 +2144,7 @@ installModel <- function(modelName=NULL, modelPath=NULL, variant="base", confirm
   initLog(Save=FALSE,Threshold=log, envir=new.env())
   model <- installStandardModel(modelName, modelPath, confirm=confirm, overwrite=overwrite, variant=variant, log=log)
   if ( is.list(model) ) {
-    return( VEModel$new( modelPath=model$modelPath, log=log ) )
+    return( VEModel$new( modelPath=model$modelPath ) )
   } else {
     return( model ) # should be a character vector of information about standard models
   }

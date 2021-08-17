@@ -132,7 +132,7 @@ readFromTable <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, env
     # table might legitimately be NA of length 1. Attributes are non-null if it is "for real"
     # If failed to find, then try upstream Datastore locations
     # DatastorePath holds absolute path to Datastore
-    msPaths <- getModelStatePaths(envir) # Does not return first element (currently writable Datastore)
+    msPaths <- getModelStatePaths(envir=envir) # Does not return first element (currently writable Datastore)
 
     # Iterate over additional ModelStates in prior model stages
     # ms.env contains an upstream ModelState_ls
@@ -1168,13 +1168,14 @@ writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvir
 #'
 #' TODO: Full description of \code{getModelStatePaths}
 #'
+#' @param dropFirst if TRUE, do not return first (current writable) Datastore 
 #' @param envir environment containing the model state and cached path list
 #' @return A list of ModelState_ls objects to search for DatasetName's
 #' @export
-getModelStatePaths <- function(envir=modelEnvironment()) {
-  
+getModelStatePaths <- function(dropFirst=TRUE,envir=modelEnvironment()) {
   if ( is.null(envir$ModelStateList) ) { # Check for ModelState cache from earlier stages
-    paths <- envir$ModelState_ls$DatastorePath[-1]
+    paths <- envir$ModelState_ls$DatastorePath
+    if ( dropFirst ) paths <- paths[-1]
     if ( length(paths) > 0 ) {
       writeLog(c("Datastore Paths:",paths),Level="trace")
       msList <- lapply(paths, # Create environments that describe the source Datastore/ModelState
@@ -1218,7 +1219,7 @@ getModelStatePaths <- function(envir=modelEnvironment()) {
 findDataset <- function(DatasetName, DstoreListing_df=NULL, envir=modelEnvironment()) {
   if ( is.null(DstoreListing_df) ) {
     G <- getModelState(envir=envir)
-    msPaths <- getModelStatePaths(envir) # Does not return current model state, might be zero length
+    msPaths <- getModelStatePaths(envir=envir) # Does not return current model state, might be zero length
     if ( length(msPaths) > 0 ) {
       basePath <- list(dsPath=G$Datastore)
       dsPaths <- lapply(msPaths,function(m) m$ModelState_ls$Datastore)

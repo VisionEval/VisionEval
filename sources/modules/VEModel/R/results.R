@@ -12,7 +12,7 @@ ve.results.init <- function(OutputPath,Param_ls=list()) {
   self$resultsPath <- OutputPath
   self$Name <- basename(OutputPath)
   self$index()
-  private$RunParam_ls <- self$ModelState$RunParam_ls
+  private$RunParam_ls <- self$ModelState()$RunParam_ls
   self$selection <- VESelection$new(self)
   return(self$valid())
 }
@@ -48,57 +48,55 @@ attributeGet <- function(variable, attr_name){
   return(NA)
 }
 
+ve.results.modelstate <- function(ModelState_ls=NULL) {
+  if ( ! is.null(ModelState_ls) ) {
+    if ( is.null(private$modelStateEnv) ) {
+      private$modelStateEnv <- new.env()
+    }
+    private$modelStateEnv$ModelState_ls <- ModelState_ls
+  }
+  return (private$modelStateEnv$ModelState_ls)
+}
+
 ve.results.index <- function() {
   # Load model state from self$resultsPath
   FileName=normalizePath( file.path(
     self$resultsPath, # Should already include ResultsDir
     visioneval::getModelStateFileName()
   ), winslash="/", mustWork=FALSE)
-  ms <- self$ModelState <- try(visioneval::readModelState(FileName=FileName,envir=new.env()))
+  if ( file.exists(FileName) ) {
+    ms <- try(visioneval::readModelState(FileName=FileName,envir=new.env()))
+  } else {
+    ms <- NULL
+  }
   if ( ! is.list(ms) ) {
-    ms <- self$ModelState <- NULL
-    writeLog(Level="error",paste("Cannot load ModelState from:",FileName))
+    self$ModelState(list())
+    writeLog(Level="info",paste("No ModelState:",FileName))
     return(list())
   }
+  self$ModelState(ms) # save ModelState
   if ( is.null(private$RunParam_ls) && is.list( ms ) ) {
-    private$RunParam_ls <-ms$RunParam_ls
+    private$RunParam_ls <- ms$RunParam_ls
   }
 
-  # TODO: if the modelpath has a DatastorePath, compile the index and inputs from
-  #       each element of the path (from back to front), and keep track of the
-  #       stage name where that element is physically present.
-  # Once we know those datasets are out there, reading the dataset
-  #   will "just work" because we'll know what to ask for.
-
-  # TODO: Use mergeDatastoreListings function to combine Datastore listings into a consolidated
-  #       List
-
-  # TODO: use explicit file paths rather than changing working directory?
-  
-  owd <- setwd(self$resultsPath)
-  on.exit(setwd(owd))
-
-  if ( ! file.exists( ms$DatastoreName ) ) {
-    message("Datastore for this model is not available. Has it run successfully?")
-    return(list())
+  msList <- rev(visioneval::getModelStatePaths(dropFirst=FALSE,envir=private$modelStateEnv))
+  combinedDatastore <- list()
+  if ( length(msList) > 0 ) {
+    msFirst <- TRUE
+    for ( ms in msList ) {
+      dsListing <- ms$ModelState_ls$Datastore
+      if ( msFirst ) {
+        combinedDatastore <- dsListing
+      } else {
+        combinedDatastore <- visioneval::mergeDatastoreListings(combinedDatastore,dsListing)
+      }
+    }
   }
 
   Index <- data.frame()
   Inputs <- data.frame()
 
-  if ( length(ms)==0 ) {
-    return(list())
-  }
-  if ( ! "Datastore" %in% names(ms) ) {
-    message("Datastore not defined in ModelState: ",paste(names(ms),collapse=","))
-    message("Clear model results and try again.")
-    return(list())
-  } else if ( ! is.list(ms$Datastore) ) {
-    message("Datastore is incomplete: ",class(ms$Datastore)," ",length(ms$Datastore))
-    message("Clear model results and try again.")
-    return(list())
-  }
-  ds <- (ms$Datastore)
+  ds <- combinedDatastore
 
   Description <- sapply(ds$attributes, attributeGet, "DESCRIPTION",simplify=TRUE) # should yield a character vector
   Module <- sapply(ds$attributes, attributeGet, "MODULE",simplify=TRUE) # should yield a character vector
@@ -355,7 +353,7 @@ ve.results.extract <- function(
   results <- list()
 
   # Construct descriptive file name (hard coded...)
-  lastChanged <- self$ModelState$LastChanged;
+  lastChanged <- self$ModelState()$LastChanged;
   timeStamp <- if ( ! is.null(lastChanged) ) {
     timeStamp <- visioneval::fileTimeStamp(lastChanged)
   } else {
@@ -401,7 +399,7 @@ ve.results.extract <- function(
     # Handle tables with different lengths of data elements ("multi-tables")
     # readDatastoreTables will have returned a ragged list rather than a data.frame
 
-    # TODO: Make this unnecessary by fixing VERSPM so it works correctly (a "Table"
+    # TODO: Make this unnecessary by fixing VERPAT so it works correctly (a "Table"
     #   should always have the same number of elements in its Datasets).
 
     if ( ! all(is.df <- sapply(Data_ls$Data,is.data.frame)) ) {
@@ -475,14 +473,14 @@ ve.results.select <- function(select=integer(0)) {  # integer(0) says select all
 
 ve.results.queryprep <- function() {
   visioneval::prepareForDatastoreQuery(
-    DstoreLocs_ = file.path(self$resultsPath,self$ModelState$DatastoreName),
-    DstoreType  = self$ModelState$DatastoreType
+    DstoreLocs_ = file.path(self$resultsPath,self$ModelState()$DatastoreName),
+    DstoreType  = self$ModelState()$DatastoreType
   )
 }
 
-ve.results.print <- function(details=FALSE) {
+ve.results.print <- function(name="",details=FALSE) {
   # Update for output
-  cat("VEResults object for these results:\n")
+  cat("VEResults object for",if(nzchar(name)) name else self$Name,":\n")
   print(self$resultsPath)
   cat("Output is valid:",self$valid(),"\n")
   if ( self$valid() ) {
@@ -508,7 +506,6 @@ VEResults <- R6::R6Class(
     # public data
     Name = NULL,
     resultsPath=NULL,
-    ModelState=NULL,
     modelIndex=NULL,
     selection=NULL,
 
@@ -522,12 +519,14 @@ VEResults <- R6::R6Class(
     list=ve.results.list,            # show the modelIndex
     queryprep=ve.results.queryprep,  # For query or other external access
     print=ve.results.print,          # summary of model results (index)
-    units=ve.results.units           # TODO: Set units on field list (modifies self$modelIndex)
+    units=ve.results.units,          # Set units on field list (modifies self$modelIndex)
+    ModelState=ve.results.modelstate # Set/Get the model state for these results
   ),
   private = list(
     queryObject=NULL,               # object to manage queries for this output
     outputPath=NULL,                # root for extract
-    RunParam_ls=NULL
+    RunParam_ls=NULL,
+    modelStateEnv=NULL
   )
 )
 

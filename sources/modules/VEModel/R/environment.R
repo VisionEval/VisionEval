@@ -246,44 +246,6 @@ getRuntimeDirectory <- function() {
   return(Directory)
 }
 
-# INTERNAL FUNCTION TO SET BASIC RUN PARAMETERS
-#==============================================
-# Set up a Runtime environment consistently by providing
-# model-run-specific parameters (see list of parameters)
-# Used internally when loading ModelState files and running Models. A specific model's
-# configuration may replace these with something else.
-ve.model.setupRunEnvironment <- function(
-  Owner,
-  PreviousState=list(),
-  Param_ls=list(),
-  RunModel=FALSE,
-  ModelDir=getwd(),
-  ResultsDir=".",         # Should be relative to ModelDir
-  InputPath=".",          # Should be relative to ModelDir
-  SaveDatastore=NULL,     # Override if set to TRUE or FALSE
-  ModelScriptFile = NULL, # Override if provided
-  Name=NULL,              # Override with self$modelName
-  LogLevel="warn"
-) {
-  # Set up ve.model environment with run parameters
-  ve.model <- visioneval::modelEnvironment(Clear=Owner)
-  ve.model$RunModel <- RunModel
-  ve.model$ModelStateStages <- PreviousState # previously loaded model states
-  addParams_ls <- list(
-    ResultsDir      = ResultsDir,
-    ModelDir        = ModelDir,
-    InputPath       = InputPath,
-    LogLevel        = LogLevel
-  )
-  if ( ! is.null(SaveDatastore) )   addParams_ls <- c(addParams_ls,list(SaveDatastore=SaveDatastore))
-  if ( ! is.null(ModelScriptFile) ) addParams_ls <- c(addParams_ls,list(ModelScriptFile=ModelScriptFile))
-  if ( ! is.null(Name) )            addParams_ls <- c(addParams_ls,list(Model=Name))
-  addParams_ls <- visioneval::addParameterSource(addParams_ls,paste0(Owner))
-  ve.model$RunParam_ls <- visioneval::mergeParameters(Param_ls,addParams_ls) # addParams_ls will override
-
-  invisible(ve.model$RunParam_ls)
-}
-
 # MAKE A UNIQUE FILE NAME
 #========================
 #  Get unique file name based on newName in folder newPath

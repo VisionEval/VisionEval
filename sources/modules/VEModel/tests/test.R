@@ -212,7 +212,7 @@ test_flatten <- function(log="info") {
   setwd(owd)
 }
 
-test_run <- function(modelName="Test-VERSPM-base",baseModel="VERSPM",variant="base",reset=FALSE,log="info") {
+test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",reset=FALSE,log="info") {
 
   if ( ! missing(log) ) logLevel(log)
 
@@ -237,8 +237,21 @@ test_run <- function(modelName="Test-VERSPM-base",baseModel="VERSPM",variant="ba
   return(rs)
 }
 
-# Prep model (make sure there's one to work with)
-prepModel <- function(modelName,reset,log) {
+# Test model runs through basic model configuration
+# oldstyle creates defs/run_parameters.json; if not oldstyle, create visioneval.cnf
+# reset forces the base model to rebuild (no special reason to do that; the base model
+#  need not have been run.
+# modelName is the particular version of VERSPM to use as a base. The base model MUST
+#  be a version of VERSPM since we use its first two modules to create the "Bare" model
+# log="warn" will confine to a streamlined list of log messages like what a regular user
+#  would see. "info" gives lots of gory details.
+test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info", brief=FALSE) {
+
+  if ( ! missing(log) ) logLevel(log)
+
+  cat("*** Test Model Management Functions ***\n")
+  options(warn=2) # Make warnings into errors...
+
   testStep("open (and maybe run) the full test version of VERSPM")
   due.to <- "reset request"
   if ( modelName %in% openModel() ) {
@@ -273,25 +286,6 @@ prepModel <- function(modelName,reset,log) {
     cat("  InputDir     :",visioneval::getRunParameter("InputDir",Param_ls=jrParam_ls),"\n")
     cat(paste("  DatastorePath:",visioneval::getRunParameter("DatastorePath",Param_ls=jrParam_ls),"\n"))
   }
-  return(jr)
-}
-
-# Test model runs through basic model configuration
-# oldstyle creates defs/run_parameters.json; if not oldstyle, create visioneval.cnf
-# reset forces the base model to rebuild (no special reason to do that; the base model
-#  need not have been run.
-# modelName is the particular version of VERSPM to use as a base. The base model MUST
-#  be a version of VERSPM since we use its first two modules to create the "Bare" model
-# log="warn" will confine to a streamlined list of log messages like what a regular user
-#  would see. "info" gives lots of gory details.
-test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info", brief=FALSE) {
-
-  if ( ! missing(log) ) logLevel(log)
-
-  cat("*** Test Model Management Functions ***\n")
-  options(warn=2) # Make warnings into errors...
-
-  jr <- prepModel(modelName,reset=reset,log=log)
 
   testStep("Construct a bare model from scratch, borrowing from base model")
   bare.dir <- file.path("models","BARE")
@@ -640,7 +634,8 @@ test_results <- function (log="info") {
   cp$clear(force=TRUE,outputOnly=FALSE)
   cat("Directory after clearing...\n")
   print(cp$dir())
-  cat("Results after clearing...\n")
+  cat("Results after clearing... (Generates error)\n")
+  debug(cp$results)
   rs <- cp$results()
   print(rs)
   cat("Selection after clearing...\n")
@@ -648,7 +643,7 @@ test_results <- function (log="info") {
   print(sl)
   rm(cp)
 
-  testStep("Pull out results and selection (head 12)...")
+  testStep("Pull out results and selection from jr (head 12)...")
   cat("Results...\n")
   rs <- jr$results()  # Gets results for final Reportable stage (only)
 
@@ -742,7 +737,7 @@ test_results <- function (log="info") {
   jr$dir()
 }
 
-test_query <- function(log="warn",multiple=FALSE) {
+test_query <- function(log="info",multiple=FALSE) {
   # Process the standard query list for the test model
   # If multiple==TRUE, copy the test model and its results a few times, then submit the
   # list of all the copies to VEQuery. Each column of results will be the same (see
@@ -750,7 +745,7 @@ test_query <- function(log="warn",multiple=FALSE) {
 
   testStep("Set up Queries and Run on Model Results")
   testStep("Opening test model and caching its results...")
-  jr <- openModel("JRSPM")
+  jr <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log)
   rs <- jr$results()
 
   testStep("Show query directory (may be empty)...")
@@ -981,18 +976,19 @@ test_query <- function(log="warn",multiple=FALSE) {
   rm(runqry)
 
   testStep("Run the query on the model...")
-  qry$run(jr)
+  qry$run(jr,OutputRoot=jr$modelResults)
 
   testStep("Run the query on the results...")
-  qry$run(rs)
+  qry$run(rs,OutputRoot=jr$modelResults)
 
   # TODO: ensure that the query outputs are disambiguated and remain available
     
   if ( multiple) {
-    testStep("Query multiple models or scenarios...")
+    testStep("Query multiple scenarios...")
     # Generate several copies of jr
     testStep("Making model copies")
-    cp.1 <- jr$copy("Scenario1")
+    debug(jr$dir)
+    cp.1 <- jr$copy("Multi-Results") # Copy results
     cp.1$set(
       stage=cp.1$modelStages[[1]]$Name,
       modelState=TRUE,
@@ -1000,7 +996,7 @@ test_query <- function(log="warn",multiple=FALSE) {
       Scenario="Scenario 1",
       Description="Same as original..."
     )
-    cp.2 <- jr$copy("Scenario2")
+    cp.2 <- jr$copy("Scenario2") # Copy results
     cp.2$set(
       stage=cp.1$modelStages[[1]]$Name,
       modelState=TRUE,
@@ -1008,27 +1004,27 @@ test_query <- function(log="warn",multiple=FALSE) {
       Scenario="Scenario 1",
       Description="Same as original..."
     )
-
-    # TODO: add a flag to VEModel:$copy to copy or ignore any results (currently does
-    # results if they exist; want to be able to force ignoring them.)
+    testStep("Running additional scenarios")
+    cp.1$run()
+    cp.2$run()
 
     testStep("Multiple query by model name")
     # Query the vector of model names (character vector says "model names" to VEQuery)
     nameList <- c(jr$modelName,cp.1$modelName,cp.2$modelName)
     names(nameList) <- nameList
-    qry$run(nameList,outputFile="%queryname%_ByModelName_%timestamp%")
+    qry$run(nameList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByModelName_%timestamp%")
     
     testStep("Multiple query as a list of opened VEModel objects")
     # Make a list of VEModel objects from the names and query that
     modelList <- lapply(nameList,openModel)
     names(modelList) <- nameList
-    qry$run(modelList,outputFile="%queryname%_ByModelObject_%timestamp%")
+    qry$run(modelList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByModelObject_%timestamp%")
 
     testStep("Multiple query as a list of VEResult objects")
     # Make a list of VEResults objects from the VEModel list and query that
     resultList <- lapply(modelList,function(m) m$results())
     names(resultList) <- nameList
-    qry$run(resultList,outputFile="%queryname%_ByResultObject_%timestamp%")
+    qry$run(resultList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByResultObject_%timestamp%")
 
     testStep("Multiple query as a list of ResultsDir path names")
     # Make a list of ResultsDir path names (i.e. list of character strings) from the
@@ -1036,11 +1032,11 @@ test_query <- function(log="warn",multiple=FALSE) {
     # model names and a list of character strings, which are the result paths).
     pathList <- lapply(resultList,function(r) r$resultsPath)
     names(pathList) <- nameList
-    qry$run(pathList,outputFile="%queryname%_ByResultPath%timestamp%")
+    qry$run(pathList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByResultPath%timestamp%")
 
     testStep("Cleaning up model copies")
-    unlink("models/Scen1",recursive=TRUE)
-    unlink("models/Scen2",recursive=TRUE)
+    unlink("models/MultiResults",recursive=TRUE)
+    unlink("models/Scenario2",recursive=TRUE)
     rm( cp.1, cp.2)
   }
   testStep("Returning test model")

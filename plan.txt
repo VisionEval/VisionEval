@@ -1,9 +1,16 @@
 The path to completion:
 
-Test all the models again with restructured visioneval::loadModel
-and supporting stuff in VEModel package.
+Gettest_query to work with multiple models (bogging down in copying models)..
 
-Get test_results and test_query to work.
+Do ALL the tests (re-run every single model) and save the log results in a file for
+scrutiny.
+
+In VEQuery, look at Brian's Bzone adjustments and allow Bzones to be a summary unit.
+Let the Geography value be a list for summarizing.
+
+Longer term: consider give a class to the ModelState_ls as well, so printing it
+  will just show its names (and perhaps a summary of each item - the text itself
+  if it's short, or a summary of long, multi-element items)
 
 It would be great to develop a "debug dump" tool:
   Copy and zip the full model plus ResultsDir into a temp dir
