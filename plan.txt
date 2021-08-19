@@ -1,6 +1,33 @@
 The path to completion:
 
-Gettest_query to work with multiple models (bogging down in copying models)..
+VEModel workflow:
+
+On startup:
+  Create ve.env$loadedParams_ls and ve.env$RunParam_ls
+
+
+Need to be able to read/write/re-write configuration files. So perhaps an S3 class created
+within the visioneval framework (to go with addParameters, etc).
+
+For the runtime, keep the configuration loaded from its file (for editing)
+  loadedParams_ls in ve.env, model and stage
+  RunParams_ls is what gets built internally
+For the model, save the configuration loaded from its file (for editing).
+For the stage, save any configuration file loaded for it (for editing).
+For both model and stage, overlay the configuration file parameters onto the runtime
+
+Existing set of operations are the basis.
+  Add an S3 class name to the parameter list
+    Create a print function for that class (VEParameters)
+    Use the presence of the class to determine what to do about the Source attribute
+  Read a file
+  Write a file
+  Add parameters
+  Add source (converts bare list to VEParameters)
+  Get a parameter
+  Merge parameter lists (keep/override)
+
+Need some printout 
 
 Do ALL the tests (re-run every single model) and save the log results in a file for
 scrutiny.

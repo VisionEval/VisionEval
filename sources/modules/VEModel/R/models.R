@@ -234,6 +234,7 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
 }
 
 # configure installs the model parameters (initializing or re-initializing)
+# TODO: 
 ve.model.configure <- function(modelPath=NULL, Param_ls=getSetup()) {
 
   if ( missing(modelPath) || ! is.character(modelPath) ) {
@@ -243,9 +244,9 @@ ve.model.configure <- function(modelPath=NULL, Param_ls=getSetup()) {
   self$modelPath <- modelPath;
 
   # Load any configuration available in modelPath (on top of ve.runtime base configuration)
-  modelParam_ls <- visioneval::loadConfiguration(ParamDir=modelPath,override=Param_ls)
-  self$RunParam_ls <- modelParam_ls # Note that this is the original one from the file
-  if ( "Model" %in% modelParam_ls ) {
+  self$loadedParam_ls <- visioneval::loadConfiguration(ParamDir=modelPath)
+  modelParam_ls <- visioneval::mergeParameters(Param_ls,self$loadedParam_ls) # override runtime parameters
+  if ( "Model" %in%  ) {
     self$modelName <- modelParam_ls$Model
   } else {
     self$modelName <- basename(modelPath) # may be overridden in run parameters
@@ -549,7 +550,7 @@ ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchive
       file.copy( copy.from, newModelPath, recursive=TRUE )
     } else {
       copy.to <- file.path(copy.to,d)
-      if ( ! dir.exists(copy.to) ) dir.create(copy.to)
+      if ( ! dir.exists(copy.to) ) dir.create(copy.to,recursive=TRUE)
       file.copy( copy.from, copy.to ) # non-recursive in stages
     }
   }
@@ -612,19 +613,28 @@ ve.model.dir <- function(
   }
 
   if ( missing(shorten) || shorten ) shorten <- self$modelPath
-  if ( is.null(stage) ) stage<-names(self$modelStages)
+  if ( is.null(stage) ) {
+    stages <- self$modelStages
+  } else {
+    stages <- self$modelStates[stage] # list of named stages
+  }
+  if ( length(stages)==0 ) {
+    writeLog(paste("Invalid stages selected for $dir:",stage,collapse=","),Level="warn")
+    inputs <- results <- outputs <- FALSE
+  }
 
-  if ( inputs ) {
-    inputPath <- file.path(self$setting("InputPath",shorten=FALSE),self$setting("InputDir"))
-    for ( stage in self$modelStages ) {
-      inputPath <- c(inputPath,
-        file.path(
-          self$setting("InputPath",stage=stage,shorten=FALSE),
-          self$setting("InputDir",stage=stage)
-        )
+  inputPath <- character(0)
+  for ( stg in stages ) {
+    # Stage input paths may all be the same at the model level, or individual, or both
+    inputPath <- c(inputPath,
+      file.path(
+        self$setting("InputPath",stage=stg$Name,shorten=FALSE),
+        self$setting("InputDir",stage=stg$Name)
       )
-    }
-    inputPath <- unique(inputPath)
+    )
+  }
+  inputPath <- unique(inputPath) # use this to avoid copying it with root files
+  if ( inputs ) {
     inputFiles <- dir(normalizePath(inputPath),full.names=TRUE)
     if ( all.files ) {
       inputFiles <- inputFiles[ ! dir.exists(inputFiles) ] # keep only the files, not subdirectories
@@ -646,6 +656,8 @@ ve.model.dir <- function(
 
   # Do the outputs before the results (makes it easier to handle
   #  results in root)
+  # TODO: verify where the "outputs" are. OutputDir needs to be relative to ModelDir/ResultsDir...
+  # "OutputDir" is used in VEModel$extract and VEModel$query...
   if ( outputs ) {
     outputPath <- file.path( baseResults,self$setting("OutputDir") )
     outputFiles <- dir(normalizePath(outputPath),full.names=TRUE,recursive=all.files)
@@ -655,10 +667,8 @@ ve.model.dir <- function(
   } else outputFiles <- character(0)
 
   # Find RunPath for each stage
-  stagePaths <- character(0)
-  for ( stage in self$modelStages ) {
-    stagePaths <- c( stagePaths, self$setting("RunPath",stage=stage,shorten=FALSE) )
-  }
+  stagePaths <- sapply(stages,function(s) s$RunPath)
+  stagePaths <- stagePaths[ !is.na(stagePaths) ]
 
   # Find archiveDirs (and if asked for, archiveFiles)
   archiveNamePattern <- paste0("^",self$setting("ArchiveResultsName"),"_")
@@ -676,12 +686,9 @@ ve.model.dir <- function(
     # Handle the old-style case where ResultsDir==modelPath
     # ResultsDir is already normalized
     # We're only going to look for known result types ("artifacts")
-    ResultsDir <- baseResults
-
-    resultPath <- unique( normalizePath(c(ResultsDir,stagePaths)) )
-    mstates <- dir(resultPath,pattern="^ModelState(_[[:digit:]]{4}-.*)*\\.Rda$",full.names=TRUE)
-    dstores <- dir(resultPath,pattern="^Datastore(_[[:digit:]]{4}-.*)*$",full.names=TRUE)
-    logs    <- dir(resultPath,pattern="Log(_[[:digit:]]{4}-.*)+\\.txt",full.names=TRUE)
+    mstates <- dir(stagePaths,pattern="^ModelState(_[[:digit:]]{4}-.*)*\\.Rda$",full.names=TRUE)
+    dstores <- dir(stagePaths,pattern="^Datastore(_[[:digit:]]{4}-.*)*$",full.names=TRUE)
+    logs    <- dir(stagePaths,pattern="Log(_[[:digit:]]{4}-.*)+\\.txt",full.names=TRUE)
     resultFiles <- c(mstates,dstores,logs)
   } else resultFiles <- character(0)
 
@@ -691,13 +698,15 @@ ve.model.dir <- function(
     if ( ResultsInRoot ) {
       rootFiles <- setdiff(rootFiles,resultFiles) # Drop Log and ModelState
     }
+    stageDirs <- file.path(rootPath,sapply(stages,function(s) s$Dir))
+    rootFiles <- setdiff(rootFiles, inputPath)    # need to specify "inputs=TRUE" to get inputPaths...
     rootFiles <- setdiff(rootFiles, baseResults)  # If we want those, they'll arrive via resultFiles
-    rootFiles <- setdiff(rootFiles, stagePaths)   # Leave out Stage result sub-directories
+    rootFiles <- setdiff(rootFiles, stageDirs)    # Leave out Stage result sub-directories
     rootFiles <- setdiff(rootFiles, archiveDirs)
 
     if ( all.files ) {
       paramPaths <- self$setting("ParamPath",shorten=FALSE)
-      for ( st in names(self$modelStages) ) paramPaths <- c(paramPaths,self$setting("ParamPath",stage=st,shorten=FALSE))
+      for ( st in stages ) paramPaths <- c(paramPaths,self$setting("ParamPath",stage=st$Name,shorten=FALSE))
       paramPaths <- unique(paramPaths)
       rootFiles <- c( rootFiles, dir(paramPaths,full.names=TRUE) )
     }
@@ -899,7 +908,8 @@ ve.stage.init <- function(stageParam_ls=list(),modelParam_ls=list()) {
     }
     if ( is.character(self$Config) && file.exists(self$Config) ) {
       writeLog(paste("Loading Config:",self$Config),Level="info")
-      self$RunParam_ls <- visioneval::loadConfiguration(ParamPath=self$Config,override=modelParam_ls)
+      self$loadedParam_ls <- visioneval::loadConfiguration(ParamPath=self$Config)
+      self$RunParam_ls <- visioneval::mergeParameters(modelParam_ls,self$loadedParam_ls)
       writeLog(paste("self$RunParam_ls contains:",paste(names(self$RunParam_ls),collapse=", ")),Level="info")
     } else {
       writeLog(paste("Warning: No Config for",self$Name),Level="info")
@@ -909,7 +919,8 @@ ve.stage.init <- function(stageParam_ls=list(),modelParam_ls=list()) {
   }
   if ( length(self$RunParam_ls) == 0 && ! is.null(self$Path) ) {
     # if no explicit Config, and the Stage directory exists, load "visioneval.cnf" from stage directory
-    self$RunParam_ls <- visioneval::loadConfiguration(ParamDir=self$Path,override=modelParam_ls)
+    self$loadedParam_ls <- visioneval::loadConfiguration(ParamDir=self$Path)
+    self$RunParam_ls <- visioneval::mergeParameters(modelParam_ls,self$loadedParam_ls)
   }
   if (length(self$RunParam_ls) == 0 ) { # Still no stage parameters 
     writeLog("Stage has no explicit configuration.",Level="info")
@@ -1220,6 +1231,7 @@ VEModelStage <- R6::R6Class(
     Config = NULL,               # File relative to ModelDir (optional); 
     StartFrom = "",              # Name of another model stage to extend
     RunParam_ls = list(),        # RunParameters to initialize the stage
+    loadedParam_ls = NULL,       # Loaded parameters (if any) present in stage configuration file
     ModelState_ls = NULL,        # ModelState constructed from RunParam_ls
     Reportable = NULL,           # If TRUE, include in default result set for extract and queries
     RunPath = NULL,              # Typically ModelDir/ResultsDir/StageDir
@@ -1649,11 +1661,15 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
 #                              Model Configuration                             #
 ################################################################################
 
-# Make TRANSIENT changes to settings in a model or stage's RunParam_ls (and optionally the stage's
-# ModelState_ls). This is a convenience for cloning models and results (see test_query() in
-# VEModel/tests/test.r). There is currently no way to save the changes - the model configuration
-# files should get updated, and the model should be re-run to make the changes "real".
-ve.model.set <- function(stage=NULL,modelState=FALSE,Source="Interactive",Param_ls=list(),...) {
+# Manipulate parameter file (runtime, model, stage)
+#    getSetup()
+#    self$e
+# Build around an inner helper function that is not attached to a model
+
+# List locally defined parameters, list a specific file, list "cascaded" parameters
+# Display list, display name + values, display source, generate a .csv with name/value/source
+# Rewrite a configuration file with the requested set of parameters
+ve.model.params <- function(stage=NULL,modelState=FALSE,Source="Interactive",Param_ls=list(),...) {
   # Update the RunParam_ls for the model or its stage(s)
   Param_ls <- c(Param_ls,list(...))
   if ( length(Param_ls)>0 ) {
@@ -1761,7 +1777,7 @@ ve.model.findstages <- function(stage=character(0),Reportable=TRUE) {
 # Reportable stages. Provide a vector of stage names or indices to filter the list.
 ve.model.results <- function(stage=character(0)) {
   if ( ! private$p.valid ) {
-    writeLog(paste0("Invalid model: ",self$status),Level="error")
+    writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
     return( NULL )
   }
   stages <- self$findstages(stage)
@@ -1803,7 +1819,7 @@ print.VEResultsList <- function(results,...) {
 #  of available queries if no QueryName is provided).
 ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
   if ( ! private$p.valid ) {
-    writeLog(paste0("Invalid model: ",self$status),Level="error")
+    writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
     return( NULL )
   }
   # Get the Query directory for the model
@@ -1846,7 +1862,8 @@ VEModel <- R6::R6Class(
     modelPath=NULL,                         # Also as RunParam_ls$ModelDir
     modelStages=NULL,                       # list of VEModelStage objects
     modelResults=NULL,                      # Absolute path == modelPath/ResultsDir
-    RunParam_ls=NULL,                       # Run parameters from the model root
+    RunParam_ls=NULL,                       # Run parameters for the model (some constructed by $configure)
+    loadedParam_ls=NULL,                    # Loaded parameters (if any) present in model configuration file
     specSummary=NULL,                       # List of inputs, gets and sets from master module spec list  
     status=codeStatus("Uninitialized"),     # Where are we in opening or running the model?
 
@@ -1864,7 +1881,7 @@ VEModel <- R6::R6Class(
     clear=ve.model.clear,                   # delete results or outputs (current or past)
     log=ve.model.log,                       # report the log file path (use e.g. file.show to display it)
     setting=ve.model.setting,               # report the values of parameter settings (for environment, model or stage)
-    set=ve.model.set,                       # change the value of a parameter in a model or stage
+    params=ve.model.params,                 # manipulate model configuration files
     copy=ve.model.copy,                     # copy a self$modelPath to another path (ignore results/outputs)
     archive=ve.model.archive,               # apply framework archive function if results exist
     results=ve.model.results,               # Create a VEResults object (if model is run); option to open a past result

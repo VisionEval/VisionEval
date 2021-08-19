@@ -364,10 +364,7 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   #   if the file does not exist on the model's InputPath (which is the case
   #   for the bare model).
 
-  base.inputs <- file.path(
-    jr$setting("InputPath",shorten=FALSE),
-    jr$setting("InputDir")
-  )
+  base.inputs <- unique(jr$dir(inputs=TRUE)) # List short names of input paths for each stage
   cat("Base Inputs",base.inputs,"\n")
   inputs <- bare$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
   cat("Input Directories (should be NA - files don't exist yet):\n")
@@ -635,7 +632,6 @@ test_results <- function (log="info") {
   cat("Directory after clearing...\n")
   print(cp$dir())
   cat("Results after clearing... (Generates error)\n")
-  debug(cp$results)
   rs <- cp$results()
   print(rs)
   cat("Selection after clearing...\n")
@@ -987,7 +983,6 @@ test_query <- function(log="info",multiple=FALSE) {
     testStep("Query multiple scenarios...")
     # Generate several copies of jr
     testStep("Making model copies")
-    debug(jr$dir)
     cp.1 <- jr$copy("Multi-Results") # Copy results
     cp.1$set(
       stage=cp.1$modelStages[[1]]$Name,

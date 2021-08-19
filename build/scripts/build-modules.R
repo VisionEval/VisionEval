@@ -141,6 +141,8 @@ if ( debug>1 ) {
 }
 
 # Copy test elements from components, if requested
+# This information is "global" to all modules (e.g. standard model outputs for comparison)
+# The current directory is not maintained and currently unused (2021-08)
 if (ve.test.run) {
   # Copy any additional test folders to ve.src
   # Mostly for "Test_Data", but any set of stuff needed for all tests
@@ -328,6 +330,13 @@ for ( module in seq_along(package.names) ) {
     dot.files <- dir(package.paths[module],pattern="^\\.Rbuildignore$",all.files=TRUE)
     if ( length(dot.files)>0 ) {
       pkg.files <- c(pkg.files,dot.files)
+      # TODO: read .Rbuildignore and remove each of the patterns in it from pkg.files
+      # Otherwise test artifacts created in the source tree (e.g. in visioneval or VEModel)
+      #  will get copied into the "src" tree and packaged for distribution.
+      read.dot.files <- file.path(package.paths[module],dot.files[1])
+      ignore.patterns <- readLines(read.dot.files)
+      message("Ignoring .Rbuildignore patterns:")
+      print(ignore.patterns)
     } else {
       message("No .Rbuildignore found in ",package.paths[module])
       print(dir(package.paths[module],recursive=TRUE,all.files=FALSE))
@@ -335,10 +344,18 @@ for ( module in seq_along(package.names) ) {
       print(dot.files)
       message("pkg.files")
       print(pkg.files)
+      ignore.patterns <- character(0)
     }
-    pkg.dirs <- c(dirname(pkg.files),"data")
+    pkg.dirs <- c(dirname(pkg.files),"data") # recreate a data directory with nothing in it
     lapply( grep("^\\.$",invert=TRUE,value=TRUE,unique(file.path(build.dir,pkg.dirs))),
       FUN=function(x) { dir.create(x, showWarnings=FALSE, recursive=TRUE ) } )
+    for ( pattern in ignore.patterns ) {
+      pkg.files <- grep(pattern=pattern,pkg.files,invert=TRUE,value=TRUE)
+    }
+    if ( debug ) {
+      message("Copying package files:")
+      print(pkg.files)
+    }
     invisible(
       file.copy(
         from=file.path(package.paths[module],pkg.files),

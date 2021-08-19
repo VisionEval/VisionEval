@@ -251,6 +251,8 @@ defaultVERunParameters <- function(Param_ls=list()) {
 #' @param ParamDir (optional) directory in which to seek a configuration file
 #' @param ParamFile (optional) is the name of a file to seek. If it is not found, throw
 #' an error.
+#' @param ParamPath The path of the file to open. If provided, then ParamDir/ParamFile are ignored
+#'   and this path is opened directly.
 #' @param mustWork (default FALSE) if TRUE, and ParamFile is provided, throw an error
 #'   if ParamDir/ParamFile does not exist. Otherwise, return an empty list if no file is found.
 #' @return A list of Run Parameters. If ParamFile is supplied and it does not exist in
@@ -258,13 +260,19 @@ defaultVERunParameters <- function(Param_ls=list()) {
 #' found, return an empty list. Otherwise return the list of parameters found in the file.
 #' A 'source' attribute is also constructed if the list is not empty (see Details).
 #' @export
-readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
+readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mustWork=FALSE) {
 
   # Initialize the parameter list
   ParamFile_ls <- list()
 
-  # ParamFile is ignored if ParamDir is not provided
-  if ( is.null(ParamDir) && !is.null(ParamFile) ) ParamFile <- NULL
+  if ( !is.null(ParamPath) ) {
+    # ParamDir and ParamFile are ignored if ParamPath is provided
+    ParamFile <- basename(ParamPath)
+    ParamDir <- dirname(ParamPath)
+  } else {
+    # ParamFile is ignored if ParamDir is not provided
+    if ( is.null(ParamDir) && !is.null(ParamFile) ) ParamFile <- NULL
+  }
   
   # Otherwise, check for candidate files and return an empty list if none found in ParamDir
   if ( is.null(ParamFile) ) {
@@ -289,26 +297,24 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
       stop(
         writeLog(
           c(
-            "Error: ParamDir has multiple components in readConfigurationFile:\n",
-            paste(ParamDir,"\n")
+            "Error: ParamDir is a vector in readConfigurationFile:\n",
+            paste(ParamDir,collapse="\n")
           ),
           Level="error"
         )
       )
     }
     ParamFileExists <- FALSE
-    if ( ! is.null(ParamFile) ) {
-      ParamFilePath <- unique(file.path(ParamDir,ParamFile))
-      ParamFileExists <- file.exists(ParamFilePath)
-    } else {
-      ParamFilePath <- ParamDir
+    if ( is.null(ParamPath) && ! is.null(ParamFile) ) {
+      ParamPath <- unique(file.path(ParamDir,ParamFile))
+      ParamFileExists <- file.exists(ParamPath)
     }
 
     if ( ! ParamFileExists ) {
       if ( mustWork ) {
         stop(
           writeLog(
-            paste("Could not locate Parameter File:",ParamFilePath),
+            paste("Could not locate Parameter File:",ParamPath),
             Level="error"
           )
         )
@@ -334,13 +340,13 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
         },
         tryCatch(
           {
-            writeLog(c("Trying YAML parameters from",ParamFilePath),Level="info")
-            yaml::yaml.load_file(ParamFilePath)
+            writeLog(c("Trying YAML parameters from",ParamPath),Level="info")
+            yaml::yaml.load_file(ParamPath)
           },
           error = function(e) {
             writeLog("Failed to read YAML file; retrying as JSON...",Level="info")
             writeLog(paste("YAML:",conditionMessage(e)),Level="info")
-            invokeRestart("json",ParamFilePath)
+            invokeRestart("json",ParamPath)
           },
           warning = function(w) {
             formatWarnings <- writeLog(c("Warning reading YAML:",conditionMessage(w)),Level="info")
@@ -348,7 +354,7 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
         )
       )
       if ( length(ParamFile_ls)==0 ) {
-        writeLog(c("No parameters in loaded file:",ParamFilePath),Level="warn")
+        writeLog(c("No parameters in loaded file:",ParamPath),Level="warn")
         writeLog("Make another attempt with log Level='info' for details",Level="warn")
       }
     }
@@ -357,17 +363,17 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,mustWork=FALSE) {
         collapse="\n",
         writeLog( c(
           paste("Parsing run parameters did not yield a named R list ( class",class(ParamFile_ls),")"),
-          paste("Parameter file:",ParamFilePath),
+          paste("Parameter file:",ParamPath),
           Level="error"
         ) )
       ) )
     } else {
-      writeLog(paste("Successfully read parameters from", ParamFilePath),Level="debug")
+      writeLog(paste("Successfully read parameters from", ParamPath),Level="debug")
     }
   } else writeLog(paste("No parameter file found in",ParamDir),Level="debug") # Just return an empty list
 
   # The following works fine if ParamFile_ls is an empty list (it gets an empty "source" attribute)
-  ParamFile_ls <- addParameterSource(ParamFile_ls,paste("File:",ParamFilePath))
+  ParamFile_ls <- addParameterSource(ParamFile_ls,paste("File:",ParamPath))
   return(ParamFile_ls)
 }
 
@@ -474,7 +480,7 @@ extractParameters <- function(ParamNames=NULL,Param_ls=list()) {
   if ( ! is.character(ParamNames) || length(ParamNames)==0 ) return(Param_ls)
   newSources <- attr(Param_ls,"source")[ParamNames,]
   newParam_ls <- Param_ls[ ParamNames ]
-  attr(newSources,"source") <- newSources
+  attr(newParam_ls,"source") <- newSources
   return(newParam_ls)
 }  
 
@@ -659,21 +665,20 @@ loadConfiguration <- function( # if all arguments are defaulted, return an empty
     override <- addParameterSource(override,override.origin)
   }
 
-  if ( !is.null(ParamPath) ) {
-    ParamFile <- basename(ParamPath)
-    ParamDir <- dirname(ParamPath)
-  }
-
   # if providing a ParamFile name, default to error if the file does not exist
   if ( missing(mustWork) && !is.null(ParamFile) && !is.null(ParamDir) ) mustWork <- TRUE
 
   # load the configuration file (empty list returned if mustWork==FALSE and no file found)
-  Param_ls <- readConfigurationFile(ParamDir,ParamFile,mustWork) # might be an empty list
+  Param_ls <- readConfigurationFile(ParamDir,ParamFile,ParamPath,mustWork) # might be an empty list
   Param_ls <- mergeParameters(Param_ls,keep) # items in keep replace Param_ls
   Param_ls <- mergeParameters(override,Param_ls) # items in Param_ls replace items in override
 
   return(Param_ls)
 }
+
+# SAVE PARAMETER CONFIGURATION
+#=============================
+#' Save a Param_ls structure to a file
 
 # FIND FILE ON PATH
 #==================

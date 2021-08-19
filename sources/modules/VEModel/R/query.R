@@ -590,7 +590,7 @@ ve.query.run <- function(
           return(results)
         }
       )
-      invalid <- sapply(Results,is.na)
+      invalid <- is.na(Results)
       Results <- Results[ ! invalid ]
       if ( length(Results)==0 ) {
         Results <- NULL
