@@ -6,7 +6,7 @@ Date: 2020-08-14
 Author: Ben Stabler <ben.stabler@rsginc.com>, Peter Andrews <peter.andrews@rsginc.com>, Brian Gregor <gregor@or-analytics.com>
 Maintainer: Ben Stabler <ben.stabler@rsginc.com>
 Copyright: AASHTO
-Description: VisionEval Synthetic Firms module
+Description: VisionEval Synthetic Firms module.
 License: file LICENSE
 LazyData: TRUE
 Depends: R (>= 3.6.0)

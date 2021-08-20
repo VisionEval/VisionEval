@@ -133,7 +133,9 @@ configure-clean build-clean: build-reset # Resets the built status of all the ta
 modules-clean: $(VE_MAKEVARS) modules-reset # Reset all VE modules for complete rebuild
 	[[ -n "$(VE_REPOS)" ]] && rm -rf "$(VE_REPOS)"/*
 	[[ -n "$(VE_SRC)" ]] && rm -rf "$(VE_SRC)"/VE*
+	[[ -n "$(VE_SRC)" ]] && rm -rf "$(VE_SRC)"/visioneval
 	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/VE*
+	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/visioneval
 
 lib-clean: $(VE_MAKEVARS) lib-reset # Reset installed package library for complete rebuild
 	[[ -n "$(VE_LIB)" ]] && rm -rf "$(VE_LIB)"/*
