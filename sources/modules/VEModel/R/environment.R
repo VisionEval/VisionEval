@@ -206,7 +206,7 @@ getSetup <- function(paramNames=NULL,source=NULL,fromFile=FALSE) {
 writeSetup <- function(source=NULL,filename=NULL,overwrite=FALSE) {
   if ( is.null(source) ) {
     Param_ls <- ve.env$loadedParam_ls
-    ParamDir <- ve.runtime
+    ParamDir <- ve.env$ve.runtime
   } else {
     Param_ls <- source$loadedParam_ls
     # TODO: determine default configuration directory for the parameter
@@ -214,7 +214,6 @@ writeSetup <- function(source=NULL,filename=NULL,overwrite=FALSE) {
 
   if ( is.null(filename) ) {
     # TODO: get the filename from the Param_ls source attribute
-    ...
   }
 
   ParamPath <- file.path(ParamDir,filename)

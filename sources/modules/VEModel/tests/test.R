@@ -733,7 +733,7 @@ test_results <- function (log="info") {
   jr$dir()
 }
 
-test_query <- function(log="info",multiple=FALSE) {
+test_query <- function(log="info",reset=FALSE) {
   # Process the standard query list for the test model
   # If multiple==TRUE, copy the test model and its results a few times, then submit the
   # list of all the copies to VEQuery. Each column of results will be the same (see
@@ -741,7 +741,7 @@ test_query <- function(log="info",multiple=FALSE) {
 
   testStep("Set up Queries and Run on Model Results")
   testStep("Opening test model and caching its results...")
-  jr <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log)
+  jr <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=reset)
   rs <- jr$results()
 
   testStep("Show query directory (may be empty)...")
@@ -977,65 +977,95 @@ test_query <- function(log="info",multiple=FALSE) {
   testStep("Run the query on the results...")
   qry$run(rs,OutputRoot=jr$modelResults)
 
-  # TODO: ensure that the query outputs are disambiguated and remain available
-    
-  if ( multiple) {
-    testStep("Query multiple scenarios...")
-    # Generate several copies of jr
-    testStep("Making model copies")
-    cp.1 <- jr$copy("Multi-Results") # Copy results
-    cp.1$set(
-      stage=cp.1$modelStages[[1]]$Name,
-      modelState=TRUE,
-      Source="test.R/test_query()",
-      Scenario="Scenario 1",
-      Description="Same as original..."
-    )
-    cp.2 <- jr$copy("Scenario2") # Copy results
-    cp.2$set(
-      stage=cp.1$modelStages[[1]]$Name,
-      modelState=TRUE,
-      Source="test.R/test_query()",
-      Scenario="Scenario 1",
-      Description="Same as original..."
-    )
-    testStep("Running additional scenarios")
-    cp.1$run()
-    cp.2$run()
-
-    testStep("Multiple query by model name")
-    # Query the vector of model names (character vector says "model names" to VEQuery)
-    nameList <- c(jr$modelName,cp.1$modelName,cp.2$modelName)
-    names(nameList) <- nameList
-    qry$run(nameList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByModelName_%timestamp%")
-    
-    testStep("Multiple query as a list of opened VEModel objects")
-    # Make a list of VEModel objects from the names and query that
-    modelList <- lapply(nameList,openModel)
-    names(modelList) <- nameList
-    qry$run(modelList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByModelObject_%timestamp%")
-
-    testStep("Multiple query as a list of VEResult objects")
-    # Make a list of VEResults objects from the VEModel list and query that
-    resultList <- lapply(modelList,function(m) m$results())
-    names(resultList) <- nameList
-    qry$run(resultList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByResultObject_%timestamp%")
-
-    testStep("Multiple query as a list of ResultsDir path names")
-    # Make a list of ResultsDir path names (i.e. list of character strings) from the
-    # VEResults and query that (Note difference between a character vector - list of
-    # model names and a list of character strings, which are the result paths).
-    pathList <- lapply(resultList,function(r) r$resultsPath)
-    names(pathList) <- nameList
-    qry$run(pathList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByResultPath%timestamp%")
-
-    testStep("Cleaning up model copies")
-    unlink("models/MultiResults",recursive=TRUE)
-    unlink("models/Scenario2",recursive=TRUE)
-    rm( cp.1, cp.2)
-  }
   testStep("Returning test model")
   return(jr)
+}
+
+test_mult <- function(reset=FALSE,log="info") {
+  # TODO: ensure that the query outputs are disambiguated and remain
+  # available
+
+  testStep("Acquiring test model")
+  jr <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=reset)
+  qry <- jr$query("Test-Query")
+  print(qry)
+
+  testStep("Query multiple scenarios...")
+  # Generate several copies of jr future year
+  # Inputs will be sought up the "StartFrom" tree.
+  # To customize inputs for Scenario-1 (as an actual scenario),
+  #   create InputDir ("inputs") inside stagePath.1 and put in
+  #   just the files you want to change. Without such an input,
+  #   it just uses the inputs found in earlier stages. For the
+  #   purposes of testing the query functionality, it suffices here
+  #   to have all the scenarios be the same.
+  stagePath.1 <- file.path(jr$modelPath,"Scenario-1")
+  if ( ! dir.exists( stagePath.1 ) ) dir.create(stagePath.1)
+  jr$addstage(
+    list(
+      Name="Scenario-1",
+      Dir="Scenario-1",
+      ModelDir=jr$modelPath
+    ),
+    Scenario="Scenario 1",
+    Description="Same as original...",
+    StartFrom="stage-pop-future",
+    BaseYear=jr$setting("BaseYear",stage="stage-pop-future"),
+    Years=jr$setting("Years",stage="stage-pop-future"),
+    ModelScript=jr$setting("ModelScript",stage="stage-pop-future")
+  )
+  stagePath.2 <- file.path(jr$modelPath,"Scenario-2")
+  if ( ! dir.exists( stagePath.2 ) ) dir.create(stagePath.2)
+  jr$addstage(
+    list(
+      Name="Scenario-2",
+      Dir="Scenario-2",
+      ModelDir=jr$modelPath
+    ),
+    Scenario="Scenario 2",
+    Description="Same as original...",
+    StartFrom="stage-pop-future",
+    BaseYear=jr$setting("BaseYear",stage="stage-pop-future"),
+    Years=jr$setting("Years",stage="stage-pop-future"),
+    ModelScript=jr$setting("ModelScript",stage="stage-pop-future")
+  )
+  # Force Reportable on stage-pop-future (auto-detect says no since
+  # the other scenarios start from it.
+  jr$modelStages[["stage-pop-future"]]$Reportable=TRUE
+
+  # NOTE: without an InputDir or a different script, this will just
+  # re-run the model using all the inputs from stage-pop-future and
+  # put the results in this stage's output directory.
+
+  testStep("Running two additional scenarios")
+  jr$run() # runs with "continue" - will just do the newly added stages
+
+  testStep("Multiple query as a list of VEResult objects")
+  # Make a list of VEResults objects from the VEModel list and run query on it
+  resultList <- jr$results() # JR now has multiple reportable results
+  qry$run(resultList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByResultObject_%timestamp%")
+
+  testStep("Base/Future query on original model by model name")
+  # Query the vector of model names (character vector says "model names" to VEQuery)
+  nameList <- c(jr$modelName,jr$modelName) # do the same model twice
+  names(nameList) <- nameList
+  qry$run(nameList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByModelName_%timestamp%.csv")
+
+  testStep("Base/Future query as a list of opened VEModel objects")
+  # Make a list of VEModel objects from the names and query that
+  modelList <- lapply(nameList,openModel)
+  names(modelList) <- nameList
+  qry$run(modelList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByModelObject_%timestamp%.csv")
+
+  testStep("Multiple query as a list of ResultsDir path names")
+  # Make a list of ResultsDir path names (i.e. list of character strings) from the
+  # VEResults and query that (Note difference between a character vector - list of
+  # model names and a list of character strings, which are the result paths).
+  pathList <- lapply(resultList,function(r) r$resultsPath)
+  names(pathList) <- nameList
+  qry$run(pathList,OutputRoot=jr$modelResults,OutputFile="%queryname%_ByResultPath%timestamp%.csv")
+
+  testStep("Done with multiple queries")
 }
 
 test_rpat <- function(run=TRUE) {

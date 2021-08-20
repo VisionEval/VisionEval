@@ -2,10 +2,6 @@ The path to completion:
 
 VEModel workflow:
 
-On startup:
-  Create ve.env$loadedParams_ls and ve.env$RunParam_ls
-
-
 Need to be able to read/write/re-write configuration files. So perhaps an S3 class created
 within the visioneval framework (to go with addParameters, etc).
 

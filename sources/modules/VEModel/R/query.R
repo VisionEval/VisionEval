@@ -165,7 +165,7 @@ ve.query.save <- function(saveTo=TRUE,overwrite=TRUE) {
     saveTo <- actualFile
   }
   QuerySpec <- lapply(private$QuerySpec,function(spec) spec$QuerySpec)
-  dump("QuerySpec",file=saveTo,control=NULL) # dump the QuerySpec list as R code
+  dump("QuerySpec",file=saveTo,control="niceNames") # dump the QuerySpec list as R code
   return(invisible(saveTo))
 }
 
@@ -579,7 +579,7 @@ ve.query.run <- function(
     if ( is.null(OutputRoot) ) OutputRoot <- Results$resultsPath
     Results <- list(Results)
   } else if ( is.character(Results) ) {
-    # Assume it's a list of models, which must exist
+    # Assume it's a vector of model names, which must exist
     ExistingResults <- Results[Results %in% openModel()]
     if ( length(ExistingResults)>0 ) {
       Results <- lapply(ExistingResults,
@@ -590,6 +590,7 @@ ve.query.run <- function(
           return(results)
         }
       )
+      Results <- unlist(Results, recursive=FALSE) # Remove one layer of list
       invalid <- is.na(Results)
       Results <- Results[ ! invalid ]
       if ( length(Results)==0 ) {
@@ -609,6 +610,9 @@ ve.query.run <- function(
     }
     Results <- modelResults
     if ( is.null(OutputRoot) ) OutputRoot <- dirname(Results[[1]]$resultsPath)
+  } else if ( is.list(Results) && is.character(Results[[1]]) ) {
+    # convert list of paths to VEResults objects
+    Results <- lapply(Results,function(resultpath) VEResults$new(resultpath))
   }
   if ( is.null(Results) ) { # May have been nullified...
     stop( writeLog("Cannot interpret results provided to query",Level="error") )
@@ -669,6 +673,7 @@ ve.query.run <- function(
   # Default QueryOutputTemplate = "%queryname%_Results_%timestamp%.csv"
   if (save) {
     OutputFileToWrite <- stringr::str_replace(OutputFile,"%queryname%",self$QueryName)
+    if ( ! grepl("\\.csv$",OutputFileToWrite) ) OutputFileToWrite <- paste0(OutputFileToWrite,".csv")
     TimeStamp <- visioneval::fileTimeStamp(Sys.time())
     OutputFileToWrite <- stringr::str_replace(OutputFileToWrite,"%timestamp%",TimeStamp)
     OutputFileToWrite <- normalizePath(file.path(OutputRoot,OutputFileToWrite),mustWork=FALSE)
@@ -1308,14 +1313,14 @@ doQuery <- function (
     # Scenario is a VEResults object (with ModelState, etc all available)
 
     # Move to results directory
-    browser(expr=(!is.character(results$resultsPath)))
+    browser(expr=(!is.environment(results) || !is.character(results$resultsPath)))
     setwd(results$resultsPath)
 
     # Scenario Name for reporting / OutputFile
     # TODO: If Results is a named list, use the name from the list
     #       Then do the $ModelState$Scenario as a fallback
     ScenarioName <- results$ModelState()$Scenario;
-    writeLog(paste("Building measures for Scenario",ScenarioName,"\n"),Level="warn")
+    writeLog(paste("Building measures for Scenario",ScenarioName),Level="warn")
 
     # Gather years from the results
     Years <- results$ModelState()$Years
@@ -1323,10 +1328,10 @@ doQuery <- function (
     # Set up model state and datastore for query processing
     QPrep_ls <- results$queryprep()
 
-    # Iterate across the Years in the scenario
+    # Iterate across the Years in the scenariotra
     for ( thisYear in Years ) {
 
-      writeLog(paste("Working on Year",thisYear,"\n"),Level="warn")
+      writeLog(paste("Working on Year",thisYear),Level="warn")
       result.env <- new.env()
 
       # Iterate over the measures, computing each one
@@ -1347,6 +1352,7 @@ doQuery <- function (
       computed <- makeMeasureDataFrame(result.env)
       if ( is.null(Measures_df) ) {
         # Uninitialized Measures_df - initialize from metadata columns
+        print(names(computed))
         Measures_df<-computed[,c("Measure","Units","Description")]
       }
       # Then add the measure results for thisYear
