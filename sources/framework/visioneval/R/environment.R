@@ -374,6 +374,7 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mu
 
   # The following works fine if ParamFile_ls is an empty list (it gets an empty "source" attribute)
   ParamFile_ls <- addParameterSource(ParamFile_ls,paste("File:",ParamPath))
+  attr(ParamFile_ls,"FILE") <- ParamPath # convenience for keeping track of what was loaded
   return(ParamFile_ls)
 }
 
@@ -571,6 +572,8 @@ mergeParameters <- function(Param_ls,Keep_ls) {
     }
     row.names(param.source) <- param.source$Name
     attr(Param_ls,"source") <- param.source
+    # propagate any file attribute
+    if ( ! is.null( keepFile <- attr(Keep_ls,"FILE") ) ) attr(Param_ls,"FILE") <- keepFile
   }
  return(Param_ls)
 }
@@ -670,8 +673,10 @@ loadConfiguration <- function( # if all arguments are defaulted, return an empty
 
   # load the configuration file (empty list returned if mustWork==FALSE and no file found)
   Param_ls <- readConfigurationFile(ParamDir,ParamFile,ParamPath,mustWork) # might be an empty list
+  ParamPath <- attr(Param_ls,"FILE") # absolute path of file that was actually read
   Param_ls <- mergeParameters(Param_ls,keep) # items in keep replace Param_ls
   Param_ls <- mergeParameters(override,Param_ls) # items in Param_ls replace items in override
+  if ( is.null(attr(Param_ls,"FILE")) ) attr(Param_ls,"FILE") <- ParamPath # Maintain FILE attribute after merging
 
   return(Param_ls)
 }
