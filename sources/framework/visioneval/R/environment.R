@@ -184,7 +184,7 @@ default.parameters.table = list(
 #' To get a list of all the defaults (by package - see the Param_ls attribute "Source" - call
 #' this function with an empty list or with no parameter at all. To pick out a default value,
 #' you can index the resulting list after it is returned,
-#' e.g. \code{defaultVERunParamters()[["ResultsDir"]]}
+#' e.g. \code{defaultVERunParameters()[["ResultsDir"]]}
 #'
 #' @param Param_ls a list (possibly empty) of already-defined parameters
 #' @return a named list for parameters not present in Param_ls containing default values for those
@@ -680,10 +680,6 @@ loadConfiguration <- function( # if all arguments are defaulted, return an empty
 
   return(Param_ls)
 }
-
-# SAVE PARAMETER CONFIGURATION
-#=============================
-#' Save a Param_ls structure to a file
 
 # FIND FILE ON PATH
 #==================

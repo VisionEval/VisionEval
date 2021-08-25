@@ -168,24 +168,82 @@ loadRuntimeConfig <- function() {
 #'   Otherwise source should be a VEModel object or a VEModelStage object.
 #' @param fromFile a logical value; if TRUE, return configuration from file, otherwise parameters as
 #'   modified at runtime
+#' @param reload a logical; if TRUE and retrieving ve.runtime configuration, re-read configuration
+#'   file
 #' @return A list of defined run parameters (possibly empty, if no parameters are defined)
 #' @export
-getSetup <- function(paramNames=NULL,source=NULL,fromFile=FALSE) {
-  if ( is.null(source) ) {
-    if ( is.null(ve.env$RunParam_ls) ) {
-      ve.env$RunParam_ls <- ve.env$loadedParam_ls <- loadRuntimeConfig()
-    }
-    RunParam_ls <- if ( ! fromFile ) ve.env$RunParam_ls else ve.env$loadedParam_ls
-  } else if ( any( c("VEModel","VEModelStage") %in% class(source) ) ) {
-    RunParam_ls <- if ( ! fromFile ) source$RunParam_ls else source$loadedParam_ls
-  } else {
-    writeLog(paste("Invalid source type for getSetup:",class(source)),Level="error")
-    RunParam_ls <- list()
+getSetup <- function(paramNames=NULL,object=NULL,fromFile=FALSE,reload=FALSE) {
+  if ( is.list(object) ) { # assume its a Param_ls list
+    RunParam_ls <- object
+  } else if ( is.null(object) ) {
+    if ( reload ) ve.env$RunParam_ls <- ve.env$loadedParam_ls <- loadRuntimeConfig()
+    object <- ve.env
   }
+  RunParam_ls <- if ( ! fromFile ) object$RunParam_ls else object$loadedParam_ls
   if ( is.character(paramNames) ) {
     RunParam_ls <- RunParam_ls[names(RunParam_ls) %in% paramNames]
   }
-  return(RunParam_ls)
+  return(invisible(RunParam_ls))
+}
+
+#VIEW RUNTIME SETUP
+#==================
+#' View elements of a RunParam_ls structure
+#'
+#' \code{viewSetup} will retrieve and display the contents of a RunParam_ls structure. Can view
+#' values set for the VisionEval runtime, values set for a model, or values set for a singele model
+#' stage. To view the system default parameters, just run the framework function
+#' \code{visioneval::defaultVERunParameters()}.
+#'
+#' @param object identifies the parameter set to write. NULL (default) reports what is in
+#' ve.runtime, Otherwise the object should be a VEModel or VEModelStage.
+#' @param fromFile if TRUE, shows only the parameters loaded from a visioneval.cnf file. If FALSE,
+#'   also shows parameters that were constructed when the model was loaded, or updated manually
+#'   after the configuration file was read.
+#' @param ... Additional arguments to \code{cat} used internally
+#' @importfrom yaml as.yaml
+#' @export
+viewSetup <- function(object=NULL,fromFile=FALSE,...) {
+  Param_ls <- getSetup(object=object,fromFile=fromFile)
+  Paraml <- yaml::as.yaml(Param_ls)
+  cat(Paraml,...)
+}
+
+#UPDATE SETUP
+#' Change setings in either a file-based or working parameter list
+#'
+#' This function will add or change parameters in a settings list. It will NOT re-write the settings
+#' to a file. Use inFile=TRUE here, then use \code{writeSetup} to re-write the changed settings.
+#' Otherwise the changes are just made in memory (and only changes for inFile=FALSE will do
+#' anything).
+#'
+#' @param object identifies the parameter set to write. NULL (default) uses 
+#' ve.runtime. Otherwise the object should be a VEModel or VEModelStage.
+#' @param inFile a logical. If TRUE, alter the loadedParam_ls, otherwise alter runParam_ls
+#' @param Source a character string describing the source assigned to these parameters
+#' @param Param_ls a named list of parameters to add (or replace)
+#' @param drop a character vector of parameters names that will be dropped rather than replaced
+#' @param ... individual named parameters that will be added to (or replace) settings
+#' @export
+updateSetup <- function(object=NULL,inFile=FALSE,Source="interactive",Param_ls=list(),drop=character(0),...) {
+  # merge ... into Param_ls
+  Param_ls <- visioneval::mergeParameters(
+    Param_ls,
+    visioneval::addParameterSource(list(...),Source)
+  )
+  # locate the settings to work on, using object and inFile
+  if ( is.null(object) ) object <- ve.env
+  # udpate the settings using the framework merge settings function
+  param.name <- if ( inFile ) "loadedParam_ls" else "RunParam_ls"
+
+  # Names to drop from Param_ls
+  if ( length(drop)>0 ) {
+    for ( nm in drop ) object[[param.name]][[nm]] <- NULL
+  }
+  # Add in other parameters
+  object[[param.name]] <- visioneval::mergeParameters(object[[param.name]],Param_ls)
+
+  return( invisible(object[[param.name]]) )
 }
 
 #WRITE RUNTIME SETUP
@@ -195,35 +253,53 @@ getSetup <- function(paramNames=NULL,source=NULL,fromFile=FALSE) {
 #' \code{writeSetup} writes a RunParam_ls list into the YAML configuration file associated
 #'   with the VisionEval runtime, a model, or a specific model stage.
 #'
-#' @param source identifies the parameter set to write. NULL (default) writes to
-#' ve.runtime/visioneval.cnf. Otherwise the source should be a VEModel or VEModelStage object.
+#' @param object identifies the parameter set to write. NULL (default) writes to
+#' ve.runtime/visioneval.cnf. Otherwise the object should be a VEModel or VEModelStage.
 #' @param filename the name of the configuration file to write. If NULL (the default), write to the
-#'   file associated with the existing parameter list of the source.
+#'   file associated with the existing parameter list of the object.
 #' @param overwrite if TRUE, overwrite any existing configuration file; otherwise abort with error
 #' @return The filename that was written, or character(0) with a warning if the file could not
 #'   be written
+#' @importfrom yaml write_yaml
 #' @export
-writeSetup <- function(source=NULL,filename=NULL,overwrite=FALSE) {
-  if ( is.null(source) ) {
-    Param_ls <- ve.env$loadedParam_ls
+writeSetup <- function(object=NULL,filename=NULL,overwrite=FALSE) {
+
+  Param_ls <- getSetup(object=object,fromFile=TRUE)
+  if ( is.null(object) ) {
     ParamDir <- ve.env$ve.runtime
+    ParamName <- "runtime"
   } else {
-    Param_ls <- source$loadedParam_ls
-    # TODO: determine default configuration directory for the parameter
+    if ( "VEModel" %in% class(object) ) {
+      ParamName <- object$modelName
+      ParamDir <- object$modelPath
+    } else if ( "VEModelStage" %in% class(object) ) {
+      ParamName <- object$Name
+      ParamDir <- object$Path
+    } else {
+      stop (
+        writeLog(paste("Warning: No directory to write visioneval.cnf for",ParamName),Level="error")
+      )
+    }
   } 
 
   if ( is.null(filename) ) {
-    # TODO: get the filename from the Param_ls source attribute
+    ParamPath <- attr(Param_ls,"FILE")
+    if ( is.null(ParamPath) ) ParamPath <- file.path(ParamDir,"visioneval.cnf")
+  } else {
+    ParamPath <- file.path(ParamDir,filename)
+    attr(Param_ls,"FILE") <- ParamPath
   }
 
-  ParamPath <- file.path(ParamDir,filename)
+  writeLog(paste("Writing configuration for",ParamName,"to",ParamPath),Level="warn")
+
   if ( file.exists(ParamPath) && ! overwrite ) {
-    stop( writeLog(paste("Cannot overwrite existing file:",ParamPath),Level="error") )
+    writeLog(paste("Renaming existing configuration file:",backupName <- paste0(ParamPath,".bak")),Level="info")
+    file.copy(ParamPath,paste0(ParamPath,".bak"))
   }
 
-  # TODO: write YAML to ParamPath (don't include attributes)
+  yaml::write_yaml(Param_ls,file=ParamPath)
   
-  return(ParamPath)
+  return(invisible(Param_ls))
 }
 
 #' Set the VisionEval runtime directory for model management

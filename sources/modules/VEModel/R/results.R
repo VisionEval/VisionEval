@@ -5,12 +5,12 @@ self=private=NULL
 # Output just wraps a ModelState and Datastore for one stage
 # It maintains everything we need for a QueryPrep_ls structure for queries
 # Plus it can export slices of the Datastore into .csv or data.frame
-ve.results.init <- function(OutputPath,Param_ls=list()) {
+ve.results.init <- function(OutputPath,ResultsName=NULL,Param_ls=list()) {
   # OutputPath is the normalized path to a directory containing the model results
   #  typically from the last model stage. Expect to find a ModelState.Rda file
   #  and a Datastore in that folder.
   self$resultsPath <- OutputPath
-  self$Name <- basename(OutputPath)
+  self$Name <- if ( !is.character(ResultsName) ) basename(OutputPath) else ResultsName
   self$index()
   private$RunParam_ls <- self$ModelState()$RunParam_ls
   self$selection <- VESelection$new(self)

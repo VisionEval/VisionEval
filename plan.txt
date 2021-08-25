@@ -1,13 +1,28 @@
 The path to completion:
 
+display settings:
+  Level:
+    ve.runtime
+    model
+    stage
+  Parameter Set:
+    defaults (independent of level)
+    constructed (RunParam_ls at that level)
+    file (loadedParam_ls at that level, if present)
+      Report parameters and full file path
+  Modify loadedParam_ls and write back (make a .cnf.bak file from any existing)
+  Modify the RunParam_ls in memory (to try something out)
+
+Testing:
+  Scenario/Stage input files changed (make sure correct file is read)
+    Model parse should figure out where the input file would come from
+    Listing out required/optional inputs from parsing run_model.R for the stage
+
 VEModel workflow:
 
 Need to be able to read/write/re-write configuration files. So perhaps an S3 class created
 within the visioneval framework (to go with addParameters, etc).
 
-For the runtime, keep the configuration loaded from its file (for editing)
-  loadedParams_ls in ve.env, model and stage
-  RunParams_ls is what gets built internally
 For the model, save the configuration loaded from its file (for editing).
 For the stage, save any configuration file loaded for it (for editing).
 For both model and stage, overlay the configuration file parameters onto the runtime
@@ -18,12 +33,10 @@ Existing set of operations are the basis.
     Use the presence of the class to determine what to do about the Source attribute
   Read a file
   Write a file
-  Add parameters
+  Add/Modify paraneters
   Add source (converts bare list to VEParameters)
   Get a parameter
   Merge parameter lists (keep/override)
-
-Need some printout 
 
 Do ALL the tests (re-run every single model) and save the log results in a file for
 scrutiny.

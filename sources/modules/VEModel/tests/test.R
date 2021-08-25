@@ -341,7 +341,7 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
     cat(readLines(configFile),sep="\n")
   } else {
     configFile <- file.path(bare.dir,"visioneval.cnf")
-    yaml::write_yaml(runConfig_ls,configFile) # TODO: can we write the same structure to YAML?
+    yaml::write_yaml(runConfig_ls,configFile)
     print(bare.dir)
     print(configFile)
     cat(readLines(configFile),sep="\n")
@@ -366,6 +366,7 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
 
   base.inputs <- unique(jr$dir(inputs=TRUE)) # List short names of input paths for each stage
   cat("Base Inputs",base.inputs,"\n")
+  base.inputs <- unique(jr$dir(inputs=TRUE,shorten=FALSE)) # Now get the full path name for inputs
   inputs <- bare$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
   cat("Input Directories (should be NA - files don't exist yet):\n")
   print( unique(inputs[,"INPUTDIR"]) )
@@ -417,9 +418,8 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
 
   testStep("run the bare model again with 'save'")
 
-  bare$set(
-    stage=bare$modelStages[[1]]$Name,
-    modelState=TRUE,
+  updateSetup(
+    bare$modelStages[[1]],
     Source="test.R/test_model()",
     Scenario="Run with save",
     Description="This run will save prior results"
@@ -431,9 +431,8 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
 
   testStep("run (really DON'T run) the bare model again with 'continue'")
 
-  bare$set(
-    stage=bare$modelStages[[1]]$Name,
-    modelState=TRUE,
+  updateSetup(
+    bare$modelStages[[1]],
     Source="test.R/test_model()",
     Scenario="Run with 'continue'",
     Description="This run should not do anything"
@@ -445,9 +444,8 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   
   testStep("run the bare model with 'reset'")
 
-  bare$set(
-    stage=bare$modelStages[[1]]$Name,
-    modelState=TRUE,
+  updateSetup(
+    bare$modelStages[[1]],
     Source="test.R/test_model()",
     Scenario="Run with 'reset'",
     Description="This run should rebuild current results but not change archived list"
@@ -1083,6 +1081,66 @@ test_rpat <- function(run=TRUE) {
   }
   testStep("Extracting JRPAT results...")
   verpat$results()$extract()
+}
+
+# Test the setup management functions
+test_setup <- function(model=NULL) {
+  testStep("Parameter defaults...")
+  visioneval::defaultVERunParameters()
+
+  testStep("Runtime setup (none to start)")
+  conf.file <- file.path(runtimeEnvironment()$ve.runtime,"visioneval.cnf")
+  if ( file.exists(conf.file) ) unlink(conf.file)
+
+  testStep("Load ve.runtime configuration")
+  getSetup(reload=TRUE)
+
+  testStep("View initial setup (empty list)")
+  viewSetup(fromFile=TRUE)
+
+  testStep("Install test model (based on runtime configuration)...")
+  setup <- if ( dir.exists(file.path("models","Setting-Test")) ) {
+    openModel("Setting-Test")
+  } else {
+    installModel("VERSPM","Setting-Test",variant="pop")
+  }
+  print(setup)
+
+  testStep("Initial model configuration")
+  viewSetup(setup)
+  cat("Seed setting in model:",setup$setting("Seed"),"\n")
+  testStep("Remove Seed parameter from model configuration file")
+  updateSetup(setup,inFile=TRUE,drop="Seed")
+  writeSetup(setup,overwrite=TRUE)
+  testStep("Reload model with Seed parameter from default")
+  setup$configure()
+  cat("Value of Seed:",setup$setting("Seed",defaults=TRUE),"\n")
+  cat("Setting source...\n")
+  print(setup$setting("Seed",defaults=TRUE,source=TRUE)) # Show source for Seed parameter: now default
+  viewSetup(setup)
+
+  testStep("Update Seed in ve.runtime setup")
+  updateSetup(inFile=TRUE,Seed=2.5)
+
+  testStep("View runtime setup with changed Seed")
+  viewSetup(fromFile=TRUE)
+
+  testStep("Writing new runtime visioneval.cnf")
+  writeSetup() # creates a backup file if setup already exists
+
+  testStep("Runtime setup file now has seed")
+  cat("Runtime configuration previously loaded:\n")
+  viewSetup(fromFile=FALSE) # Still has old value of Seed in global runtime
+  getSetup(reload=TRUE) # force reload of runtime configuration
+  cat("Runtime configuration after reloading from file:\n")
+  viewSetup(fromFile=FALSE) # Now has reloaded file value in regular runtime
+
+  testStep("Reopen model and see changed setup")
+  setup$configure() # Reopen the model from saved configuration
+  cat("Seed setting in model:",setup$setting("Seed"),"\n")
+  cat("Setting source...\n")
+  print(setup$setting("Seed",defaults=TRUE,source=TRUE)) # Show source for Seed parameter: now default
+  unlink(conf.file) # Don't leave the runtime visioneval.cnf around
 }
 
 # Now set it all up
