@@ -471,6 +471,22 @@ ve.results.select <- function(select=integer(0)) {  # integer(0) says select all
   invisible(self$selection)
 }
 
+ve.results.copy <- function(ToDir, Flatten=TRUE, DatastoreType=NULL) {
+  if ( missing(ToDir) || ! dir.exists(ToDir) ) {
+    stop(writeLog("Invalid target directory for results copy",Level="error"))
+  }
+  owd <- setwd(self$resultsPath) # copyDatastore must work in that directory
+  on.exit(setwd(owd))
+  return(
+    visioneval::copyDatastore(
+      ToDir=ToDir,
+      Flatten=Flatten,
+      DatastoreType=DatastoreType,
+      envir=self$ModelStateEnv
+    )
+  )
+}
+
 ve.results.queryprep <- function() {
   visioneval::prepareForDatastoreQuery(
     DstoreLocs_ = file.path(self$resultsPath,self$ModelState()$DatastoreName),
@@ -500,6 +516,7 @@ ve.results.print <- function(name="",details=FALSE) {
 # Here is the VEResults R6 class
 # One of these is constructed by VEModel$output()
 
+#' @export
 VEResults <- R6::R6Class(
   "VEResults",
   public = list(
@@ -512,6 +529,7 @@ VEResults <- R6::R6Class(
     # methods
     initialize=ve.results.init,
     index=ve.results.index,          # Index Datastore from ModelState (part of init)
+    copy=ve.results.copy,            # Apply visioneval::copyDatastore
     valid=ve.results.valid,          # has the model been run, etc.
     select=ve.results.select,        # return the object's selection object
     extract=ve.results.extract,      # generate files or data.frames from model results
@@ -759,6 +777,8 @@ as.integer.VESelection <- function(x,...) x$selection
 
 # The VESelection R6 class
 # This interoperates with VEResult to keep track of what to print
+
+#' @export
 VESelection <- R6::R6Class(
   "VESelection",
   public = list(

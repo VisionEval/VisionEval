@@ -269,6 +269,7 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mu
     # ParamDir and ParamFile are ignored if ParamPath is provided
     ParamFile <- basename(ParamPath)
     ParamDir <- dirname(ParamPath)
+    ParamPath <- NULL
   } else {
     # ParamFile is ignored if ParamDir is not provided
     if ( is.null(ParamDir) && !is.null(ParamFile) ) ParamFile <- NULL

@@ -405,7 +405,7 @@ isDatasetPresent <- function(Name, Table, Group, QueryPrep_ls) {
   #  the QueryPrep_ls.
   MS_ls <- QueryPrep_ls$Listing;
   DstoreLocs <- QueryPrep_ls$Dir # Change so we only process one
-  DatasetPresent_ <- FALSE
+  DatasetPresent <- FALSE
   for (loc in DstoreLocs) {
     query.env <- new.env()
     query.env$ModelState_ls <- MS_ls[[loc]]
@@ -1059,7 +1059,7 @@ calcWithBy <- function(CompiledQuery, CalcData_ls) with ( CompiledQuery,
       } else {
         if (is.integer(ByData_) | all(round(ByData_) == as.integer(ByData_))) {
           ByData_ <- as.integer(ByData_)
-          if (!is.null(Breaks_ls[[nm]])) {
+          if (exists("Breaks_ls") && !is.null(Breaks_ls[[nm]])) {
             Breaks_ <- unique(c(min(ByData_), Breaks_ls[[nm]], max(ByData_)))
             By_ls[[nm]] <- cut(ByData_, Breaks_, include.lowest = TRUE)
           } else {
@@ -1067,12 +1067,12 @@ calcWithBy <- function(CompiledQuery, CalcData_ls) with ( CompiledQuery,
           }
         }
         if (is.double(ByData_) & !all(round(ByData_) == as.integer(ByData_))) {
-          if (!is.null(Breaks_ls[[nm]])) {
+          if (exists("Breaks_ls") && !is.null(Breaks_ls[[nm]])) {
             Breaks_ <- unique(c(min(ByData_), Breaks_ls[[nm]], max(ByData_)))
             By_ls[[nm]] <- cut(ByData_, Breaks_, include.lowest = TRUE)
           } else {
             msg <- (paste(nm, "is non-integer. Breaks must be specified."))
-            return(Result=NA,Errors=msg)
+            return(list(Result=NA,Errors=msg))
           }
         }
       }
@@ -1110,7 +1110,7 @@ calcWithBy <- function(CompiledQuery, CalcData_ls) with ( CompiledQuery,
         }
       }
     }
-    return(Result=Results_ar,Errors="")
+    return(list(Result=Results_ar,Errors=""))
   }
 )
 
@@ -1148,12 +1148,14 @@ with( CompiledSpec,
         calcResults <- calcWithBy(CompiledSpec,Data_ls$Data[[1]])
         if ( length(calcResults$Errors)>0 && any(nzchar(calcResults$Errors)) ) {
           return( list(Result=NA,Errors=calcResults$Errors) )
+        } else {
+          return( calcResults )
         }
       } else if (length(Data_ls$Data) > 1) {
         #If there is a By but several tables, calculate results for each table
         calcResults_ls <- lapply(
           Data_ls$Data,
-          function(x) {
+          function(x) {d
             calcResults <- calcWithBy(CompiledSpec,x)
             if ( length(calcResults$Errors)>0 && any(nzchar(calcResults$Errors)) ) {
               return( list(Result=NA,Errors=calcResults$Errors) )

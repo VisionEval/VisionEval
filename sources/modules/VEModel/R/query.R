@@ -694,6 +694,8 @@ ve.query.run <- function(
 # One of these is constructed by VEResults$query
 # Perhaps have some S3 generic functions defined...
 
+#' @importFrom R6 R6Class
+#' @export
 VEQuery <- R6::R6Class(
   "VEQuery",
   public = list(
@@ -809,7 +811,7 @@ specOverallElements <- c(
 )
 
 specSummarizeElements <- c(
-  "Expr", "Units", "By", "Breaks_ls", "Table", "Key", "Group"
+  "Expr", "Units", "By", "Breaks", "BreakNames", "Table", "Key", "Group"
 )
 
 ve.spec.print <- function() {
@@ -1111,6 +1113,7 @@ ve.spec.setgeo <- function(Geography=NULL) {
 # S3 helper - turn the R6 object into a standard list
 as.list.VEQuerySpec <- function(spec) return(spec$QuerySpec)
 
+#' @export
 VEQuerySpec <- R6::R6Class(
   "VEQuerySpec",
   public = list(
@@ -1169,7 +1172,8 @@ makeMeasure <- function(measureSpec,thisYear,Geography,QPrep_ls,measureEnv) {
 
   # Compute the measure based on the measureSpec
   if ( "Function" %in% names(measureSpec) ) {
-    measure <- eval(parse(text=measureSpec$Function), envir=measureEnv)
+    measure <- try( eval(parse(text=measureSpec$Function), envir=measureEnv) )
+    browser(expr=!is.numeric(measure))
     names(measure) <- measureName
   } else if ( "Summarize" %in% names(measureSpec) ) {
     sumSpec <- measureSpec$Summarize;

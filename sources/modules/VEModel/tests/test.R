@@ -395,11 +395,15 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   print(bare.inputs)
   print(dir(bare.inputs,full.names=TRUE))
 
-  testStep("Re-open the bare model and list its inputs again (should have fulle path)")
-  bare <- openModel("BARE",log=log)
+  testStep("Re-open the bare model")
+  bare$configure()
+
+  testStep("List the inputs again: this time showing directory")
   inputs <- bare$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
-  required.files <- file.path(ifelse(is.na(inputs$INPUTDIR),"",inputs$INPUTDIR),inputs$FILE)
-  required.files <- data.frame(EXISTS=ifelse(is.na(inputs$INPUTDIR),FALSE,file.exists(required.files)),FILE=required.files)
+  print(inputs)
+  required.files <- file.path(inputs$INPUTDIR,inputs$FILE)
+  print(unique(required.files))
+  required.files <- data.frame(EXISTS=file.exists(required.files),FILE=required.files)
   cat("Required Files (all should EXIST):\n")
   print(unique(required.files))
 
@@ -530,7 +534,7 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
 test_load <- function(model=NULL, log="info" ) {
   # Tests the LoadModel functionality (pre-load Datastore and then
   #   execute additional steps from the copied data.all
-  testStep("Finding model template")
+  testStep("Finding BARE model template")
   if ( is.null(model) ) {
     model <- test_model("JRSPM",brief=TRUE,log=log) # skip the deeper tests
     model$run(log=log)                      # run it anyway (default="continue" does nothing)
@@ -573,6 +577,7 @@ test_load <- function(model=NULL, log="info" ) {
     BaseYear    = jsonlite::unbox(model$setting("BaseYear")),
     Years       = loadModel$setting("Years"),
     LoadModel   = jsonlite::unbox(model$modelPath) # could be any form accepted by openModel
+    # Can also set LoadStage...
   )
   configFile <- file.path(baseModelPath,"visioneval.cnf")
   yaml::write_yaml(runConfig_ls,configFile)
@@ -911,6 +916,7 @@ test_query <- function(log="info",reset=FALSE) {
 
   testStep("Clear test queries, if any...")
   qfiles <- jr$query()
+
   print(qfiles <- file.path(jr$modelPath,"queries",qfiles))
   unlink(qfiles)
   print(jr$query())

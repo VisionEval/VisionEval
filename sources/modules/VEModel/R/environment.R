@@ -172,7 +172,7 @@ loadRuntimeConfig <- function() {
 #'   file
 #' @return A list of defined run parameters (possibly empty, if no parameters are defined)
 #' @export
-getSetup <- function(paramNames=NULL,object=NULL,fromFile=FALSE,reload=FALSE) {
+getSetup <- function(object=NULL,paramNames=NULL,fromFile=FALSE,reload=FALSE) {
   if ( is.list(object) ) { # assume its a Param_ls list
     RunParam_ls <- object
   } else if ( is.null(object) ) {
@@ -197,14 +197,18 @@ getSetup <- function(paramNames=NULL,object=NULL,fromFile=FALSE,reload=FALSE) {
 #'
 #' @param object identifies the parameter set to write. NULL (default) reports what is in
 #' ve.runtime, Otherwise the object should be a VEModel or VEModelStage.
+#' @param Param_ls If provided (and object is NOT provided), view this list instead of looking up
+#'   via getSetup.
 #' @param fromFile if TRUE, shows only the parameters loaded from a visioneval.cnf file. If FALSE,
 #'   also shows parameters that were constructed when the model was loaded, or updated manually
 #'   after the configuration file was read.
 #' @param ... Additional arguments to \code{cat} used internally
 #' @importFrom yaml as.yaml
 #' @export
-viewSetup <- function(object=NULL,fromFile=FALSE,...) {
-  Param_ls <- getSetup(object=object,fromFile=fromFile)
+viewSetup <- function(object=NULL,Param_ls=NULL,fromFile=FALSE,...) {
+  if ( ! is.null(object) || is.null(Param_ls) ) {
+    Param_ls <- getSetup(object=object,fromFile=fromFile)
+  } # else view Param_ls from function parameters
   Paraml <- yaml::as.yaml(Param_ls)
   cat(Paraml,...)
 }

@@ -52,7 +52,7 @@
 # contains exactly one such object definition.
 # So it could also be something like "MyMareaSpecifications <- list("
 
-PMSpecifications <- list(
+QuerySpec <- list(
 
   #### DVMT
   #Urban area household DVMT

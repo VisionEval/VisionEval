@@ -4,7 +4,5 @@
 .Rdata
 VEModel.Rproj
 ^NAMESPACE$
-man/
-tests/runtime*
+runtime*
 launch.bat
-walkthrough/runtime*/

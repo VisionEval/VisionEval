@@ -1,0 +1,45 @@
+---
+title: "VisionEval Next Generation Walkthrough"
+output: html_document
+author: "Jeremy Raw"
+---
+
+```{ r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# VisionEval Next Generation
+
+## Introduction
+
+[VisionEval](https://visioneval.org) is a strategic modeling system. The "Next Generation" of
+VisionEval (aka VNG, for "VisionEval Next Generation") adds a new package `VEModel` that works with an extensively refactored version of the
+VisionEval framework (in the package `visioneval`) to provide a streamlined command-line interface
+(CLI) for inspecting and running VisionEval models and for extracting and querying the model
+results.
+
+This document provides a walk-through of `VEModel` capabilities.
+
+## Installing
+
+The VNG system can be installed from Github (currently unreleased) or from a VisionEval binary
+installer, just like earlier versions of VisionEval.
+
+From within the Github source tree, it is also possible to launch a full R environment for live
+testing of the `VEModel` package (a similar facility is available for the `visioneval` framework).
+Start the R environment of your choice (RGUI or RStudio) and set the working directory to
+sources/modules/VEModel, then `source("tests/test.R")` which will run `pkg.load` to install VEModel
+and will also load some test functions that illustrate the capabilities that are also reviewed in
+this document.
+
+Processing this R Markdown file reproduces most of the `test.R` features. In particular it creates a
+full VisionEval runtime space in which you can subsequently do interactive testing of VEModel
+capabilities. You must have an installed "ve-lib" folder that can be placed on the R path. This
+document presumes that your working directory is writeable and that "ve-lib" (all the visioneval
+packages and dependencies) can be found on the R_LIBS_USER path (set explicitly as a system environment
+variable, or provided through `.Renviron`). If this R Markdown file does not run for you, make sure
+that your `.libPaths()` can find `ve-lib`. All the remaining work will be done in the current
+directory, which should ideally be an empty directory but which may already contain a `visioneval.cnf` file
+and a `models` sub-directory (more on both of those below), either from pre-creating those, or by
+previously running this R Markdown in that working directory.
+
