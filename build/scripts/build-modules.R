@@ -266,15 +266,25 @@ for ( module in seq_along(package.names) ) {
     }
   } else data.files <- character(0)
   # only releevant dot.file is .Rbuildignore
-  dot.files <- dir(package.paths[module],pattern="^\\.Rbuildignore$",all.files=TRUE)
+  dot.files <- dir(package.paths[module],pattern="^\\.(VE|R)buildignore$",all.files=TRUE)
   if ( length(dot.files)>0 ) {
-    pkg.files <- c(pkg.files,dot.files)
-    read.dot.files <- file.path(package.paths[module],dot.files[1])
+    if ( ".Rbuildignore" %in% dot.files ) {
+      pkg.files <- c(pkg.files,".Rbuildignore")
+    }
+    if ( ".VEbuildignore" %in% dot.files ) {
+      ignore.files <- ".VEbuildignore"
+      # These are patterns to ignore when copying to src/ folder for build
+      # Generally a subset of .Rbuilditnore (keeping things like the VEModel walkthrough
+    } else {
+      ignore.files <- ".Rbuildignore"
+      # Do not copy anything that will be ignored during the R build
+    }
+    read.dot.files <- file.path(package.paths[module],ignore.files)
     ignore.patterns <- readLines(read.dot.files)
     # empty lines in .Rbuildignore would blow away everything
     ignore.patterns <- grep("^[[:space:]]*$",ignore.patterns,invert=TRUE,value=TRUE)
     if ( debug>2 ) {
-      message("Ignoring .Rbuildignore patterns:")
+      message("Ignoring ",ignore.files," patterns:")
       print(ignore.patterns)
     }
     for ( pattern in ignore.patterns ) {

@@ -7,4 +7,4 @@ VEModel.Rproj
 man/
 tests/runtime*
 launch.bat
-walkthrough/walkthrough*/
+walkthrough/runtime*/

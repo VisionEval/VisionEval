@@ -1,0 +1,6 @@
+^\.Rproj\.user$
+tests/runtime*
+walkthrough/runtime*
+.Renviron
+.Rhistory
+launch.bat
