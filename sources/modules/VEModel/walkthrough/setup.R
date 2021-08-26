@@ -31,7 +31,7 @@ local( {
     message("Setting up walkthrough in ",getwd())
     ve.runtime <- grep("walkthrough.*",list.dirs(),value=TRUE)[1]
     if ( ! dir.exists(ve.runtime) ) {
-      ve.runtime <- normalizePath(tempfile(pattern="walkthrough",tmpdir="."),winslash="/",mustWork=FALSE)
+      ve.runtime <- normalizePath(tempfile(pattern="runtime",tmpdir="."),winslash="/",mustWork=FALSE)
       dir.create(ve.runtime)
       walkthrough.action <- "Creating"
     }

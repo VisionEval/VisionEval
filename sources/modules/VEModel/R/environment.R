@@ -164,8 +164,8 @@ loadRuntimeConfig <- function() {
 #'
 #' @param paramNames is a character vector of parameter names identifying a subset of runParameters
 #'   to retrieve. If not provided, return all defined parameters (but not any that are defaulted).
-#' @param source identifies the parameter set to return. NULL (default) returns runtime parameters.
-#'   Otherwise source should be a VEModel object or a VEModelStage object.
+#' @param object identifies which parameter set to get. NULL (default) returns runtime parameters.
+#'   Otherwise object should be a VEModel or a VEModelStage.
 #' @param fromFile a logical value; if TRUE, return configuration from file, otherwise parameters as
 #'   modified at runtime
 #' @param reload a logical; if TRUE and retrieving ve.runtime configuration, re-read configuration
@@ -201,7 +201,7 @@ getSetup <- function(paramNames=NULL,object=NULL,fromFile=FALSE,reload=FALSE) {
 #'   also shows parameters that were constructed when the model was loaded, or updated manually
 #'   after the configuration file was read.
 #' @param ... Additional arguments to \code{cat} used internally
-#' @importfrom yaml as.yaml
+#' @importFrom yaml as.yaml
 #' @export
 viewSetup <- function(object=NULL,fromFile=FALSE,...) {
   Param_ls <- getSetup(object=object,fromFile=fromFile)
@@ -260,7 +260,7 @@ updateSetup <- function(object=NULL,inFile=FALSE,Source="interactive",Param_ls=l
 #' @param overwrite if TRUE, overwrite any existing configuration file; otherwise abort with error
 #' @return The filename that was written, or character(0) with a warning if the file could not
 #'   be written
-#' @importfrom yaml write_yaml
+#' @importFrom yaml write_yaml
 #' @export
 writeSetup <- function(object=NULL,filename=NULL,overwrite=FALSE) {
 

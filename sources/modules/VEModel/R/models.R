@@ -1791,7 +1791,7 @@ ve.model.results <- function(stage=character(0)) {
 
 #' pretty print a list of VEResults objects
 #' 
-#' @param results a named list of VEResults objects
+#' @param x a named list of VEResults objects
 #' @param ... Other parameters for generic print function
 #' @export
 print.VEResultsList <- function(x,...) {

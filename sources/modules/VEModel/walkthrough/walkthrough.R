@@ -23,17 +23,19 @@ installModel("VERPAT",modelPath="VERPAT",confirm=FALSE) # base variant, but with
 dir("models")
 
 # opening models
-vr <- openModel("VERSPM-base")
+vrb <- openModel("VERSPM-base")
 print(vr)
 
 # inspecting model inputs
-inputs <- vr$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
+inputs <- vrb$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
 print(inputs)
+input.dir <- unique(vrb$dir(inputs=TRUE,shorten=FALSE))
+required.files <- unique(file.path(input.dir,inputs[,"FILE"]))
 
 # inspecting model stages
 print(vr$modelStages)  # list of stage objects - only one in "base" model
 
-vrs <- openModel("VERSPM-run") # pre-created and run in setup.R
+vr <- openModel("VERSPM-run") # pre-created and run in setup.R
 print(vrs$modelStages) # Three stages - we'll get back to stages
 
 # running models
