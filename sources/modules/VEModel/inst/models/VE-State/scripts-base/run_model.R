@@ -1,27 +1,6 @@
-#===========
-#run_model.R
-#===========
+# Full VE-State model (takes a long time to run)
+message('VE-State: Model script entered\n')
 
-#This script demonstrates the VisionEval framework for the VE-State model.
-cat('run_model.R: script entered\n')
-#Load libraries
-#--------------
-library(visioneval)
-cat('run_model.R: library visioneval loaded\n')
-
-#Initialize model
-#----------------
-initializeModel(
-  ModelScriptFile = "run_model.R",
-  ParamDir = "defs",
-  RunParamFile = "run_parameters.json",
-  GeoFile = "geo.csv",
-  ModelParamFile = "model_parameters.json",
-  LoadDatastore = FALSE,
-  DatastoreName = NULL,
-  SaveDatastore = TRUE
-  )  
-cat('run_model.R: initializeModel completed\n')
 #Run all demo module for all years
 #---------------------------------
 for(Year in getYears()) {
@@ -64,5 +43,4 @@ for(Year in getYears()) {
   runModule("CalculateComEnergyAndEmissions",   "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   runModule("CalculatePtranEnergyAndEmissions", "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
 }
-cat('run_model.R: run complete.\n')
-
+message('VE-State: Run Complete\n')

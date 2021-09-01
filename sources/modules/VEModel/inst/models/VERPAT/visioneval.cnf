@@ -6,9 +6,9 @@ Region         : Multnomah County
 State          : OR
 
 # Scenario description
-Scenario       : RPAT Example Scenario
+Scenario       : RPAT Example
 Seed           : 1
-Description    : Pilot RPAT module in VisionEval
+Description    : Pilot RPAT module in VisionEval NextGen
 BaseYear       : 2005
 Years          : [ 2005, 2035 ]
 

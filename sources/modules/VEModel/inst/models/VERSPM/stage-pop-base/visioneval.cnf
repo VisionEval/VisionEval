@@ -2,8 +2,8 @@
 
 # Scenario description
 ModelScript : run_scenario.R
-Scenario    : VERSPM RVMPO Base Year Using Pre-Built Population
-Description : Base Year Scenario (2010)
+Scenario    : VERSPM RVMPO Base Year
+Description : Base Year Build (using pre-built population)
 BaseYear    : 2010
 Years       : [ 2010 ]
 StartFrom   : stage-pop-synth

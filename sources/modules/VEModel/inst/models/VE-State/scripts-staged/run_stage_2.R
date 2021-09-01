@@ -3,26 +3,7 @@
 #===================
 # This run_model.R script runs all of the VE modules to model a land use and transportation scenario
 
-cat('run_model.R: Stage 2 script entered\n')
-
-#Load libraries
-#--------------
-library(visioneval)
-
-#Initialize model
-#----------------
-initializeModel(
-  ModelScriptFile = "run_model.R",
-  ParamDir = "../stage-2/defs",
-  RunParamFile = "run_parameters.json",
-  GeoFile = "geo.csv",
-  ModelParamFile = "model_parameters.json",
-  LoadDatastore = TRUE,
-  DatastoreName = "../stage-1/Datastore",
-  SaveDatastore = TRUE
-  )
-cat("run_model.R: Stage 2 Initialization Complete")
-
+message('VE-Stage Staged: Stage 2 script entered\n')
 #Run core models for land use and travel
 #---------------------------------------
 for(Year in getYears()) {
@@ -48,5 +29,4 @@ for(Year in getYears()) {
   runModule("CalculateVehicleTrips",           "VEHouseholdTravel",     RunFor = "AllYears",    RunYear = Year)
   runModule("DivertSovTravel",                 "VEHouseholdTravel",     RunFor = "AllYears",    RunYear = Year)
 }
-cat('run_model.R: Stage 2 run complete.\n')
-
+message('VE-State Staged: Stage 2 complete.\n')
