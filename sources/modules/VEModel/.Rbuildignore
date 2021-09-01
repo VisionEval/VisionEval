@@ -2,7 +2,6 @@
 .VEbuildignore
 .Renviron
 .Rhistory
-tests/runtime*
+runtime*
 tests/
 launch.bat
-walkthrough/

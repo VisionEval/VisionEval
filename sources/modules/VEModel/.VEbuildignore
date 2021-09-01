@@ -1,6 +1,5 @@
 ^\.Rproj\.user$
-tests/runtime*
-walkthrough/runtime*
+runtime*
 .Renviron
 .Rhistory
 launch.bat
