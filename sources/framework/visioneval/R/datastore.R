@@ -1639,7 +1639,7 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
 #' @param envir An environment from which to extract G / ModelState_ls
 #' @return A logical value which is TRUE if the data are successfully saved to
 #' the datastore.
-#' @exports
+#' @export
 setInDatastore <- function(Data_ls, ModuleSpec_ls, ModuleName, Year, Geo = NULL, GeoIndex_ls = NULL, envir=modelEnvironment()) {
   # Note: since we're writing, we'll look directly at G$Datastore rather than environment in
   # functions like checkTableExistence... DatastorePath is only used when reading...

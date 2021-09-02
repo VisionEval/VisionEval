@@ -22,7 +22,6 @@ Description: This package defines all of the functions used to implement the
     initializing and managing the model run environment, managing the common
     datastore, and running modules.
 License: file LICENSE
-LazyData: TRUE
 Depends: R (>= 3.5)
 Imports:
     jsonlite,

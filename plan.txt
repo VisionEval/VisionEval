@@ -1,13 +1,24 @@
 The path to completion:
 
-Can we open a model that was "source'd", or must it have run in VE? Probably the latter, though it
-might be interesting to see if openModel/VEModel$new can inject the missing information into the
-ModelState (run status, etc) by reading the model and inspecting the results. Or we could suspend
-certain types of error checking if the result artifacts are present (i.e. assume that Run Status
-is complete if the directory contains what is needed).
+Fix up the NextGen runtime installer: use Setup.R from the walkthrough to locate ve-lib (with some
+additional installation stuff that might work on the Mac from the original installer). Basically,
+all we need in the runtime is something that will locate ve-lib (or build from ve-pkg), then require
+VEModel. Create the models folder but do not include it. Keep the tools folder mechanism for testing
+out future enhancements. Do not (at this time) include the VEScenarioViewer.
 
-Clean up the sample models to be better: description, scenario, etc. the way it ought to be.
-Implement some part of VEScenario setup as stages with input paths.
+Create the model visualizer (dump detailed structures to a JSON file, and then launch a static page
+to navigate it). Visualizer should include the scripts, the configurations (including grayed-in defaults),
+the module inputs and outputs. That can be a warmup for the full scenario viewer.
+
+Update the scenario viewer to be fully table driven.
+
+If we open a VisionEval result set, we want to be able to patch in missing pieces if the run_model.R
+was run using "source" on a script that includes initialize model. Can we open a model that was
+"source'd", or must it have run in VE? Probably the latter, though it might be interesting to see if
+openModel/VEModel$new can inject the missing information into the ModelState (run status, etc) by
+reading the model and inspecting the results. Or we could suspend certain types of error checking if
+the result artifacts are present (i.e. assume that Run Status is complete if the directory contains
+what is needed).
 
 Make sure queries and results give better errors if deployed on a model that has not yet been run.
 
@@ -19,16 +30,18 @@ Check on doing all geographies (or a subset) rather than a single GeoValue
 
 Does the H5 storage format still work?
 
-Extract should work on a flat Datastore - I think we're doing that.
+Extract should work on a flat Datastore - I think we're doing that by flattenig the DatastoreListing.
 
 Restructure Query output to use sub-folders.
 
-Automate the debug dump.
+Automate the debug dump. If we have a model that has crashed in a certain stage, we should be
+able to open it, then do a crash exploration.
+
+Get RunScript specified and working (to go with RunModule).
 
 VEModel workflow:
 
-Do ALL the tests (re-run every single model) and save the log results in a file for
-scrutiny.
+Do ALL the tests (re-run every single model) and save the log results in a file for scrutiny.
 
 In VEQuery, look at Brian's Bzone adjustments and allow Bzones to be a summary unit.
 Let the Geography value be a list for summarizing.

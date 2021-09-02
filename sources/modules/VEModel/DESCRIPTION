@@ -10,7 +10,6 @@ Description: Contains R6 object management code providing functions
   and objects to set up VisionEval models, run them, and query or extract
   their output.
 License: file LICENSE
-LazyData: TRUE
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,

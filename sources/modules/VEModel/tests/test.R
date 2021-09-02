@@ -134,63 +134,69 @@ test_classic <- function(modelName="VERSPM-Classic",clear=TRUE,log="info") {
   return(rs)
 }
 
-test_all_install <- function() {
-
-  owd <- setwd("models")
-  print(files<-list.dirs("models",full.names=TRUE,recursive=FALSE))
-  if ( length(files)>0 ) unlink(files,recursive=TRUE)
-  setwd(owd)
-  
-  return (
-    list(
-      # VERSPM variants
-      vr.classic = installModel("VERSPM",variant="classic",confirm=FALSE,overwrite=TRUE),
-      vr.base = installModel("VERSPM",variant="base",confirm=FALSE,overwrite=TRUE),
-      vr.year = installModel("VERSPM",variant="year",confirm=FALSE,overwrite=TRUE),
-      vr.pop = installModel("VERSPM",variant="pop",confirm=FALSE,overwrite=TRUE),
-
-      # VERPAT variants
-      vp.base = installModel("VERPAT",variant="base",confirm=FALSE,overwrite=TRUE),
-
-      # VE-State variants
-      vs.base = installModel("VE-State",variant="base",confirm=FALSE,overwrite=TRUE),
-      vs.staged = installModel("VE-State",variant="staged",confirm=FALSE,overwrite=TRUE)
-    )
-  )
-}
-
-test_install <- function(modelName="VERSPM",variant="base",installAs=NULL,log="info") {
+test_install <- function(modelName="VERSPM",variant="base",installAs="",log="info") {
 
   if ( ! missing(log) ) logLevel(log)
-
   if ( ! nzchar(variant) ) variant <- ""
-  if ( missing(installAs) || is.null(installAs) ) {
+  if ( missing(installAs) || ! nzchar(installAs) ) {
     if ( nzchar(variant) && nzchar(modelName) ) {
       installAs <- paste0("test-",modelName,"-",variant)
     }
   }
 
-  if ( nzchar(installAs) ) {
+  if ( nzchar(modelName) && nzchar(variant) && nzchar(installAs) ) {
     if ( dir.exists(file.path("models",installAs)) ) {
       testStep(paste0("Clearing previous installation at ",installAs))
       unlink(file.path("models",installAs), recursive=TRUE)
     }
 
     testStep(paste("Installing",modelName,"model from package as",installAs))
-    rs <- installModel("VERSPM",installAs,variant,log=log,confirm=FALSE)
+    rs <- installModel(modelName,installAs,variant,log=log,confirm=FALSE,overwrite=TRUE)
   } else {
     if ( nzchar(modelName) ) {
       testStep(paste0("Directory of available variants for ",modelName))
     } else {
       testStep("Directory of available models")
     }
-    rs <- installModel(modelName,"")
+    rs <- installModel(modelName=modelName,variant="")
   }
-  if ( ! "VEModel" %in% class(rs) ) {
-    # It's not a model, so it is probably a diagnostic showing available models or variants
-    if ( is.character(rs) ) cat(paste(rs,collapse="\n")) else print(rs)
+  # NOTE: pkgload bug - print.VEAvailableModels/Variants not recognized for class dispatch...
+  if ( "VEAvailableModels" %in% class(rs) ) {
+    print.VEAvailableModels(rs)
+  } else if ( "VEAvailableVariants" %in% class(rs) ) {
+    print.VEAvailableVariants(rs)
+  } else {
+    print(rs)
   }
-  return(rs)
+  return(invisible(rs))
+}
+
+test_all_install <- function() {
+
+  testStep("Installing all models")
+  models       <- test_install("")               # List available models
+  variants <- list(                              # List available variants
+    "VERSPM"   =test_install("VERSPM",var=""),
+    "VERPAT"   =test_install("VERPAT",var=""),
+    "VE-State" =test_install("VE-State",var="")
+  )
+
+  return (
+    lapply(
+      models,
+      function(m) {
+        cat("\nInstalling model",m,"\n")
+        vars <- variants[[m]]
+        mods <- lapply(
+          vars,
+          function(v) {
+            cat("\nInstalling model",m,"variant",v,"\n")
+            installModel(m,variant=v,confirm=FALSE,overwrite=TRUE)
+          }
+        )
+      }
+    )
+  )
 }
 
 test_flatten <- function(log="info") {
@@ -212,9 +218,12 @@ test_flatten <- function(log="info") {
   setwd(owd)
 }
 
-test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",reset=FALSE,log="info") {
+test_run <- function(modelName="VERSPM-base",reset=FALSE,log="info") {
 
   if ( ! missing(log) ) logLevel(log)
+  if ( missing(modelName) || ! nzchar(modelName) ) {
+    return(dir("models"))
+  }
 
   if ( ! reset ) {
     testStep(paste("Attempting to re-open existing",modelName))
@@ -228,9 +237,6 @@ test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",r
     }
   }
   if (reset) {
-    testStep("Running model installer...")
-    rs <- test_install(baseModel,variant,modelName,log)
-
     testStep("Running model...")
     rs$run(run="reset",log=log) # clears results directory
   }

@@ -129,6 +129,7 @@ loadParamFile <- function(Param_ls=NULL,ModelDir=NULL) {
   ParamFile <- getRunParameter("RunParamFile",Param_ls)
   ParamPath <- findRuntimeInputFile(ParamFile,"ParamDir",Param_ls=Param_ls,StopOnError=FALSE)
   if ( ! is.na(ParamPath) ) {
+    writeLog(paste("Found run_parameters.json:",ParamPath),Level="info")
     Param_ls <- loadConfiguration(ParamPath=ParamPath,keep=Param_ls)
     ParamPath <- dirname(ParamPath)
   } else {
