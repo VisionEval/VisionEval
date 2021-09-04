@@ -36,12 +36,10 @@ Components:
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
     CRAN:
-      - httpuv
+      - futile.logger
       - jsonlite
-      - mime
-      - R.utils
+      - yaml
       - R6
-      - stringi
       - stringr
 #    Github:
 #      - anders-biostat/jrc
@@ -181,9 +179,9 @@ Components:
 
 # "Type: test" components are copied verbatim to "src" environment under its name
 # May need to rethink this...
-  Test_Data:
-    Type: test
-    Path: sources/modules
+#   Test_Data:
+#     Type: test
+#     Path: sources/modules
 
 # "Type: model" components may have tests, and are copied to "models" folder of runtime under their name
 # The "group" is unused for testing - it is always the "last" group for the models
@@ -195,10 +193,10 @@ Components:
 #   VERPAT_Scenarios:
 #     Type: model
 #     Path: sources/models
-  VERSPM:
-    Type: model
-    Path: sources/models
-    Test: { Script: Test1/run_model.R, Group: 5 }
+#   VERSPM:
+#     Type: model
+#     Path: sources/models
+#     Test: { Script: Test1/run_model.R, Group: 5 }
 #   VERSPM_MM:
 #     Type: model
 #     Path: sources/models
@@ -210,12 +208,12 @@ Components:
 #   VERSPM_Scenarios:
 #     Type: model
 #     Path: sources/models
-  VE-State:
-    Type: model
-    Path: sources/models
-  VE-State-Staged:
-    Type: model
-    Path: sources/models
+#   VE-State:
+#     Type: model
+#     Path: sources/models
+#   VE-State-Staged:
+#     Type: model
+#     Path: sources/models
 
 # "Type: runtime" components are copied recursively to the runtime root
 # Their name is used to find them under the Path but unlike "script" components
@@ -229,36 +227,34 @@ Components:
   LICENSE:
     Type: script
     Path: "."
-  VEScenarioViewer:
-    Type: script
-    Path: sources
-  VEGUI:
-    Type: script
-    Path: sources
-    Test: { Script: run_vegui_test.R, Group: 5 }
-    CRAN:
-      - DT
-      - envDocument
-      - rhandsontable
-      - shiny
-      - shinyBS
-      - shinyFiles
-      - shinyjs
-      - shinytest
-      - testit
-      - testthat
-    BioC:
-      - rhdf5
-    Github:
-      - tdhock/namedCapture
+#   VEScenarioViewer:
+#     Type: script
+#     Path: sources
+#   VEGUI:
+#     Type: script
+#     Path: sources
+#     Test: { Script: run_vegui_test.R, Group: 5 }
+#     CRAN:
+#       - DT
+#       - envDocument
+#       - rhandsontable
+#       - shiny
+#       - shinyBS
+#       - shinyFiles
+#       - shinyjs
+#       - shinytest
+#       - testit
+#       - testthat
+#     BioC:
+#       - rhdf5
+#     Github:
+#       - tdhock/namedCapture
   tools:
     Type: script
     Path: sources
     CRAN:
-      - futile.logger
-      - tryCatchLog
+      - futile.logger                # Review continued need for all these
       - import
-      - R6
       - jsonlite
   api:                               # "package" for 'docs' type is the last element (can be file name)
     Type: docs
