@@ -181,22 +181,25 @@ test_all_install <- function() {
     "VE-State" =test_install("VE-State",var="")
   )
 
-  return (
-    lapply(
-      models,
-      function(m) {
-        cat("\nInstalling model",m,"\n")
-        vars <- variants[[m]]
-        mods <- lapply(
-          vars,
-          function(v) {
-            cat("\nInstalling model",m,"variant",v,"\n")
-            installModel(m,variant=v,confirm=FALSE,overwrite=TRUE)
-          }
-        )
-      }
-    )
+  installed <- lapply(
+    models,
+    function(m) {
+      cat("\nInstalling model",m,"\n")
+      vars <- variants[[m]]
+      mods <- lapply(
+        vars,
+        function(v) {
+          cat("\nInstalling model",m,"variant",v,"\n")
+          model <- installModel(m,variant=v,confirm=FALSE,overwrite=TRUE)
+          return(model)
+        }
+      )
+      names(mods) <- sapply(mods,function(m)m$modelName)
+      return(mods)
+    }
   )
+  names(installed) <- models
+  return(installed)
 }
 
 test_flatten <- function(log="info") {
