@@ -895,9 +895,6 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
 
 # Load the stage configuration
 ve.stage.init <- function(Name=NULL,Model=NULL,modelParam_ls=NULL,stageParam_ls=list()) {
-  # TODO: pass the actual VEModel, not just its modelParam_ls (gives
-  #  access to modelStages and other built model structures)
-  #  Use that to find modelParam_ls <- model$RunParam_ls
   # stageParam_ls has the following elements (which are explicitly provided or come from
   #  a ModelStages specification in the model parameters):
   #
@@ -911,6 +908,8 @@ ve.stage.init <- function(Name=NULL,Model=NULL,modelParam_ls=NULL,stageParam_ls=
   #     default is Path/visioneval.cnf. Relative to Path
   #   Reportable is an optional logical that says whether to include
   #     the stage in query results or exports
+  #   StartFrom is an optional name of an earlier stage whose inputs and
+  #     and Datastore will be added to this stage's paths
   #
   if ( ! is.character(Name) ) {
     if ( "Name" %in% names(stageParam_ls) ) {
@@ -942,7 +941,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,modelParam_ls=NULL,stageParam_ls=
     writeLog(paste0("Model name ",self$Name," is already defined in ",ModelName),Level="info")
     # Not an error, as this object may replace the one already in the Model
     # That error is trapped when this stage is pushed back into the model
-  }
+  } else writeLog(paste0("Initializing Model Stage:",self$Name),Level="info")
 
   # Parse the stageParam_ls (any of these may still be NULL)
   self$Dir         <- stageParam_ls$Dir
@@ -1070,12 +1069,16 @@ ve.stage.init <- function(Name=NULL,Model=NULL,modelParam_ls=NULL,stageParam_ls=
   # Identify "startFrom" stage (VEModelStage$runnable will complete setup)
   # Can find StartFrom through ModelStages or from the stage configuration file/parameters
   if (
-    ( !is.character(self$StartFrom) || length(self$StartFrom)==0 ) &&
+    ( !is.character(self$StartFrom) || length(self$StartFrom)==0 || ! nzchar(self$StartFrom) ) &&
     "StartFrom" %in% names(self$RunParam_ls)
   ) {
     self$StartFrom <- self$RunParam_ls$StartFrom
     writeLog(paste("Starting From:",self$StartFrom),Level="info")
-  } else self$StartFrom <- character(0)
+  } else {
+    writeLog("No StartFrom in self$RunParam_ls:",Level="info")
+    writeLog(paste(names(self$RunParam_ls),collapse=","),Level="info")
+    self$StartFrom <- character(0)
+  }
 
   # Wait for "runnable" setup to unpack StartFrom and to build final InputPath and
   # DatastorePath
@@ -1122,6 +1125,7 @@ ve.stage.runnable <- function(priorStages) {
     }
     StartFromScriptPath <- startFrom$ModelScriptPath
   } else {
+    writeLog("No StartFrom for stage",Level="info")
     startFrom     <- list()
     DatastorePath <- character(0)             # Default is to contribute no DatastorePath
     ParamPath <- self$RunParam_ls$ParamPath   # May be NULL
