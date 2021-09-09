@@ -9,6 +9,7 @@
 .onAttach <- function(libname, pkgname) {
   # library(VEModel) will always put us in VE_RUNTIME from the system environment
   packageStartupMessage("Welcome to the new VisionEval!")
+  initLog(Save=FALSE,Threshold=Sys.getenv("VE_LOGLEVEL",unset="warn")) # Set default logging threshold
   getSetup(reload=TRUE)   # with no arguments, reload the ve.runtime configuration and return ve.env$RunParam_ls
   packageStartupMessage(paste0("Running in ",getwd()))
 }

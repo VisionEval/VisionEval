@@ -42,102 +42,43 @@
 {
   // Runtime Environment Standard locations (relative to ve.runtime)
   // These will rarely need to be changed
-  "ModelRoot"        : "models", // Location to look by default for VEModel::openModel, relative to ve.runtime
-                                 // May be a vector of locations, but all must be relative paths
-                                 // Could also be a (single) absolute path, which may or may not
-                                 // have anything to do with ve.runtime
-  "ModelScript"      : "run_model\\.R", // This is treated as an R regular expression.
-                                          // The model script pattern is NOT case sensitive. If you
-                                          // have more than one matching file (e.g. something like
-                                          // "run_model_[[:digit:]]+\\.R"), they are presumed to
-                                          // be model stages and will be processed in OS collation
-                                          // order. These are sought recursively in ModelDir at
-                                          // runtime (when the model is loaded), and executed in the
-                                          // order found (which may not be what you expect). Look
-                                          // closely at VEModel$runModel
-  "ModelStateFileName" : "ModelState.Rda",
-
-  // "ModelScriptFile"  : "run_model.R" // relative to getwd() will initializing model, or to
-                           // an absolute path. That is how we always used to do it.
-                           // Must be set in the configuration path before a model is opened or sourced.
-                           // Generally, ModelScriptFile is deprecated in favor of "ModelScript"
-                           // (which uses a regular expression to locate valid scripts; see above)
-                           // Use ModelScriptFile if you want to provide an absolute path for a
-                           // one-script model (no external stages). If it is not an absolute path,
-                           // it will be used like "ModelScript" but with the grep flags
-                           // "fixed=TRUE" and "ignore.case=TRUE".
-                           // VEModel::openModel will set explicit absolute model paths based on
-                           // examining the model directory, and the working directory will be
-                           // the model root below which ModelScripts were sought.
-
-  "DatastoreName"    : "Datastore",
-  // "InputPath"     : [], // This parameter exists but you should just let VEModel and VEScenario set it.
-                           // This is a vector of root locations to seek InputDirName.
-                           // When an input file is sought, the first version found in
-                           // InputPath/InputDirName is used (allows scenario overrides).
-                           // Default for regular model is to look in ModelDir (see below)
-                           // Staged models will add stage subfolders of ModelDir as each stage is
-                           // run (see StageTemplate below) then in the model root, if the
-                           // ModelScriptFiles are in subdirectories of the ModelPath
+  "ModelRoot"          : "models", // Location to look by default for VEModel::openModel, relative to ve.runtime
 
   // Names of standard model files (could redefine for individual models)
-  // Rarely need to be changed
-  "RunParamFile"     : "run_parameters.json",
-  "GeoFile"          : "geo.csv",
-  "UnitsFile"        : "units.csv",
-  "DeflatorsFile"    : "deflators.csv",
-  "ModelParamFile"   : "model_parameters.json",
+  // Rarely need to be changed (RunParamFile is for backward compatibility)
+  "ModelScriptFile"    : "run_model.R",
+  "ModelStateFileName" : "ModelState.Rda",
+  "DatastoreName"      : "Datastore",
+  "RunParamFile"       : "run_parameters.json",
+  "GeoFile"            : "geo.csv",
+  "UnitsFile"          : "units.csv",
+  "DeflatorsFile"      : "deflators.csv",
+  "ModelParamFile"     : "model_parameters.json", // sought in "inputs" first, then "defs"
 
   // Structure of model inputs and outputs (set globally or on a per-model basis prior to running)
-  // The directories can be absolute paths, but that is not recommended as it will mash all your
-  // models together.
-  "InputDir"         : "inputs",   // Location of inputs, relative to InputPath
-  "ResultsDir"       : ".",        // location of Datastore and ModelState.rda relative to ModelDir
-                                   // Model stages will each get a subfolder within ResultsDir
-                                   // Scenarios managed by VEScenario will set this to "." even if
-                                   // the base model set it somewhere else. The scenario manager
-                                   // will set the model working directory to its results folder,
-                                   // and pull the script and inputs from the base model
-                                   // description, with scenario-specific inputs first on the
-                                   // InputPath
-  "OutputDir"        : "output",   // location of extracts and query results relative to ModelDir
-  "ParamDir"         : "defs",     // Location of model definitions relative to InputPath
-  "StageTemplate"    : "Stage-",   // prefix for subdirectories created for each model stage
-                                   // if the model is using "runStage" instructions in run_model.R
-                                   // "Slugified" Name (if available) or number will be appended.
-                                   // Usually all stages will share the same inputs, and the files
-                                   // should be placed in ModelDir/InputDirName (see sample models).
-                                   // StageTemplate is also used to construct locations in
-                                   // ResultsDir (or the scenario subfolder of ResultsDir) for each
-                                   // stage.
-                                   // If model stages are created externally by scripts in
-                                   // subfolders of ModelDir, StageTemplate is ignored. The stage
-                                   // directory containing the run_model.R will be pushed onto the
-                                   // InputPath. The results directory for the stage will have the
-                                   // same name as each input directory where the staged script was
-                                   // found. If model stages are created externally by multiple
-                                   // run_model_<digit>.R files (for example, using a ModelScript
-                                   // pattern), each of subdirectories will be named after the
-                                   // basename of the run_model script (including the "run_model"
-                                   // part - so build your ModelScript pattern and file names
-                                   // accordingly).
+  "InputDir"           : "inputs",   // Location of inputs, relative to InputPath
+  "ResultsDir"         : ".",        // location of Datastore and ModelState.rda relative to ModelDir
+  "OutputDir"          : "output",   // location of extracts and query results relative to ResultsDir
+                                     //  or ModelDir (multiple scenarios)
+  "ParamDir"           : "defs",     // Location of model definitions relative to InputPath
 
-  // Parameters that can be either global or set at runtime
+  // Parameters that can be either global or set in a model
   "DatastoreType"    : "RD",       // can redefine this model-by-model if desired
   "SaveDatastore"    : true,       // often overridden at runtime
   "Seed"             : 1           // Default is 1 if not overridden at runtime
 
-  // Parameters that must be set in run_parameters.json for the model
+  // Parameters that should be set in visioneval.cnf for the model
+  // "Model"            : "VERSPM Test",
   // "Region"           : "RVMPO",             // Could also set at model root
   // "BaseYear"         : "2010",              // Could also set at model root
+
+  // Parameters that should be set for a model stage (or for the model, if only one stage)
+  // "InputPath"        : [], // This parameter exists but you should just let VEModel set it unless
+                              // building scenarios.
+                              // This is a vector of root locations to seek InputDirName.
+                              // When an input file is sought, the first version found in
+                              // InputPath/InputDirName is used (allows scenario overrides).
   // "Years"            : ["2010", "2038"],    // Could also set at model root
-  // "Model"            : "VERSPM Test",
   // "Scenario"         : "Test",              // VEScenario overrides this
   // "Description"      : "Test of VERSPM",    // VEScenario overrides this
-
-  // Parameters set dynamically in pre-loaded RunParam_ls
-  // Eventually most useful to run models inside Docker images or similar
-  // "ModelDir"      : "."    // This is where the results and outputs are placed
-  //   // ModelDir may never be explicitly set - it is the working directory
-  //   // as the model runs.
 }
