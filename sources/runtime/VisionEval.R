@@ -195,5 +195,13 @@ if ( install.success ) {
   message("Please run ve.install() to complete installation.")
 }
 
+# Make sure there is a "Models" directory
+ModelRoot <- file.path(
+  getRuntimeDirectory(),
+  visioneval::getRunParameter("ModelRoot") # Uses runtime configuration or default value "models"
+)
+if ( ! dir.exists(ModelRoot) ) dir.create(ModelRoot,recursive=TRUE,showWarnings=FALSE)
+
+# clean up variables created during startup
 if ( exists("ve.lib",inherits=FALSE) ) rm(ve.lib)
 rm(env.loc,install.success)
