@@ -1,6 +1,13 @@
 # VisionEval GUI
 VisionEval R Shiny GUI and Scenario Viewer (Visualizer)
 
+**Warning!** This code has not been maintained for a long time and will be removed from VisionEval
+3.0. The functionality is being reproduced in the VEModel package (including a visual model
+inspector) and may eventually be incorporated into a new VEGUI. In practice, most agencies have
+found that working with R scripts and the R command line (often in RStudio) provides the greatest
+flexibility for debugging model inputs, and for building and running scenarios. See the [VisionEval
+website](https://visioneval.org) for more details.
+
 See [Getting Started](https://github.com/VisionEval/VisionEval/wiki/Getting-Started)
 
 VisionEval GUI (VEGUI) is an application built in R that supports VisionEval. It provides a useful interface for running a limited selection of VisionEval based models. It also offers various features like changing the input parameters to the models and visualizing the results of the model run.
