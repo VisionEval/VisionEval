@@ -1,2 +1,2 @@
 @echo off
-%R_HOME%\bin\R.exe --no-save
+start %R_HOME%\bin\x64\RGui.exe --no-save

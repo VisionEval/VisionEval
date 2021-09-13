@@ -54,10 +54,7 @@ loadModelSetup <- function(log="warn")
   loadModel$configure()
 
   message("Copy additional inputs")
-  base.inputs <- file.path(
-    baseModel$setting("InputPath",shorten=FALSE),
-    baseModel$setting("InputDir")
-  )
+  base.inputs <- baseModel$setting("InputPath",shorten=FALSE)
   cat("Base Inputs",base.inputs,"\n")
   print(loadModel$setting("LoadDatastoreName"))
   inputs <- loadModel$list(inputs=TRUE,details=c("FILE"))
@@ -67,10 +64,7 @@ loadModelSetup <- function(log="warn")
   print(basename(required.files))
 
   message("Copying additional input files")
-  load.inputs <- file.path(
-    loadModel$setting("InputPath",shorten=FALSE),
-    loadModel$setting("InputDir")
-  )
+  load.inputs <- loadModel$setting("InputPath",shorten=FALSE)
 
   message("Remove base model inputs - will just have new ones")
   unlink(load.inputs,recursive=TRUE)

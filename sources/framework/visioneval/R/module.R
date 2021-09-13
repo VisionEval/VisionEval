@@ -1409,7 +1409,8 @@ doProcessInpSpec <- function(InpSpecs_ls) {
   G <- getModelState() # To resolve InputPath
   for (i in 1:length(InpSpecs_ls)) {
     Spec_ls <- InpSpecs_ls[[i]]
-    File <- findRuntimeInputFile(Spec_ls$FILE,Dir="InputDir",Param_ls<-G$RunParam_ls,StopOnError=FALSE)
+    # findRuntimeInputFile looks on InputPath by default
+    File <- findRuntimeInputFile(Spec_ls$FILE,Param_ls<-G$RunParam_ls,StopOnError=FALSE)
     if ( is.na(File) ) {
       if ( checkOptional(Spec_ls) ) next # Optional but missing; just skip
       Spec_ls$INPUTDIR <- NA # Required, but missing; trap later

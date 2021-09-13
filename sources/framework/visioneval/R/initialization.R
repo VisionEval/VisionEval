@@ -98,6 +98,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   }
   newModelState_ls$Units <- read.csv(UnitsFilePath, as.is = TRUE)
 
+  # Note: reproduces visioneval::readGeography, which is itself only called in tests.R
   GeoFile <- getRunParameter("GeoFile",Param_ls=Param_ls)
   GeoFilePath <- file.path(ParamPath,GeoFile)
   GeoFilePath <- GeoFilePath[file.exists(GeoFilePath)][1] # Allow ParamPath to be a vector of Paths
@@ -110,6 +111,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
     )
   }
   Geo_df <- read.csv(GeoFilePath, colClasses="character")
+  attr(Geo_df,"file") <- GeoFilePath
   CheckResults_ls <- checkGeography(Geo_df)
   Messages_ <- CheckResults_ls$Messages
   if (length(Messages_) > 0) {
@@ -1334,7 +1336,8 @@ documentModule <- function(ModuleName){
 #' are found, write the errors to a log file and stops model execution. If there are no errors, the
 #' function adds the geography in the geographic specifications file, the errors are written to the
 #' log file and execution stops. If no errors are found, the geographic specifications are added to
-#' the model state file.
+#' the model state file. This function is only called from tests.R. Standard model run reproduces
+#' these steps in visioneval::initModelState.
 #'
 #' @param Save A logical (default=TRUE) indicating whether the model state
 #'   should be saved to the model state file, or just updated in ve.model environment
@@ -1357,7 +1360,17 @@ readGeography <- function(Save=TRUE,Param_ls=NULL) {
   #Read in geographic definitions if file exists, otherwise error
   #--------------------------------------------------------------
   GeoFile <- getRunParameter("GeoFile",Param_ls=Param_ls)
-  GeoFilePath <- findRuntimeInputFile(GeoFile,Dir="ParamDir",Param_ls=Param_ls)
+  ParamPath <- getRunParameter("ParamPath",Param_ls=Param_ls)
+  GeoFilePath <- file.path(ParamPath,GeoFile)
+  GeoFilePath <- GeoFilePath[file.exists(GeoFilePath)][1] # Allow ParamPath to be a vector of Paths
+  if ( is.na(GeoFilePath) || length(GeoFilePath)!=1 ) {
+    stop(
+      writeLog(
+        paste("Geography File",GeoFile,"does not exist in",ParamPath),
+        Level="error"
+      )
+    )
+  }
   Geo_df <- read.csv(GeoFilePath, colClasses="character")
   attr(Geo_df,"file") <- GeoFilePath
   CheckResults_ls <- checkGeography(Geo_df)
@@ -1385,7 +1398,7 @@ readGeography <- function(Save=TRUE,Param_ls=NULL) {
 #'
 #' This function reads the file containing geographic specifications for the
 #' model and checks the file entries to determine whether they are internally
-#' consistent. This function is called by the readGeography function.
+#' consistent. This function is called when setting up the geography file.
 #'
 #' @param Geo_df A data.frame containing a model geography description
 #' @return A list having two components. The first component, 'Messages',
@@ -1662,10 +1675,11 @@ loadModelParameters <- function(FlagChanges=FALSE,envir=modelEnvironment()) {
 
   writeLog("Loading model parameters file.",Level="info")
   ModelParamFile <- getRunParameter("ModelParamFile",Param_ls=RunParam_ls)
-  ParamFile <- findRuntimeInputFile(ModelParamFile,"ParamDir",Param_ls=RunParam_ls,StopOnError=FALSE)
+  # look first on InputPath, then for file in ParamPath if not found
+  ParamFile <- findRuntimeInputFile(ModelParamFile,Dir="InputPath",Param_ls=RunParam_ls,StopOnError=FALSE)
   if ( is.na(ParamFile) ) {
-    # Not Found: Try again looking this time in InputDir (element of input path)
-    ParamFile <- findRuntimeInputFile(ModelParamFile,"InputDir",Param_ls=RunParam_ls,StopOnError=FALSE)
+    # Not Found: Try again looking this time in ParamPath (classic location)
+    ParamFile <- findRuntimeInputFile(ModelParamFile,Dir="ParamPath",Param_ls=RunParam_ls,StopOnError=FALSE)
     if ( is.na(ParamFile) ) {
       # Still Not Found: Throw an error
       ErrorMsg <- paste0(
@@ -1679,7 +1693,7 @@ loadModelParameters <- function(FlagChanges=FALSE,envir=modelEnvironment()) {
       ParamFile <- ParamFile[1] # may have multiple InputPaths; pick the first found file
     }
   }
-
+ 
   Param_df <- jsonlite::fromJSON(ParamFile)
   if ( ! FlagChanges ) {
     Group <- "Global"

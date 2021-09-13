@@ -177,23 +177,12 @@ addDisplayUnits <- function(GTN_df,Param_ls) {
   # GTN_df is a data.frame with "Group","Table","Name" rows for each Name/field for which display
   #  units are sought. Always re-open the DisplayUnits file, as it may have changed since the last
   #  run.
-  ConfigDir <- visioneval::getRunParameter("ConfigDir",Param_ls=Param_ls) # relative to ve.runtime
-  ParamDir <- visioneval::getRunParameter("ParamDir",Param_ls=Param_ls)   # relative to InputPath
-  InputPath <- visioneval::getRunParameter("InputPath",Param_ls=Param_ls)
+  ParamPath <- visioneval::getRunParameter("ParamPath",Param_ls=Param_ls) # location of structural files
 
   DisplayUnitsFile <- visioneval::getRunParameter("DisplayUnitsFile",Param_ls=Param_ls)
-  DisplayUnitsFile <- c(
-    visioneval::findFileOnPath(
-      Root=getRuntimeDirectory(),
-      Dir=ConfigDir,
-      File=DisplayUnitsFile,onlyExists=FALSE
-    ),
-    visioneval::findFileOnPath(
-      Root=InputPath,
-      Dir=ParamDir,
-      File=DisplayUnitsFile,onlyExists=FALSE
-    )
-  )
+  # Where to look for DisplayUnitsFile...
+  # By its name, in ParamPath for model (preferred) or runtime directory (global values)
+  DisplayUnitsFile <- file.path(paste(c(ParamPath,getRuntimeDirectory()),DisplayUnitsFile))
 
   existing <- file.exists(DisplayUnitsFile)
   if ( ! any(existing) ) {

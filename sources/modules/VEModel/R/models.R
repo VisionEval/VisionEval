@@ -183,16 +183,14 @@ getModelRoots <- function(get.root=0,Param_ls=NULL) {
 
 ## Helper function
 # Cull the InputPath parameter (only those containing InputDir, no duplicates)
-cullInputPath <- function(InputPath,InputDir) {
+cullInputPath <- function(InputPath) {
   # Remove any element of InputPath that is "" or "."
   InputPath <- InputPath[ nzchar(InputPath) & InputPath != "." ]
 
   # Normalize remaining InputPath elements, if any, and remove duplicates
   InputPath <- unique(normalizePath(InputPath,winslash="/",mustWork=FALSE))
 
-  # Remove any element of InputPath that is not an existing directory
-  InputDir <- InputDir[1] # backstop in case InputDir accidentally set to a vector
-  InputPath <- InputPath[dir.exists( file.path(InputPath,InputDir) )]
+  InputPath <- InputPath[dir.exists( InputPath )]
 
   return(InputPath)
 }
@@ -297,19 +295,25 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
   }
 
   # Process InputPath for overall model (culling directories for those actually exist)
+  rootInputPath <- normalizePath(
+    file.path(modelParam_ls$ModelDir,visioneval::getRunParameter("InputDir",Param_ls=modelParam_ls)),
+    winslash="/",mustWork=FALSE
+  )
   if ( ! "InputPath" %in% names(modelParam_ls) ) {
     modelParam_ls <- visioneval::addRunParameter(
       Param_ls=modelParam_ls,
       Source="VEModel::findModel",
-      InputPath=modelParam_ls$ModelDir
+      InputPath=rootInputPath
     )
   } else {
     # expand default InputPath if necessary
-    if ( modelParam_ls$InputPath == "." ) modelParam_ls$InputPath <- modelParam_ls$ModelDir
+    if ( any( modelParam_ls$InputPath == "." ) ) {
+      modelParam_ls$InputPath[ modelParam_ls$InputPath=="." ] <- rootInputPath
+    }
     modelParam_ls <- visioneval::addRunParameter(
       Param_ls=modelParam_ls,
       Source="VEModel::findModel",
-      InputPath=c( modelParam_ls$ModelDir, modelParam_ls$InputPath )
+      InputPath=c( rootInputPath, modelParam_ls$InputPath )
     )
   }
   # Cull input paths (directory must exist and contain InputDir (default: "inputs")
@@ -317,8 +321,7 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
     Param_ls=modelParam_ls,
     Source="VEModel::findModel",
     InputPath=cullInputPath(
-      InputPath=modelParam_ls$InputPath,
-      InputDir=visioneval::getRunParameter("InputDir",Param_ls=modelParam_ls)
+      InputPath=modelParam_ls$InputPath
     )
   )
   writeLog("Input Paths:",Level="info")
@@ -1052,17 +1055,19 @@ ve.stage.init <- function(Name=NULL,Model=NULL,modelParam_ls=NULL,stageParam_ls=
   self$RunPath <- normalizePath(self$RunPath)
   writeLog(paste("Stage RunPath:",self$RunPath),Level="info")
 
-  # Set stage InputPath (will be culled later if not useful)
+  # Set stage InputPath
   if (
     ! "InputPath" %in% names(self$RunParam_ls) &&
     is.character(self$Path) &&
     dir.exists(self$Path)
   ) {
     writeLog("Adding stage path to InputPath",Level="info")
+    stageInput <- file.path(self$Path,visioneval::getRunParameter("InputDir",self$RunParam_ls))
+    if ( ! file.exists(stageInput) ) stageInput <- self$Path
     self$RunParam_ls <- visioneval::addRunParameter(
       self$RunParam_ls,
       Source="VEModelStage$initialize",
-      InputPath=self$Path
+      InputPath=stageInput
     )
   }
 
@@ -1133,16 +1138,13 @@ ve.stage.runnable <- function(priorStages) {
     StartFromScriptPath <- NULL
   }
 
-  # Construct InputPath
+  # Save InputPath
   self$RunParam_ls <- visioneval::addRunParameter(
     self$RunParam_ls,
     Source="VEModelStage$runnable",
-    InputPath=cullInputPath( # remove duplicates
-      InputPath=InputPath,
-      InputDir=visioneval::getRunParameter("InputDir",Param_ls=self$RunParam_ls)
-    )
+    InputPath=cullInputPath( InputPath=InputPath )
   )
-  writeLog(paste0("InputPath for ",self$Name,": ",self$RunParam_ls$InputPath),Level="info")
+  writeLog(paste("InputPath for",self$Name,":",self$RunParam_ls$InputPath,collapse="; "),Level="info")
 
   # Construct DatastorePath, prepending ModelDir/ResultsDir/StageDir as
   #   first element (writable)

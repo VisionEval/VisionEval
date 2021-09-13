@@ -692,15 +692,14 @@ loadConfiguration <- function( # if all arguments are defaulted, return an empty
 #' exist, or NA if there are no existing files.
 #'
 #' @param File The name of the file to seek
-#' @param Dir The name of a run parameter specifying a directory relative to Root
-#' @param Root The root from which to build file paths (getwd() by default)
+#' @param Dir Directory (or directories) in which to seek files
 #' @param onlyExists A logical; if TRUE filter the list of files to just those that exist (or NA if
 #'   none); otherwise return all candidate names.
 #' @return the path(s) of files found on all combinations of Root(s), Dir(s) and File(s)
 #' @export
-findFileOnPath <- function(File,Dir,Root=getwd(),onlyExists=TRUE) {
+findFileOnPath <- function(File,Dir,onlyExists=TRUE) {
   dir.file <- character(0)
-  for ( r in Root) for ( d in Dir ) for ( f in File ) dir.file <- c(dir.file, file.path(r,d,f))
+  for ( d in Dir ) for ( f in File ) dir.file <- c(dir.file, file.path(d,f))
   dir.file <- unique(normalizePath(dir.file,winslash="/",mustWork=FALSE))
   if ( onlyExists ) dir.file <- dir.file[ file.exists(dir.file) ]
   return(dir.file) # possibly empty character vector
@@ -715,19 +714,17 @@ findFileOnPath <- function(File,Dir,Root=getwd(),onlyExists=TRUE) {
 #' error message is logged and processing stops.
 #'
 #' @param File The name (or a vector of names) of the file to seek (NOT a run parameter)
-#' @param Dir The name of a run parameter specifying a directory relative to getwd()
-#' @param Param_ls The run parameters in which to seek InputPath and Dir (default
-#'   is the one in ve.model environment)
+#' @param Dir The name of a path parameter (InputPath, ParamPath) to search for input files
+#' @param Param_ls The run parameters in which to seek value for Dir (yields vector of directory paths)
 #' @param StopOnError logical, if TRUE stop if no existing file is found, else return NA
-#' @return the path of the first file existing in InputDir/Dir/File or NA if not found
+#' @return the path of the first existing Dir/File or NA if not found
 #' @export
-findRuntimeInputFile <- function(File,Dir="InputDir",Param_ls=NULL,StopOnError=TRUE) {
-  inputPath <- getRunParameter("InputPath",Param_ls=Param_ls)
+findRuntimeInputFile <- function(File,Dir="InputPath",Param_ls=NULL,StopOnError=TRUE) {
+  inputPath <- getRunParameter(Dir,Param_ls=Param_ls)
   writeLog(paste("Input path raw:",inputPath,collapse=":"),Level="trace")
-  searchDir <- getRunParameter(Dir,Param_ls=Param_ls)
-  candidates <- findFileOnPath( File=File, Dir=searchDir, Root=inputPath )
+  candidates <- findFileOnPath( File=File, Dir=inputPath )
   if ( StopOnError && ( length(candidates)==0 || is.na(candidates) ) ) {
-    stop( writeLog(paste("Could not locate",File,"as",paste(candidates,collapse="; ")),Level="error") )
+    stop( writeLog(paste("Could not locate",File,"on",inputPath,collapse="; "),Level="error") )
   }
   return(candidates[1]) # if StopOnError==FALSE, return NA if no matching File was found
 }
