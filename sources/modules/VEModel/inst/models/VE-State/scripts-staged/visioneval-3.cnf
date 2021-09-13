@@ -1,4 +1,8 @@
-# Stage configuration
+Notes:
+- VE-State Stage e (Carbon Intensity/Powertrains for Base & Future Year)
+- Model Script varies by stage
+- Years, BaseYear set for the model
+- Scenario Description: ModelScript, Scenario, Description, StartFrom
 
 # Scenario description
 ModelScript    : run_stage_3.R

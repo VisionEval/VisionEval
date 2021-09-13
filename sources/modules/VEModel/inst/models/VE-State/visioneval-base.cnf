@@ -1,4 +1,8 @@
-# VisionEval.cnf for VERSPM (single stage)
+Notes:
+- VE-State "all in one" implementation (takes a LONG time to run)
+- Model Structural Parameters: ScriptsDir,ModelScript,InputDir,ParamDir,GeoFile,ModelParamFile
+- Model Description: Model, Region, Stage
+- Scenario Description: Seed, Scenario, Description, BaseYear, Years
 
 # Model Structural Parameters (all are optional)
 ScriptsDir     : scripts

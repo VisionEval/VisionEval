@@ -1,4 +1,11 @@
-# VisionEval.cnf for VERSPM (single stage)
+Notes:
+- VE-State "staged" implementation (still LONG to run, but each stage is shorter...)
+- Model Structural Parameters: ScriptsDir,InputDir,ParamDir
+- Model Description: Model, Region, Stage, ModelStages
+- Stages do not have their own directories - just individual configuration files that
+  are stored in the ScriptsDir
+- Scenario Description: Scenario, Description, BaseYear, Years
+- Seed parameter is defaulted in this model...
 
 # Model Structural Parameters
 ScriptsDir     : scripts

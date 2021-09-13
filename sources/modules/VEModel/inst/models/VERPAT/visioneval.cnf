@@ -1,4 +1,10 @@
-# VisionEval.cnf for VERPAT
+Notes:
+- VERPAT is lightly supported in NextGen
+- It does egregious things like write table columns of different lengths into
+  the same Datastore table.
+- Model description: Model, Region, State
+- Model Scenario: Scenario, Seed, Description, BaseYear, Years
+- Structural Parameters: ScriptsDir, InputDir, ParamDir
 
 # Model description
 Model          : VERPAT

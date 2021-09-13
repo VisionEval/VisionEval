@@ -1,5 +1,6 @@
-# Descriptive elements of this stage (Years)
-# Clone this future year with different inputs for alternate scenarios
+Notes:
+- Descriptive elements of Future Year stage
+- Clone this future year with different inputs for alternate scenarios
 
 # Scenario description
 ModelScript : run_scenario.R

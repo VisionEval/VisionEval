@@ -1,5 +1,13 @@
-# VisionEval.cnf for VERSPM with "horizontal" population synthesis stage
-#   and full copy of Datastore between each stage.
+Notes:
+- VisionEval.cnf for VERSPM with "vertical" years (and "horizontal" population synthesis)
+- Full copy of Datastore between each stage
+- The LoadDatastore directive causes the Datastore from each previous
+  stage to be copied into the current stage when it starts. Generally
+  that is not needed (virtual Datastore is the default; you can copy the
+  Datastore afterwards and "Flatten" it).
+- Model Structural Parameters: ScriptsDir, InputDir, ParamDir, Seed, LoadDatastore
+- Model Description: Model, Region, State, ModelStages
+- See individual ModelStages for scenario descriptions
 
 # Model Structural Parameters
 ScriptsDir    : scripts
@@ -9,12 +17,6 @@ InputDir      : inputs # model_parameters.json is located here
     # Stages can include just the minimal input data they need to run
 ParamDir      : defs # default parameter location
 Seed          : 1
-
-# The LoadDatastore directive causes the Datastore from each previous
-# stage to be copied into the current stage when it starts. Generally
-# that is not needed (virtual Datastore is the default; you can copy the
-# Datastore afterwards and "Flatten" it).
-
 LoadDatastore : true
 
 # Model description
@@ -31,5 +33,3 @@ ModelStages : # specify explicitly to avoid processing base scenario
     "stage-pop-future":
       Dir: stage-pop-future
       Reportable: true
-
-# Additional parameters in stage configurations

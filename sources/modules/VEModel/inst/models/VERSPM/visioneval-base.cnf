@@ -1,4 +1,8 @@
-# VisionEval.cnf for VERSPM (single stage)
+Notes:
+- VisionEval.cnf for VERSPM (single stage)
+- Model Structural Parameters: ScriptsDir, InputDir, ParamDir, GeoFile, ModelParamFile
+- Model Description: Model, Region, State
+- Scenario Description (single stage): Scenario, Description, BaseYear, Years
 
 # Model Structural Parameters
 ScriptsDir     : scripts

@@ -1,4 +1,8 @@
-# Stage configuration
+Notes:
+- VE-State Stage 2 (Core Metrics for Base & Future Year)
+- Model Script varies by stage
+- Years, BaseYear set for the model
+- Scenario Description: ModelScript, Scenario, Description, StartFrom
 
 # Scenario description
 ModelScript    : run_stage_2.R

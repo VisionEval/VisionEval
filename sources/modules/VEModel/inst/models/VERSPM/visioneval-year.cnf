@@ -1,13 +1,17 @@
-# VisionEval.cnf for VERSPM with "vertical" stages by Year
-# Each year runs as a separate stage; clone stage-year-2030 with
-#   different inputs to create additional scenarios.
+Notes:
+- VisionEval.cnf for VERSPM with "vertical" years
+- Each year runs as a separate stage; StartFrom stage-year-2030 with
+  different inputs to create additional scenarios.
+- Model Structural Parameters: ScriptsDir, InputDir, Seed
+- Model Description: Model, Region, State, ModelStages
+- See individual ModelStages for scenario descriptions
 
 # Model Structural Parameters
 ScriptsDir  : scripts
 InputDir    : inputs
+Seed        : 1
 
 # Model description
-Seed        : 1
 Model       : VERSPM 3.0 ("Vertical" stages/Years)
 Region      : RVMPO
 State       : OR

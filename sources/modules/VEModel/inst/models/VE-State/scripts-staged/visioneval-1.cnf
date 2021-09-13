@@ -1,4 +1,8 @@
-# Stage configuration
+Notes:
+- VE-State State 1 (Population Synthesis)
+- Model Script varies by stage
+- Years, BaseYear set for the model
+- Scenario Description: ModelScript, Scenario, Description
 
 # Scenario description
 ModelScript    : run_stage_1.R
