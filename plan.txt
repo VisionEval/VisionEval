@@ -1,14 +1,57 @@
 The path to completion:
 
-Fix up the NextGen runtime installer: use Setup.R from the walkthrough to locate ve-lib (with some
-additional installation stuff that might work on the Mac from the original installer). Basically,
-all we need in the runtime is something that will locate ve-lib (or build from ve-pkg), then require
-VEModel. Create the models folder but do not include it. Keep the tools folder mechanism for testing
-out future enhancements. Do not (at this time) include the VEScenarioViewer.
+Absorb Dan et al's scripts for extracting metrics...
 
 Create the model visualizer (dump detailed structures to a JSON file, and then launch a static page
 to navigate it). Visualizer should include the scripts, the configurations (including grayed-in defaults),
 the module inputs and outputs. That can be a warmup for the full scenario viewer.
+
+Recent changes to InputPath development allow the StageDir to hold the altered input files directly
+(so the InputDir sub-directory is optional)
+
+Create an option to the addstage function to make a stage in the file system (sub-directory within
+the ModelDir), containing an (optional) Scripts directory, a visioneval.cnf (with the extras, and an
+Inputs directory). Must specify the Dir option (which must not already existing within ModelDir).
+
+If inputs have been developed elsewhere, option to provide a string of file paths (absolute) that
+will be copied into the scenario stage directory.
+
+So the VEScenario operation should go like this:
+  - Identify a Base Model and copy it to the Scenario Model
+  - Identify the configuration files describing the scenarios
+  - Identify (or create) the "StartFrom" stage that is the basis for all the scenarios (e.g. "Future Year")
+    - Gets a script
+    - Gets a complete set of inputs
+    - May StartFrom another stage in the model (e.g. base year)
+  - Generate a (possibly long) sequence of Reportable model stages that get written back out to the
+    Scenario Model Copy's visioneval.cnf by iterating through the Scenario configurations.
+
+The input files for the scenarios are not copied from the location identified in the configuration files.
+Instead, the containing folder(s) are added to an InputPath for the scenarios. This is where making the
+InputDir optional would be good.
+
+The "addstage" function should default to rewriting the ModelStages structure in the model's
+visioneval.cnf. Could just do it in memory (leaving the residue in the ModelState_ls/RunParam_ls
+results structure).
+
+Add a metadata element ("Notes" structure) to visioneval.cnf that just contains an array of strings.
+Later useful in the model inspector.
+
+Set up scenarios using addstage function:
+  1. Add a scenario to the model's runtime
+     - Start From (base scenario)
+  2. Rewrite the model stages description to the Model/Stage configuration (save it back out)
+     A. Model gets Stage Configuration (stage does not get explicit configuration)
+     B. Stage Configuration:
+        - Path may not be set (it includes "Inputs" and "Scripts" if those vary for the scenario)
+        - Config is not set in this case (but could be)
+        - StartFrom (base scenario that other scenarios modify)
+        - Dir (name of output subfolder for this scenario in ResultsDir)
+        - Name
+     C. Extra configuration parameters (also placed in ModelStages)
+        - InputPath (one or more directories with scenario inputs)
+        - Description
+        - Reportable (defaults to TRUE)
 
 Update the scenario viewer to be fully table driven.
 
