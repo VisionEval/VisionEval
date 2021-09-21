@@ -1003,8 +1003,10 @@ test_mult <- function(reset=FALSE,log="info") {
   # TODO: ensure that the query outputs are disambiguated and remain
   # available
 
+  if ( ! missing(log) ) logLevel(log)
   testStep("Acquiring test model")
-  jr <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=reset)
+  jr <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",reset=reset)
+  print(jr)
   qry <- jr$query("Test-Query")
   print(qry)
 
@@ -1020,11 +1022,9 @@ test_mult <- function(reset=FALSE,log="info") {
   stagePath.1 <- file.path(jr$modelPath,"Scenario-1")
   if ( ! dir.exists( stagePath.1 ) ) dir.create(stagePath.1)
   jr$addstage(
-    list(
-      Name="Scenario-1",
-      Dir="Scenario-1",
-      ModelDir=jr$modelPath
-    ),
+    Name="Scenario-1",
+    Dir="Scenario-1",
+    ModelDir=jr$modelPath,
     Scenario="Scenario 1",
     Description="Same as original...",
     StartFrom="stage-pop-future",
@@ -1035,11 +1035,9 @@ test_mult <- function(reset=FALSE,log="info") {
   stagePath.2 <- file.path(jr$modelPath,"Scenario-2")
   if ( ! dir.exists( stagePath.2 ) ) dir.create(stagePath.2)
   jr$addstage(
-    list(
-      Name="Scenario-2",
-      Dir="Scenario-2",
-      ModelDir=jr$modelPath
-    ),
+    Name="Scenario-2",
+    Dir="Scenario-2",
+    ModelDir=jr$modelPath,
     Scenario="Scenario 2",
     Description="Same as original...",
     StartFrom="stage-pop-future",
@@ -1047,6 +1045,7 @@ test_mult <- function(reset=FALSE,log="info") {
     Years=jr$setting("Years",stage="stage-pop-future"),
     ModelScript=jr$setting("ModelScript",stage="stage-pop-future")
   )
+
   # Force Reportable on stage-pop-future (auto-detect says no since
   # the other scenarios start from it.
   jr$modelStages[["stage-pop-future"]]$Reportable=TRUE

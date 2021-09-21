@@ -951,7 +951,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,modelParam_ls=NULL,stageParam_ls=
   self$Path        <- stageParam_ls$Path
   self$Config      <- stageParam_ls$Config
   self$Reportable  <- stageParam_ls$Reportable
-  selfStartFrom    <- stageParam_ls$StartFrom
+  self$StartFrom   <- stageParam_ls$StartFrom
 
   # Merge any remaining items defined in stageParam_ls (ModelStages structure) into
   #   stageConfig_ls (which overrides the modelParam_ls and stage Config file (if any))
@@ -1073,16 +1073,16 @@ ve.stage.init <- function(Name=NULL,Model=NULL,modelParam_ls=NULL,stageParam_ls=
 
   # Identify "startFrom" stage (VEModelStage$runnable will complete setup)
   # Can find StartFrom through ModelStages or from the stage configuration file/parameters
-  if (
-    ( !is.character(self$StartFrom) || length(self$StartFrom)==0 || ! nzchar(self$StartFrom) ) &&
-    "StartFrom" %in% names(self$RunParam_ls)
-  ) {
-    self$StartFrom <- self$RunParam_ls$StartFrom
-    writeLog(paste("Starting From:",self$StartFrom),Level="info")
-  } else {
-    writeLog("No StartFrom in self$RunParam_ls:",Level="info")
-    writeLog(paste(names(self$RunParam_ls),collapse=","),Level="info")
-    self$StartFrom <- character(0)
+  if ( !is.character(self$StartFrom) || length(self$StartFrom)==0 || ! nzchar(self$StartFrom) ) {
+    # StartFrom was not set previously from stageParam_ls
+    if ( "StartFrom" %in% names(self$RunParam_ls) ) {
+      self$StartFrom <- self$RunParam_ls$StartFrom
+      writeLog(paste("Starting From:",self$StartFrom),Level="info")
+    } else {
+      writeLog("No StartFrom in self$RunParam_ls:",Level="info")
+      writeLog(paste(names(self$RunParam_ls),collapse=","),Level="info")
+      self$StartFrom <- character(0)
+    }
   }
 
   # Wait for "runnable" setup to unpack StartFrom and to build final InputPath and
@@ -1208,7 +1208,7 @@ ve.stage.runnable <- function(priorStages) {
       DatastoreType=visioneval::getRunParameter("DatastoreType",Param_ls=self$RunParam_ls)
     )
   }
-  writeLog("DatastoreType:",self$RunParam_ls$DatastoreType)
+  writeLog(paste("DatastoreType:",self$RunParam_ls$DatastoreType),Level="info")
 
   # Check if stage can run (enough parameters to run visioneval::loadModel and visioneval::prepareModelRun)
   missingParameters <- visioneval::verifyModelParameters(self$RunParam_ls)
@@ -1741,7 +1741,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
   # Organize the stages into run groups (Stages that have identical StartFrom stages)
   # We'll do this by walking through the modelStages in order to preserve the stage order
   RunGroups <- list()
-  for ( sn in names(self$modelStages) ) {
+  for ( sn in runStages ) {
     stage <- self$modelStages[[sn]]
     sf <- if ( length(stage$StartFrom)>0 ) stage$StartFrom else "--"
     if ( ! sf %in% names(RunGroups) ) {
@@ -1784,17 +1784,13 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
 #   list of parameters that are considered to be part of the StageConfig (e.g. InputPath for the
 #   stage) - anything that might go into a stage's visioneval.cnf. The combination of stageParam_ls
 #   and ... must add up to a runnable stage (errors identified in self$initstages)
-
-# TODO: restructure with explicit stage Name (not from stageParam_ls)
-# Then just have stageParam_ls be the entire set of ... (and don't bother with
-# stageConfig_ls since the stage.init rolls anything left over from stageParam_ls
-# into stageConfig_ls.
 ve.model.addstage <- function(Name=NULL,...) {
   # Add additional configuration parameters
   dotParam_ls <- list(...)
   stageParam_ls <- visioneval::addParameterSource(dotParam_ls,"addstage")
 
   # Merge the stage into the list of modelStages
+  VEModelStage$debug("initialize")
   stage <- VEModelStage$new(
     Name = Name,
     Model = self,
