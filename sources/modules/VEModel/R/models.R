@@ -1288,6 +1288,9 @@ ve.stage.run <- function(log="warn") {
       ve.model$RunModel <- TRUE
       initLog(Threshold=log,Save=TRUE,envir=ve.model) # Log stage
       # Create new ModelState_ls (ignore existing)
+      # TODO: These should perhaps be done in a separate pass/function when
+      # ve.model.run is called (and the need to be sequential, since we'll
+      # be looking back at the ModelState for the StartFrom stages...
       visioneval::loadModel(self$RunParam_ls)
       visioneval::setModelState()                       # Save ModelState.Rda
       visioneval::prepareModelRun()                     # Initialize Datastore
@@ -1735,13 +1738,33 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
   # Establish the LogLevel from the overall environment
   LogLevel <- visioneval::getRunParameter("LogLevel",Default=log,Param_ls=self$RunParam_ls)
 
-  # Set up the model runtime environment
-  for ( ms in runStages ) { # iterate over names of stages to run
-    writeLog(paste("Running stage:",ms),Level="warn")
-    self$modelStages[[ms]]$run(log=LogLevel)
-    if ( self$modelStages[[ms]]$RunStatus != codeStatus("Run Complete") ) {
-      msg <- writeLog(paste("Model failed with status",self$printStatus(self$modelStages[[ms]]$RunStatus)),Level="error")
-      stop(msg)
+  # Organize the stages into run groups (Stages that have identical StartFrom stages)
+  # We'll do this by walking through the modelStages in order to preserve the stage order
+  RunGroups <- list()
+  for ( sn in names(self$modelStages) ) {
+    stage <- self$modelStages[[sn]]
+    sf <- if ( length(stage$StartFrom)>0 ) stage$StartFrom else "--"
+    if ( ! sf %in% names(RunGroups) ) {
+      RunGroups[[sf]] <- sn
+    } else {
+      RunGroups[[sf]] <- c( RunGroups[[sf]], sn )
+    }
+  }
+
+  # Run the stages
+  # TODO: Spawn background processes to run the stages (perhaps using future package)
+  # TODO: Need to not exceed number of available processors (block until more available)
+
+  for ( rgn in names(RunGroups) ) {
+    writeLog(paste("Running Stages where StartFrom =",rgn),Level="warn")
+    rg <- RunGroups[[rgn]]
+    for ( ms in rg ) { # iterate over names of stages to run
+      writeLog(paste("Running stage:",ms),Level="warn")
+      self$modelStages[[ms]]$run(log=LogLevel)
+      if ( self$modelStages[[ms]]$RunStatus != codeStatus("Run Complete") ) {
+        msg <- writeLog(paste("Model failed with status",self$printStatus(self$modelStages[[ms]]$RunStatus)),Level="error")
+        stop(msg)
+      }
     }
   }
 

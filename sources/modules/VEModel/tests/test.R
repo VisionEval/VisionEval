@@ -221,13 +221,17 @@ test_flatten <- function(log="info") {
   setwd(owd)
 }
 
-test_run <- function(modelName="VERSPM-base",reset=FALSE,log="info") {
+test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",reset=FALSE,log="info") {
 
   if ( ! missing(log) ) logLevel(log)
+  model.dir <- dir("models")
   if ( missing(modelName) || ! nzchar(modelName) ) {
-    return(dir("models"))
+    return(model.dir)
   }
-
+  if ( ! modelName %in% model.dir ) {
+    reset <- TRUE
+    rs <- test_install(modelName=baseModel,variant=variant,installAs=modelName,log="info")
+  }
   if ( ! reset ) {
     testStep(paste("Attempting to re-open existing",modelName))
     rs <- openModel(modelName)
@@ -240,7 +244,8 @@ test_run <- function(modelName="VERSPM-base",reset=FALSE,log="info") {
     }
   }
   if (reset) {
-    testStep("Running model...")
+    rs <- openModel(modelName)
+    testStep(paste("Running model",rs$modelName))
     rs$run(run="reset",log=log) # clears results directory
   }
   return(rs)
