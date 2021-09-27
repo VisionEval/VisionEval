@@ -1,34 +1,261 @@
 The path to completion:
 
+Get VE-State to run as a multi-stage model with the WSDOT Scenarios.
+
+Get the scenario setup working, using addstage and building directories (and InputPath) as
+needed.
+
+Basic scenario operation:
+  Scenario configuration (inline via addstage, written into StageDir/visioneval.cnf, possibly
+    saving the settings back out into visioneval.cnf after setting them up dynamically)
+  Key Scenario elements:
+    StartFrom stage (possibly free-standing) - sets DatastorePath, base InputPath
+    InputPath (from StageDir or StageDir/InputDir)
+  Verify that InputPath is cumulative:
+    Add StageDir (if present), StageDir/InputDir (if present)
+    Push all of that ahead of the StartFrom InputPath
+    InputPath may be a vector in the stage (as when constructing a scenario from categories and
+     levels).
+  Notion of ScenarioRoot (where to look for Scenario elements)
+  A: compose scenario categories and levels
+     This construction happens within a copy of the BaseModel - we build multiple stages. Identify
+     the model into which to inject stages. Come up with a name scheme for Stage (StageDir). Build
+     the InputPath/configuration - can be inline in Model/ModelStages. Don't need to build StageDir
+     for input (keep configuration in copy of BaseModel); use StageDir for output; put
+     configuration in Model/ModelStages.
+       1. ScenarioDir is used when processing category/level spreadsheet to find input folders
+          that are then placed into the constructed stage configurations. We don't want to copy
+          the input folders. So perhaps we build a series of configurations for each stage and
+          we just end up with "A3B1C1D2.cnf" in the ScenarioDir.
+       2. ScenarioDir defaults "scenarios" relative to ModelDir, but can be absolute
+       2. StartFrom stage may be supplied; null modification (no additional input path) will
+          just reproduce that stage - but perhaps we want to use it "as-is" so if InputPath
+          for a stage is empty, it is not generated (with a warning).
+     Workflow:
+       $scenarios()
+         # Return a VEModelScenario object from Model's "Scenarios" key
+         # Could be proactive: if no Scenarios key and default Dir exists, open visioneval.cnf from
+         #   there and build a "Scenarios" key in the model
+         # If no key available, report no scenarios defined
+         # Otherwise parse key and return a VEModelScenario object
+       $scenarios(
+          Dir=model$settings("ScenarioDir"),
+          StartFrom=<last Reportable stage, or NULL>,
+          Create=FALSE
+          )
+         # If Create==TRUE, create ScenarioDir=Dir (if not present)
+         #   If directory was not present, remove Model Scenarios key
+         #   Then set Create=FALSE
+         # If Create==FALSE 
+         #   Create Model Scenarios key if not present
+         #   If ScenarioDir contains visioneval.cnf use that to (re-)populate Model's "Scenarios" key
+         # Probably also want to save in the ScenarioDir visioneval.cnf as we create them so we can
+         #   recreate the scenarios:
+         #     ScenarioDir (hosting categories, inputs)
+         #     StartFrom (stage existing in model; over-written from $scenarios argument)
+         #     ScenarioStages (added later by VEModelScenario$buildstages
+         # Does not otherwise alter what is in ScenarioDir - just works on the Model
+
+       Change ModelStage processing so the scenario stages are sought if the Scenarios
+         key exists in the Model configuration. Those are appended after the last
+         regular ModelStage (note that the scenarios are automatically considered
+         Reportable, and we don't alter Reportable for any "StartFrom" stage)
+
+       The $scenario function returns a VEModelScenario object that we can manipulate.
+         # Has Model object reference, ScenarioDir, StartFrom, ScenarioParam_ls
+         #   (ScenarioParam_ls load/saves to ScenarioDir/visioneval.cnf)
+       Functions for VEModelScenario:
+         # Keep track of whether VEModelScenario is unsaved and save it
+         $save()
+           # rewrites ScenarioParam_ls into ScenarioDir/visioneval.cnf
+         $inputs(Filename="CategoryInputs.csv")
+           # If scenario StartFrom not defined, use last Reportable stage
+           # return a data.frame of category, input files from StartFrom stage
+           # if Filename provided, create that file (basename only) within ScenarioDir
+           # if Filename exists, read it and return the data.frame, otherwise create it
+           # Category is an empty string unless manually added to Filename
+           $ Save Filename as CategoryInputs in ScenarioParam_ls
+         $categories(Category_df,Filename,inputs=FALSE)
+           # Category_df has Category/Description
+           # Filename to open if Category_df not provided or to save if Category_df provided
+           # If inputs==TRUE, look up Category in $inputs and add a Files column
+           #   Order data.frame by Category, InputFile
+           #   Adds Input to columns, and one row per input with Category/Description duplicated
+           # Returns Category_df (with optional Input column)
+           # Record Category_df in VEModelScenario and push CategoryFile into Scenario
+           #   visioneval.cnf
+           # If no parameters, return Category_df from within VEModelScenario, possibly
+           #   opening CategoryFile from within ScenarioParam_ls, if the file exists.
+         $levels(Levels_df,Filename)
+           # Levels_df has Category/Level/Description
+           # Filename to open if Levels_df not provided or to save if Levels_df provided
+           # If inputs==TRUE, look up Category in $inputs and return files for Category
+           #   Adds Input to columns, and one row per input with
+           #    Category/CategoryDescription/Level/LevelDescription duplicated
+           #   Also add Exists column to see if file exists in CategoryLevel subdirectory
+           # Returns Levels_df (with optional Inputs/Exists columns)
+           # Record Levels_df in VEModelScenario and push LevelsFile into Model config
+           # If no parameters, return Levels_df from within VEModelScenario, possibly opening
+           #   LevelsFile from within Model, if it exists
+         $initfiles()
+           # Do nothing (Warn) if Categories and Levels not set
+           # Verify that a subdirectory is available for each CategoryLevel; create as needed
+           # Note that this will not (initially) clean up any CategoryLevel subdirectories for
+           #   Category or Level which was removed.
+           # If not all Category files exist in the CategoryLevel subdirectory, copy missing ones
+           #   from the StartFrom stage
+           # NOTE: never delete any input files
+           # Warn on any Category with no input files defined
+         $buildstages(UseCategories=TRUE, Implicit=TRUE, Reset=FALSE)
+           # Will load manual stages if Categories and Levels not set up
+           # Process CategoryLevel from Model (permutations) if they are fully defined
+           # Warn if they are not and roll over to Implicit, if requested
+           # If Reset is TRUE, ignore any existing Scenarios/ModelStages in Model and rebuild
+           #   Otherwise warn that stages are already built (and use Reset to rebuild)
+           # Build ModelStages (goes into Scenarios section)
+           # If Categories and Levels not fully defined and Implicit==TRUE, build ModelStages
+           #   from explicit subdirectories of ScenarioDir (see manual stages below)
+           # The result needs to be a ModelStages structure placed in the Model's Scenarios key
+           # The ModelStages shold be culled for "runnable" (but Reportable should always be TRUE
+           #   on the ones that remain).
+           # Should end up defining:
+           #   Name (of stage)
+           #   Dir (compound name for stage, for ResultsDir)
+           #   Scenario (==Stage Name; may not need if Name propagates to Dir)
+           #   Description (Category + Level Descriptions): could end up REALLY long...
+           #   InputPath (compounded as path to CategoryLevel subdirectories relative to
+           #     ScenarioDir) - should normalize when Scenario stages are loaded.
+           #   Reportable (always TRUE)
+           #   Do we need any other configuration for the stage? More can just end up
+           #   as extras in the Scenarios/ModelStages entry - we don't do individual configs.
+
+First try:
+Build a process controller for the model stages. To run the model, we create a queue of future
+objects for each stage, with each one running a stage. +We can't start a stage until its "StartFrom"
+is complete. So we'll group the stages by "StartFrom". We'll make a future running the stage into
+each stage in the Group (we can start everybody in the group all at once); then we'll loop over
+the group until all the elements are resolved.
+
+Scan the list of stages to make groups:
+  1. All stages, in order, with no "StartFrom"
+  2. For each stage G in Group 1:
+     All stages that StartFrom=="G"
+  3. For each Group created in 2, do the same operation on any remaining ungrouped stages
+
+The Groups are always run sequentially.
+The individual stages in each group can run in parallel.
+  If free workers > 0 add a future, otherwise poll ealier futures for resolved
+    If resolved, then
+      get the future's value (which should be the RunStatus) and put it in the Stage
+      start the next future
+    Otherwise, wait a second
+
+The process runner can generate an offline status file as the processes it is polling finish and
+new ones get started. That status file, which belongs to the model that the process runner is
+processing, gets re-read when we ask for process status. That would ideally be a transactional
+database... process runner does a polling loop on its processes to start N number of them, then
+polls for finish and queue the next. It will also poll for presence of an updated request file. We
+could just create a file system message queue (request/response) that uses files with standard
+names and timestamps. So when we start running a model, we create the message queue directory (temp
+directory) and send it to the process runner as a parameter. The process runner will poll for a
+new file (written into under a temporary name, then renamed as an "almost atomic" operation) and
+gather data to write into the response file (same timestamp as the request) - write the file under
+a temp name, then rename it as an "almost atomic" operation. So we write the request, then go into
+a loop waiting (up to a timeout) for the response file from the process runner.
+
+Don't forget to manage the writeLog so when we do the run, the logging only goes to a file (not
+the console).
+
+Poll the r_process object for the run status. The results after the process is over (function
+returns or fails) are backloaded into the model stage.
+
+Need a simplified process status report (table) showing the Run Status for each stage, including
+the low-level process status (so they can be cleaned up). Simple run management functions
+(start/restart, stop, purge).
+
+Create a "Waiting" status that is set into all the ModelStages for all the stages the model will
+run. The ModelStages are grouped by their StartFrom (no StartFrom first). Then the process runner
+will keep NUM_CORES processes running. When a process finishes, the next waiting in its group is set
+in motion. When the group has all been set in motion and a core becomes free, the first waiting in
+the next group is started. If any stage fails, the process runner does not add any additional
+stages; all running ones will be allowed to complete/fail. Problems can be fixed, and a "continue"
+run can be launched, which will set all incomplete stages to "Waiting" then start running them.
+
+The process management does imply that we should have a single process runner that lives outside any
+particular model. The model furnishes the list of stages to run and then calls the global
+(singleton) process runner. That won't stop us from starting R twice, but it will let us trap
+problems from having different models (or the same one!) running at the same time.
+
+One way to manage that is not to allow any other model to run() until there are no more running
+processes. Doing "running" will check if any model is running (it can be accessed via a model object
+but also via a class function (VEModel$runner, for the process runner). That function will take a
+command line option, and if none provided will show the running stages. We can ask for "waiting",
+"complete", "failed", "running", or "paused" or some vector subset of those. We can also give a verb
+plus PID to act on a particular process ("kill", "pause", "resume"). Default display: show
+"complete", then "failed", then "waiting", then "running", then "paused". That is accomplished by
+posing questions to the background process, which itself is in a loop to poll the processes.
+
+Since the runner needs to be polling regularly (or using "future") to monitor the status of processes.
+
+Organize Stages in the order of their StartFrom stage (no StartFrom are first). Queue the first group.
+Then when a stage finishes, see if there is a group with 
+
+Keep stages waiting if their StartFrom is not "Run Complete", and when a stage finishes, find any
+later stages that StartFrom it and set all of those running.
+  Run up to "max_child" processes - a runtime configuration item in VEModel, defaulting to 4.
+  When a stage finishes, see if there are more queued for the current StartFrom
+
+We can efficiently run the stages like this: Classify them as those that start from scratch and
+those that StartFrom. Note that if there is a LoadModel/LoadStage directive, that is treated like a
+"StartFrom", and we look back to see if that model/stage is available and has been run, then copy it
+into the first model stage. All of that should happen prior to starting parallel processing (though
+we could run the LoadModel if it is not RunComplete).
+  1. Collect the "free" stages and run them in parallel (probably there will only be one).
+  3. When ANY stage is complete, look down the list of stages for those that StartFrom the completed
+     one's name. Set all those running.
+  2. Move to the first "StartFrom" stage, and find all the other stages that start from the same
+  place; those can run in parallel
+  3.
+
+Experiment with running a stage using 'callr': what do we need to construct in the separate R process
+environment: all data/configuration elements present in the same location (all relative to ModelDir).
+The RunParam_ls for the stage should be complete - build it and pass it to the child process.
+
 Absorb Dan et al's scripts for extracting metrics...
 
 Create the model visualizer (dump detailed structures to a JSON file, and then launch a static page
 to navigate it). Visualizer should include the scripts, the configurations (including grayed-in defaults),
 the module inputs and outputs. That can be a warmup for the full scenario viewer.
 
-Recent changes to InputPath development allow the StageDir to hold the altered input files directly
-(so the InputDir sub-directory is optional)
-
 Create an option to the addstage function to make a stage in the file system (sub-directory within
 the ModelDir), containing an (optional) Scripts directory, a visioneval.cnf (with the extras, and an
-Inputs directory). Must specify the Dir option (which must not already existing within ModelDir).
+Inputs directory)
+  - Create=TRUE (by default): look for/create StageDir if any Scripts/Inputs/Config are specified;
+    can be forced to FALSE to leave everything only in memory. If we don't specific at least one of
+    Scripts/Inputs/Config, the stage will take those from the Model - still need the Scenario specifiers
+    like Scenario, Description.
+  - Scripts=TRUE (by default): look for/create ScriptsDir in StageDir
+  - Inputs=TRUE (by default): look for/create InputDir in StageDir; NA is like TRUE in forcing Create but does not
+    make an InputDir sub-directory (expect just to drop the inputs into StageDir)
+  - Config=TRUE (or filename): dump stage-specific parameters into filename/visioneval.cnf (otherwise leave
+    them only in the ModelStage structure saved into the model). If they get saved to a file, remove
+    the extras from the ModelStage, leaving only the Name, Dir, Config, Reportable etc. basic parameters.
 
 If inputs have been developed elsewhere, option to provide a string of file paths (absolute) that
 will be copied into the scenario stage directory.
 
 So the VEScenario operation should go like this:
-  - Identify a Base Model and copy it to the Scenario Model
-  - Identify the configuration files describing the scenarios
+  - Identify a Base Model (an open VEModel) and copy it to the Scenario Model
+  - Identify the ScenarioConfig configuration files describing the scenarios (see VEScenario)
   - Identify (or create) the "StartFrom" stage that is the basis for all the scenarios (e.g. "Future Year")
-    - Gets a script
-    - Gets a complete set of inputs
-    - May StartFrom another stage in the model (e.g. base year)
   - Generate a (possibly long) sequence of Reportable model stages that get written back out to the
-    Scenario Model Copy's visioneval.cnf by iterating through the Scenario configurations.
-
-The input files for the scenarios are not copied from the location identified in the configuration files.
-Instead, the containing folder(s) are added to an InputPath for the scenarios. This is where making the
-InputDir optional would be good.
+    Scenario Model Copy's visioneval.cnf by iterating through the Scenario configurations. This uses
+    "addstage" and will create directories with visioneval.cnf and inputs for each combined scenario.
+  - Extend that mechanism to handle manually constructed scenarios (see Eric's scripts) - that's a tweak
+    to the configuration file.
+  - Using this scenario function, the stages are written to the model's config (just Name and Dir),
+    but we also create directories with visioneval.cnf plus inputs. Those directories will be mirrored
+    in results.
 
 The "addstage" function should default to rewriting the ModelStages structure in the model's
 visioneval.cnf. Could just do it in memory (leaving the residue in the ModelState_ls/RunParam_ls

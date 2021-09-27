@@ -1790,7 +1790,6 @@ ve.model.addstage <- function(Name=NULL,...) {
   stageParam_ls <- visioneval::addParameterSource(dotParam_ls,"addstage")
 
   # Merge the stage into the list of modelStages
-  VEModelStage$debug("initialize")
   stage <- VEModelStage$new(
     Name = Name,
     Model = self,
