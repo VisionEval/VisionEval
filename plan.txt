@@ -6,130 +6,134 @@ Get the scenario setup working, using addstage and building directories (and Inp
 needed.
 
 Basic scenario operation:
-  Scenario configuration (inline via addstage, written into StageDir/visioneval.cnf, possibly
-    saving the settings back out into visioneval.cnf after setting them up dynamically)
-  Key Scenario elements:
-    StartFrom stage (possibly free-standing) - sets DatastorePath, base InputPath
-    InputPath (from StageDir or StageDir/InputDir)
-  Verify that InputPath is cumulative:
-    Add StageDir (if present), StageDir/InputDir (if present)
-    Push all of that ahead of the StartFrom InputPath
-    InputPath may be a vector in the stage (as when constructing a scenario from categories and
-     levels).
-  Notion of ScenarioRoot (where to look for Scenario elements)
-  A: compose scenario categories and levels
-     This construction happens within a copy of the BaseModel - we build multiple stages. Identify
-     the model into which to inject stages. Come up with a name scheme for Stage (StageDir). Build
-     the InputPath/configuration - can be inline in Model/ModelStages. Don't need to build StageDir
-     for input (keep configuration in copy of BaseModel); use StageDir for output; put
-     configuration in Model/ModelStages.
-       1. ScenarioDir is used when processing category/level spreadsheet to find input folders
-          that are then placed into the constructed stage configurations. We don't want to copy
-          the input folders. So perhaps we build a series of configurations for each stage and
-          we just end up with "A3B1C1D2.cnf" in the ScenarioDir.
-       2. ScenarioDir defaults "scenarios" relative to ModelDir, but can be absolute
-       2. StartFrom stage may be supplied; null modification (no additional input path) will
-          just reproduce that stage - but perhaps we want to use it "as-is" so if InputPath
-          for a stage is empty, it is not generated (with a warning).
-     Workflow:
-       $scenarios()
-         # Return a VEModelScenario object from Model's "Scenarios" key
-         # Could be proactive: if no Scenarios key and default Dir exists, open visioneval.cnf from
-         #   there and build a "Scenarios" key in the model
-         # If no key available, report no scenarios defined
-         # Otherwise parse key and return a VEModelScenario object
-       $scenarios(
-          Dir=model$settings("ScenarioDir"),
-          StartFrom=<last Reportable stage, or NULL>,
-          Create=FALSE
-          )
-         # If Create==TRUE, create ScenarioDir=Dir (if not present)
-         #   If directory was not present, remove Model Scenarios key
-         #   Then set Create=FALSE
-         # If Create==FALSE 
-         #   Create Model Scenarios key if not present
-         #   If ScenarioDir contains visioneval.cnf use that to (re-)populate Model's "Scenarios" key
-         # Probably also want to save in the ScenarioDir visioneval.cnf as we create them so we can
-         #   recreate the scenarios:
-         #     ScenarioDir (hosting categories, inputs)
-         #     StartFrom (stage existing in model; over-written from $scenarios argument)
-         #     ScenarioStages (added later by VEModelScenario$buildstages
-         # Does not otherwise alter what is in ScenarioDir - just works on the Model
+  If "Scenarios" key in model's RunParam_ls, use that
+  Otherwise, if ScenarioDir (default="scenarios") exists:
+    - If it contains visioneval.cnf, that file will be opened and a single key "Scenarios" will
+      be sought in it.
+  The Scenarios key contains:
+    ScenarioDir (where we look for the scenario stage definitions)
+    StartFrom (the stage that the scenarios will start from; must be Reportable)
+    ModelStages (definitions of ModelStages)
+      - Reportable will be ignored (always TRUE)
 
-       Change ModelStage processing so the scenario stages are sought if the Scenarios
-         key exists in the Model configuration. Those are appended after the last
-         regular ModelStage (note that the scenarios are automatically considered
-         Reportable, and we don't alter Reportable for any "StartFrom" stage)
+The model's "$scenarios" function returns a VEModelScenarios object
+  Pointer to the model
+  StartFrom stage
+  ScenarioDir (relative to model$modelPath)
+  ModelStages (may be NULL)
+Printing the scenarios object will say if scenarios are defined.
+  VEModelScenarios$create()
+    Does $load if ScenarioDir exists, otherwise create ScenarioDir and its visioneval.cnf
+    Will set the StartFrom stage (required parameter)
+  VEModelScenarios$load()
+    Option to rewrite "StartFrom" if provided
+    Will load "scenarios.cnf" if it exists in ScenarioDir and extract "Scenarios" key
+    If "Scenarios" key does not exist, create it and resave scenarios.cnf
+      Contains ScenarioDir, StartFrom
+    Verify ModelStages if it is present
+      Check that components of each given ModelStage are present and stage is runnable
+  VEModelScenarios$files()
+    Report the table of input files from StartFrom stage
+    If 
+  VEModelScenarios$build()
+    Reset = TRUE/FALSE; if TRUE, rewrite scenaros.cnf, if FALSE, just verify what is there
+    Source = "folders" or "directories":'
+      FileName, if present, is a vector of directories to make into scenario stages
+        if not present, all sub-directories are made into stages
+      Each designated sub-directory is made into a model stage (like any sub-directory)
+      Populate the Scenarios structure (for scenarios.cnf)
+      ModelStages will be just use the sub-directories as "StageDir" for the stages
+      If the sub-directory has a visioneval.cnf, set StageConfig instead
+      Names of sub-directories will be Names of scenario stages (must be unique relative to Model)
+      Categories structure will not exist
+    Source = "tables"
+      Read FileName=scenario-categories.csv - a table of input files allocated to categories
+      Can start with the list of input files from StartFrom stage
+        There is a function to generate that
+      Table has File, Category, Description
+      Read scenario-levels.csv - a table of category levels
+      Table has Category, Level, Description
+      Create the Categories/Files/Levels structure (as in "config")
+      Proceed to complete the build (below)
+    Source = "config":
+      Read FileName=visioneval.cnf and find a Categories structure that has these lists:
+        Categories
+          Files
+            Must be inputs to StartFrom stage, must be unique across all Categories)
+          Levels
+            Sub-Folder for each Category-Level must exist
+      Proceed to complete the build (below)
+    Complete the build: After doing table or config build, complete as follows:
+      Build a Categories/Files/Levels structure
+      Validate categories:
+        Each category must have at least one level (StartFrom is the base scenario for all)
+        Each category must specify at least one file
+        Each file from StartFrom input must exist in at most one category
+      If Reset, blow away existing Category/Level folders and restock them
+      Otherwise, only restock NEW Categories, Levels, Files
+        Make folders for each Category
+          Make folders for each Level
+          Install the Category files into each Level folder
+      In all cases, make Scenarios/ModelStage entry for each combination of Category-Level
+         Set up InputPath (vector of Category-Level folders), Scenario, Description
+         Goes straight into ModelStages (rewrite ModelStages structure)
+    If reset or no scenarios.cnf, write resulting Scenarios and Categories tags into scenarios.cnf
+    Otherwise, report discrepancies and instruct user to Reset
 
-       The $scenario function returns a VEModelScenario object that we can manipulate.
-         # Has Model object reference, ScenarioDir, StartFrom, ScenarioParam_ls
-         #   (ScenarioParam_ls load/saves to ScenarioDir/visioneval.cnf)
-       Functions for VEModelScenario:
-         # Keep track of whether VEModelScenario is unsaved and save it
-         $save()
-           # rewrites ScenarioParam_ls into ScenarioDir/visioneval.cnf
-         $inputs(Filename="CategoryInputs.csv")
-           # If scenario StartFrom not defined, use last Reportable stage
-           # return a data.frame of category, input files from StartFrom stage
-           # if Filename provided, create that file (basename only) within ScenarioDir
-           # if Filename exists, read it and return the data.frame, otherwise create it
-           # Category is an empty string unless manually added to Filename
-           $ Save Filename as CategoryInputs in ScenarioParam_ls
-         $categories(Category_df,Filename,inputs=FALSE)
-           # Category_df has Category/Description
-           # Filename to open if Category_df not provided or to save if Category_df provided
-           # If inputs==TRUE, look up Category in $inputs and add a Files column
-           #   Order data.frame by Category, InputFile
-           #   Adds Input to columns, and one row per input with Category/Description duplicated
-           # Returns Category_df (with optional Input column)
-           # Record Category_df in VEModelScenario and push CategoryFile into Scenario
-           #   visioneval.cnf
-           # If no parameters, return Category_df from within VEModelScenario, possibly
-           #   opening CategoryFile from within ScenarioParam_ls, if the file exists.
-         $levels(Levels_df,Filename)
-           # Levels_df has Category/Level/Description
-           # Filename to open if Levels_df not provided or to save if Levels_df provided
-           # If inputs==TRUE, look up Category in $inputs and return files for Category
-           #   Adds Input to columns, and one row per input with
-           #    Category/CategoryDescription/Level/LevelDescription duplicated
-           #   Also add Exists column to see if file exists in CategoryLevel subdirectory
-           # Returns Levels_df (with optional Inputs/Exists columns)
-           # Record Levels_df in VEModelScenario and push LevelsFile into Model config
-           # If no parameters, return Levels_df from within VEModelScenario, possibly opening
-           #   LevelsFile from within Model, if it exists
-         $initfiles()
-           # Do nothing (Warn) if Categories and Levels not set
-           # Verify that a subdirectory is available for each CategoryLevel; create as needed
-           # Note that this will not (initially) clean up any CategoryLevel subdirectories for
-           #   Category or Level which was removed.
-           # If not all Category files exist in the CategoryLevel subdirectory, copy missing ones
-           #   from the StartFrom stage
-           # NOTE: never delete any input files
-           # Warn on any Category with no input files defined
-         $buildstages(UseCategories=TRUE, Implicit=TRUE, Reset=FALSE)
-           # Will load manual stages if Categories and Levels not set up
-           # Process CategoryLevel from Model (permutations) if they are fully defined
-           # Warn if they are not and roll over to Implicit, if requested
-           # If Reset is TRUE, ignore any existing Scenarios/ModelStages in Model and rebuild
-           #   Otherwise warn that stages are already built (and use Reset to rebuild)
-           # Build ModelStages (goes into Scenarios section)
-           # If Categories and Levels not fully defined and Implicit==TRUE, build ModelStages
-           #   from explicit subdirectories of ScenarioDir (see manual stages below)
-           # The result needs to be a ModelStages structure placed in the Model's Scenarios key
-           # The ModelStages shold be culled for "runnable" (but Reportable should always be TRUE
-           #   on the ones that remain).
-           # Should end up defining:
-           #   Name (of stage)
-           #   Dir (compound name for stage, for ResultsDir)
-           #   Scenario (==Stage Name; may not need if Name propagates to Dir)
-           #   Description (Category + Level Descriptions): could end up REALLY long...
-           #   InputPath (compounded as path to CategoryLevel subdirectories relative to
-           #     ScenarioDir) - should normalize when Scenario stages are loaded.
-           #   Reportable (always TRUE)
-           #   Do we need any other configuration for the stage? More can just end up
-           #   as extras in the Scenarios/ModelStages entry - we don't do individual configs.
+   # The ModelStages structure placed in the Model's Scenarios key:
+   # Should end up defining:
+   #   Name (of stage)
+   #   Dir (compound name for stage, for ResultsDir)
+   #   Scenario (==Stage Name; may not need if Name propagates to Dir)
+   #   Description (Category + Level Descriptions): could end up REALLY long...
+   #   InputPath (compounded as path to CategoryLevel subdirectories relative to
+   #     ScenarioDir) - should normalize when Scenario stages are loaded.
+   #   Reportable (always TRUE)
+   #   Do we need any other configuration for the stage? More can just end up
+   #   as extras in the Scenarios/ModelStages entry - don't do individual configs
+   #     unless the stages have been defined manually
+
+  Change ModelStage processing so the scenario stages are added in if ScenarioDir exists
+    in the model and valid Scenarios are defined in its scenarios.cnf file.
+  That's a nice way to do it, since we can then just drop the "scenarios" directory into a
+    base model without doing anything at all to its core configuration.
+
+  Scenario stages are appended after the last regular ModelStage (note that the scenarios are
+  automatically considered Reportable, and we don't alter Reportable for any "StartFrom" stage).
+  Also require unique names for the scenarios. If scenario configuration is broken, just do a
+  warning. Warn if model has no scenarios at all.
+
+  Helper functions for VEModelScenario. Figure out how to interact these with the "build"
+    function: probably these should just help make templates.
+  $print()
+    # Indicate type of scenarios (manual, category-based)
+    # Indicate how many scenarios are defined
+    # If manual, list the scenarios
+    # If category-based report Category/Level/File, plus the number of generated scenarios
+  $inputs(Filename="categories.csv") # Make the categories file a configurable parameter
+    # return a data.frame of category, description, input files from StartFrom stage
+    # if Filename provided, create that file (basename only) within ScenarioDir
+    # if Filename exists, read it and merge its contents with StartFrom input files list, otherwise create it
+    # Category and Description are empty strings unless present in file
+  $categories(Categories=list of Categories/Levels/Files, writeTables=FALSE)
+    # Report if using directory-based (manual) scenarios
+    # Report the Categories key from Scenarios key, if present, else "No categories defined"
+    # If categories.csv plus possibly levels.csv exist, populate with what is found there
+    # Can replace categories from a list (which may contain Levels and Files elements)
+    # writeTables==TRUE, write out categories.csv and levels.csv
+  $list()
+    # report a vector of the scenario names
+    # works for both category-based and manual scenarios
+
+  In the VEModel print function, treat scenario stages differently - acknowledge they exist and how
+  many there are, details=TRUE will print the scenarios object.
+
+  When the model is run, the scenarios just end up as stages in ResultsDir. Calling out the model
+  results will find them and their definitions, which could be mashed into the top level model
+  stages or kept as a separate list (appended implicitly to the end of the core ModelStages).
 
 First try:
+
 Build a process controller for the model stages. To run the model, we create a queue of future
 objects for each stage, with each one running a stage. +We can't start a stage until its "StartFrom"
 is complete. So we'll group the stages by "StartFrom". We'll make a future running the stage into
