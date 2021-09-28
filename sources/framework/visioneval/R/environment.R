@@ -281,7 +281,7 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mu
       ParamFiles   <- c("visioneval.yml","visioneval.json","visioneval.cnf","visioneval.ini")
       ParamPattern <- sapply(ParamFiles,function(x) paste0("(",x,")"))
       ParamPattern <- paste("^",paste(ParamPattern,collapse="|"),"$",sep="")
-      ParamPattern <- gsub("\\.","\\.",ParamPattern) # quote literal periods in file name candidates
+      ParamPattern <- gsub("\\.","\\\\.",ParamPattern) # quote literal periods in file name candidates
       candidates <- dir(ParamDir,pattern=ParamPattern,ignore.case=TRUE) # find any matching files
       candidates <- candidates[ tolower(candidates) %in% ParamFiles ] # figure out which we found
     } else {

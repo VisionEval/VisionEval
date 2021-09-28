@@ -138,8 +138,11 @@ loadParamFile <- function(Param_ls=NULL,ModelDir=NULL) {
   if ( ! is.null(ParamPath) ) {
     ParamFile <- file.path(ParamPath,getRunParameter("RunParamFile",Param_ls))
     if ( file.exists(ParamFile) ) {
-      writeLog(paste("Found run_parameters.json:",ParamPath),Level="info")
-      Param_ls <- loadConfiguration(ParamPath=ParamPath,keep=Param_ls)
+      # ParamPath, if set,is probably the location of a "visioneval.cnf" (without the filename)
+      # So we'll expand the path to be the actual file, then load the configuration
+      writeLog(paste("Found run_parameters.json:",ParamFile),Level="info")
+      # Then underlay whatever we find there.
+      Param_ls <- loadConfiguration(ParamPath=ParamFile,keep=Param_ls)
     }
     # If we built ParamPath here, make sure it stays in Param_ls
     #   It will be an error later if no ParamPath for locating Geo.csv, Units.csv, Deflators.csv
