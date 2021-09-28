@@ -188,9 +188,11 @@ cullInputPath <- function(InputPath) {
   InputPath <- InputPath[ nzchar(InputPath) & InputPath != "." ]
 
   # Normalize remaining InputPath elements, if any, and remove duplicates
+  writeLog(paste("Culling Input Path:\n",paste(InputPath,collapse="\n")),Level="info")
   InputPath <- unique(normalizePath(InputPath,winslash="/",mustWork=FALSE))
 
   InputPath <- InputPath[dir.exists( InputPath )]
+  writeLog(paste("InputPath length after culling:",length(InputPath)),Level="info")
 
   return(InputPath)
 }
@@ -295,38 +297,40 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
   }
 
   # Process InputPath for overall model (culling directories for those actually exist)
+
+  # Find ModelDir/InputDir if that exists and make it InputPath
+  # If explicit InputPath in modelParam_ls, just use that
   rootInputPath <- normalizePath(
     file.path(modelParam_ls$ModelDir,visioneval::getRunParameter("InputDir",Param_ls=modelParam_ls)),
     winslash="/",mustWork=FALSE
   )
-  if ( ! "InputPath" %in% names(modelParam_ls) ) {
-    modelParam_ls <- visioneval::addRunParameter(
-      Param_ls=modelParam_ls,
-      Source="VEModel::findModel",
-      InputPath=rootInputPath
-    )
-  } else {
+  if ( "InputPath" %in% names(modelParam_ls) ) {
     # expand default InputPath if necessary
-    if ( any( modelParam_ls$InputPath == "." ) ) {
-      modelParam_ls$InputPath[ modelParam_ls$InputPath=="." ] <- rootInputPath
+    inputPath <- modelParam_ls$InputPath
+    if ( ! isAbsolutePath(inputPath) ) {
+      inputPath <- normalizePath(
+        file.path(
+          modelParam_ls$ModelDir,
+          inputPath
+        )
+      )
     }
+    inputPath <- c( rootInputPath, inputPath )
+  } else {
+    inputPath <- rootInputPath
+  }
+  # cull input path to keep only unique existing directories
+  inputPath <- cullInputPath(inputPath)
+  if ( length(inputPath) > 0 ) {
     modelParam_ls <- visioneval::addRunParameter(
       Param_ls=modelParam_ls,
       Source="VEModel::findModel",
-      InputPath=c( rootInputPath, modelParam_ls$InputPath )
+      InputPath=inputPath
     )
-  }
-  # Cull input paths (directory must exist and contain InputDir (default: "inputs")
-  modelParam_ls <- visioneval::addRunParameter(
-    Param_ls=modelParam_ls,
-    Source="VEModel::findModel",
-    InputPath=cullInputPath(
-      InputPath=modelParam_ls$InputPath
-    )
-  )
-  writeLog("Input Paths:",Level="info")
-  for ( p in modelParam_ls$InputPath ) {
-    writeLog(paste("Input Path:",p),Level="info")
+    writeLog("Input Paths:",Level="info")
+    for ( p in modelParam_ls$InputPath ) {
+      writeLog(paste("Input Path:",paste("'",p,"'")),Level="info")
+    }
   }
 
   # Locate ParamPath for overall model
@@ -393,6 +397,8 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
 
   # Save the model's RunParam_ls
   self$RunParam_ls <- modelParam_ls
+  writeLog(paste("Model RunParam_ls contains:"),Level="info")
+  writeLog(paste(names(self$RunParam_ls),collapse=", "),Level="info")
 
   # Locate model stages
 
@@ -503,7 +509,6 @@ ve.model.initstages <- function( modelStages ) {
   # Set Reportable attribute for the stages
   if ( stageCount == 1 ) {
     # Single stage model will ignore stage$Dir when constructing results or outputs
-    # StageDir will still be used for InputPath
     if ( is.null(modelStages[[1]]$Reportable) ) {
       # do not set if already explicitly set during ve.stage.init
       modelStages[[1]]$Reportable <- TRUE
@@ -665,15 +670,12 @@ ve.model.dir <- function(
     inputs <- results <- outputs <- FALSE
   }
 
+  # Develop the input path - unique list of directories from all requested stages
   inputPath <- character(0)
   for ( stg in stages ) {
     # Stage input paths may all be the same at the model level, or individual, or both
-    inputPath <- c(inputPath,
-      file.path(
-        self$setting("InputPath",stage=stg$Name,shorten=FALSE),
-        self$setting("InputDir",stage=stg$Name)
-      )
-    )
+    # InputPath includes InputDir
+    inputPath <- c(inputPath,self$setting("InputPath",stage=stg$Name,shorten=FALSE))
   }
   inputPath <- unique(inputPath) # use this to avoid copying it with root files
   if ( inputs ) {
@@ -1056,20 +1058,41 @@ ve.stage.init <- function(Name=NULL,Model=NULL,modelParam_ls=NULL,stageParam_ls=
   writeLog(paste("Stage RunPath:",self$RunPath),Level="info")
 
   # Set stage InputPath
-  if (
-    ! "InputPath" %in% names(self$RunParam_ls) &&
-    is.character(self$Path) &&
-    dir.exists(self$Path)
-  ) {
-    writeLog("Adding stage path to InputPath",Level="info")
-    stageInput <- file.path(self$Path,visioneval::getRunParameter("InputDir",self$RunParam_ls))
-    if ( ! file.exists(stageInput) ) stageInput <- self$Path
-    self$RunParam_ls <- visioneval::addRunParameter(
-      self$RunParam_ls,
-      Source="VEModelStage$initialize",
-      InputPath=stageInput
-    )
-  }
+  # If InputPath defined explicitly for the stage, look no further
+  # Otherwise:
+  #   Add ModelDir/StageDir/InputDir if it exists
+  #   Otherwise, add ModelDir/StageDir if it exists
+  if ( "InputPath" %in% names(self$RunParam_ls) ) {
+    stageInput <- self$RunParam_ls$InputPath
+    writeLog(paste(nzchar(stageInput),"Stage InputPath is set",paste("'",stageInput,"'"),collapse="\n"),Level="info")
+  } else {
+    if ( "InputPath" %in% names(modelParam_ls) ) {
+      modelInputPath <- modelParam_ls$InputPath # base InputPath from model, if defined
+    } else {
+      modelInputPath <- NULL
+    }
+    # Add on stage input path
+    if ( is.character(self$Path) && dir.exists(self$Path) ) {
+      stageInput <- file.path(self$Path,visioneval::getRunParameter("InputDir",self$RunParam_ls))
+      if ( ! file.exists(stageInput) ) stageInput <- self$Path
+      if ( file.exists(stageInput) ) {
+        stageInput <- c( stageInput, modelInputPath )
+      } else {
+        stageInput <- modelInputPath
+      }
+      if ( ! is.null(stageInput) ) {
+        writeLog(paste("Stage InputPath is",stageInput),Level="info")
+        self$RunParam_ls <- visioneval::addRunParameter(
+          self$RunParam_ls,
+          Source="VEModelStage$initialize",
+          InputPath=stageInput
+        )
+      } else {
+        # Not an error if there is a runnable StartFrom stage with InputPath
+        writeLog("No Stage Input File.",Level="info")
+      }
+    }
+  } # Still may have no explicit InputPath for Stage
 
   # Identify "startFrom" stage (VEModelStage$runnable will complete setup)
   # Can find StartFrom through ModelStages or from the stage configuration file/parameters
@@ -1122,8 +1145,12 @@ ve.stage.runnable <- function(priorStages) {
         ParamPath=ParamPath
       )
     }
-    InputPath     <- startFrom$InputPath      # Use this as the base InputPath
+    # There should be an InputPath for the StartFrom stage
+    # Prepend the stage's InputPath
+    InputPath     <- startFrom$InputPath      # Use this as the base InputPath, may be NULL
     if ( ! is.null(InputPath) ) {
+      # self$RunParam_ls$InputPath will be NULL  if not set
+      # and thus we'll just get InputPath which may also be NULL
       InputPath <- c( self$RunParam_ls$InputPath, InputPath )
     } else {
       InputPath <- self$RunParam_ls$InputPath
@@ -1138,13 +1165,17 @@ ve.stage.runnable <- function(priorStages) {
     StartFromScriptPath <- NULL
   }
 
-  # Save InputPath
-  self$RunParam_ls <- visioneval::addRunParameter(
-    self$RunParam_ls,
-    Source="VEModelStage$runnable",
-    InputPath=cullInputPath( InputPath=InputPath )
-  )
-  writeLog(paste("InputPath for",self$Name,":",self$RunParam_ls$InputPath,collapse="; "),Level="info")
+  # Save InputPath into stage run parameters
+  if ( ! is.null(InputPath) ) {
+    self$RunParam_ls <- visioneval::addRunParameter(
+      self$RunParam_ls,
+      Source="VEModelStage$runnable",
+      InputPath=cullInputPath( InputPath=InputPath )
+    )
+    writeLog(paste("InputPath for",self$Name,":",self$RunParam_ls$InputPath,collapse="; "),Level="info")
+  } else {
+    writeLog(paste("No InputPath for stage",self$Name),Level="info")
+  }
 
   # Construct DatastorePath, prepending ModelDir/ResultsDir/StageDir as
   #   first element (writable)
