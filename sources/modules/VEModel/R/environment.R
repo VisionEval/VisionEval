@@ -100,11 +100,13 @@ runtimeEnvironment <- function() { ve.env }
 
 default.parameters.table = list(
   ModelRoot           = "models",
-  ScriptsDir          = "scripts", # Will collapse to '.' if not already present
-  ResultsDir          = "results", # Will create if not already present
-  OutputDir           = "output",  # Will create if not already present
-  QueryDir            = "queries", # Home for defined queries within the ModelDir
-  ExtractRootName     = "Extract", # used by VEResults$extract to make "output/Extract_<timestamp>" to hold extracted files
+  ScriptsDir          = "scripts",        # Will collapse to '.' if not already present
+  ResultsDir          = "results",        # Will create if not already present
+  OutputDir           = "output",         # Will create if not already present
+  QueryDir            = "queries",        # Home for defined queries within the ModelDir
+  ScenarioDir         = "scenarios",      # Root for defined scenarios
+  ScenarioConfig      = "scenarios.cnf",  # Configuration file for scenarios
+  ExtractRootName     = "Extract",        # used by VEResults$extract to make "output/Extract_<timestamp>"
   DisplayUnitsFile    = "display_units.csv",
   QueryFileName       = "New-Query",
   QueryOutputTemplate = "%queryname%_Results_%timestamp%.csv"

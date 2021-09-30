@@ -2,9 +2,7 @@
 #' @include environment.R
 self=private=NULL
 
-# Output just wraps a ModelState and Datastore for one stage
-# It maintains everything we need for a QueryPrep_ls structure for queries
-# Plus it can export slices of the Datastore into .csv or data.frame
+# Create VEResults object (manipulates Datastore/ModelState)
 ve.results.init <- function(OutputPath,ResultsName=NULL,Param_ls=list()) {
   # OutputPath is the normalized path to a directory containing the model results
   #  typically from the last model stage. Expect to find a ModelState.Rda file
@@ -17,6 +15,7 @@ ve.results.init <- function(OutputPath,ResultsName=NULL,Param_ls=list()) {
   return(self$valid())
 }
 
+# Check results validity (all files present)
 ve.results.valid <- function() {
   valid <- ! is.null(private$RunParam_ls) &&
            dir.exists(self$resultsPath) &&

@@ -1,20 +1,38 @@
 The path to completion:
 
-Get VE-State to run as a multi-stage model with the WSDOT Scenarios.
+Verify that the WSDOT Scenarios are complete: they ran well as stages!
 
 Get the scenario setup working, using addstage and building directories (and InputPath) as
 needed.
 
+Generalize addstage so it populates a modelstage without forcing it into the model's
+RunParam_ls: we can specify where the ModelStages definition goes.
+
 Basic scenario operation:
-  If "Scenarios" key in model's RunParam_ls, use that
-  Otherwise, if ScenarioDir (default="scenarios") exists:
-    - If it contains visioneval.cnf, that file will be opened and a single key "Scenarios" will
-      be sought in it.
+  Add scenarios to a model by creating ScenarioDir and adding ScenarioConfig file to it
+    Helper functions to initialize ScenarioConfig
+  If ScenarioDir (default="scenarios" relative to ModelDir) exists:
+    - Add a key ScenarioConfig defaulting to "scenarios.cnf";
+    - If it contains scenarios.cnf, that file will be opened and the keys "Categories" (optional)
+      and "Scenarios" will be sought in it.
   The Scenarios key contains:
     ScenarioDir (where we look for the scenario stage definitions)
     StartFrom (the stage that the scenarios will start from; must be Reportable)
+      - May be NULL (scenarios are free-standing runnable model stages)
+      - Even without StartFrom, InputPath for Scenarios will still include InputPath
+        for Model if the model has an InputPath
+      - So the scenarios can still just have the subset of inputs that are different
     ModelStages (definitions of ModelStages)
       - Reportable will be ignored (always TRUE)
+      - StartFrom can be specified (or NULL) for each ModelStage
+      - The stage Config is always inline for Category-Level Scenarios
+      - Free-standing scenarios can have a visioneval.cnf, which is read
+        just as for standard model stages
+  The Categories key (if present) contains:
+    A list of categories (names)
+    Within each categorie:
+      Levels key (naming levels)
+      Files key (naming input files that this Category varies)
 
 The model's "$scenarios" function returns a VEModelScenarios object
   Pointer to the model
@@ -22,6 +40,11 @@ The model's "$scenarios" function returns a VEModelScenarios object
   ScenarioDir (relative to model$modelPath)
   ModelStages (may be NULL)
 Printing the scenarios object will say if scenarios are defined.
+  VEModelScenarios$print()
+    # Indicate type of scenarios (manual, category-based)
+    # Indicate how many scenarios are defined
+    # If manual, list the scenarios
+    # If category-based report Category/Level/File, plus the number of generated scenarios
   VEModelScenarios$create()
     Does $load if ScenarioDir exists, otherwise create ScenarioDir and its visioneval.cnf
     Will set the StartFrom stage (required parameter)
@@ -34,7 +57,7 @@ Printing the scenarios object will say if scenarios are defined.
       Check that components of each given ModelStage are present and stage is runnable
   VEModelScenarios$files()
     Report the table of input files from StartFrom stage
-    If 
+    Perhaps report the Category (if any) to which the input file attaches
   VEModelScenarios$build()
     Reset = TRUE/FALSE; if TRUE, rewrite scenaros.cnf, if FALSE, just verify what is there
     Source = "folders" or "directories":'
@@ -95,8 +118,10 @@ Printing the scenarios object will say if scenarios are defined.
 
   Change ModelStage processing so the scenario stages are added in if ScenarioDir exists
     in the model and valid Scenarios are defined in its scenarios.cnf file.
+  The base model is run first, then the scenarios are processed as a single group
+    Scenario outputs are placed into ResultsDir, like regular stages
   That's a nice way to do it, since we can then just drop the "scenarios" directory into a
-    base model without doing anything at all to its core configuration.
+    base model without doing anything at all to its core configuration.xb
 
   Scenario stages are appended after the last regular ModelStage (note that the scenarios are
   automatically considered Reportable, and we don't alter Reportable for any "StartFrom" stage).
@@ -105,25 +130,25 @@ Printing the scenarios object will say if scenarios are defined.
 
   Helper functions for VEModelScenario. Figure out how to interact these with the "build"
     function: probably these should just help make templates.
-  $print()
-    # Indicate type of scenarios (manual, category-based)
-    # Indicate how many scenarios are defined
-    # If manual, list the scenarios
-    # If category-based report Category/Level/File, plus the number of generated scenarios
-  $inputs(Filename="categories.csv") # Make the categories file a configurable parameter
+  VEModelScenarios$inputs(Filename="categories.csv") # Make the categories file a configurable parameter
     # return a data.frame of category, description, input files from StartFrom stage
     # if Filename provided, create that file (basename only) within ScenarioDir
     # if Filename exists, read it and merge its contents with StartFrom input files list, otherwise create it
     # Category and Description are empty strings unless present in file
-  $categories(Categories=list of Categories/Levels/Files, writeTables=FALSE)
+  VEModelScenarios$categories(Categories=list of Categories/Levels/Files, writeTables=FALSE)
     # Report if using directory-based (manual) scenarios
     # Report the Categories key from Scenarios key, if present, else "No categories defined"
     # If categories.csv plus possibly levels.csv exist, populate with what is found there
     # Can replace categories from a list (which may contain Levels and Files elements)
     # writeTables==TRUE, write out categories.csv and levels.csv
-  $list()
+  VEModelScenarios$list()
     # report a vector of the scenario names
     # works for both category-based and manual scenarios
+    # Or should it report a vector of VEModelStages - the latter is more flexible
+    #   and could support the internal operation of creating the group of scenarios
+    #   to run.
+    # Picking a "stage" for producing a directory or finding out about it should look
+    #   not just into the model's intrinsic ModelStages but also into the Scenarios$ModelStages
 
   In the VEModel print function, treat scenario stages differently - acknowledge they exist and how
   many there are, details=TRUE will print the scenarios object.
@@ -132,7 +157,7 @@ Printing the scenarios object will say if scenarios are defined.
   results will find them and their definitions, which could be mashed into the top level model
   stages or kept as a separate list (appended implicitly to the end of the core ModelStages).
 
-First try:
+Process Management
 
 Build a process controller for the model stages. To run the model, we create a queue of future
 objects for each stage, with each one running a stage. +We can't start a stage until its "StartFrom"

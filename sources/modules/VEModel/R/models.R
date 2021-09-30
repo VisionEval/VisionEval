@@ -23,7 +23,7 @@ NULL
 #' convenient interface for running a model and exploring its structure and results.
 #'
 #' Creating a model is still a manual process, so you're usually better off duplicating one of the
-#' standard models The VEModel manager makes that very easy! See \code{vignette('VEModel')} for full
+#' standard models. The VEModel manager makes that very easy! See \code{vignette('VEModel')} for full
 #' instructions. A simple introduction is found on the VisionEval wiki, in the Getting-Started
 #' document (that document is also included in runtime installations of VisionEval).
 #'
@@ -401,7 +401,6 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
   writeLog(paste(names(self$RunParam_ls),collapse=", "),Level="info")
 
   # Locate model stages
-
   if ( fromFile || is.null(self$modelStages) ) {
     writeLog("Locating model stages",Level="info")
     if ( ! "ModelStages" %in% names(self$RunParam_ls) ) {
@@ -455,9 +454,14 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
       writeLog("No model stages found!",Level="error")
       return(self)
     }
+
+    # Load scenarios and add scenario stages to modelStages (if scenarios are configured)
+    scenarios <- self$scenarios()
+    modelStages <- c( modelStages, scenarios$stages() ) # scenario stages may be an empty list
+
   } else {
     # all stage edits in memory should be made to stage$RunParam_ls, not stage$loadedParam_ls
-    # stages changes mediated through their files should be reloaded with fromFile=TRUE
+    # stage changes mediated through their files should be reloaded with fromFile=TRUE
     writeLog("Existing Model Stages",Level="info")
     modelStages <- self$modelStages
   }
@@ -631,16 +635,17 @@ ve.model.archive <- function(SaveDatastore=TRUE) {
 #   results=TRUE : show result sets
 #   outputs=TRUE : show "outputs" (extracts and query results)
 # if all.files, list inputs and outputs as files, otherwise just directories
-ve.model.dir <- function(
-  pattern=NULL,stage=NULL,shorten=TRUE, all.files=FALSE,
-  root=FALSE,results=FALSE,outputs=FALSE,inputs=FALSE,archive=FALSE) {
+ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
+  root=FALSE,results=FALSE,outputs=FALSE,inputs=FALSE,scenarios=FALSE,archive=FALSE) {
   # We're going to report contents of these directories
   #   self$modelPath (root)
   #   self$modelPath/ResultsDir (results)
   #   self$modelStages[[stage]]$RunPath (results)
-  #   self$modelPath/InputDir (inputs) # if exists
-  #   self$modelStages[[stage]]$InputPath/InputDir (inputs) # if exists
+  #   self$modelStages[[stage]]$InputPath (inputs) # if exists
   #     Do the inputs by assembling the entire InputPath and reducing to unique directories
+  #     Report for all stages unless specific ones requested
+  #     Just list the InputPath directories unless all.files==TRUE
+  #   se;f$modelPath/ScenarioDir (scenarios) # if exists
   #   self$modelPath/ParamDir (inputs)
   #   self$modelStages[[stage]]$ParamPath (inputs)
   #     Like the inputs, reduce to a unique set of directories
@@ -689,6 +694,23 @@ ve.model.dir <- function(
       inputFiles <- inputFiles[ dir.exists(inputFiles) ]
     }
   } else inputFiles <- character(0)
+
+  # List scenarios
+  scenarioPath <- character(0)
+  if ( scenarios ) {
+    scenarioPath <- file.path(
+      self$modelPath,
+      self$setting("ScenarioDir")
+    )
+    scenarioFiles <- dir(scenarioPath,all.files=all.files,recursive=all.files)
+    if ( all.files ) {
+      scenarioFiles <- scenarioFiles[ ! dir.exists(scenarioFiles) ] # all the files (only)
+    } else {
+      scenarioFiles <- scenarioFiles[ dir.exists(scenarioFiles) ] # just the subdirectories
+    }
+  } else {
+    scenarioFiles <- character(0)
+  }
 
   # Locate results
   baseResults <- normalizePath(
@@ -745,17 +767,18 @@ ve.model.dir <- function(
     rootFiles <- setdiff(rootFiles, inputPath)    # need to specify "inputs=TRUE" to get inputPaths...
     rootFiles <- setdiff(rootFiles, baseResults)  # If we want those, they'll arrive via resultFiles
     rootFiles <- setdiff(rootFiles, archiveDirs)
+    rootFiles <- setdiff(rootFiles, scenarioPath)
 
     stageDirs <- file.path(rootPath,sapply(stages,function(s) s$Dir))
-    if ( length(stageDirs)>1 || normalizePath(stageDirs) != rootPath ) {
-      rootFiles <- setdiff(rootFiles, stageDirs)    # Leave out Stage sub-directories; TODO: is that correct?
-      # TODO: probably want to identify the stage directories and show their contents...
+    if ( length(stageDirs)==1 && normalizePath(stageDirs) == rootPath ) {
+      stageDirs <- character(0)
     }
 
     if ( all.files ) {
       paramPaths <- self$setting("ParamPath",shorten=FALSE)
       for ( st in stages ) paramPaths <- c(paramPaths,self$setting("ParamPath",stage=st$Name,shorten=FALSE))
       paramPaths <- unique(paramPaths)
+      rootFiles <- c( rootFiles, dir(stageDirs,full.names=TRUE) )
       rootFiles <- c( rootFiles, dir(paramPaths,full.names=TRUE) )
       rootFiles <- c( rootFiles, self$setting("ModelScriptPath",shorten=FALSE) )
       queryPath <- file.path(rootPath,self$setting("QueryDir")) # QueryDir is always "shortened"
@@ -769,7 +792,9 @@ ve.model.dir <- function(
     # So force the type for files by providing an empty string to add to NULL/nothing
     character(0), 
     unlist(
-      list(inputFiles,outputFiles,resultFiles,rootFiles,archiveFiles)[c(inputs,outputs,results,root,archive)]
+      list(
+        inputFiles,scenarioFiles,outputFiles,
+        resultFiles,rootFiles,archiveFiles) [c(inputs,scenarios,outputs,results,root,archive)]
     )
   )))
   if ( nzchar(shorten) ) files <- sub(paste0(shorten,"/"),"",files,fixed=TRUE)
@@ -1809,6 +1834,13 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
 #                              Model Configuration                             #
 ################################################################################
 
+ve.model.scenarios <- function( fromFile=TRUE ) {
+  if ( is.null(self$modelScenarios) || fromFile ) {
+    self$modelScenarios <- VEModelScenarios$new(baseModel=self)
+  }
+  return( self$modelScenarios )
+}
+
 # Function to add a stage to a loaded model. Accepts a stageParam_ls (as we would use for
 #   ve.stage.init), which should contain, at a minimum, a "Name" (which must be unique in the model)
 #   and a "StartFrom" designating another stage in the current model. The dots resolve to a named
@@ -2259,7 +2291,7 @@ installStandardModel <- function( modelName, modelPath, confirm, overwrite=FALSE
 #'   If directory does exist, create a unique variant of modelName adjacent to it. If it is NULL
 #'   create a unique variant of modelName in ve.runtime/models.
 #' @param variant the name of a model variant (staging, sample data, etc) to install; empty string
-#'   will list available variants for modelName
+#'   will list available variants for modelNameb
 #' @param confirm if TRUE (default) and running interactively, prompt user to confirm, otherwise
 #'   just do it.
 #' @param overwrite if TRUE (default = FALSE) then overwrite (recreate) any modelName that already
@@ -2293,6 +2325,7 @@ VEModel <- R6::R6Class(
     modelName=NULL,                         # Model identifier
     modelPath=NULL,                         # Also as RunParam_ls$ModelDir
     modelStages=NULL,                       # list of VEModelStage objects
+    modelScenarios=NULL,                    # VEModelScenarios object, if scenarios configured
     modelResults=NULL,                      # Absolute path == modelPath/ResultsDir
     RunParam_ls=NULL,                       # Run parameters for the model (some constructed by $configure)
     loadedParam_ls=NULL,                    # Loaded parameters (if any) present in model configuration file
@@ -2310,6 +2343,7 @@ VEModel <- R6::R6Class(
     print=ve.model.print,                   # provides generic print functionality
     printStatus=ve.model.printStatus,       # turn integer status into text representation
     updateStatus=ve.model.updateStatus,     # fill in overall status based on individual stage status
+    scenarios=ve.model.scenarios,           # Create a VEModelScenarios object to manage scenarios
     list=ve.model.list,                     # interrogator function (script,inputs,outputs,parameters
     dir=ve.model.dir,                       # list model elements (output, scripts, etc.)
     clear=ve.model.clear,                   # delete results or outputs (current or past)
