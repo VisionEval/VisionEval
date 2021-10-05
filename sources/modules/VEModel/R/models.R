@@ -134,6 +134,15 @@ NULL
 #' @name VEModel
 NULL
 
+# Documentation for VEModelStage
+#' VEModelStage class for managing scenarios within a model
+#'
+#' Documentation yet to come for various functions (plus some
+#' implementation).
+#'
+#' @name VEModelStage
+NULL
+
 self=private=NULL # To avoid R6 class "undefined global" errors
 
 ## Helper
@@ -449,15 +458,25 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
         }
       )
     }
-    # If no stages remain, model is invalid
-    if ( !is.list(modelStages) || length(modelStages)==0 ) {
-      writeLog("No model stages found!",Level="error")
-      return(self)
-    }
-
+      
     # Load scenarios and add scenario stages to modelStages (if scenarios are configured)
     scenarios <- self$scenarios()
-    modelStages <- c( modelStages, scenarios$stages() ) # scenario stages may be an empty list
+    scenarioStages <- scenarios$stages() # scenario stages may be an empty list
+
+    # It is possible for a model to ONLY have scenarios (if they are "manually" created)
+    # Each "scenario" in that case must be a complete model run
+    # Usually in such cases, it is better just to make them Reportable modelStages
+    if ( ! is.list(modelStages) ) {
+      if ( length(scenarioStages) > 0 ) {
+        modelStages <- scenarioStages
+      } else {
+        # If no stages remain, model is invalid
+        writeLog("No model stages found!",Level="error")
+        return(self)
+      }
+    } else {
+      modelStages <- c( modelStages, scenarioStages )
+    }
 
   } else {
     # all stage edits in memory should be made to stage$RunParam_ls, not stage$loadedParam_ls
@@ -612,7 +631,7 @@ ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchive
 ve.model.archive <- function(SaveDatastore=TRUE) {
   failToArchive <- visioneval::archiveResults(
     RunParam_ls=self$RunParam_ls,
-    RunDir=file.path(self$modelPath,self$setting("ResultsDir")),
+    RunDir=self$modelResults,
     SaveDatastore=SaveDatastore
   )
   if ( length(failToArchive)>0 ) {
@@ -713,17 +732,14 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
   }
 
   # Locate results
-  baseResults <- normalizePath(
-    file.path(
-      self$modelPath,
-      self$setting("ResultsDir")
-    )
-  )
+  baseResults <- self$modelResults
 
   # Do the outputs before the results (makes it easier to handle
   #  results in root)
   # TODO: verify where the "outputs" are. OutputDir needs to be relative to ModelDir/ResultsDir...
+  # TODO: if extracting a stage, outputdir is relative to ModelDir/ResultsDir/StageDir
   # "OutputDir" is used in VEModel$extract and VEModel$query...
+  # Query OutputDir is relative to ModelDir/ResultsDir...
   if ( outputs ) {
     outputPath <- file.path( baseResults,self$setting("OutputDir") )
     outputFiles <- dir(normalizePath(outputPath),full.names=TRUE,recursive=all.files)
@@ -784,7 +800,6 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
       queryPath <- file.path(rootPath,self$setting("QueryDir")) # QueryDir is always "shortened"
       rootFiles <- c( rootFiles, dir(queryPath,full.names=TRUE) )
     }
-    # TODO: give better results for model stages...
   } else rootFiles <- character(0)
 
   files <- sort(unique(c(
@@ -1074,11 +1089,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,modelParam_ls=NULL,stageParam_ls=
   writeLog(paste(names(self$RunParam_ls),collapse=", "),Level="info")
 
   # Stage Output
-  self$RunPath <- file.path(
-    ModelDir,
-    Model$setting("ResultsDir"),
-    self$Dir
-  )
+  self$RunPath <- file.path(Model$modelResults,self$Dir)
   self$RunPath <- normalizePath(self$RunPath)
   writeLog(paste("Stage RunPath:",self$RunPath),Level="info")
 
@@ -1475,6 +1486,8 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
   # "details" TRUE lists all the field attributes (the full data.frame of specSummary)
   # "stage" is a list of stage names (default = all stages) to appear in the output
   #   The fields shown are just the ones accessed in that particular stage
+  # Currently reports local specifications (within stage) for each stage, and includes
+  #   both reportable and non-reportable stages.
   # TODO: Include only Reportable stages unless name specified. If a reportable stage is
   #   requested, include the "StartFrom" tree for this stage as well. So augment the
   #   stage list by including "StartFrom" stages for each named stage (or each
@@ -1497,8 +1510,9 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
         if ( is.null(self$specSummary) ) {
           self$specSummary <- specFrame
         } else {
-          rbind(self$specSummary,specFrame)
+          self$specSummary <- rbind(self$specSummary,specFrame)
         }
+        writeLog(paste("Number of specs:",nrow(self$specSummary)),Level="info")
       } else {
         writeLog(paste("No specifications for",stage$Name),Level="warn")
       }
@@ -1726,8 +1740,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
   # TODO: Clear and take ownership of ve.model
 
   # Set up workingResultsDir for file manipulations (including stage sub-directories)
-  ResultsDir <- visioneval::getRunParameter("ResultsDir",Param_ls=self$RunParam_ls)
-  workingResultsDir <- normalizePath(file.path(self$modelPath,ResultsDir),winslash="/",mustWork=FALSE)
+  workingResultsDir <- self$modelResults
 
   # Determine which stages need to be-rerun
   if ( run=="continue" ) {
@@ -1960,22 +1973,50 @@ ve.model.results <- function(stage=character(0)) {
     writeLog("Have you run the model?",Level="warn")
   }
   if ( length(results)>1 ) {
+    # Create a VEResultsList with two function elements: "extract" and "results"
+    # extract calls $extract on each element of "results"
+    # results returns the "results" list (a bare list of VEResults)
+    # The actual results are stored in an environment attached to each of those functions
+
+    results.env <- new.env()
+    results.env$results <- results # named list of VEResults objects
+    rm(results)
+
+    # Extract from the list
+    extract <- function(stage=character(0),...) {
+      if ( length(stage)==0 ) stage<-names(results)
+      for ( stg in stage ) {
+        writeLog(paste("Would extract results for stage",stg),Level="info")
+        # results[[stg]]$extract(...)
+      }
+      return(invisible(stage))
+    }
+    environment(extract)<-results.env
+
+    # Produce a bare named list of VEResults objects
+    results.func <- function() {
+      return( results ) # A list (for use by query or print)
+    }
+    environment(results.func)<-results.env
+
+    # Get the results path
+    results <- list(env=results.env$results,extract=extract,results=results.func,path=self$modelResults)
     class(results) <- "VEResultsList" # print function defined below
   } else if ( length(results)==1 ) {
     results <- results[[1]]              # Just return the single VEResults object
-#    names(results) <- names(results)[1]  # Carry over the name
   }
   return(results)
 }
 
 #' pretty print a list of VEResults objects
 #' 
-#' @param x a named list of VEResults objects
+#' @param x a VEResultsList object
 #' @param ... Other parameters for generic print function
 #' @export
 print.VEResultsList <- function(x,...) {
-  for ( nm in names(x)) {
-    print(x[[nm]],name=nm,...)
+  results <- x$results()
+  for ( nm in names(results)) {
+    print(results[[nm]],name=nm,...) # Call VEResults$print
   }
 }
 

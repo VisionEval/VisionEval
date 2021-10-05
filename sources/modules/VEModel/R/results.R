@@ -1,5 +1,25 @@
 # Results.R
 #' @include environment.R
+NULL
+
+# Documentation for VEResults
+#' VEResults class for managing scenarios within a model
+#'
+#' Documentation yet to come for various functions (plus some
+#' implementation).
+#'
+#' @name VEResults
+NULL
+
+# Documentation for VESelection
+#' VESelection class for managing scenarios within a model
+#'
+#' Documentation yet to come for various functions (plus some
+#' implementation).
+#'
+#' @name VESelection
+NULL
+
 self=private=NULL
 
 # Create VEResults object (manipulates Datastore/ModelState)

@@ -1,5 +1,17 @@
 # scenarios.R
-#' @include environment.R models.R
+#' @include environment.R
+#' @include models.R
+NULL
+
+# Documentation for VEModelScenarios
+#' VEModelScenarios class for managing scenarios within a model
+#'
+#' Documentation yet to come for various functions (plus some
+#' implementation).
+#'
+#' @name VEModelScenarios
+NULL
+
 self=private=NULL
 
 ve.scenario.init <- function( baseModel=NULL ) {
@@ -12,8 +24,8 @@ ve.scenario.load <- function(fromFile=TRUE) {
   if ( fromFile ) {
     # reload if requested
     self$scenarioConfig <- visioneval::loadConfiguration(
-      ParamDir=self$setting("ScenarioDir"),
-      ParamFile=self$setting("ScenarioConfig"),
+      ParamDir=self$baseModel$setting("ScenarioDir"),
+      ParamFile=self$baseModel$setting("ScenarioConfig"),
       mustWork=FALSE
     )
   }
@@ -29,7 +41,7 @@ ve.scenario.load <- function(fromFile=TRUE) {
           writeLog(paste("Scenario Stage:",stage),Level="info")
           VEModelStage$new(
             Name=stage,
-            Model=self,
+            Model=self$baseModel,
             stageParam_ls=obj
           )
         }

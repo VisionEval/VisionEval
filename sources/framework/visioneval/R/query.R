@@ -1186,7 +1186,7 @@ with( CompiledSpec,
           })
         }
 
-        #Check that they conform if 2 By variables
+        #Check that they conform if 2 By variables (e.g. geography and breaks)
         if (length(By) == 2) {
           # TODO: Unimplemented...
           NULL # Not doing this check...

@@ -26,6 +26,7 @@ RoxygenNote: 7.1.1
 Collate: 
     'environment.R'
     'models.R'
+    'scenarios.R'
     'results.R'
     'query.R'
     'zzz.R'

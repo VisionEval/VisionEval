@@ -2,7 +2,6 @@
 .VEbuildignore
 .Renviron
 .Rhistory
-runtime*
 tests/
 launch.bat
 extensions/
