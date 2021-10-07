@@ -460,21 +460,21 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
     }
       
     # Load scenarios and add scenario stages to modelStages (if scenarios are configured)
-    scenarios <- self$scenarios()
+    scenarios <- self$scenarios(fromFile=fromFile) # re-create VEModelScenario object from file
     scenarioStages <- scenarios$stages() # scenario stages may be an empty list
 
     # It is possible for a model to ONLY have scenarios (if they are "manually" created)
     # Each "scenario" in that case must be a complete model run
     # Usually in such cases, it is better just to make them Reportable modelStages
     if ( ! is.list(modelStages) ) {
-      if ( length(scenarioStages) > 0 ) {
+      if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
         modelStages <- scenarioStages
       } else {
         # If no stages remain, model is invalid
         writeLog("No model stages found!",Level="error")
         return(self)
       }
-    } else {
+    } else if ( is.list(scenarioStages) ) {
       modelStages <- c( modelStages, scenarioStages )
     }
 
@@ -1341,6 +1341,11 @@ ve.stage.run <- function(log="warn") {
   self$ModelState_ls <- NULL
   self$Results       <- NULL
 
+  # TODO: borrow VEScenario::RunScenarios mechanism for setting up and
+  # asynchronously running the scenarios and tracking where they are.
+  # TODO: Principal thing to change is to use the model stage elements
+  # rather than sourcing run_model.R to run the stage.
+
   # Construct and change to working directory
   if ( ! dir.exists(self$RunPath) ) dir.create(self$RunPath)
   owd <- setwd(self$RunPath)
@@ -1847,9 +1852,22 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
 #                              Model Configuration                             #
 ################################################################################
 
-ve.model.scenarios <- function( fromFile=TRUE ) {
+ve.model.scenarios <- function( fromFile=FALSE, create=FALSE, startFrom=NULL ) {
   if ( is.null(self$modelScenarios) || fromFile ) {
-    self$modelScenarios <- VEModelScenarios$new(baseModel=self)
+    if ( is.logical(startFrom) && startFrom ) {
+      startFrom <- self$modelStages[ which(self$modelStages$Reportable) ]
+      startFrom <- startFrom[length(startFrom)] # last Reportable stage
+    } else if ( is.character(startFrom) ) {
+      startFrom <- startFrom[1]
+      if ( ! startFrom %in% names(self$modelStages) ) {
+        # In principle, self$modelStages only has "natural" stages at this point, not scenarios
+        stop(
+          writeLog(paste("Cannot locate StartFrom stage:",startFrom),Level="error")
+        )
+      }
+    }
+    # create will create ScenarioDir/ScenarioConfig if they do not already exist
+    self$modelScenarios <- VEModelScenarios$new(baseModel=self,create=create,startFrom=startFrom)
   }
   return( self$modelScenarios )
 }

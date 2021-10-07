@@ -281,19 +281,24 @@ writeSetup <- function(object=NULL,filename=NULL,overwrite=FALSE) {
     } else if ( "VEModelStage" %in% class(object) ) {
       ParamName <- object$Name
       ParamDir <- object$Path
-    } else {
+    } else if ( ! is.list(object) ) {
       stop (
         writeLog(paste("Warning: No directory to write visioneval.cnf for",ParamName),Level="error")
       )
+    } else {
+      ParamName <- "Parameter List"
+      # if object was a list, fall through to find filename
     }
   } 
 
   if ( is.null(filename) ) {
     ParamPath <- attr(Param_ls,"FILE")
     if ( is.null(ParamPath) ) ParamPath <- file.path(ParamDir,"visioneval.cnf")
-  } else {
+  } else if ( ! isAbsolutePath(filename) ) {
     ParamPath <- file.path(ParamDir,filename)
     attr(Param_ls,"FILE") <- ParamPath
+  } else {
+    ParamPath <- filename
   }
 
   writeLog(paste("Writing configuration for",ParamName,"to",ParamPath),Level="warn")
