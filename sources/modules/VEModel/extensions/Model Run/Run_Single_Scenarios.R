@@ -18,7 +18,7 @@ for(i in 1:nrow(scenarios)){
   model$run()
   
   # Update status when complete
-  scenarios[i, 'status'] <- model$status
+  scenarios[i, 'status'] <- model$overallStatus
   
 }
 

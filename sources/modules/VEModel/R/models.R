@@ -412,6 +412,7 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
   # Locate model stages
   if ( fromFile || is.null(self$modelStages) ) {
     writeLog("Locating model stages",Level="info")
+    self$modelStages <- NULL
     if ( ! "ModelStages" %in% names(self$RunParam_ls) ) {
       # In general, to avoid errors with random sub-directories becoming stages
       #  it is best to explicitly set ModelStages in the model's main visioneval.cnf
@@ -458,10 +459,11 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
         }
       )
     }
-      
-    # Load scenarios and add scenario stages to modelStages (if scenarios are configured)
-    scenarios <- self$scenarios(fromFile=fromFile) # re-create VEModelScenario object from file
-    scenarioStages <- scenarios$stages() # scenario stages may be an empty list
+
+    scenarioStages <- list()
+    # TODO: Load scenarios and add scenario stages to modelStages (if scenarios are configured)
+    # scenarios <- self$scenarios(fromFile=fromFile) # re-create VEModelScenario object from file
+    # scenarioStages <- scenarios$stages() # scenario stages may be an empty list
 
     # It is possible for a model to ONLY have scenarios (if they are "manually" created)
     # Each "scenario" in that case must be a complete model run
@@ -474,7 +476,7 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
         writeLog("No model stages found!",Level="error")
         return(self)
       }
-    } else if ( is.list(scenarioStages) ) {
+    } else if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
       modelStages <- c( modelStages, scenarioStages )
     }
 
@@ -516,9 +518,12 @@ ve.model.initstages <- function( modelStages ) {
     }
     writeLog(paste("Evaluating ",stage$Name),Level="info")
     if ( stage$runnable(runnableStages) ) {   # complete stage initialization
+      writeLog(paste("Stage",stage$Name,"is runnable"),Level="info")
       runnableStages <- c( runnableStages, stage )
       names(runnableStages) <- sapply(runnableStages,function(s)s$Name)
-    } 
+    } else {
+      writeLog(paste("Stage",stage$Name,"is NOT runnable"),Level="info")
+    }    
   }
 
   # Forget the modelStages that can't run
@@ -584,7 +589,7 @@ ve.model.init <- function(modelPath) {
 #   Update RunPath for each stage in its RunParams_ls and ModelState_ls if copyResults
 #   Identify other elements of ModelState and RunParams that will change if the
 #     the ModelDir changes (everything built from ModelDir)
-ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchives=FALSE) {
+ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchives=FALSE,log="warn") {
   # Copy the current model to NewName (in ModelDir, unless newPath is also provided)
   if ( ! private$p.valid ) {
     writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
@@ -624,7 +629,7 @@ ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchive
       file.copy( copy.from, copy.to ) # non-recursive in stages
     }
   }
-  return( openModel(newModelPath) )
+  return( openModel(newModelPath,log=log) )
 }
 
 # Archive results directory
@@ -1331,47 +1336,40 @@ ve.stage.load <- function(onlyExisting=TRUE,reset=FALSE) {
   return(FALSE)
 }
 
-# Run the model stage
-ve.stage.run <- function(log="warn") {
-  # Mark local status on the stage
-  self$RunStatus <- codeStatus("Running")
-  # TODO: add PID below if running in background process
+run.future <- function() {
+  # Parameters:
+  #   runPath (directory in which to write log/ModelState/Datastore
+  #   RunParam_ls (big list structure with everything needed to run the model)
 
-  # Remove any existing ModelState and run results from this stage
-  self$ModelState_ls <- NULL
-  self$Results       <- NULL
+  #   message("Search path")
+  #   message(paste("  ",search(),collapse="\n"))
+  #   message("GlobalEnv contents")
+  #   message(paste("  ",ls(".GlobalEnv"),collapse="\n"))
 
-  # TODO: borrow VEScenario::RunScenarios mechanism for setting up and
-  # asynchronously running the scenarios and tracking where they are.
-  # TODO: Principal thing to change is to use the model stage elements
-  # rather than sourcing run_model.R to run the stage.
+  # Create run path
+  if ( ! dir.exists(runPath) ) dir.create(runPath)
 
-  # Construct and change to working directory
-  if ( ! dir.exists(self$RunPath) ) dir.create(self$RunPath)
-  owd <- setwd(self$RunPath)
+  owd <- setwd(runPath) # may not need inside a future
   on.exit(setwd(owd))
 
   # Take ownership of ve.model
   ve.model <- visioneval::modelEnvironment(Clear="VEModelStage::run") # add Owner
-
   RunStatus <- try (
     {
       # Initialize Log, create new ModelState
       ve.model$RunModel <- TRUE
-      initLog(Threshold=log,Save=TRUE,envir=ve.model) # Log stage
-      # Create new ModelState_ls (ignore existing)
-      # TODO: These should perhaps be done in a separate pass/function when
-      # ve.model.run is called (and the need to be sequential, since we'll
-      # be looking back at the ModelState for the StartFrom stages...
-      visioneval::loadModel(self$RunParam_ls)
+      visioneval::initLog(Threshold=log,Save=TRUE,envir=ve.model) # Log stage
+      visioneval::loadModel(RunParam_ls)
       visioneval::setModelState()                       # Save ModelState.Rda
       visioneval::prepareModelRun()                     # Initialize Datastore
 
       # Run the model script
-      sys.source(self$RunParam_ls$ModelScriptPath,envir=new.env())
+      sys.source(RunParam_ls$ModelScriptPath,envir=new.env())
 
-      # If we get this far without a "stop", save the ModelState and RunStatus
-      RunStatus <- codeStatus("Run Complete")
+      # Report completion into model log
+      visioneval::writeLog("Model Run Complete",Level="warn")
+      # Use the following RunStatus if we got this far without error
+      codeStatus("Run Complete")
     },
     silent=TRUE
   )
@@ -1380,21 +1378,110 @@ ve.stage.run <- function(log="warn") {
   if ( ! is.numeric(RunStatus) ) {
     # Failure: stop trapped while performing run sequence
     msg <- as.character(RunStatus) # try-error (captures "stop" message)
-    writeLog(msg,Level="error") # possibly redundant with interior logging
-    self$RunStatus <- codeStatus("Run Failed")
+    writeLog(msg,Level="error")
+    RunStatus <- structure( codeStatus("Run Failed"), reason=msg ) # append an attribute
     if ( "ModelState_ls" %in% names(visioneval::modelEnvironment()) ) {
-      visioneval::setModelState(list(RunStatus=self$RunStatus),envir=ve.model)
+      visioneval::setModelState(list(RunStatus=RunStatus),envir=ve.model)
     }
   } else {
     # Success: Assemble the runResults
-    self$RunStatus <- RunStatus
-    visioneval::setModelState(list(RunStatus=self$RunStatus),envir=ve.model)
-    writeLog(printStatus(self$RunStatus),Level="warn")
+    visioneval::setModelState(list(RunStatus=RunStatus),envir=ve.model)
   }
+  # Reset log to console (in case running in "direct")
   visioneval::saveLog(LogFile="console",envir=ve.model)
-  self$ModelState_ls <- ve.model$ModelState_ls # The story of the run...
-  return(invisible(self$ModelState_ls))
+
+  return(RunStatus)
 }
+
+ve.stage.running <- function() {
+  return (
+    ! is.null( self$FutureRun ) && # No process created yet
+    ! is.null( self$RunStarted) && # Start time not yet recorded
+    ! future::resolved( self$FutureRun )   # not resolved yet
+  )
+}
+
+# TODO: return a string indicating run status of model
+#   Name
+#   When the run started
+#   Duration from start of run to (done) completion time or (not done) Sys.time()
+#   Whether it is done
+tformat <- function(tm) format(tm,"%Y-%m-%d %H:%M:%S")
+tdiff <- function(tm0,tm1,digits=3) {
+  sub("mins","minutes",format( difftime(tm1,tm0,units="mins"), digits=digits ))
+}
+
+ve.stage.pstatus <- function(start=FALSE) {
+  paste(
+    paste0(self$Name,":"),
+    if ( is.null(self$RunStarted) ) {
+      "has not started to run."
+    } else if ( start ) {
+      paste("Started at",tformat(self$RunStarted))
+    } else if ( ! is.null(self$RunCompleted) ) {
+      paste("Completed at",tformat(self$RunCompleted),"after",tdiff(self$RunStarted,self$RunCompleted))
+    } else {
+      paste("Running for",tdiff(self$RunStarted,Sys.time()),"since",tformat(self$RunStarted))
+    }
+  )
+}
+
+# Run the model stage
+ve.stage.run <- function(log="warn",UseFuture=TRUE) {
+  # Mark local status on the stage
+  self$RunStatus <- codeStatus("Running")
+  self$RunStarted <- Sys.time()
+  self$RunCompleted <- NULL
+  writeLog(self$processStatus(start=TRUE),Level="warn")
+
+  # Remove any existing ModelState and run results from this stage
+  # Will reload later once the run is complete
+
+  self$ModelState_ls <- NULL
+  self$Results       <- NULL
+
+  # Set up run parameters
+  run.env <- new.env()
+  run.env$runPath=self$RunPath
+  run.env$RunParam_ls=self$RunParam_ls
+  run.env$log=log
+
+  # Create a future (will block if no available processors)
+  if ( UseFuture ) {
+    # Run in a future (other environment/process)
+    # Note that log is not visible
+    run.func <- run.future # Solve scoping problem when using pkgload...
+    self$FutureRun <- future::future(
+      {
+        environment(run.func) <- run.env
+        run.func()
+      },
+      globals=c("run.func","run.env"),
+      seed=visioneval::getRunParameter("Seed",Param_ls=self$RunParam_ls),
+      packages="visioneval"
+    )
+  } else {
+    # Run inline
+    environment(run.future) <- run.env
+    self$completed( run.future() )
+  }
+
+  return(self)
+}
+
+ve.stage.completed <- function( runStatus=NULL ) {
+  self$RunCompleted <- Sys.time()
+  if ( !is.null(self$FutureRun) ) {
+    runStatus <- future::value(self$FutureRun)
+    if ( ! is.numeric(runStatus) ) {
+      writeLog(paste("Error running stage",self$Name),Level="error")
+      stop( writeLog(runStatus) )
+    }
+  }
+  self$RunStatus <- runStatus
+  self$load(onlyExisting=TRUE)
+}
+
 
 # Helper
 # List unique sources in a parameter list
@@ -1561,6 +1648,9 @@ ve.model.print <- function(details=FALSE) {
     cat(paste("  ",uniqueSources(self$RunParam_ls)),sep="\n") # Generates one row for each unique source
   }
   cat("Status:", self$printStatus(),"\n")
+  # TODO: change for scenarios since there may be hundreds of them...
+  # Just report the number of scenarios, and only report baseModel stages
+  #   (keep scenarios separate)
   if ( private$p.valid ) {
     cat("Model Stages:\n")
     for ( s in self$modelStages ) {
@@ -1605,7 +1695,7 @@ StatusLevelCodes <- c(
 
 # Helper - Decode status and handle "out of bounds"
 printStatus <- function(status) {
-  if ( ! is.integer(status) || status < 1 || status > length(StatusLevelCodes) ) {
+  if ( ! is.numeric(status) || status < 1 || status > length(StatusLevelCodes) ) {
     status <- codeStatus("Unknown")
   }
   return( StatusLevelCodes[status] )
@@ -1626,7 +1716,7 @@ codeStatus <- function(level) {
 # Return text representation of the status
 ve.model.printStatus <- function(status=NULL) {
   if ( is.null(status) ) {
-    status <- self$status
+    status <- self$overallStatus
   }
   return( printStatus(status) )
 }
@@ -1634,7 +1724,7 @@ ve.model.printStatus <- function(status=NULL) {
 # Show "minimum" stage status (see StatusLevelCodes)
 ve.model.updateStatus <- function() {
   private$p.valid <- is.list(self$modelStages) && length(self$modelStages)>0
-  self$status <- if ( private$p.valid ) {
+  self$overallStatus <- if ( private$p.valid ) {
     min(sapply(self$modelStages,function(s) s$RunStatus))
   } else {
     codeStatus("No Stages Defined")
@@ -1690,7 +1780,7 @@ ve.model.load <- function(onlyExisting=TRUE,reset=FALSE) {
     stage$load(onlyExisting=onlyExisting,reset=reset)
     self$modelStages[[index]] <- stage
   }
-  # Update self$status
+  # Update self$overallStatus
   self$updateStatus()
   return(self$printStatus())
 }
@@ -1705,17 +1795,55 @@ ve.model.load <- function(onlyExisting=TRUE,reset=FALSE) {
 #       parameters...
 
 # Proxy some visioneval functions (things that might get called from
-# classic run_model.R without namespace resolution.
+# classic run_model.R without namespace resolution).
 getYears <- visioneval::getYears
 runModule <- visioneval::runModule
 runScript <- visioneval::runScript
 requirePackage <- visioneval::requirePackage
 
+# Helper to get multitasking strategy name
+futureStrategyName <- function(strategy) {
+  return (
+    if ( ! is.null(strategy) && "FutureStrategy" %in% class(strategy) ) {
+      # Hack from future::print.FutureStrategy
+      # Get first class that is not one of the structural ones
+      setdiff(class(strategy), c("FutureStrategy", "tweaked", "function"))[1]
+    } else {
+      "sequential"
+    }
+  )
+}
+
+# Report status of model stages
+ve.model.status <- function(stage=NULL,statusCode=NULL,limit=10) {
+  # TODO: function to check on which stages are running.
+  # Report the status of each stage
+  # stage parameter: character vector stage names to list (or numeric vector, indices in modelStages list)
+  # statusCode parameter: vector of statusCodes to list
+  # limit parameter: show first limit number of stages (only applies if other parameters are not supplied)
+  # With no parameters, only show running stages if any are running
+  # If none are running, only show completed stages if any are completed
+  # If none are completed, show all stages (but apply "limit" and report how many more there are)
+}
+
+knownPlans <- c("inline", "sequential", "callr", "multisession")
+# "inline" runs the stage by directly calling run.future
+# initially, sequential maps onto "inline"
+# The other two set up true multiprocessing plans
+
+ve.model.plan <- function(plan="callr",workers=parallelly::availableCores(omit=1)) {
+  # options for the plan are
+  # validate plan
+  if ( ! is.character(plan) || ! plan %in% knownPlans ) plan <- knownPlans[1]
+  self$FuturePlan <- plan
+  self$Workers <- workers
+}
+
 # Run the modelStages
-ve.model.run <- function(run="continue",stage=NULL,log="warn") {
+ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,workers=NULL,log="warn") {
   # run parameter can be
   #      "continue" (run all steps, starting from first incomplete; "reset" is done on the first
-  #      incomplete stage and all subsequent ones, then execution continues)
+  #      incomplete stage and all subsequent ones, then execution continues)q
   #   or "save" in which case we reset, but first save the ResultsDir tree
   #   or "reset" (or "restart") in which case we restart from stage 1, but first clear out ResultsDir (no save)
   #
@@ -1727,9 +1855,14 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
   # "stage" could perhaps be a vector of stages - just those stages will be reset or re-run.
   #   "stage" can be specified either as an index position in self$modelStages or as a named position
 
+  # "delay" says how long to wait for running stages to finish
+  # "watch", if TRUE, applies if only one stage is running in a group (no multiprocessing for whatever reason)
+  #   then it will open a non-blocking connection to the stage log and echo out whatever is written there
+  #   before polling again for completion
+
   if ( ! private$p.valid ) {
     writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
-    return( invisible(self$status) )
+    return( invisible(self$overallStatus) )
   }
   
   # If save, like reset, but forces SaveDatastore to be TRUE
@@ -1752,7 +1885,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
     self$load(onlyExisting=TRUE,reset=TRUE) # Open any existing ModelState_ls to see which may be complete
     alreadyRun <- ( sapply( self$modelStages, function(s) s$RunStatus ) == codeStatus("Run Complete") )
     if ( all(alreadyRun) ) {
-      self$status <- codeStatus("Run Complete")
+      self$overallStatus <- codeStatus("Run Complete")
       writeLog("Model Run Complete",Level="warn")
       return(invisible(self$printStatus()))
     } else {
@@ -1797,7 +1930,7 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
   if ( toRun > length(runStages) ) { # should never happen
     writeLog(paste("Stages:",runStages,collapse=","),Level="info")
     msg <- writeLog(paste("Starting stage",toRun,"comes after last stage",length(runStages)),Level="error")
-    return( invisible(self$status) )
+    return( invisible(self$overallStatus) )
   }
   runStages <- runStages[toRun:length(runStages)]
 
@@ -1825,27 +1958,156 @@ ve.model.run <- function(run="continue",stage=NULL,log="warn") {
     }
   }
 
-  # Run the stages
-  # TODO: Spawn background processes to run the stages (perhaps using future package)
-  # TODO: Need to not exceed number of available processors (block until more available)
+  # Set up multiprocessing plan if requested
+  # Default is just to call the run.future function directly
+  # TODO: need option for number of workers...
+  UseFuture <- TRUE
+  if ( missing(workers) || is.null(workers) ) workers <- self$Workers
+  if ( is.null(self$FuturePlan) ) self$plan("inline")
+  if ( self$FuturePlan == "callr" ) {
+    oplan <- future::plan(future.callr::callr,workers=workers)
+  } else if ( self$FuturePlan == "multisession" ) {
+    oplan <- future::plan(future::multisession,workers=workers)
+  } else {
+    oplan <- NULL
+    UseFuture <- FALSE
+  }
+  if ( ! is.null(oplan) ) {
+    writeLog(paste("Processing model stages using",self$FuturePlan),Level="warn")
+    on.exit( future::plan(oplan), add=TRUE )
+  } else {
+    writeLog("Processing model stages inline",Level="warn")
+  }
 
+  # Process the run groups (stages in the same RunGroup can run in parallel)
   for ( rgn in names(RunGroups) ) {
     writeLog(paste("Running Stages where StartFrom =",rgn),Level="warn")
+
     rg <- RunGroups[[rgn]]
-    for ( ms in rg ) { # iterate over names of stages to run
-      writeLog(paste("Running stage:",ms),Level="warn")
-      self$modelStages[[ms]]$run(log=LogLevel)
-      if ( self$modelStages[[ms]]$RunStatus != codeStatus("Run Complete") ) {
-        msg <- writeLog(paste("Model failed with status",self$printStatus(self$modelStages[[ms]]$RunStatus)),Level="error")
-        stop(msg)
+    runningList <- list()
+    
+    if ( ! UseFuture ) {
+      for ( ms in rg ) { # iterate over names of stages to run
+        stg <- self$modelStages[[ms]]
+        stg$run(log=LogLevel,UseFuture=UseFuture)
+        # inline execution will mark stage complete and reload the stage
+        writeLog( stg$processStatus(), Level="warn")
+      }
+    } else {
+      delay <- 2          # how long between polls TODO: make this a run model parameter
+      statusDelay <- 15   # how long between status reports TODO: make this a run model parameter
+      lastStatusReport <- NULL
+      for ( ms in rg ) { # iterate over names of stages to run
+        # Wait for avaialble processors before attempting to schedule the next stage
+        if ( length(runningList) >= future::nbrOfWorkers() ) {
+          # Wait for a stage to finish so we can start another one
+          while ( all(sapply(runningList,function(stg) stg$running())) ) {
+            if ( is.null(lastStatusReport) || difftime(lastStatusReport,Sys.time(),units="secs") > statusDelay ) {
+              sapply(runningList,function(stg) {
+                writeLog( stg$processStatus(), Level="warn" )
+              })
+              lastStatusReport <- Sys.time()
+            }
+            Sys.sleep(delay)
+          }
+
+          # Post-process finished stages
+          running <- sapply(runningList,function(stg) stg$running())
+          done <- runningList[ which( ! running ) ]
+          writeLog(paste("Stages done:",paste(sapply(done,function(stg)stg$Name),collapse=",")),Level="info")
+          if ( length(done)>0 ) {
+            # Remove stage from running list
+            runningList <- runningList[ which(sapply(runningList,function(stg) stg$running())) ]
+            sapply( done, function(stg) {
+              # Log process completion status to console for stage no longer running
+              stg$completed()
+              writeLog( stg$processStatus(), Level="warn")
+            } )
+          } else {
+            stop( writeLog("Program run error: done processes reported but not found",Level="error") )
+          }
+          writeLog(paste("Running list now has",length(runningList),"processes"),Level="info")
+        }
+
+        queueMsg <- paste("Queuing stage",ms)
+        running <- length(runningList)
+        if ( running > 0 ) queueMsg <- paste( queueMsg,paste0("(Joining ",running," already running)") )
+        writeLog(queueMsg,Level="info")
+        runningList <- c(
+          runningList,
+          self$modelStages[[ms]]$run(log=LogLevel,UseFuture=TRUE)
+        )
+      }
+      # Finalize last stage(s) in group (keep waiting while any are running)
+      writeLog(paste("All run group stages are queued; monitoring processes..."),Level="info")
+      watchingLogs <- FALSE
+      while ( length(runningList)>0 ) {
+        running <- sapply(runningList,function(stg) stg$running())
+        done <- runningList[ which( ! running ) ]
+        if ( length(done) > 0 ) {
+          if ( watchingLogs ) {
+            # sapply is overkill since watchingLogs implies done has length==1
+            sapply( done, function(stg) {
+              stg$watchLogfile(stop=TRUE) # grab end of log file if watching
+            } )
+            watchingLogs <- FALSE
+          }
+          # Mark the stage complete
+          sapply( done, function(stg) {
+            stg$completed()
+            writeLog( stg$processStatus(), Level="warn" )
+          } )
+          # Remove done processes from runningList
+          runningList <- runningList[ - which( ! running ) ]
+        }
+        if ( length(runningList) > 0 ) { # will be zero if we just finished the last stage
+          if ( ! watchingLogs && length(runningList)==1 ) watchingLogs <- watch
+          if ( watchingLogs ) { # only one stage running - watch its logs
+            runningList[[1]]$watchLogfile() # There's a delay built into watchLogFile
+          } else {
+            if ( is.null(lastStatusReport) || difftime(lastStatusReport,Sys.time(),units="secs") > statusDelay ) {
+              sapply(runningList,function(stg) {
+                writeLog( stg$processStatus(), Level="warn" )
+              })
+              lastStatusReport <- Sys.time()
+            }
+            Sys.sleep(delay)
+          }
+        }
       }
     }
   }
 
-  # Update overall model status
+  # Update overall model status]
   self$updateStatus() # "Worst"/Lowest RunStatus for the overall model
 
-  return(invisible(self$status))
+  return(invisible(self$overallStatus))
+}
+
+ve.stage.watchlog <- function(stop=FALSE,delay=2) {
+  if ( stop ) delay <- 0
+  if ( is.null(private$log.to.watch) ) {
+    Logfile <- dir(self$RunPath,pattern="^Log_.*txt",full.names=TRUE)
+    if ( length(Logfile)==0 ) {
+      if ( delay > 0 ) Sys.sleep(delay)
+      return() # probably called too soon after launching model
+    }
+    if ( file.exists(Logfile) ) {
+      writeLogMessage(paste0(self$Name,": Watching Log file"),Level="warn")
+      private$log.to.watch <- file(Logfile,blocking=FALSE,open="r")
+    }
+  }
+  if ( ! is.null(private$log.to.watch) ) {
+    newlines <- readLines(private$log.to.watch)
+    for ( line in newlines ) {
+      writeLogMessage(paste0(self$Name,": ",line),Level="warn")
+    }
+    if ( delay > 0 ) Sys.sleep(delay)
+  }
+  if ( stop && ! is.null(private$log.to.watch) ) {
+    close(private$log.to.watch)
+    private$log.to.watch <- NULL
+  }
 }
 
 ################################################################################
@@ -2124,7 +2386,7 @@ openModel <- function(modelPath="",log="error") {
       )
     )
   } else {
-    initLog(Save=FALSE,Threshold=log, envir=new.env())
+    if ( !is.null(log) ) initLog(Save=FALSE,Threshold=log, envir=new.env())
     return( VEModel$new(modelPath = modelPath) )
   }
 }
@@ -2389,7 +2651,9 @@ VEModel <- R6::R6Class(
     RunParam_ls=NULL,                       # Run parameters for the model (some constructed by $configure)
     loadedParam_ls=NULL,                    # Loaded parameters (if any) present in model configuration file
     specSummary=NULL,                       # List of inputs, gets and sets from master module spec list  
-    status=codeStatus("Uninitialized"),     # Where are we in opening or running the model?
+    overallStatus=codeStatus("Uninitialized"), # Overall model status (worst case from stages)
+    FuturePlan=NULL,                        # character string describing multiprocessing plan (see ve.model.plan)
+    Workers=1,                              # workers for multiprocessing
 
     # Methods
     initialize=ve.model.init,               # initialize a VEModel object
@@ -2398,7 +2662,9 @@ VEModel <- R6::R6Class(
     addstage=ve.model.addstage,             # Add a stage programmatically
     valid=function() private$p.valid,       # report valid state
     load=ve.model.load,                     # load the model state for each stage (slow - defer until needed)
+    plan=ve.model.plan,                     # Choose a multiprocessing plan
     run=ve.model.run,                       # run a model (or just a subset of stages)
+    status=ve.model.status,                 # report status of running or complete stages
     print=ve.model.print,                   # provides generic print functionality
     printStatus=ve.model.printStatus,       # turn integer status into text representation
     updateStatus=ve.model.updateStatus,     # fill in overall status based on individual stage status
@@ -2433,29 +2699,36 @@ VEModelStage <- R6::R6Class(
   "VEModelStage",
   public = list(
     # Public data
-    Name = NULL,                 # Name of stage (used e.g. in another stage's StartFrom)
-    Model = NULL,                # VEModel to which this stage belongs
-    # May not need to save some of the following (build into RunParam_ls)
-    Dir = NULL,                  # basename of stage subdirectory (for inputs and results)
-    Path = NULL,                 # Normalized path to folder holding InputDir and ParamDir
-    Config = NULL,               # File relative to ModelDir (optional); 
-    Reportable = NULL,           # If TRUE, include in default result set for extract and queries
-    StartFrom = "",              # Name of another model stage to extend
-    RunParam_ls = list(),        # RunParameters to initialize the stage
-    loadedParam_ls = NULL,       # Loaded parameters (if any) present in stage configuration file
-    ModelState_ls = NULL,        # ModelState constructed from RunParam_ls
-    RunPath = NULL,              # Typically ModelDir/ResultsDir/StageDir
-    RunStatus = 1, # "Unknown"   # Indicates whether results are available
-    Results = NULL,              # A VEResults object (create on demand)
+    Name = NULL,                    # Name of stage (used e.g. in another stage's StartFrom)
+    Model = NULL,                   # VEModel to which this stage belongs
+    Dir = NULL,                     # basename of stage subdirectory (for inputs and results)
+    Path = NULL,                    # Normalized path to folder holding InputDir and ParamDir
+    Config = NULL,                  # File relative to ModelDir (optional); 
+    Reportable = NULL,              # If TRUE, include in default result set for extract and queries
+    StartFrom = "",                 # Name of another model stage to extend
+    RunParam_ls = list(),           # RunParameters to initialize the stage
+    loadedParam_ls = NULL,          # Loaded parameters (if any) present in stage configuration file
+    ModelState_ls = NULL,           # ModelState constructed from RunParam_ls
+    RunPath = NULL,                 # Typically ModelDir/ResultsDir/StageDir
+    FutureRun = NULL,               # Future object for running a stage (NULL if run is not happening)
+    RunStatus = 1,                  # "Unknown"   # Indicates whether results are available
+    RunStarted = NULL,              # Sys.time() when model stage run started
+    RunCompleted = NULL,            # Sys.time() when model stage run completed
+    Results = NULL,                 # A VEResults object (create on demand)
     
     # Methods
-    initialize=ve.stage.init,    # Create a stage and set its Runnable flag
-    runnable=ve.stage.runnable,  # Does the stage have all it needs to run?
-    print=ve.stage.print,        # Print stage summary
-    load=ve.stage.load,          # Read existing ModelState.Rda if any
-    run=ve.stage.run             # Run the stage (build results)
+    initialize=ve.stage.init,       # Create a stage and set its Runnable flag
+    runnable=ve.stage.runnable,     # Does the stage have all it needs to run?
+    print=ve.stage.print,           # Print stage summary
+    load=ve.stage.load,             # Read existing ModelState.Rda if any
+    run=ve.stage.run,               # Run the stage (build results)
+    completed=ve.stage.completed,   # Gather results of multiprocessing
+    running=ve.stage.running,       # Check if stage is still running
+    processStatus=ve.stage.pstatus, # Return string describing stage run process status
+    watchLogfile=ve.stage.watchlog  #
   ),
   private=list(
-    complete = NULL              # set to TRUE/FALSE when self$runnable() is executed
+    complete = NULL,                # set to TRUE/FALSE when self$runnable() is executed
+    log.to.watch = NULL
   )
 )

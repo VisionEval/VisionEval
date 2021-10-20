@@ -33,6 +33,10 @@ Basic scenario operation:
         List of input files (name only) to be changed for this Category
         Each level for the category gets those files (from StartFrom stage)
 
+The scenarios become "part" of the model they are attached to. The model (baseModel) is kept as part
+of the scenario management object, so certain model functions (like reloading the model or running
+the scenarios) can be performed by acting on the set of scenarios.
+
 TODO: keep track of whether the scenarios are explicit (implemented as model stages) or
   categories. Changes how $files works and what happens when we $build (and whether we
   can $add a scenario).
@@ -91,19 +95,28 @@ Printing the scenarios object will say if scenarios are defined.
     Can optionally specify "build" to try constructing ModelStages
       Model stages will be rebuilt from what is in scenarios.cnf in this case
       If $build fails, report what is missing
-      If $build succeeds, replace ModelStages
+      If $build succeeds
+        replace ModelStages
+        reload the baseModel (which will add the scenarios to its stages)
     Otherwise note in print/status that ModelStages have not been built
     If build==TRUE, also rewrite ScenarioDir/ScenarioConfig with any built changes.
-  [DONE] VEModelScenarios$save()
+  [DONE] VEModelScenarios$save(overwrite=FALSE)
     Save the in-memory scenario configuration back to ScenarioDir/ScenarioConfig
     Use as an alternative (and perhaps call from within) to the Save=TRUE option on $load, $files, $build
-  [DONE] VEModelScenarios$stages()
-    Return the built list of stages (or an empty list)
+    Nuance the overwrite flag appropriately
+  [DONE] VEModelScenarios$stages(scenarios=NULL)
+    Return the built list of stages (or an empty list) as VEModelStage objects
+    TODO: May filter that list by scenario (stage) name, perhaps also by category (just stages
+      using a certain category) and further by level (just stages using a certain level)
+  VEModelScenarios$run
+    Dispatches to the model run, with option to list specific scenarios to run
+      Scenarios to run are listed by name (see $stages object to get the names)
+    Includes option to "save", "reset" or "continue" (with, in this case, "reset" being the default)
   VEModelScenarios$print()
-    Indicate type of scenarios (manual, category-based)
+    Indicate type of scenarios (folders, category-based)
     Indicate how many scenarios are defined
-    If manual, list the scenarios
-    If category-based report Category/Level/File, plus the number of generated scenarios
+    List Folder-based scenarios
+    List Categories/Levels, plus number of generated scenarios
   VEModelScenarios$inputs(scenario or category name; default all of them)
     Return StartFrom inputs that have been defined in the requested (default: ALL) scenario or categories
     Option to show all files (default for full scenario - looks at BaseModel/StartFrom inputs)
@@ -112,66 +125,89 @@ Printing the scenarios object will say if scenarios are defined.
       For scenarios, will say if the file exists in the scenario directory
     Validate category inputs - file can only occur in one category
     For directory based scenarios
-  VEModelScenarios$fromCSV(CSVFile,overwrite=FALSE) # implies Save==TRUE
+  VEModelScenarios$fromCSV(CSVFile="scenario_categories.csv")
     # Simpler function just to parse CSV files set up the "old way" (see VEScenario)
-    If CSVFile is provided (TRUE = "scenario_categories.csv", or an alternate name):
-      Read that file to determine categories to attach to the Input files
-      Flag any inputs in the CSV that are not in the StartFrom Stage
-      Return the Category_df from the CSV file
-      If Save is true and Category_df is provided, save Category_df to CSVFile
+    # Converts the spreadsheet into "Categories" key in the scenario description
+    Read that file to determine categories to attach to the Input files
+    Flag any inputs in the CSV that are not in the StartFrom Stage
+    Return constructed "Category" key
+    Return the Category_df from the CSV file
+    If Save is true, save Category_df to CSVFile
     Don't change anything if the CSV does not have a valid configuration
-    Only replace an existing configuration if the scenarios have nto yet been built
-  VEModelScenarios$build(Source=NULL,FileNames=NULL,Reset=FALSE,Save=TRUE)
+  VEModelScenarios$categories(levels=FALSE)
+    Return the Category names (for use, e.g. in examining inputs)
+    If levels==TRUE, return a named list of character vectors
+      Each list element is named for its category
+      The character vector contains the names of the levels
+    Usual workflow:
+      Update the Category key (a nested named list, or via the CSV)
+      Save the VEScenarios back out to to scenarios.cnf
+      Re-load the scenarios object (build=TRUE)
+  VEModelScenarios$build(Reset=FALSE,Save=TRUE)
     Main activity of "build" is to construct ModelStages from the scenarios identified in scenario.cnf
-    If Save==TRUE
-    Save = TRUE/FALSE; if TRUE, rewrite scenaros.cnf, if FALSE, rebuild ModelStages and change only in memory
-    Source = "folders" or "directories":'
-      FileNames, if present, is a vector of directories to make into scenario stages
-        if not present, all sub-directories are made into stages
-      Each designated sub-directory is made into a model stage (like any sub-directory)
-        Can perhaps abstract the same code used in VEModel$configure
-      Populate the Scenarios structure (for scenarios.cnf)
-      ModelStages will be just use the sub-directories as "StageDir" for the stages
+    Handle two types of scenarios (Categories and Folders)
+      Process "Folders" first
+      If "Categories" tag is present, holds a Category/Level structure
+        Optional StartFrom as the first element of Categories; may refer to a Folder scenario
+        Subsequent elements are names with Files and Levels
+        Process the combinations into ModelStages structures
+      if "ScenarioFolders" tag is present, is a list of directories to treat as scenarios
+        else generate ScenarioFolders from sub-directories of ScenarioDir (like VEModel$configure)
+        Process directories into ModelStages structures
+    If Reset is TRUE:
+      Ignore existing ModelStages - otherwise just check for additions/consistency
+    If Save is TRUE
+      Resave scenario.cnf with ModelStages added
+    If Save is FALSE
+      Just leave ModelStages in memory (for debugging/inspection)
+    The "load" function turns the ModelStages description for the Scenarios into VEModelStage objects (after build)
+    Folders are always processed first, then Categories
+    If processing Folders:
+      ModelStages will just use each of the ScenarioFolders as "StageDir" for the stages
       If the sub-directory has a visioneval.cnf, set StageConfig instead
       Names of sub-directories will be Names of scenario stages (must be unique relative to Model)
-      Categories structure will not exist and we don't create it
-      But we do create the ModelStages structure
-      Then we're done
-    Source = "tables" -- DO NOT DO THIS: force the "config" option?
-      FileNames, if present, is a vector of c("scenario-categories.csv","scenario-levels.csv")
-      Read FileName2[1]=scenario-categories.csv - a table of input files allocated to categories
-        Can use a file created by VEModelScenarios$files
-        Table has File, Category, Description
-      Read FileNames[2] scenario-levels.csv - a table of category levels
-        Table has Category, Level, Description
-        Read those into the Categories structure
-        Stop with error if the file does not exist or if it contains non-existent categories or
-          fails to contain levels for each defined category
-      Construct the Categories key in the scenarios configuration
-      Proceed to complete the "config" process below below
-    Source = "config":
-      Use the Categories structure from scenarios.cnf that has these elements:
-        Categories
-          Files
-            Must be inputs to StartFrom stage, must be unique across all Categories)
-          Levels
-            Sub-Folder for each Category-Level must exist
+      All the ScenarioFolders will StartFrom the overall scenario StartFrom
+      StartFrom need not be provided (in which case the Scenario folders must be runnable - error
+        will be generated when we attempt to reload the model in which the scenarios live)
+    If processing Categories
+      CategoryStartFrom (can refer to a Folder scenario)
+        Defaults to overall scenario StartFrom
+        If provided, it must refer to the name of a Folder scenario within this scenario set
+        If the name is not a folder within the scenario set, offer a warning and ignore it
+        If no StartFrom available, then an error (missing "StartFrom")
+      Categories structure is an array
+        NOTES (ignored)
+        NAME
+        LABEL
+        DESCRIPTION
+        INSTRUCTIONS
+        FILES
+        LEVELS
+          NAME
+          NOTES (ignored)
+          LABEL
+          DESCRIPTION
+        Files
+          Must be inputs to StartFrom stage, must be unique across all Categories
+        Levels
+          Name (short, for reports and output folder)
+          Description (describing intent)
+          Notes (ignored)
       Proceed to complete the Category build (below)
     Complete the Category build: After doing table or config build setup, complete as follows:
-      Build a Categories/Files/Levels structure (using either tables or what is in scenario.cnf)
       Validate categories:
         Each category must have at least one additional level
-          StartFrom is the implied base scenario for all
+          StartFrom is the implied base scenario level for all categories
         Each category must specify at least one file
         Each file from StartFrom input must exist in at most one category
       Create any Category-Level folders that do not exist
-        Make folders for each Category
-          Make folders for each Level
+        Make folders for each Category (create if not existing)
+          Make folders for each Level (create if not existing)
       Install the Category files from StartFrom InputPath into each Level folder
         If the file is present, just skip it
         If a file not in the Category is present in a level, warn the user and stop the build
         If a file is not present, copy it from the StartFrom InputPath
-      Build the ModelStages structure:
+      Build the ModelStages structure for Categories
         Make a Scenarios/ModelStage entry for each combination of Category-Level
         Name constructed from index of Category and Level (C1L2C2L3)
           The stages are just the scenarios
@@ -189,8 +225,8 @@ Printing the scenarios object will say if scenarios are defined.
           #   Additional configuration can be provided by hand for Category scenarios
           #   Manual scenarios can be adjusted through their own visioneval.cnf
         Goes straight into ModelStages (rewrite ModelStages structure)
-    If Save or no scenarios.cnf, write resulting Scenarios, Categories and ModelStages tags into scenarios.cnf
-    If not Save, then just keep the scenario object up to date (can call VEModelScenarios$save)
+    If Save, rewrite scenarios.cnf
+    If not Save, then just keep the scenario object up to date in memory (can call VEModelScenarios$save)
 
 ============================
 

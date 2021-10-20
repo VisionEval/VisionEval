@@ -2,141 +2,26 @@ The path to completion:
 
 Continue working on DVMT documentation for WSDOT.
 
-See plan-scenario.txt for details on the new scenario architecture.
+See plan-scenario.txt and scenarios.r for details on the new scenario architecture.
 
-Look closely at the multiple background process implementation for running scenarios in VEScenario.
-That strategy seems to work well, but doesn't provide much of an interactive process controller...
+Start testing VEModel with the future implementation
+  1. sequential is mapped over to "inline" which runs the model in the interactive R
+     session (so you can watch the logfile "live"). Seems to be working. Blocks while
+     each stage is running.
+  2. multisession (or callr) can use some number of workers to do parallel processing
+     Basically working, but the internal plan handling needs to have an option for
+     number of workers (currently uses all available). Make those options part of the
+     RunParam_ls options? Main process becomes a controller, with status updates on
+     how long each stage has been running. The log file for the last stage in each group
+     can be polled for updates (so you can see it finish "live").
 
-Need to make sure the stage environment is set up suitably for stage to run - what is the minimal
-enviroment we need - .libPaths(), VEModel loaded in the process, copy over any required setup in
-the ve.model / ve.env environments that will get accessed. Ideally, we're as little subject to those
-as possible.
+Start to develop the stage/scenario walkthrough (will furnish tests for scenario
+elements).
 
-What happens if we just wrap each stage in a "future" - do we need to re-open the model in that
-environment, or can we pass it across?
+Do a multi-stage model (set up a model that has "parallelizable" stages so we can see
+the parallel run working). We'll get a lot more parallelism going as scenarios emerge.
 
-It will probably be simpler to just push the RunParams_ls into the function to run in the background
-and work at a low-level with framework functions, so the background process only uses the visioneval
-package - we have that architectural separation now (VEModel just bottles up what the framework
-needs to run in its new disaggregate fashion). models.R::1357-1377 (inside ve.stage.run).
-
-We don't need the try-catch - that will be handled by the runner (trapping what comes back from the
-"future").
-
-Should we keep the runner structure (future, status, etc.) in the VEModelStage object? Then we
-just iterate over the list of stages for status updates. Need to figure out how to manage that at
-the VEModel level (running in one thread - the process manager) and then just check over the list
-of model stages in the current run group for progress.
-
-Could do a bigger structure for the run status (essentially, the runner object) that explains
-the run status. So rather than just the RunStatus text, we have the whole apparatus of the future,
-when the run was started, when it completed, etc. Pushing the run completion back into the model
-state would be good too.
-
-Report on stage groups:
-  Group 0: Starting from Nothing
-  Group 1: Starting from 'Some Stage in Group 0 or earlier'
-
-The function should return ModelState_ls (after saving it) since we'll keep track of all those
-for the background processes - let's see what the memory ramifications are for running hundreds
-of scenario combinations.
-
-The process running is all about model stages (not specifically "scenarios") - we'll use parallel
-running for all stages that have the same "StartFrom" and set up BaseModel$setting("NumWorkers")
-processes (possibly only 1) to run in parallel. Also use BaseModel$setting("ConcurrentPlan") to
-map the name of a plan to the future function implementing the plan. That gets set prior to doing
-a Model $run and controls how the stages will be processed. Default is "sequential" but can be
-set to "transparent" or to one of the multi-process plans.
-
-Process Management
-
-Build a process controller for the model stages. To run the model, we create a queue of future
-objects for each stage, with each one running a stage. +We can't start a stage until its "StartFrom"
-is complete. So we'll group the stages by "StartFrom". We'll make a future running the stage into
-each stage in the Group (we can start everybody in the group all at once); then we'll loop over
-the group until all the elements are resolved.
-
-Scan the list of stages to make groups:
-  1. All stages, in order, with no "StartFrom"
-  2. For each stage G in Group 1:
-     All stages that StartFrom=="G"
-  3. For each Group created in 2, do the same operation on any remaining ungrouped stages
-
-The Groups are always run sequentially.
-The individual stages in each group can run in parallel.
-  If free workers > 0 add a future, otherwise poll ealier futures for resolved
-    If resolved, then
-      get the future's value (which should be the RunStatus) and put it in the Stage
-      start the next future
-    Otherwise, wait a second
-
-The process runner can generate an offline status file as the processes it is polling finish and
-new ones get started. That status file, which belongs to the model that the process runner is
-processing, gets re-read when we ask for process status. That would ideally be a transactional
-database... process runner does a polling loop on its processes to start N number of them, then
-polls for finish and queue the next. It will also poll for presence of an updated request file. We
-could just create a file system message queue (request/response) that uses files with standard
-names and timestamps. So when we start running a model, we create the message queue directory (temp
-directory) and send it to the process runner as a parameter. The process runner will poll for a
-new file (written into under a temporary name, then renamed as an "almost atomic" operation) and
-gather data to write into the response file (same timestamp as the request) - write the file under
-a temp name, then rename it as an "almost atomic" operation. So we write the request, then go into
-a loop waiting (up to a timeout) for the response file from the process runner.
-
-Don't forget to manage the writeLog so when we do the run, the logging only goes to a file (not
-the console).
-
-Poll the r_process object for the run status. The results after the process is over (function
-returns or fails) are backloaded into the model stage.
-
-Need a simplified process status report (table) showing the Run Status for each stage, including
-the low-level process status (so they can be cleaned up). Simple run management functions
-(start/restart, stop, purge).
-
-Create a "Waiting" status that is set into all the ModelStages for all the stages the model will
-run. The ModelStages are grouped by their StartFrom (no StartFrom first). Then the process runner
-will keep NUM_CORES processes running. When a process finishes, the next waiting in its group is set
-in motion. When the group has all been set in motion and a core becomes free, the first waiting in
-the next group is started. If any stage fails, the process runner does not add any additional
-stages; all running ones will be allowed to complete/fail. Problems can be fixed, and a "continue"
-run can be launched, which will set all incomplete stages to "Waiting" then start running them.
-
-The process management does imply that we should have a single process runner that lives outside any
-particular model. The model furnishes the list of stages to run and then calls the global
-(singleton) process runner. That won't stop us from starting R twice, but it will let us trap
-problems from having different models (or the same one!) running at the same time.
-
-One way to manage that is not to allow any other model to run() until there are no more running
-processes. Doing "running" will check if any model is running (it can be accessed via a model object
-but also via a class function (VEModel$runner, for the process runner). That function will take a
-command line option, and if none provided will show the running stages. We can ask for "waiting",
-"complete", "failed", "running", or "paused" or some vector subset of those. We can also give a verb
-plus PID to act on a particular process ("kill", "pause", "resume"). Default display: show
-"complete", then "failed", then "waiting", then "running", then "paused". That is accomplished by
-posing questions to the background process, which itself is in a loop to poll the processes.
-
-Since the runner needs to be polling regularly (or using "future") to monitor the status of processes.
-
-Keep stages waiting if their StartFrom is not "Run Complete", and when a stage finishes, find any
-later stages that StartFrom it and set all of those running.
-  Run up to "max_child" processes - a runtime configuration item in VEModel, defaulting to 4.
-  When a stage finishes, see if there are more queued for the current StartFrom
-
-We can efficiently run the stages like this: Classify them as those that start from scratch and
-those that StartFrom. Note that if there is a LoadModel/LoadStage directive, that is treated like a
-"StartFrom", and we look back to see if that model/stage is available and has been run, then copy it
-into the first model stage. All of that should happen prior to starting parallel processing (though
-we could run the LoadModel if it is not RunComplete).
-  1. Collect the "free" stages and run them in parallel (probably there will only be one).
-  3. When ANY stage is complete, look down the list of stages for those that StartFrom the completed
-     one's name. Set all those running.
-  2. Move to the first "StartFrom" stage, and find all the other stages that start from the same
-  place; those can run in parallel
-  3.
-
-Experiment with running a stage using 'callr': what do we need to construct in the separate R process
-environment: all data/configuration elements present in the same location (all relative to ModelDir).
-The RunParam_ls for the stage should be complete - build it and pass it to the child process.
+Doing a very basic implementation using the "future" package.
 
 Absorb Dan et al's scripts for extracting metrics...
 

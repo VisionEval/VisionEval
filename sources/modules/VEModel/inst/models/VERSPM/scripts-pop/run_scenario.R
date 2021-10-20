@@ -1,5 +1,4 @@
 # run_model.R for year-based scenario with population already synthesized
-cat('VERSPM (staged population synthesis, Scenario Years): run_scenario.R script entered.\n')
 
 #Run all demo module for all years
 #---------------------------------
@@ -39,4 +38,3 @@ for(Year in getYears()) {
   runModule("CalculateComEnergyAndEmissions",   "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   runModule("CalculatePtranEnergyAndEmissions", "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
 }
-cat('VERSPM (staged population synthesis, Scenario Years): run_scenario.R script complete.\n')

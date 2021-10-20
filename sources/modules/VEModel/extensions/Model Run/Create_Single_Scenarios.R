@@ -85,7 +85,7 @@ for (scenario in scenario_directories){
     modelNames <- rbind(modelNames, data.frame(name = modelName,
                                                files = paste(toChange, collapse = ", "),
                                                location = runningModel$modelPath,
-                                               status = runningModel$status))
+                                               status = runningModel$overallStatus))
   }
   
   

@@ -16,7 +16,10 @@ Imports:
     R6,
     stringr,
     yaml,
-    futile.logger
+    futile.logger,
+    parallelly,
+    future,
+    future.callr
 Suggests:
     knitr,
     pkgload

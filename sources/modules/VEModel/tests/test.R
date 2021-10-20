@@ -17,6 +17,12 @@ if ( ! requireNamespace("yaml",quietly=TRUE) ) {
   stop("Missing required package: 'yaml'")
 }
 
+# future.callr also loads future
+# required for multitasking test
+if ( ! requireNamespace("future.callr",quietly=TRUE) ) {
+  stop("Missing required package: 'future.callr'")
+}
+
 logLevel <- function(log="info") {
   initLog(Save=FALSE,Threshold=log)
 }
@@ -235,7 +241,7 @@ test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",r
   if ( ! reset ) {
     testStep(paste("Attempting to re-open existing",modelName))
     rs <- openModel(modelName)
-    if ( rs$status != codeStatus("Run Complete") ) {
+    if ( rs$overallStatus != codeStatus("Run Complete") ) {
       print(rs)
       reset <- TRUE
       message("\nStage is not Complete; Rebuilding model")
@@ -270,7 +276,7 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   due.to <- "reset request"
   if ( modelName %in% openModel() ) {
     jr <- openModel(modelName)
-    if ( ! jr$status == codeStatus("Run Complete") ) {
+    if ( ! jr$overallStatus == codeStatus("Run Complete") ) {
       reset = TRUE
       due.to = paste("status",jr$printStatus())
     }
@@ -545,6 +551,92 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   return(bare)
 }
 
+test_multicore <- function(model=NULL, log="info", workers=3) {
+
+  logLevel(log)
+
+  testStep("Finding BARE model template")
+  if ( is.null(model) ) {
+    model <- test_model("JRSPM",brief=TRUE,log=log) # skip the deeper tests, return BARE model
+  } else {
+    print(model)
+  }
+
+  testStep("Copy model...")
+  modelPath <- file.path("models","CORE-test")
+  if ( dir.exists(modelPath) ) unlink(modelPath,recursive=TRUE)
+  coreModel <- model$copy("CORE-test",copyResults=FALSE,log=log)
+  print(coreModel)
+
+  testStep("Create CORE-base stage")
+  updateSetup(coreModel,inFile=TRUE,drop=c("Scenario","Description"))
+  writeSetup(coreModel,overwrite=TRUE)
+  owd <- setwd(coreModel$modelPath)
+  file.rename(coreModel$setting("InputDir"),"CORE-base")
+  stageConfig_ls <-  list(
+      Scenario    = jsonlite::unbox("CORE-base"),
+      Description = jsonlite::unbox("Base Stage for Multicore Test")
+    )
+  configFile <- file.path("CORE-base","visioneval.cnf")
+  yaml::write_yaml(stageConfig_ls,configFile)
+  setwd(owd)
+  coreModel$configure(fromFile=TRUE) # Will load CORE-base stage
+  print(coreModel)
+
+  testStep("Run the CORE-test model inline")
+  coreModel$plan("inline")   # "sequential" maps over to the same thing
+  coreModel$run()            # should look identical to test_model run and BARE-test
+  # In particular, you should see the Logfile scrolling past "live"
+  print(coreModel)
+
+  testStep("Add model stages (just duplicates) to run in parallel")
+  # To run in parallel, different stages must have the same "StartFrom"
+
+  # For this test, we'll restructure the CORE-test model so it has three identical
+  # stages, each of which just runs the base model over and over. We'll get
+  # CORE-base, Stage-1, Stage-2, Stage-3 and Stage-4 as sub-directories of
+  # coreModel$modelPath/ResultsDir.
+  for ( newstage in 1:4 ) {
+    coreModel$addstage(
+      Name=paste0("Simultaneous-",newstage),
+      Dir=paste0("Stage-",newstage),
+      Scenario=paste0("Simultaneous ",newstage),
+      Description=paste("Run stage",newstage,"in parallel"),
+      StartFrom="CORE-base"
+    )
+  }
+  cat("Show model with new stages\n")
+  print(coreModel)
+
+#   testStep("Run model with sequential to check")
+#   coreModel$plan("inline")
+#   coreModel$run("continue")
+# 
+#   stopTest("Done checking stage runs")
+
+  logLevel(log=log)
+
+  testStep("Run model with callr")
+  cat("Running with callr plan",workers, "workers; should work on any R version\n")
+  coreModel$plan("callr",workers=workers)
+  coreModel$run("continue") # Use existing Core-base stage run
+  print(coreModel)
+  # then will run each of the new stages in parallel (asynchronously)
+
+  testStep("Run model with multisession")
+  coreResults <- try ( {
+    cat("Historically, multisession fails on Windows machines due to firewall restrictions.\n")
+    cat("Recent tests on a pretty locked-down Windows 10 suggest it may now work.\n")
+    coreModel$plan("multisession",workers=workers)
+    coreModel$run("reset") # Will re-run CORE-base stage
+    coreModel
+  } )
+  print(coreResults)
+  testStep("Done with multitasking test")
+
+  return(invisible(coreModel))
+}
+
 test_load <- function(model=NULL, log="info" ) {
   # Tests the LoadModel functionality (pre-load Datastore and then
   #   execute additional steps from the copied data.all
@@ -553,12 +645,9 @@ test_load <- function(model=NULL, log="info" ) {
     model <- test_model("JRSPM",brief=TRUE,log=log) # skip the deeper tests
     model$run(log=log)                      # run it anyway (default="continue" does nothing)
   }
-  testStep("Copy base model...")
+  testStep("Copy model...")
   modelPath <- file.path("models","LOAD-test")
   if ( dir.exists(modelPath) ) unlink(modelPath,recursive=TRUE)
-  # TODO: despite copyResults=FALSE, still copying results, which
-  # screws up everything in the ModelState, paths, etc. when model is
-  # reloaded.
   loadModel <- model$copy("LOAD-test",copyResults=FALSE)
   print(loadModel)
   testStep("Set up load script...")
@@ -591,7 +680,7 @@ test_load <- function(model=NULL, log="info" ) {
     BaseYear    = jsonlite::unbox(model$setting("BaseYear")),
     Years       = loadModel$setting("Years"),
     LoadModel   = jsonlite::unbox(model$modelPath) # could be any form accepted by openModel
-    # Can also set LoadStage...
+    # Could also set LoadStage (last Reportable stage is used by default)
   )
   configFile <- file.path(baseModelPath,"visioneval.cnf")
   yaml::write_yaml(runConfig_ls,configFile)
@@ -999,7 +1088,7 @@ test_query <- function(log="info",reset=FALSE) {
   return(jr)
 }
 
-test_mult <- function(reset=FALSE,log="info") {
+test_multiquery <- function(reset=FALSE,log="info") {
   # TODO: ensure that the query outputs are disambiguated and remain
   # available
 

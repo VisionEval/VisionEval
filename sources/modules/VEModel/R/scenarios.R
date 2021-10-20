@@ -14,10 +14,11 @@ NULL
 
 self=private=NULL
 
+# Build a scenario management object
 ve.scenario.init <- function( baseModel=NULL, create=FALSE, startFrom=NULL ) {
   self$baseModel <- baseModel
-  self$scenarioDir <- self$baseModel$setting("ScenarioDir"),
-  self$configFile <- self$baseModel$setting("ScenarioConfig"),
+  self$scenarioDir <- self$baseModel$setting("ScenarioDir")
+  self$configFile <- self$baseModel$setting("ScenarioConfig")
   if ( create && ! dir.exists(scenarioDir) ) {
     self$scenarioPath <- normalizePath(baseModel$modelPath,self$scenarioDir)
     dir.create(scenarioDir)
@@ -28,6 +29,7 @@ ve.scenario.init <- function( baseModel=NULL, create=FALSE, startFrom=NULL ) {
   }
 }
 
+# Load scenario configuration; build by default
 ve.scenario.load <- function(startFrom=NULL,build=TRUE,scenarioPath=NULL) {
   if ( dir.exists(scenarioPath) ) {
     # Note: ScenarioConfig can contain "Years" for scenarios
@@ -48,7 +50,6 @@ ve.scenario.load <- function(startFrom=NULL,build=TRUE,scenarioPath=NULL) {
     if ( is.list(scenarioStages) ) {
       # (Re-)create the scenario modelStages
       self$scenarioStages <- lapply(names(scenarioStages), # Use pre-defined structures
-        # At a minimum, must provide Dir or Config
         function(stage) {
           obj <- scenarioStages[[stage]] # Get the stageParam_ls structure
           writeLog(paste("Scenario Stage:",stage),Level="info")
@@ -67,30 +68,64 @@ ve.scenario.load <- function(startFrom=NULL,build=TRUE,scenarioPath=NULL) {
   return(self)
 }
 
+# Return the scenario ModelStages
+# Note that they must already have been built and loaded
 ve.scenario.stages <- function() {
+
   return( self$scenarioStages )
 }
 
-ve.scenario.print <- function() {
-  # TODO
+# Print summary information about scenarios
+ve.scenario.print <- function(details=FALSE) {
+  # does self$scenarioConfig exist?
+  # list its folder scenarios (just the name)
+  # list its categories (how many files and levels in each)
+  # list number of ModelStages present in self$scenarioConfig (from build)
+  # details adds in:
+  #   under categories, list files and levels
+  #   under model stages, list how many are in each run status
 }
 
-ve.scenario.inputs <- function() {
-  # TODO: extract input list from baseModel/startFrom
-  # Want actual inputs from modules in startFrom script
+# List available inputs for each scenario and (if details) whether it has a local version
+ve.scenario.inputs <- function(scenario=NULL,category=NULL,details=TRUE) {
+  # if "scenario" is a character vector, only show those folder scenarios
+  # if "category" is a character vector, only show those categories
+  # Folder scenarios list/compare files from overall StartFrom (if any) else just files in folder
+  #   Use baseModel$inputs(stage=StartFrom)
+  #   List each folder scenario, inspect its InputPath and if the file is present there, mark it as "Used"
+  # Category scenarios list all files in Category StartFrom and tags them with the Category they
+  #   are associated with (from the Categories configuration, only one possible Category per file)
 }
 
-ve.scenario.categories <- function() {
-  # TODO
+ve.scenario.categories <- function(category=NULL,details=FALSE) {
+  # TODO: list categories
+  # Show category name by default (not informative)
+  # If "category" is a character vector, only show those categories
+  #   (and set details=TRUE if missing)
+  # With details return a data.frame:
+  #   TRUE == all details (== c("levels","files"))
+  #   "levels" == add one row for each distinct set of level columns (LevelName, Label, Description)
+  #   "files" == add one row with File name for each distinct file in the category
+  #   if details is a character vector with both "levels" and "files", list files within each
+  #     level and in addition to the file name, list out its directory, its size, and its
+  #     modification date.
 }
 
-ve.scenario.list <- function() {
+ve.scenario.list <- function(scenario=NULL, details=FALSE) {
   # TODO: list scenarios
+  # Show scenario names by default (character vector)
+  # If "scenario" parameter is a character vector, only show those scenarios
+  #   (and set details=TRUE if missing)
+  # With details return a data.frame:
+  #  Show if it is a "Folder" scenario or a "Category" scenario
+  #  Show scenario (stage) RunStatus (check baseModel stages - should (re-)load baseModel)
+  # Can subset details by providing a character string instead of a logical
+  #  TRUE == all details
+  #  "status" == name plus run status
+  #  "type" == folder/category
 }
 
 ve.scenario.build <- function(startFrom=NULL) {
-  # TODO: construct model stages from ScenarioDir/ScenarioConfig
-  # Update config if needed
 }
 
 ve.scenario.save <- function(overwrite=TRUE) {
