@@ -1,7 +1,36 @@
 Basic scenario operation:
-  Add scenarios to a model by creating ScenarioDir and adding ScenarioConfig file to it
-    Helper functions to initialize ScenarioConfig
-    Get list of input files to use in constructing categories and levels
+  Scenarios are just an alternate place/means of constructing model stages
+    Look for ScenarioDir and if found, process model stages from there (tag as "Scenario" stages as they are built)
+  Inside ScenarioDir:
+    If visioneval.cnf:
+      Provides defaults (notably StartFrom) applied to ALL scenarios
+        Includes both Folders/ModelStages and Scenarios constructed from Categories
+        Could also include InputPath (the base set of future year scenario inputs...)
+      if ModelStages present
+        Process those as regular model stages
+      THEN, if Categories tag present, build those into model stages
+        Include Optional CategorySettings (source: "CategorySettings")
+          Used as RunParams_ls (overlaid on overall scenario parameters)
+        Categories tag is an array of Categories:
+          Name (short/distinct), Label, Description, Instructions
+          Files (array of files from model to include in Category)
+          Levels (array of levels)
+            Name, Label, Description
+    If no visioneval.cnf or if no ModelStages and no Categories:
+      Process any sub-folders as if they were model stages defined in the base model
+      Just read their visioneval.cnf
+
+Add category, file and level interrogation (VEModelScenarios object).
+Intersect files from basemodel and categories (which files are in which categories)
+
+  VEModelScenarios object
+    Can manipulate visioneval.cnf for VEScenarios object using standard environment tools.
+      Has a RunParam_ls and a loadedParam_ls elements
+    Can construct stages (build them on the fly if not already prepared; see above)
+      Rebuild/Revalidate categories (all+only the files; present in all levels) when making stages
+    Printing the scenarios object will show the stages that are defined
+      Will show Categories, Files, Levels if defined
+
   Need to set:
     StartFrom stage in base model (default is last Reportable, can provide non-character to ignore)
     ScenarioDir (where to look for scenario configuration, inputs)

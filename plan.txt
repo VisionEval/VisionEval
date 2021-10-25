@@ -4,24 +4,8 @@ Continue working on DVMT documentation for WSDOT.
 
 See plan-scenario.txt and scenarios.r for details on the new scenario architecture.
 
-Start testing VEModel with the future implementation
-  1. sequential is mapped over to "inline" which runs the model in the interactive R
-     session (so you can watch the logfile "live"). Seems to be working. Blocks while
-     each stage is running.
-  2. multisession (or callr) can use some number of workers to do parallel processing
-     Basically working, but the internal plan handling needs to have an option for
-     number of workers (currently uses all available). Make those options part of the
-     RunParam_ls options? Main process becomes a controller, with status updates on
-     how long each stage has been running. The log file for the last stage in each group
-     can be polled for updates (so you can see it finish "live").
-
 Start to develop the stage/scenario walkthrough (will furnish tests for scenario
 elements).
-
-Do a multi-stage model (set up a model that has "parallelizable" stages so we can see
-the parallel run working). We'll get a lot more parallelism going as scenarios emerge.
-
-Doing a very basic implementation using the "future" package.
 
 Absorb Dan et al's scripts for extracting metrics...
 

@@ -198,7 +198,7 @@ getSetup <- function(object=NULL,paramNames=NULL,fromFile=FALSE,reload=FALSE) {
 #' \code{visioneval::defaultVERunParameters()}.
 #'
 #' @param object identifies the parameter set to write. NULL (default) reports what is in
-#' ve.runtime, Otherwise the object should be a VEModel or VEModelStage.
+#' ve.runtime, Otherwise the object should be a VEModel, VEModelStage, or VEModelScenarios.
 #' @param Param_ls If provided (and object is NOT provided), view this list instead of looking up
 #'   via getSetup.
 #' @param fromFile if TRUE, shows only the parameters loaded from a visioneval.cnf file. If FALSE,
@@ -281,6 +281,9 @@ writeSetup <- function(object=NULL,filename=NULL,overwrite=FALSE) {
     } else if ( "VEModelStage" %in% class(object) ) {
       ParamName <- object$Name
       ParamDir <- object$Path
+    } else if ( "VEModelScenarios" %in% class(object) ) {
+      ParamName <- object$scenarioDir
+      ParamDir <- dirname(object$scenarioPath)
     } else if ( ! is.list(object) ) {
       stop (
         writeLog(paste("Warning: No directory to write visioneval.cnf for",ParamName),Level="error")
@@ -421,3 +424,19 @@ normalizePath <- function(
 writeLog <- visioneval::writeLog
 writeLogMessage <- visioneval::writeLogMessage
 initLog <- visioneval::initLog
+
+# HELPER TO LIST UNIQUE SOURCES IN RUN PARAMETERS
+# ===============================================
+# List unique sources in a parameter list
+uniqueSources <- function(Param_ls,shorten=NULL) {
+  sources <- attr(Param_ls,"source")
+  if ( is.null(sources) ) {
+    writeLog("'sources' attribute is null in uniqueSources",.traceback(1),Level="info")
+    sources <- "NULL"
+  } else {
+    sources <- unique(sources$Source)
+    if ( ! is.null(shorten) ) sources <- sub(paste0(shorten,"/"),"",sources)
+  }
+  return(sources)
+}
+
