@@ -1360,7 +1360,8 @@ ve.stage.load <- function(onlyExisting=TRUE,reset=FALSE) {
   return(FALSE)
 }
 
-run.future <- function() {
+globalVariables(c("runPath", "RunParam_ls")) # attached in function environment when running
+run.function <- function() {
   # Parameters:
   #   runPath (directory in which to write log/ModelState/Datastore)
   #   RunParam_ls (big list structure with everything needed to run the model)
@@ -1431,8 +1432,14 @@ ve.stage.running <- function() {
 #   Duration from start of run to (done) completion time or (not done) Sys.time()
 #   Whether it is done
 tformat <- function(tm) format(tm,"%Y-%m-%d %H:%M:%S")
-tdiff <- function(tm0,tm1,digits=3) {
-  sub("mins","minutes",format( difftime(tm1,tm0,units="mins"), digits=digits ))
+tdiff <- function(tm0,tm1,digits=3,units="mins") {
+  if ( missing(units) || units == "mins" ) {
+    # used for display
+    sub("mins","minutes",format( difftime(tm1,tm0,units="mins"), digits=digits ))
+  } else {
+    # used internally for delay interval
+    difftime(tm1,tm0,units="secs")
+  }
 }
 
 ve.stage.pstatus <- function(start=FALSE) {
@@ -1474,20 +1481,20 @@ ve.stage.run <- function(log="warn",UseFuture=TRUE) {
   if ( UseFuture ) {
     # Run in a future (other environment/process)
     # Note that log is not visible
-    run.func <- run.future # Solve scoping problem when using pkgload...
+    run.future <- run.function # Solve scoping problem when using pkgload...
     self$FutureRun <- future::future(
       {
-        environment(run.func) <- run.env
-        run.func()
+        environment(run.future) <- run.env
+        run.future()
       },
-      globals=c("run.func","run.env"),
+      globals=c("run.future","run.env"),
       seed=visioneval::getRunParameter("Seed",Param_ls=self$RunParam_ls),
       packages="visioneval"
     )
   } else {
     # Run inline
-    environment(run.future) <- run.env
-    self$completed( run.future() )
+    environment(run.function) <- run.env
+    self$completed( run.function() )
   }
 
   return(self)
@@ -1853,10 +1860,15 @@ ve.model.status <- function(stage=NULL,statusCode=NULL,limit=10) {
 }
 
 knownPlans <- c("inline", "sequential", "callr", "multisession")
-# "inline" runs the stage by directly calling run.future
-# initially, sequential maps onto "inline"
-# The other two set up true multiprocessing plans
+# "inline" runs the stage by directly calling run.function
+# "sequential" gets re-mapped to "inline"
+# "callr" spawns a background RTerm to run the process
+# "multisession" uses the internal multi-thread run method from future package
+# "inline" is the default (and used for unknown plans).
+# other strategies can be implemented by directly modifying self$FuturePlan and self$Workers
+# deeper hacking may be required if the strategy does not take a "workers" parameter
 
+#' @import parallelly
 ve.model.plan <- function(plan="callr",workers=parallelly::availableCores(omit=1)) {
   # options for the plan are
   # validate plan
@@ -1866,7 +1878,7 @@ ve.model.plan <- function(plan="callr",workers=parallelly::availableCores(omit=1
 }
 
 # Run the modelStages
-ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,workers=NULL,log="warn") {
+ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FALSE,log="warn") {
   # run parameter can be
   #      "continue" (run all steps, starting from first incomplete; "reset" is done on the first
   #      incomplete stage and all subsequent ones, then execution continues)q
@@ -1885,6 +1897,7 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,workers=N
   # "watch", if TRUE, applies if only one stage is running in a group (no multiprocessing for whatever reason)
   #   then it will open a non-blocking connection to the stage log and echo out whatever is written there
   #   before polling again for completion
+  # "dryrun", if TRUE, will not actually run the stages - just report which stages will run 
 
   if ( ! private$p.valid ) {
     writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
@@ -1985,16 +1998,16 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,workers=N
   }
 
   # Set up multiprocessing plan if requested
-  # Default is just to call the run.future function directly
-  # TODO: need option for number of workers...
+  # Default is just to call run.function directly
   UseFuture <- TRUE
-  if ( missing(workers) || is.null(workers) ) workers <- self$Workers
   if ( is.null(self$FuturePlan) ) self$plan("inline")
   if ( self$FuturePlan == "callr" ) {
-    oplan <- future::plan(future.callr::callr,workers=workers)
+    oplan <- future::plan(future.callr::callr,workers=self$Workers)
   } else if ( self$FuturePlan == "multisession" ) {
-    oplan <- future::plan(future::multisession,workers=workers)
+    oplan <- future::plan(future::multisession,workers=self$Workers)
   } else {
+    # TODO: extend to allow manually setting self$FuturePlan and self$Workers
+    # Do not supply the workers parameter if self$Workers is NULL
     oplan <- NULL
     UseFuture <- FALSE
   }
@@ -2007,11 +2020,17 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,workers=N
 
   # Process the run groups (stages in the same RunGroup can run in parallel)
   for ( rgn in names(RunGroups) ) {
-    writeLog(paste("Running Stages where StartFrom =",rgn),Level="warn")
+    runMsg <- if (dryrun) "Would Run" else "Running"
+    writeLog(paste(runMsg,"Stages where StartFrom =",rgn),Level="warn")
 
     rg <- RunGroups[[rgn]]
     runningList <- list()
-    
+
+    if ( dryrun ) {
+      for ( ms in rg ) writeLog(paste("Would run stage",ms),Level="warn")
+      next
+    }
+
     if ( ! UseFuture ) {
       for ( ms in rg ) { # iterate over names of stages to run
         stg <- self$modelStages[[ms]]
@@ -2020,15 +2039,16 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,workers=N
         writeLog( stg$processStatus(), Level="warn")
       }
     } else {
-      delay <- 2          # how long between polls TODO: make this a run model parameter
-      statusDelay <- 15   # how long between status reports TODO: make this a run model parameter
+      delay <- self$setting("RunPollDelay")           # how long between polls (order of magnitude 2 seconds)
+      statusDelay <- self$setting("RunStatusDelay")   # how long between status reports (order of magnitude 1 minute)
       lastStatusReport <- NULL
       for ( ms in rg ) { # iterate over names of stages to run
         # Wait for avaialble processors before attempting to schedule the next stage
         if ( length(runningList) >= future::nbrOfWorkers() ) {
           # Wait for a stage to finish so we can start another one
+          writeLog("Waiting for free processor...",Level="warn")
           while ( all(sapply(runningList,function(stg) stg$running())) ) {
-            if ( is.null(lastStatusReport) || difftime(lastStatusReport,Sys.time(),units="secs") > statusDelay ) {
+            if ( is.null(lastStatusReport) || tdiff(lastStatusReport,Sys.time(),units="secs") > statusDelay ) {
               sapply(runningList,function(stg) {
                 writeLog( stg$processStatus(), Level="warn" )
               })
@@ -2091,7 +2111,7 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,workers=N
           if ( watchingLogs ) { # only one stage running - watch its logs
             runningList[[1]]$watchLogfile() # There's a delay built into watchLogFile
           } else {
-            if ( is.null(lastStatusReport) || difftime(lastStatusReport,Sys.time(),units="secs") > statusDelay ) {
+            if ( is.null(lastStatusReport) || tdiff(lastStatusReport,Sys.time(),units="secs") > statusDelay ) {
               sapply(runningList,function(stg) {
                 writeLog( stg$processStatus(), Level="warn" )
               })

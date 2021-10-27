@@ -74,13 +74,13 @@ ve.scenario.load <- function(fromFile=FALSE) {
     
     scenarioList <- list()
     # Process Categories
-    for ( category in categories ) {
+    for ( category in modelParam_ls$Categories ) {
       writeLog(paste("Processing category",category$Name),Level="info")
 
       # Construct levels for this category
       levels <- category$Levels
       catLevel <- lapply(
-        levs,
+        levels,
         function(level) {
           catLevelName <- paste0(category,"-",level$Name)
           list(
@@ -112,7 +112,7 @@ ve.scenario.load <- function(fromFile=FALSE) {
           c(
             list(
               Name=paste(sapply(scen,function(sc) sc$Name),collapse=""),
-              Dir=Dir,
+              Dir=Dir
             ),
             modelParam_ls[ ! names(modelParam_ls) %in% c("Name","Dir","Description") ]
           )
@@ -121,12 +121,12 @@ ve.scenario.load <- function(fromFile=FALSE) {
     )
     self$modelStages <- lapply(scenarioList,
       function(stage) {
-        Dir <- paste(sapply(scen,function(sc) sc$Name),collapse="")
+        Dir <- paste(sapply(stage,function(sc) sc$Name),collapse="")
         stageParam_ls <- list(
           Dir=Dir,                    # For stage output
           Name=Dir,                   # Root for stage
-          InputPath=sapply(scen,function(sc) sc$InputPath), # character vector
-          Description=paste(sapply(scen,function(sc) sc$Description),collapse="\n")
+          InputPath=sapply(stage,function(sc) sc$InputPath), # character vector
+          Description=paste(sapply(stage,function(sc) sc$Description),collapse="\n")
         )
         VEModelStage$new(
           Name = Dir,

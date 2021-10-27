@@ -2,6 +2,10 @@ The path to completion:
 
 Continue working on DVMT documentation for WSDOT.
 
+Figure out why status is not updating when multiple model stages are running with multisession.
+All the stages started and they're running, but the progress message (every so often) is not
+running.
+
 See plan-scenario.txt and scenarios.r for details on the new scenario architecture.
 
 Start to develop the stage/scenario walkthrough (will furnish tests for scenario
