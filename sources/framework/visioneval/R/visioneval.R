@@ -342,6 +342,7 @@ loadModel <- function(
     if ( file.exists(envir$ModelStatePath) ) {
       RunParam_ls <- loadModelState(envir$ModelStatePath,envir=envir)
       ms <- envir$ModelState_ls
+      if ( is.null(ms) ) ms <- list() # file may have nothing in it, yielding a failure
     } else {
       ms <- list()
     }

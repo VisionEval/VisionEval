@@ -356,7 +356,14 @@ archiveResults <- function(RunParam_ls,RunDir=getwd(),SaveDatastore=NULL) {
 loadModelState <- function(FileName=getModelStateFileName(),envir=NULL) {
   if ( is.null(envir) ) envir = modelEnvironment()
   if (file.exists(FileName)) {
-    load(FileName,envir=envir)
+    loaded <- try (silent=TRUE,
+      load(FileName,envir=envir)
+    )
+    if ( "try-error" %in% class(loaded) ) {
+      # Something wrong with ModelState file - just ignore the attempt
+      writeLog("Pre-existing ModelState.Rda is empty or invalid:",Level="warn")
+      writeLog(as.character(loaded),Level="warn")
+    }
   }
   ModelState_ls <- get0( "ModelState_ls", envir=envir, ifnotfound=list() )
   if ( length(ModelState_ls) > 0 ) {
