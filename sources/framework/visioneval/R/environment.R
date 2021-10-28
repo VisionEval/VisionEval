@@ -438,11 +438,11 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
   return(Param_ls)
 }
 
-#ADD PARAMETER
-#=============
+#ADD RUN PARAMETER
+#=================
 #' Convenience function for adding or updating a parameter to Param_ls
 #'
-#' \code{addRunParameter} a visioneval developer function that adds an arbitrary parameter to a
+#' \code{addRunParameter} a visioneval framework control function that adds an arbitrary parameter to a
 #' RunParam_ls.
 #'
 #' @param Param_ls the list whose parameters will be changed/added to

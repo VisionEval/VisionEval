@@ -158,6 +158,9 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
 #===============
 #' Move an existing set of results into a different time-stamped directory
 #'
+#' \code{archiveResults} a visioneval framework control function that moves existing results
+#' to a new directory.
+#'
 #' If RunDir is the same as RunParam_ls$ModelDir, then pick out the ModelState.Rda, Datastore and
 #' Log Files to move into a newly created archive directory. If RunDir is different (probably the
 #' absolute path to some Results directory), we can just rename the directory.

@@ -117,8 +117,13 @@ if ( need.new.docs ) {
   }
   #Iterate through documentation files
   for (DocFile in DocFilePaths_) {
+    cat("Parsing file:",DocFile)
     ParsedRd_ls <- Rd2md::parseRd(tools::parse_Rd(DocFile))
     Group <- getGroup(ParsedRd_ls)
+    if ( length(Group)==0 ) {
+      Group <- "control"
+      cat(" (default)","\n")
+    } else cat("\n")
     ParsedRd_ls$group <- Group
     FunctionName <- ParsedRd_ls$name
     ParsedRd_ls$calls <- FunctionCalls_ls[[FunctionName]]
