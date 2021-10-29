@@ -1,0 +1,307 @@
+Change how the queries manage their results and make other adjustments to scenario stage building so
+all the information needed by the visualizer is available. Keep very raw results from running the
+query. Only build data.frames for the tabular export formats (csv, data.frame, sql, perhaps
+tableau). For the visualizer, we make a complex pile of JSON structures and function calls which
+can either be exported into a file or injected into a JRC-hosted page.
+
+VEModel Adjustments
+
+  - Need to update the "dir" and "clear" functions for the model to manage queries. QueryDir
+    contains query templates. They are not managed by "clear" which looks only at results.
+    Need to recognize queries in the ResultsDir and treat those like log files with respect to
+    listing and clearing. Clearing results will take out the QueryRun-*.Rda along with Logs.
+    The Query outputs are .Rda files called QueryRun-<QueryName>.Rda where the QueryName is
+    same one that was loaded to run the query.
+  - VEQuery uses an attached model to manage query results (and we can call up results - which
+    internally calls run if there are no results yet). Do VEQuery$results to get results (report "No
+    Model" if a model is not attached; report "Model run status: X" if the model is not "Run
+    Complete").
+  - Accessing a query through a model automatically attaches the model. Otherwise use
+    VEQuery$model(VEModel object) to attach. Opional Save parameter will create QueryDir for the
+    model (if it doesn't exist) and save to VEQuery name if there is no corresponding .VEqry yet.
+  - Archiving Results should also archive query results (like Log files)
+
+Run ModelStage Punch List:
+
+  - When we run a ModelStage, we need to save key features of the ModelStage into the ModelState.Rda
+    In particular, we want to keep the Scenario/Level list. The RunParam_ls for the ModelStage
+    (if it was built as a scenario) should include the "Scenario/Level" descriptors as
+    built when we identify scenarios - that's the "ScenarioConfig" key described below. Any
+    ModelStage that is a scenario needs to have that key.
+
+Setting up scenario ModelStages:
+
+  - For manual scenarios, the ModelStage should include a "Category" key, referring to the
+    "Categories" tag (which should only contain "NAME", "LABEL" and "DESCRIPTION", not "LEVELS").
+    If there is no Category key, it gets a default one called "Scenarios". If there are Category
+    keys but no "Categories" tag, build the latter from whatever is present (at a minimum, a
+    "Scenarios" category).
+
+  - If no "Scenarios" tag, but "Categories" exists, use that to classify any manual scenarios - drop
+    any Categories that are not referred to by any of the defined ModelStages. If the "Levels"
+    element of "Categories" is provided, only include the scenario ModelStages listed there (by
+    their ModelStage Name) and give it Level=1. The default is to include all scenario model stages
+    as levels in the corresponding Category if no levels are defined for the Category.
+
+  - If "Scenarios" tag exists but no Categories, just do a one-to-one mapping from "Scenarios"
+    to "Categories". Name and Description are elevated from the Scenario Label and Description
+    respectively, and the Category levels just track over to the Scenario/Level list from
+    "Scenarios". Amounts to renaming "Scenarios" into "Categories"
+
+  - If no "Categories" and "Scenarios" are pre-defined:
+      - "Categories" and "Scenarios" tags will be created as the set of unique "Category" tags in
+        each Reportable ModelStage (if no "Category" tag, create a default Category="Scenarios")
+      - Each reportable ModelStage:
+        - Adds a Scenario/Level to the scenarios list (NAME=Scenario Name/Dir, LEVEL=1)
+        - Adds a Category/Level (or just a level to the Categories table)
+          - If the stage has no Category, its category is "Scenarios"
+          - If the stage category does not exist it is created in the categories table
+          - The stage is appended to the list of category levels (NAME = next available number)
+          - The Category level only has one scenario (NAME=ModelStage name, LEVEL=1)
+
+  - If there are both "Categories" and "Scenarios" defined
+      - "Categories" must contain "LEVELS", which is a list of the defined NAME and LEVEL from
+        the "Scenarios" tag
+      - FILES tag goes on "Scenarios", not "Categories" in the visualizer scheme.
+      - The Scenario Name/Level is sought as an input folder in ScenarioDir (paste0(Name,Level))
+        Input path for the Scenario/Level is the corresponding input folder. Description for
+        the Scenario/Level is placed in the "Scenarios" tag.
+      - We build model stages from combinations of Category/Level (where each Category/Level
+        supplies the vector of InputPaths from its Scenario/Level elements as well as the structure
+        that identifies the active set of Scenario/Level for that Scenario ).
+          - Visit all the Scenario/Levels and add InputPath (normalized) and Level NAME
+          - When building a ModelStage for a combination of Category/Level, add the InputPaths
+            of all the Scenario/Levels in the Category/Levels and accumulate a named vector of
+            Scenario/Level
+          - A special "Level 0" is added to the front of the list of Category/Levels, with
+            description "Base Conditions" and Name "0"
+      - The StartFrom stage is also tagged: it is tagged with level zero for each possible
+        Scenario entry
+
+Extracting information from ModelStages:
+
+  - When building a ModelStage from scenario categories, add a "ScenarioConfig" tag to RunParam_ls
+    which is a list of items with the following elements:
+      Name
+      Level
+    Build the Scenario name by concatenating the selected NameLevel for each scenario element. The
+    combinations are composed by permuting the Scenario/Level listed for the category levels.
+    The defined levels in the scenario configuration file will be numbered starting from 1,
+    but there will be a folder with the scenario name joined to the level number for each level
+    of 1 or greater.
+
+  - The only thing we're interested in for creating a runnable stage is the Dir/Name for the
+    ModelStage (build by concatenating the Name+Level for each scenario component) and the InputPath
+    (build by concatenating the normalized directory path for each ScenarioName-Level) and setting
+    the StartFrom, which comes from the overall ScenarioDir/visioneval.cnf or from
+    "CategorySettings" within that file. Generally, the overall StartFrom will refer to a ModelStage
+    in the base model, whereas a stage set in CategorySettings is expected to be a folder-based
+    scenario within ScenarioDir - because StartFrom is only processed after the stages have been
+    loaded (as they are evaluated as "runnable"), it doesn't matter which place "StartFrom" refers
+    to: any runnable ModelStage defined in either place will work (except that in the Category
+    world, the stage does need to be a folder stage - i.e. not one of the auto-generated ones).
+
+  - Add tose tags retroactively (with Level=0 through all the scenario categories) to the
+    StartFrom ModelStage.
+
+  - When exporting data from this scenario for the Visualizer, put out these columns ahead of the
+    query values:
+    "Scenario" : RunParam_ls$Scenario // composed name of this scenario combining category pieces
+    "ScenarionName" : ScenarioLevel
+    // dump the ScenarioConfig tag, using Name (ideally one character) and Level (one
+    // character)
+
+  - When exporting the "scenarioconfig" descriptor for the Visualizer, put out the structure
+    for that file. Note that the Level always includes the StartFrom stage as the first level.
+    So what we need to define in ScenarioDir/visioneval.cnf are just the "extra" levels (so
+    there may only be one additional level defined there).
+     {
+        "NAME": Scenario$Name
+        "LABEL": Scenario$Label
+        "DESCRIPTION": Scenario$OverallDescription
+        "LEVELS": [
+          {
+            "NAME": "0", // auto-generated "no-build"; adds nothing to InputPath
+            "LABEL": "Base",
+            "DESCRIPTION": ["Base Scenario"] // auto-generated
+          },
+          {  // For example... This and subsequent are defined in "Scenario Land"
+            "NAME": "1",
+            "LABEL": "Double divesion",
+            "DESCRIPTION": ["Increase diversion of SOV tours to 20%"]
+          }
+        ]
+      },
+
+  - Generate the output config from the QuerySpecification (just dumping description for up to the
+    first N measures)
+
+  - Generate the category config from the scenario's category descripion (including map to the
+    Scenario/Level elements for each config level.  We'll only generate scenario combinations as
+    needed to do come up with one scenario for each combination of category level (not each
+    combination of scenario level). The Category config needed by the visualizer is pretty much
+    a dump of the (possibly augmented/auto-generated) "Categories" structure in the scenario
+    configuration.
+
+Query Punch List:
+
+  - Change Geography not to include specific zones (GeoValue). Just include GeoType - and only
+    process metrics compatible with that type (interior conversion). This will need clean-up
+    later.
+
+  - Change the VEQuery $run function to deal exclusively with its attached model. We can provide a
+    list of ModelStage names, in which case the VEQuery will only be run for those (and we do not
+    update the VEModel root results) - intended to re-do a particular scenario. So you can fix one
+    scenario within hundreds (if a particular scenario/level was wrong on input).
+
+  - Make the VEQuery much more particular about what it processes. It needs an attached model,
+    and it can be told only to run on certain stages.
+
+  - Basic approach is to take a VEModel object, run its $query function supplying the path of
+    a query (relative to modelPath/QueryDir or a full path). The result of that is a VEQuery object
+    with the model attached. From there we can $run the VEQuery or go straight to $results (which
+    implicitly does a $run unless a flag says only to use existing results).
+  - The actual query processing (turning Datastore into Metrics) only happens at the stage level.
+    Default is to run the query on each Reportable stage in the attached model. Output from the
+    query is placed in ModelDir/ResultsDir/StageDir/Query-<QueryName>.Rda for the attached model.
+  - If we explicitly ask for stages, only those stages are updated (unless the index flag is TRUE;
+    it defaults to FALSE). If we do NOT ask for explicit stages, then the index flag is set to true
+    and an index of Query results is created in the attached model's ModelDir/ResultsDir.
+
+  - If we ask for stages explicitly when requesting results, we get a list of VEQueryResults objects
+    (each stage must be exported individually). If we ask for stages explicitly when running,
+    query results are only generated for those stages (and we get the list of VEQueryResults).
+    Otherwise, we run the query for all Reportable stages, the VEModel results gets a query index
+    and we get a single VEQueryResults object that can be exported or visualized.
+
+  - When we have a VEQuery, we can run it (like a model run, "reset" paramter will clear what is
+    there). Otherwise it always re-creates the VEModel index of ModelStage query results, checks
+    for the existence of results in each ModelStage and re-runs the query just for those that
+    don't have results.
+
+  - Return from VEQuery$results is either a VEQueryResults (from the VEModel) if we did not
+    request Stages or a list of VEQueryResults for each stage. That list of VEQueryResults
+    can be exported in tabular form but not visualized. Individual VEQueryResults can be
+    visualized.
+
+  - The VEQueryResults can be exported. We won't write an "export" function. Instead,
+    we'll set an export=format, with an optional "connection" parameter that describes
+    the file to save (defaulting variously for the different types). So then we can do
+    export="visualize" with the default connection being "jrc" with an option to specify
+    a different string naming the subdirectory or if "file" or "" as the connection then
+    use the default "visualizer".  For "data.frame", connection defaults to returning
+    a list of data.frames. For "csv", connection will be the folder into which the
+    exported data.frames will be written. For "sql", connection will be a database into
+    which the data.frame tables will be created (respecting an "overwrite" flag which
+    defaults to TRUE for .csv and visualize to a "file", and FALSE/ignored for data.frame
+    and SQL).
+
+  - Can $clear VEQueryResults.
+
+  - Can extract a VEQuery from a VEQueryResults ($query function recovers the original
+    query from the version saved in the results).
+
+  - Running just stores the raw values from SummarizeDatasets and saves them to the Query .Rdata.
+    Results are always saved. Do not do a timestamp, but we can keep a Timestamp internally:
+    Date on the VEQuery file versus Timestamp internally kept in QueryRun-<QueryName>.Rdata.
+    Warn user if Timestamp on run is older.
+
+  - A separate $export function will take the raw results and boil them down (including looking at
+    just a subset of Geographies - we don't do that up front, though we do set the geography level).
+    - Internally, we construct a list of one data.frame from the query by flattening the
+      Values for the query results and then doing cbind to join it into the data.frame.
+      - Values for an array value are flattened into a named vector that unrolls the dimension names
+      - Option on the data.frame generation to include the Scenario/Level columns for visualizing
+      - If exporting to data.frame or other tabular form, can filter by Category (all levels in
+        that category will be added to the table with one column per Level) - that will also work
+        for visualizing.
+    - Then we have the option to
+      - just return the data.frame
+      - write the data.frame to a .csv file
+      - write the "metadata" to a .VEqry file
+      - write the "visualizer.js" file into the "data" subdirectory of a "visualizer" directory
+        that gets created and populated with boilerplate inside ResultsDir. Also, visualizer.js
+        in the export case includes the $(document).ready() method to invoke "VisualVE" javascript
+        code.
+    - Building the visualizer.js happens as follows:
+        - calls a function in the VEModel to generate the scenario description JSON elements
+          - categoryconfig
+          - scenarioconfig
+          - Those two files will essentially be a JSON dump of what is maintained internally.
+          - Pseudo-files will be created if a single ModelStage/VEResults is being visualized
+        - calls a function in the VEQueryResults to generate the output configuration
+          - outputconfig
+          - Dumps the QuerySpecification:
+            "NAME": "DVMT Per Capita",
+            "LABEL": "Daily Vehicle Miles Traveled",
+            "DESCRIPTION": "daily vehicle miles of travel of residents divided by population.",
+            "INSTRUCTIONS": "daily vehicle miles of travel of residents divided by population.",
+            "METRIC": "Average",
+            "UNIT": "daily miles",
+            "COLUMN": "DVMTPerCapita"
+        - Constructs the VEData JSON object using a function in VEQueryResults that visits each
+          ModelStage and gets its (including the StartFrom stage to create the data table). Creates a
+          named list with the ModelStage name; one column for each Scenario, showing the level; and
+          one column for each metric and its value)
+
+   - The $visualize function works just like exporting to "visualize" format, except that it starts
+     a JRC webpage and pushes out the base page (with all its JS and CSS components findable
+     straight from the package version of the page), then it formates visualizer.js (in memory)
+     and uses SendCommand to push visualizer.js. In that case it doesn't do the $(document).ready
+     command, but instead just makes a direct call to VisualVE.
+     - For JRC management, we keep the web socket as a field in the VEModel. If there is something
+       already in that field, we start by closing it and then recreate everything from the ground
+       up.
+
+Don't use the .VEqry suffix for the query output .Rdata - just make it an .Rdata file.
+
+In the .Rdata file, The QuerySpecification list for the Query is joined by a "Value" object which
+contains either a scalar, named vector or named matrix/array (convention for which is the first
+index of the array - see existing code). When the query is run, the results are ALWAYS placed in
+ResultsDir with the file name: QueryRun-<QueryName>.RData. So we end up with:
+  - QuerySpecification
+  - Value (scalar, vector or array, with names)
+  - Dimension (what kind of thing is the vector; what is in each dimension of the the array)
+    All of which is conventional (I think it's geography first, then "Breaks/By")
+
+So here's the summary of running:
+  - for a VEModelStage, write just its Values+QuerySpec+Dimension into an .RData file in the
+    ResultsDir/StageDir output location.
+  - for a VEModel, develop a list of Reportable stages, identify whether we are doing discrete
+    scenarios or combinations, write that result into the Model ResultsDir (root) then visit each
+    ModelStage and run the query on that stage (generating its results).
+  - Key technical consideration is to load the ModelState for the stage and use its Datastore
+    path to find necessary data elements.
+
+We can subset the visualization for a model by listing just specific categories to include - as
+if those were all that were configured. If we export (instead of visualize) a result subset, we
+get a data.frame/csv/sql for all the levels withing those categories (missing categories are
+treated as if we asked for "Level 0"). Or do we filter Scenarios, which are the actual files...
+
+For VEResults, also improve the export: format can be "csv", "data.frame" (return), or "sql" (where
+the SQL database DBI connection is provided). The .csv export also produces a metadata file
+indicating what was selected for export, as is currently the case, and the results go into a
+timestamped sub-folder.
+
+So the only difference in exporting VEResults versus exporting a .VEqry is how the data.frame list
+is generated. We can ask for .VEqry metadata, which does a text dump of the results .Rdata file,
+without the Value key.
+
+Internally, VEResults and VEModel can use the same mechanism for generating their output. We start
+by generating data.frame(s) (a list if more than one), then use the output formatter to generate
+the return. If we ask for data.frames, they are returned visibly. If we ask for some other format,
+we get an invisible named list of data.frames (with a special class VEExport that tells "print" to
+list their names not their values) - probably do that via a class-specific "as.character" function
+(and an as.data.frame function which just removes the "VEExport" class).
+
+If we ask for .csv (either exporting a query or extracted tables) then the data.frames are written
+out to a series of .csv files named after the data.frames. Overwriting is not an issue for .csv
+since they will just keep piling up in OutputDir.
+
+If we ask for SQL and provide a connection to a database, the data.frames are written to tables (the
+names are the data.frame names, only SQL-ized), and if those tables already exist they are first
+dropped (if overwrite=TRUE) or the transaction is cancelled with an error message (if
+overwrite=FALSE). For SQL, if instead of a dbiconnecton we provide a filename, a text .SQL file will
+be generated in a SQL dump format (dropping and recreating tables, and providing INSERT statements
+to load the data).
+

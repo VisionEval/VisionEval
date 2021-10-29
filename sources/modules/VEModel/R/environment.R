@@ -109,7 +109,7 @@ default.parameters.table = list(
   ExtractRootName     = "Extract",        # used by VEResults$extract to make "output/Extract_<timestamp>"
   DisplayUnitsFile    = "display_units.csv",
   QueryFileName       = "New-Query",
-  QueryOutputTemplate = "%queryname%_Results_%timestamp%.csv",
+  QueryOutputTemplate = "Query_%queryname%.Rda",
   RunStatusDelay      = 60,               # seconds between status updates when multi-processing
   RunPollDelay        = 2                 # seconds between status poll for multi-process completion
 )

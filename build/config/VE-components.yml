@@ -41,6 +41,10 @@ Components:
       - yaml
       - R6
       - stringr
+      - jrc
+      - parallelly
+      - future
+      - future.callr
 #    Github:
 #      - anders-biostat/jrc
 #    To build properly, need to do externals after creating ve.lib!

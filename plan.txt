@@ -1,15 +1,42 @@
 The path to completion:
 
-Continue working on DVMT documentation for WSDOT.
+See various files in sources/VEModel/dev-docs for implementation plans
 
-Figure out why status is not updating when multiple model stages are running with multisession.
-All the stages started and they're running, but the progress message (every so often) is not
-running.
-
-See plan-scenario.txt and scenarios.r for details on the new scenario architecture.
-
-Start to develop the stage/scenario walkthrough (will furnish tests for scenario
-elements).
+Develop the stage/scenario walkthrough (will furnish tests for scenario elements)
+  Inspecting and adjusting settings programatically (usually easier just to edit the file)
+    Runtime settings versus "InFile" settings
+  Resurrect some of the stage stuff from the first round
+    Stages for running sections of a model (vertical/horizontal)
+    Stages and Load for debugging a model (or building up working stuff incrementally)
+    Adding a stage by creating a directory
+    Adding a stage programatically
+    Adding a stage by writing ModelStages
+  Scenarios
+    How is a "scenario" different from a "model stage" ("severable")
+    How is a "scenario" like a "model stage"?
+      Can configure as a subdirectory, as a "ModelStage"
+    Additional scenario generation approach: Auto-generation of Category/Level
+      Categories list specific input files
+      Levels identify alternate inputs (different values in those files)
+      ScenarioGroup brings Category/Level into conceptual headings
+  Using multi-processing
+    "Run Groups" for stages (all the stages that "StartFrom" the same place)
+    Can use any future strategy that works in your environment
+      Probably still need to make it a bit more configurable for cluster strategies
+      Have an option in the VEModel$plan function to allow future::plan to be set directly
+    Caveats:
+      Don't exceed the number of processors
+      Use Task Manager to figure out the memory footprint of your model
+      If "live memory" runs out (falling over into a swap), things get much slower than sequential
+        VE-Stage is HUGE - even 16Gb on a state like Washington is not enough to run multiple
+        threads
+      Run "inline" until you're sure the model is working
+  Structure of setting up queries
+    We'll need another webinar just on the queries
+  Look at a set of regional queries
+    Query run automatically processes every "Reportable" model stage
+    Scenarios are automatically "Reportable"
+      Stages need "Reportable" to be explicit, if used as a "StartFrom" stage
 
 Absorb Dan et al's scripts for extracting metrics...
 

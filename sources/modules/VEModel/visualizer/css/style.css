@@ -1,0 +1,54 @@
+/* Custom local styles for visualizer */
+
+.stack._1 > .bar {
+        fill:darkgray;
+}
+.stack._1 > .bar {
+        fill:darkgray;
+}
+h5 span {
+        font-size: 14px;
+}
+.pietitle {
+        font-weight: bold;
+}
+.bartitle {
+        font-weight: bold;
+}
+.subtitle {
+        font: 11px;
+        color: grey;
+}
+.stat {
+        font: 11 px;
+        font-weight: bold;
+        color: grey;
+}
+.info {
+        cursor: url(img/info.png), auto;
+}
+.readme {
+        float:right;
+}
+.pie-slice text {
+        font-size: 11px;
+        fill: black;
+}
+.pop-crsr {
+        cursor: help
+}
+.sm-margin {
+        margin: .1em;
+}
+.glyphicon {
+        color: darkgray;
+}
+.policy {
+        background-color: white;
+}
+.context {
+        background-color: lightgray;
+}
+.popover.fade{
+        min-width:400px;
+}

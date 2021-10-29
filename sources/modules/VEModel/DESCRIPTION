@@ -19,7 +19,8 @@ Imports:
     futile.logger,
     parallelly,
     future,
-    future.callr
+    future.callr,
+    jrc
 Suggests:
     knitr,
     pkgload

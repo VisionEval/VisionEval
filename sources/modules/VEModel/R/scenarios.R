@@ -37,6 +37,7 @@ ve.scenario.load <- function(fromFile=FALSE) {
   modelParam_ls <- visioneval::mergeParameters(self$baseModel$RunParam_ls,self$loadedParam_ls)
 
   # Load different types of scenarios
+  # Build ModelStages for them
   writeLog("Loading model Scenarios",Level="info")
   self$modelStages <- NULL
   if ( "ModelStages" %in% names(modelParam_ls) ) {
@@ -60,7 +61,7 @@ ve.scenario.load <- function(fromFile=FALSE) {
   } else modelStages <- list()
   self$modelStages <- modelStages
 
-  if ( "Categories" %in% names(modelParam_ls) ) {
+  if ( all("Categories","Scenarios") %in% names(modelParam_ls) ) {
     writeLog(paste("Parsing Category combination Scenarios from",self$ScenarioDir),Level="info")
 
     # Get CategorySettings if any and overlay on self$RunParam_ls
@@ -79,6 +80,14 @@ ve.scenario.load <- function(fromFile=FALSE) {
 
       # Construct levels for this category
       levels <- category$Levels
+      # TODO: Categories redirect to a set of Scenario/Levels which are the actual
+      # folders for the scenarios. Each Scenario/Level becomes an InputPath plus
+      # Scenario / Level descriptor (two fields) - we save the latter for the
+      # visualizer, making them properties of the Category/Level's ModelStage so
+      # when we generate data for the Visualizer, we can filter the scenarios.
+      # For the visualizer, VEdata will dump out data for the ModelStage, including
+      # the query results for that stage.
+      
       catLevel <- lapply(
         levels,
         function(level) {
@@ -88,11 +97,9 @@ ve.scenario.load <- function(fromFile=FALSE) {
             Description=paste0("(Category: ",category$Label,") ",level$Description),
             InputPath=file.path(self$scenarioPath,catLevelName)
           )
-          # TODO: check that categoryLevel exists as a subdirectory of self$scenarioPath
-          # If not, then warn (and flag for failure).
         }
       )
-      # Construct scenarios from combination s
+      # Construct scenarios from combinations
       if ( length(scenarioList)==0 ) scenarioList <- catLevel else {
         augmentList <- list()
         for ( nextLevel in catLevel ) {
@@ -102,6 +109,13 @@ ve.scenario.load <- function(fromFile=FALSE) {
       }
     }
     # TODO: fail if any Category-Level input list was missing
+
+    # TODO: Keep the Category and Level definitions around for building the visualizer. Don't need
+    # the files for the Visualizer. Do need to add ScenarioGroup and ScenarioGroupLevel to the
+    # Category definition and create the inside-out structure ScenarioGroup / ScenarioGroupLevel
+    # with each ScenarioGroupLevel composed of one or more Categories and Levels. Maybe we attach
+    # the ScenarioGroupLevel as an attribute of the Category-Level. That will help avoid duplicates
+    # TODO: Verify that all Category-Levels are assiged to ScenarioGroup and ScenarioGroupLevel.
 
     # Convert Category-Level construction to ModelStage objects
     modelStages <- lapply(
