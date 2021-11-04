@@ -29,9 +29,9 @@ ve.scenario.load <- function(fromFile=FALSE) {
   if ( ! fromFile && ! is.null(self$modelStages) ) return(NULL) # do not reload model stages
 
   # Reload scenario configuration file and then build the scenario stages
-  if ( dir.exists(self$scenarioPath) ) {
-    self$loadedParam_ls <- visioneval::loadConfiguration(ParamDir=self$scenarioPath, mustWork=FALSE)
-  } else self$loadedParam_ls <- list()
+  self$loadedParam_ls <- if ( dir.exists(self$scenarioPath) ) {
+    visioneval::loadConfiguration(ParamDir=self$scenarioPath, mustWork=FALSE)
+  } else list()
 
   # Layer in the base model run parameters as basis for scenarios
   modelParam_ls <- visioneval::mergeParameters(self$baseModel$RunParam_ls,self$loadedParam_ls)
@@ -40,6 +40,7 @@ ve.scenario.load <- function(fromFile=FALSE) {
   # Build ModelStages for them
   writeLog("Loading model Scenarios",Level="info")
   self$modelStages <- NULL
+  # Explicit ModelStages are defined first (available to use as StartFrom for Category stages)
   if ( "ModelStages" %in% names(modelParam_ls) ) {
     writeLog(paste("Parsing explicit Scenarios from",self$scenarioDir),Level="info")
     # TODO: overlay self$RunParam_ls on self$baseModel$RunParam_ls
@@ -64,14 +65,31 @@ ve.scenario.load <- function(fromFile=FALSE) {
   if ( all("Categories","Scenarios") %in% names(modelParam_ls) ) {
     writeLog(paste("Parsing Category combination Scenarios from",self$ScenarioDir),Level="info")
 
-    # Get CategorySettings if any and overlay on self$RunParam_ls
+    # Get CategorySettings if any and overlay on self$RunParam_ls for use in building these stages
+    # Only present to support setting a StartFrom from among the explicit ModelStages in the
+    # ScenarioDir - that stage will always use a StartFrom from the BaseModel (or have no start
+    # from). All the Category/Scenario stages will StartFrom the CategorySetting/StartFrom
     if ( "CategorySettings" %in% names(modelParam_ls) ) {
       categoryParam_ls <- visioneval::addParameterSource(modelParam_ls$CategorySettings,Source="Scenario CategorySettings")
       if ( length(categoryParam_ls)>0 ) {
         modelParam_ls <- visioneval::mergeParameters(modelParam_ls,categoryParam_ls)
       }
     }
+
     # TODO: Verify Category Files and warn if any duplicates or categories without files
+
+    # TODO: Figure out which Category/Level constitutes each ModelStage. Zero level is injected
+    # into the category implicitly: we only permute the non-zero levels, but we do include all the
+    # variations of "just this category's levels", add one more category, add another category,
+    # etc. The StartFrom stage has no Levels, and if we ask for one we always get zero. That will
+    # be true throughout. So the ModelStage lets us add a Level (which includes a Scenario
+    # index/name. the Level indictor for that Scenario, and an InputPath entry). Later, we can ask
+    # for levels for a list of Scenario index/names and get back the numbers if present, or zero
+    # if not, so each Model stage will generate its descriptors based on giving it a list of all
+    # scenarios known to the visualizer and we'll have a complete set in VEData.
+
+    # TODO: visit each scenario that is part of the category level included in the stage and add its
+    # InputPath and descriptor (Scenario Tag, Level) to the ModelStage Levels list.
     
     scenarioList <- list()
     # Process Categories
@@ -80,14 +98,7 @@ ve.scenario.load <- function(fromFile=FALSE) {
 
       # Construct levels for this category
       levels <- category$Levels
-      # TODO: Categories redirect to a set of Scenario/Levels which are the actual
-      # folders for the scenarios. Each Scenario/Level becomes an InputPath plus
-      # Scenario / Level descriptor (two fields) - we save the latter for the
-      # visualizer, making them properties of the Category/Level's ModelStage so
-      # when we generate data for the Visualizer, we can filter the scenarios.
-      # For the visualizer, VEdata will dump out data for the ModelStage, including
-      # the query results for that stage.
-      
+
       catLevel <- lapply(
         levels,
         function(level) {
@@ -108,7 +119,7 @@ ve.scenario.load <- function(fromFile=FALSE) {
         scenarioList <- augmentList
       }
     }
-    # TODO: fail if any Category-Level input list was missing
+
 
     # TODO: Keep the Category and Level definitions around for building the visualizer. Don't need
     # the files for the Visualizer. Do need to add ScenarioGroup and ScenarioGroupLevel to the
@@ -154,7 +165,7 @@ ve.scenario.load <- function(fromFile=FALSE) {
   } else modelStages <- list()
   self$modelStages <- c(self$modelStages,modelStages)
   
-  # Fallback if no other stage definitions to loading sub-directories of ScenarioDir
+  # If no stage definitions in the configuration, try to do folder-based stages (only)
   if ( length(self$modelStages)==0 && ! any(c("ModelStages","Categories") %in% names(modelParam_ls)) ) {
     # Attempt to make sub-folders of self$scenarioPath into stages
     # In general, to avoid errors with random sub-directories becoming stages
@@ -198,6 +209,18 @@ ve.scenario.load <- function(fromFile=FALSE) {
 ve.scenario.stages <- function() {
   return( self$modelStages )
 }
+
+# Return TRUE or FALSE depending on whether the indicated stage name is the Scenario StartFrom
+# In a scenario-bearing model, only the startFrom stage will be Reportable from the Base Model
+ve.scenario.reportable <- function(stageName) {
+  startFrom <- self$RunParam_ls$StartFrom
+  return(
+    is.character(startFrom) &&
+    is.character(stageName) &&
+    stageName==startFrom
+  )
+}
+  
 
 # Print summary information about scenarios
 ve.scenario.print <- function(details=FALSE) {
@@ -271,6 +294,7 @@ VEModelScenarios <- R6::R6Class(
     initialize=ve.scenario.init,        # Initializes VEModelScenarios object
     load=ve.scenario.load,              # loads ScenarioDir/ScenarioConfig
     stages=ve.scenario.stages,          # Returns list of VEModelStage representing scenarios (will build if needed)
+    reportable=ve.scenario.reportable,  # Returns TRUE if the supplied stage name is the Scenario StartFrom stage, else FALSE
     print=ve.scenario.print,            # Display scenario configuration
     inputs=ve.scenario.inputs,          # Set/View list of inputs by category (or just list of files if no categories)
     categories=ve.scenario.categories,  # Return categories, or replace/update them (optionally save config to .csv files)

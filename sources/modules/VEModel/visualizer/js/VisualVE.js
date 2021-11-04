@@ -229,6 +229,7 @@ VisualVE = function( catconfig, scenconfig, outputconfig, VEdata ) {
   for( var i=0; i<measures.length; i++ ) {
       bins[measures[i]] = calcBinning( VEdata, measures[i], 15 );
   };
+
   // Establish the output group statistics (counts) to be displayed in bar charts
   var outputReduceGroup = Array(outputMeasureChartCount);
   $.each(outputReduceGroup, function(index,value) {

@@ -467,7 +467,7 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
 
     # It is possible for a model to ONLY have scenarios (if they are "manually" created)
     # Each "scenario" in that case must be a complete model run
-    # Usually in such cases, it is better just to make them Reportable modelStages
+    # Usually in such cases, it may be easier just to make them Reportable modelStages
     if ( ! is.list(modelStages) ) {
       if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
         modelStages <- scenarioStages
@@ -477,6 +477,8 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
         return(self)
       }
     } else if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
+      if ( nzchar(scenarioStartFrom) && scenarioStartFrom %in% 
+      sapply(modelStages, function(s) s$Reportable <- scenarios$reportable(s$Name))
       modelStages <- c( modelStages, scenarioStages )
     }
 

@@ -4,6 +4,67 @@ query. Only build data.frames for the tabular export formats (csv, data.frame, s
 tableau). For the visualizer, we make a complex pile of JSON structures and function calls which
 can either be exported into a file or injected into a JRC-hosted page.
 
+When we process scenario ModelStages that were build from Category/Scenario, we need to keep the
+list of Scenario/Level for each set of results. The StartFrom stage goes in as a stage where all the
+Levels are set to zero (the "base case"). Levels are only defined for inputs that deviate. Scenarios
+are only built for Categories (which map over to Scenarios). Categories can be made for manual
+scenarios (see below).
+
+If we add a new Category or a new Level (e.g. by way of a new Scenario) we should not have to re-run
+everything. If a new Category appears, we just mark the ModelStage for all the other built stages as
+having Level=0 for that Category so we're done (if a Category/Level is not part of the list of how a
+ModelState scenario was defined, we presume it is Level=0). If a new Level appears, we will build
+that Category/Level scenario in combination with all others and just do the additional stages that
+for combinations of the new Level. Likewise, if we drop a Category (for export or otherwise), we
+just ignore its components and do not build model stages for it.
+
+That suggests that the built name of scenarios for Category/Level should not include explicit
+reference to Level=0 - if the Category/Level was not used for the scenario, the implication is that
+it is the base state. That also means we don't explicitly have to assign Category/Level to the
+StartFrom stage since the default for all Categories is Level=0.
+
+When we are tagging scenario ModelStages for use in the VEData structure for the Visualizer, we look
+at what Categories are requested for the Visualization (default = all defined categories) and we
+only pull scenarios for combinations of the requested Category/Levels (there will always be a "zero
+level" for the missing Category where we just vary the others). So the build tree of category/level
+looks like this:
+
+StartFrom
+C1/L1
+C1/L2
+C2/L1 (level 0 for C1)
+C2/L2
+C2/L3
+C3/L1
+C1/L1/C2/L1 (inclues level 0 for C3)
+C1/L1/C2/L1/C3/L1
+C1/L2/C2/L1
+C1/L2/C2/L1/C3/L1
+C1/L1/C2/L2
+C1/L1/C2/L2/C3/L1
+C1/L2/C2/L2
+C1/L2/C2/L2/C3/L1
+C1/L1/C2/L3
+C1/L1/C2/L3/C3/L1
+C1/L2/C2/L3
+C1/L2/C2/L3/C3/L1
+
+So we just do stages for (just)
+                levels of the first category (L1 stages)
+Then stages for levels of second category (L2 stages)
+Then stages for levels of third category (L3 stages)
+Then stages for levels of first category plus second category (L1 * L2 stages)
+Then stages for levels of first category plus third category (L1 * L3 stages)
+Then stages for levels of first category plus second plus third category (L1 * L2 * L3 stages)
+Then stages for levels of second category plus third category (L2 * L3 stages)
+
+If we add another Category with L4 levels we'll just do another version of each of those stages
+with all combinations of L4 levels, as well as the L4 levels alone. The permutations go up fast,
+but keeping track is easy, and we don't have to rename or redefine anything to run.
+
+We do need to look at the indexing in the Visualizer and make sure we generate the categories
+with the initial Level 0 into categoryconfig. It's all keyed off the Name so we should be good.
+
 VEModel Adjustments
 
   - Need to update the "dir" and "clear" functions for the model to manage queries. QueryDir
