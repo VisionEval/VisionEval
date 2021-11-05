@@ -568,10 +568,12 @@ ve.query.getlist <- function(Geography=NULL) {
   return( newSpec )
 }
   
-# Export query results (if any) to a .csv, visualizer or some other format
+# Generate data.frame from all query results for a model or list of VEResults
+# From there, we can write the data.frame or use it for visualizeResults
+# Option to save the data.frame in some output format (data.frame, csv, sql)
 # TODO: possibly filter by Geography (Type, Value) - only measures where Geography == Type and
 # only the elements for the corresponding value (always include Region measures).
-ve.query.export <- function(format="visualizer",OutputDir="",Geography=list(),Results=NULL) {
+ve.query.export <- function(format="data.frame",OutputDir="",Geography=list(),Results=NULL) {
   Results <- self$results(Results)
   if ( length(Results)==0 ) {
     stop(
@@ -582,16 +584,6 @@ ve.query.export <- function(format="visualizer",OutputDir="",Geography=list(),Re
   #       required output formats.
   # TODO: a Query $visualize shortcut function that runs export(format="visulalize") with no
   #       OutputDir.
-  # TODO: visualizer generates JSON from model Reportable stages and query results data for the
-  #       stages that have results. Call helper function to dump query results into VEData JSON
-  #       Build outputconfig JSON from query specification. Build categoryconfig and scenarioconfig
-  #       from VEModel$scenarios object. If using bare results or model has no scenarios, create
-  #       default one-to-one category and scenario config with one scenario per result set.
-  #       Launch JRC live visualizer if OutputDir is missing. If OutputDir is NA or "", write a
-  #       "visualizer_QueryName_Timestamp" folder into default OutputDir. Find default OutputDir
-  #       from ModelDir/ResultsDir/OutputDir, or by way of implied Model for first of the Results
-  #       being visualized. Writing to a file versus launching JRC will produce a different
-  #       invocation at the end of visualizer.js
   # TODO: data.frame and .csv format are identical (use the same helper function to build
   #       data.frames) but differ with respect to how (or if) those data.frames are written out.
   # TODO: data.frame generates a data.frame of flattened measures for each scenario+year in
@@ -600,7 +592,7 @@ ve.query.export <- function(format="visualizer",OutputDir="",Geography=list(),Re
   #       formulate the columns for each scenario (use the first Result file to load up the
   #       the measure names). Crap out if subsequent Results have different measure names in them.
   #       Metadata flag determines if we include Units/Description/Geography along with first
-  #       column. If OutputDir is not missing, locate OutputDir (see "visualizer") and create
+  #       column. If OutputDir is not missing, locate OutputDir and create
   #       "Export_<QueryName>_<Timestamp>.Rda" in that location. Also return the data.frames.
   # TODO: writes results of data.frame format except including metadata by default into files in
   #       timestamped subdirectory of model's ResultsDir. If no model is attached and we provide
@@ -610,10 +602,61 @@ ve.query.export <- function(format="visualizer",OutputDir="",Geography=list(),Re
   #       the data.frames.
 }
 
-# TODO: helper function to locate OutputDir given Results (VEModel or VEResults)
+# Helper function to locate OutputDir given Results (VEModel or VEResults)
+exportDir <- function(model=NULL,results=NULL) {
+  exportDir <- if ( class(model) == "VEModel" ) {
+    file.path(model$modelPath,model$setting("ResultsDir"))
+  } else if ( class(results) == "VEResults" ) {
+    dirname(dirname(normalizePath(results$resultsPath)))
+  } else {
+    stop( writeLog("Cannot export: no model or results to locate output directory.",Level="error") )
+  }
+  return(exportDir)
+}
+
+# TODO: helper function to prepare a list of metadata elements
+defautlMetadata <- c("NAME","UNITS","DESCRIPTION")
+
+makeExportJSON <- function(resultList,scenarios) {
+  # resultsList contains pathnames to query result files for this query
+  # scenarios contains a list of scenario names to populate into the JSON
+  # (it must be filtered against desired categories through the model's scenarios
+  # d
+  
 
 # TODO: helper function to build a data.frame from a sequence of query result files (with
 #       option to include metadata or not from the query specification).
+makeExportDataFrame <- function(resultList,metadata=TRUE,data=TRUE) {
+  # resultList is a character vector of file path names
+  # if metadata is TRUE (default), basic metadata will be inserted before the first
+  #   data output; if metadata is a character vector, it is treated as TRUE, but
+  #   the vector holds names of specific metadata fields to insert (e.g. just UNITS
+  #   or some other field not usually included).
+  # if data is FALSE, data columns will not be generated if metadata is TRUE
+  # if both are false, data is treated as TRUE
+
+  if ( is.character(metadata) ) {
+    wantMetadata <- TRUE
+  } else {
+    wantMetadata <- metadata
+    metadata <- if ( wantMetadata ) defaultMetadata else character(0)
+  }
+
+  results.df <- NULL
+  results <- new.env()
+  for ( resultsFile in resultList ) {
+    load(resultsFile, envir=results)
+    theseResults <- makeMeasureDataframe(results,metadata)
+    # has one column per scenario year of values
+    # plus initial columns are metadata if requested
+    results.df <- if ( is.null(results.df) ) {
+      theseResults
+    } else {
+      cbind( results.df, theseResults )
+    }
+    rm(list=ls(results,all=TRUE)) # Set up environment contents for garbarge collection
+  }
+}   
 
 # Find any existing Query Results (as a list of files)
 ve.query.results <- function(Results=NULL) {
@@ -740,8 +783,6 @@ VEQuery <- R6::R6Class(
     # Running the query will create a data file for each ModelStage/VEResults and an overall
     # summary for the VEModel in its ResultsDir. We access those results for external processing
     # by doing an "export"
-    # TODO: add an "export" function that can write .csv files and "visualize", or produce R
-    # data.frames in memory. Could add "sql" to make tables in (e.g.) Access or MySQL or SQL Server.
     # TODO: add a "visualize" function that does in-memory export to JSON then launches visualizer
     # web page using "jrc" and pushes the JSON over to it.
     initialize=ve.query.init,       # initialize a new VEQuery object
@@ -764,7 +805,7 @@ VEQuery <- R6::R6Class(
     print=ve.query.print,           # List names of Specs in order, or optionally with details
     getlist=ve.query.getlist,       # Extract he QuerySpec list (possibly filtering geography) for $run)
     results=ve.query.results,       # report results of last run
-    export=ve.query.export,         # Export query results to .csv, visualizer or something else
+    export=ve.query.export,         # Export query results to .csv or something else
     run=ve.query.run                # Option to save; results are cached in self$QueryResults
   ),
   private = list(
@@ -1277,9 +1318,9 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls) {
   }
 
   # Turn the measure into a named list of one, for inclusion in the measureEnv$Values entry
-  measure <- list(measure)
-  names(measure) <- measureName
-  return(measure)
+  measureList <- list(measure)
+  names(measureList) <- measureName
+  return(measureList)
 }
 
 #   # Linearize measure elements and names when doing export

@@ -477,7 +477,6 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
         return(self)
       }
     } else if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
-      if ( nzchar(scenarioStartFrom) && scenarioStartFrom %in% 
       sapply(modelStages, function(s) s$Reportable <- scenarios$reportable(s$Name))
       modelStages <- c( modelStages, scenarioStages )
     }
@@ -2664,6 +2663,81 @@ installModel <- function(modelName=NULL, modelPath=NULL, variant="base", confirm
   } else {
     return( model ) # should be a character vector of information about standard models
   }
+}
+
+# TODO: documentation
+# Function requires:
+# a model (openable by name or VEModel object)
+# a query (openable by name through the VEModel or a VEQuery object)
+# a Year (default to last Year in "Years" of first Reportable model stage)
+# (optional) categories, a list of categories defined in model scenarios to print; any names not
+# present in the scenarios configuration are ignored, except that if the result is an empty list,
+# we generate default categories. Only up to maxCategories are shown - so shrinking that number
+# below what is defined is alternate way to visualize a reduced set.
+# (optiona) measures, a list of measure names from the VEQuery. Names not present are ignoreed,
+# if an empty list then up to the first maxMeasures are visualized.
+# maxMeasures is the limit on how many measures will appear in the visualization (counted along
+# the length of measures, or if measures is not present or empty, along the VEQuery list of all
+# measures (expanded - so geography and breaks count). visualizeModel is usually used for regional
+# measures only.
+# maxCategories is the limit on how many categories to display (measured along categories, or the
+# set of all defined categories in the VEModelScenarios).
+
+  # TODO: visualizer generates JSON from model Reportable stages and query results data for the
+  #       stages that have results. Call helper function to dump query results into VEData JSON
+  #       Build outputconfig JSON from query specification. Build categoryconfig and scenarioconfig
+  #       from VEModel$scenarios object. If using bare results or model has no scenarios, create
+  #       default one-to-one category and scenario config with one scenario per result set.
+  #       Launch JRC live visualizer if OutputDir is missing. If OutputDir is NA or "", write a
+  #       "visualizer_QueryName_Timestamp" folder into default OutputDir. Find default OutputDir
+  #       from ModelDir/ResultsDir/OutputDir, or by way of implied Model for first of the Results
+  #       being visualized. Writing to a file versus launching JRC will produce a different
+  #       invocation at the end of visualizer.js
+
+# TODO: also have VEModel$visualize which provide the Model, and VEQuery$visualize which provides
+# the query. They just forward over to this passing "self" for the relevant element.
+visualize <- function(Model, Query, Year, categories, measures,saveTo,maxMeasures,maxCategories,reset) {
+  # Visualize Model (using its VEModelScenarios and ModelStages) using measures from Query
+  # Will ruy Query on Model for any stages without up-to-date query results reset=TRUE (run Query
+  # on all ModelStages) Up-to-date evaluated by checking query result Timestamp against ModelState
+  # last changed.
+  # "Model" could also be a list of VEResults - converted to that internally
+
+  # Year defaults to last year in first (StartFrom) Reportable ModelStage
+  
+  # if categories is character, only categories with those names (up to maxCategories)
+  # if measures is charcater, only measures with those names (up to maxMeasures)
+
+  # Get the model's scenarios
+  # Identify the ones against categories we want to use
+  # Identify the full set of scenarios for each included category + level
+
+  # Visit each reportable model stage (start from)
+  # Get the data for the requested year
+  # Request scenario levels for each stage. The first one with all zero levels stays (probably the
+  # first overall - the StartFrom stage). Later stages with all zeroes are not included in the
+  # output.
+
+  # Build the JSON for the visualizer:
+  #   VEData           From makeExportJSON()
+  #   categoryconfig   From Model$scenarios()$categoryConfig(categories)
+  #   scenarioconfig   From Model$scenarios()$scenarioConfig(categoryconfig) # just the ones we used
+  #   outputconfig     From Query Specification filtered by "measures"
+
+  # if NOT saveTo
+  # Start the browser with the Visualizer HTML/JS/CSS
+  # then inject visualizer.json via jrc::sendCommand
+  # then inject call to VisualVE(); via jrc::sendCommand
+  # Don't need to stay live with the page (leave it in the browser, but close
+  #  everything on our side).
+
+  # if saveTo provided or TRUE
+  # generate the results into a folder with that name inside Model$ResultsDir
+  # default saveTo (if not character) is "visualizer" in ResultsDir
+
+  # Cache the visualizer.json somewhere? Return it?
+
+  return(invisible(visualizer.json))
 }
 
 ################################################################################

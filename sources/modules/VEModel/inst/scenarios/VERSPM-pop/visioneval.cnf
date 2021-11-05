@@ -1,0 +1,217 @@
+StartFrom: "stage-pop-future"       # StartFrom stage for ModelStages (adjust for your model)
+
+Scenarios:
+  - Name: B
+    ScenarioRoot: B       # If ScenarioRoot not provided, use scenario Name
+    Label: "Bicycles"
+    Description: "Network improvements, incentives, and technologies that encourage bicycling and other light-weight vehicle travel."
+    Files:
+      - azone_prop_sov_dvmt_diverted.csv
+    Levels:
+      - Name: 1
+        LevelDir: 1       # If LevelDir not provided use level Name 
+        Label: "Double"
+        Description: "Increase diversion of SOV tours less than 20 miles to 20% bicycling"
+  - Name: D
+    Label: "Demand Management"
+    Description: "Programs to encourage less private vehicle travel."
+    Files:
+      - bzone_travel_demand_mgt.csv
+    Levels:
+      - Name: 1
+        Label: "EcoProp & ImpProp"
+        Description: "Increased the proportion by 10%"
+  - Name: L
+    Label: "Land Use"
+    Description: "Distribution of population and employment by place type."
+    Files:
+      - bzone_urban_du_proportions.csv
+      - azone_hhsize_targets.csv
+    Levels:
+      - Name: 1
+        Label: "Activity Center Growth"
+        Description: "LU overlaps with HHsize + Population."
+  - Name: P
+    Label: "Parking"
+    Description: "Extent of and charges for priced parking."
+    Files:
+      - bzone_parking.csv
+    Levels:
+      - Name: 1
+        Label: "Increase parking cost and proportion"
+        Description: "Increase parking cost by 100% and proportion charted by 10%."
+  - Name: T
+    Label: "Transit"
+    Description: "Level of public transit service."
+    Files:
+      - marea_transit_service.csv
+    Levels:
+      - Name: 1
+        Label: "Double"
+        Description: "Double public transit service level."
+      - Name: 2
+        Label: "Triple"
+        Description: "Quadruple public transit service level."
+  - Name: C
+    Label: "Vehicle Travel Cost"
+    Description: "Combination of fuel prices and charges to pay for roadway costs and possibly externalities."
+    Files:
+      - region_prop_externalities_paid.csv
+      - azone_hh_veh_own_taxes.csv
+    Levels:
+      - Name: 1
+        Label: "Steady Ownership Cost/Tax"
+        Description: "Keep the vehicle ownership cost the same; other costs increase."
+      - Name: 2
+        Label: "Payd insurance and higher cost"
+        Description: "Both higher climate cost and pay as you drive insurance."
+  - Name: V
+    Label: "Vehicle Characteristics"
+    Description: "Proportions of light trucks and average vehicle age"
+    Files:
+      - azone_lttrk_prop.csv
+      - azone_hh_veh_mean_age.csv
+    Levels:
+      - Name: 1
+        Label: "Reduced"
+        Description: "Light truck proportion at 35% of the fleet and the average vehicle age at 8 years."
+  - Name: F
+    Label: "Technology Mix and CI"
+    Description: "Vehicle technology mix and carbon intensity of fuels."
+    Files:
+      - region_comsvc_powertrain_prop.csv
+      - region_carsvc_powertrain_prop.csv
+      - marea_transit_powertrain_prop.csv
+    Levels:
+      - Name: 1
+        Label: "Higher Electric"
+        Description: "Increased percentage of electric vehicles in household and commercial setting by 20%."
+  - Name: E
+    Label: "Driving Efficiency"
+    Description: "Driving efficiency by increasing implementation of ITS."
+    Files:
+      - other_ops_effectiveness.csv
+      - marea_speed_smooth_ecodrive.csv
+      - marea_operations_deployment.csv
+    Levels:
+      - Name: 1
+        Label: "Fully implemented ITS"
+        Description: "Increase the effectiveness of implementation of ITS."
+  - Name: G
+    Label: "Fuel Price"
+    Description: "Real fuel price in 2010 USD."
+    Files:
+      - azone_fuel_power_cost.csv
+    Levels:
+      - Name: 1
+        Label: "Double fuel price"
+        Description: "Real fuel price doubles."
+      - Name: 2
+        Label: "Quadruple fuel price"
+        Description: "Real fuel price quadruples."
+  - Name: I
+    Label: "Income"
+    Description: "Real average household income in Base Year USD."
+    Files:
+      - azone_per_cap_inc.csv
+    Levels:
+      - Name: 1
+        Label: "Income growth 1"
+        Description: "Income growth of 7% w.r.t reference."
+      - Name: 2
+        Label: "Income growth 2"
+        Description: "Income growth of 14% w.r.t reference."
+
+Categories:
+  StartFrom: "stage-pop-future" # or could just leave it out since it's the same as overall
+  Category:
+    - Name: "Community Design"
+      Description: "Local policies to enable shorter trips and travel by alternate modes."
+      Levels: 
+        - Name: 1
+          Inputs: 
+            - Name: L
+              Level: 1
+            - Name: B
+              Level: 0
+            - Name: T
+              Level: 1
+            - Name: P
+              Level: 0
+        - Name: 2
+          Inputs: 
+            - Name: L
+              Level: 1
+            - Name: B
+              Level: 0
+            - Name: T
+              Level: 2
+            - Name: P
+              Level: 1
+        - Name: 3
+          Inputs: 
+            - Name: L
+              Level: 1
+            - Name: B
+              Level: 1
+            - Name: T
+              Level: 2
+            - Name: P
+              Level: 1
+    - Name: "Marketing/Incentive"
+      Description: "Local programs to improve driving efficiency & reduce auto demand."
+      Levels: 
+        - Name: 1
+          Inputs: 
+            - Name: D
+              Level: 1
+            - Name: E
+              Level: 1
+    - Name: "Pricing"
+      Description: "State-led policies that move towards true cost pricing."
+      Levels: 
+        - Name: 1
+          Inputs: 
+            - Name: C
+              Level: 1
+        - Name: 3
+          Inputs: 
+            - Name: C
+              Level: 2
+    - Name: "Vehicles/Fuels"
+      Description: "Factors representing changes to future vehicles and fuels."
+      Levels: 
+        - Name: 1
+          Inputs: 
+            - Name: V
+              Level: 1
+            - Name: F
+              Level: 0
+        - Name: 2
+          Inputs: 
+            - Name: V
+              Level: 1
+            - Name: F
+              Level: 1
+    - Name: "Fuel Price"
+      Description: "Context factor on the assumed market price of gasoline (exclusive of fuel taxes.)"
+      Levels: 
+        - Name: 1
+          Inputs: 
+            - Name: G
+              Level: 1
+        - Name: 2
+          Inputs: 
+            - Name: G
+              Level: 2
+    - Name: "Income"
+      Description: "Context factor on the assumed growth of statewide average per capita income."
+      Levels: 
+        - Name: 1
+          Inputs: 
+            - Name: I
+              Level: 1
+        - Name: 2
+          Inputs: 
+            - Name: I
+              Level: 2
