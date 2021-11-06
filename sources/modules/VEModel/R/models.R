@@ -1443,6 +1443,12 @@ tdiff <- function(tm0,tm1,digits=3,units="mins") {
   }
 }
 
+# report whether scenario level is in this stage
+# if level is missing, report the named vector of non-zero levels
+ve.stage.levels <- function(level) {
+  return(character(0))
+}
+
 ve.stage.pstatus <- function(start=FALSE) {
   paste(
     paste0(self$Name,":"),
@@ -1660,6 +1666,107 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
 
   return(self$specSummary[listRows,listFields])
 }
+
+# Visualize model results
+ve.model.visual <- function(stages=list(),query=NULL,save=FALSE) {
+  # TODO: visualizer should filter query results by Year
+  # Introduce Year as the first "Measure", but it's not in the list of VEQuery measures so
+  # event though it is produced (and we produce simplified metadata for it), it won't get
+  # sucked up as a metric to visualize (but we can limit what we visualize to columns whose
+  # Year matches what we're looking for).
+
+  # the Query provides the measures (by running the query on model results for reportable stages)
+  # and looking up the results for the stages The model gets scenario information about the stages
+  # from each stage if the model has scenarios, we'll use model$scenarios()$stages to tell us what
+  # to iterate through (and model$modelStages[[model$scenarios()$StartFrom] to get the StartFrom
+  # stage if any prior to doing the scenarios()$stages(). If the model does not have scenarios, we
+  # can make the category and scenario structures using reportable stages - there is no base
+  # scenario, all stages are equal, each one is a single level in its own scenario, and each
+  # scenario maps one-to-one to a category level, with just the one "Scenarios" category (or
+  # possibly allowing a "CategoryName" to be injected into the ModelStage RunParam_ls so we can
+  # group the scenario ModelStages into different Categories. That tag is not used for
+  # Category/Scenario model stages, though perhaps we could (there would be multiple categories, and
+  # we would only record the ones where the category contributed a non-zero level). The base model
+  # should always be included if we filter categories (it belongs to all categories)
+
+  # New approach to visualizing:
+  # 
+  #   VEModel contains VEModelScenarios
+  #   VEModelScenarios can report VEModelStages with Scenario/Level for desired list of categories
+  #   VEModel can run VEModelStages
+  #   VEModelStage can report its run directory (location of VEResults)
+  #   VEModel can return list of VEResults for some or all VEModelStages
+  #   VEQuery can run on Model / list of VEResults to generate query results into the VEResults Path
+  #   VEQUery can format the generated query results for a list of VEResults into a data.frame
+  #     (or really a list of vectors of measures). Then we can lapply across the data.frame to generate
+  #     one row of JSON measure values for each column. TODO: see above about Year as a
+  #     pseudo-metric.
+  #   VEModelStage, given a list of "scenarios" (elements from VEModelScenarios Scenarios tag) can say
+  #     what level the stage has for that scenario (possibly zero if scenario did not supply changed
+  #     files)
+  #   VEModelScenarios can take the exported VEQuery data.frame of results (suitably filtered by
+  #     selecting which results and the Year) and generate everything needed for the visualizer
+  #     (VEQuery provides the outputconfig - export metadata to get the pieces;
+  #     VEQuery$export(data=TRUE) provides the results for VEData, VEModelScenarios can produce the
+  #     categoryconfig and scenarioconfig, and the VEModelScenarios$stages (which also give the
+  #     VEResults) can provide the tags indicating which Scenario/Level the stage belongs to (the
+  #     VEModelStage does that)
+  #   So the Visualizer is (ta-da) something we do to the VEModel, giving it a VEQuery for the measures
+  #     and using the VEModelScenarios element to provide Category/Scenario.
+  #   That let's us "visualize" a standard model with stages, where each Reportable stage becomes a
+  #     "Scenario" level in the single "Scenarios" category without actually defining a ScenarioDir.
+  #   If we build standard ModelStages for VEModelScenarios, those should have Scenario/Level injected
+  #     into them (zero for the Category StartFrom stage, or for the containing model's StartFrom
+  #     stage).
+
+  # TODO: visualizer generates JSON from model Reportable stages and query results data for the
+  #       stages that have results. Call helper function to dump query results into VEData JSON
+  #       Build outputconfig JSON from query specification. Build categoryconfig and scenarioconfig
+  #       from VEModel$scenarios object. If using bare results or model has no scenarios, create
+  #       default one-to-one category and scenario config with one scenario per result set.
+  #       Launch JRC live visualizer if OutputDir is missing. If OutputDir is NA or "", write a
+  #       "visualizer_QueryName_Timestamp" folder into default OutputDir. Find default OutputDir
+  #       from ModelDir/ResultsDir/OutputDir, or by way of implied Model for first of the Results
+  #       being visualized. Writing to a file versus launching JRC will produce a different
+  #       invocation at the end of visualizer.js
+
+  # If categories is numeric, first N categories
+  # if categories is character, only categories with those names (max length)
+  # if measures is numeric, first N measures
+  # if measures is charcter, only measures with those names (max length)
+
+  # TODO: think about filtering for a particular year
+  # Can we tie a category to a year?
+  
+  # Get the model's scenarios
+  # Identify the ones against categories we want to use
+  # Identify the full set of scenarios for each included category + level
+  # Visit each reportable model stage (start from)
+  # Request scenario levels for each stage. The first one with all zero levels stays (probably the
+  # first overall - the StartFrom stage). Later stages with all zeroes are not included in the
+  # output.
+  # VEData consists of one JSON row for each result
+
+  # Build the JSON for the visualizer:
+  #   VEData           From ModelStages scenario/level list
+  #   categoryconfig   From Model$scenarios()$categoryConfig(categories)
+  #   scenarioconfig   From Model$scenarios()$scenarioConfig(categoryconfig) # just the ones we used
+  #   outputconfig     From Query Specification filtered by "measures"
+
+  # if NOT save
+  # Start the browser with the Visualizer HTML/JS/CSS
+  # then inject visualizer.json via jrc::sendCommand
+  # then inject call to VisualVE(); via jrc::sendCommand
+  # Don't need to stay live with the page (leave it in the browser, but close
+  #  everything on our side).
+
+  visualizer.json <- character(0)
+
+  # always return the JSON so the caller can write a file if desired
+  return(invisible(visualizer.json))
+}
+
+
 
 # Print a summary of the VEModel, including its run status
 ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
@@ -2735,6 +2842,8 @@ visualize <- function(Model, Query, Year, categories, measures,saveTo,maxMeasure
   # generate the results into a folder with that name inside Model$ResultsDir
   # default saveTo (if not character) is "visualizer" in ResultsDir
 
+  visualizer.json <- character(0)
+
   # Cache the visualizer.json somewhere? Return it?
 
   return(invisible(visualizer.json))
@@ -2825,7 +2934,14 @@ VEModelStage <- R6::R6Class(
     RunStarted = NULL,              # Sys.time() when model stage run started
     RunCompleted = NULL,            # Sys.time() when model stage run completed
     Results = NULL,                 # A VEResults object (create on demand)
-    
+    Category = "Scenarios",         # Vector of categories for which this stage provides non-default results
+                                    # Standard reportable stage goes into default "Scenarios"
+                                    # If standard stages are visualized and no Scenarios are
+                                    # configured, each stage becomes a single Scenario/Level and
+                                    # is mapped into a single level for the "Scenarios" category.
+                                    # See ve.model.visual for how it is used in that case
+    ScenarioLevels = list(),         # List of Scenarios (names) and Levels (values) for this scenario
+
     # Methods
     initialize=ve.stage.init,       # Create a stage and set its Runnable flag
     runnable=ve.stage.runnable,     # Does the stage have all it needs to run?
@@ -2834,8 +2950,9 @@ VEModelStage <- R6::R6Class(
     run=ve.stage.run,               # Run the stage (build results)
     completed=ve.stage.completed,   # Gather results of multiprocessing
     running=ve.stage.running,       # Check if stage is still running
+    scenariolevel=ve.stage.levels,  # Given a scenario name, return the level that this stage used to alter it (0 if base)
     processStatus=ve.stage.pstatus, # Return string describing stage run process status
-    watchLogfile=ve.stage.watchlog  #
+    watchLogfile=ve.stage.watchlog  # Helper to watch a logfile as this stage runs in the background
   ),
   private=list(
     complete = NULL,                # set to TRUE/FALSE when self$runnable() is executed

@@ -3,35 +3,6 @@ to pick one year (default, the last one in the StartFrom Stage). When exporting,
 year, but by default include all of them. BaseYear is not included unless it is forced to be
 Reportable.
 
-Query data.frame creation includes "Year" as a pseudo-measure (first in list), and we ignore it
-for Visualization (but filter on it) - find the minimum year and use that if not provided.
-
-Need to finish ve.query.export (and create data.frame for visualization etc.). Also need to update
-test_query to make sure that runs through and sensibly shows how to do everything (filter by
-year and measure to get the data.frame).
-
-Do not bother caching Query results in the query object: just rebuild for visualization or
-data.frame in memory or export.
-
-Need to finish scenario construction and stage building, and handle all the ways stages can be
-visualized - get the visualizer working first for a set of 1 or more reportable stages and a set of
-measures from that stage (via running a VEQuery on it). Then expand out to more refined types of
-Categories and Scenarios (combination build, including StartFrom).
-
-visualize function (VEModel$visualize, VEQuery$visualize) will run the VEModel or the VEQuery or
-both, with control via a reset flag (or more nuanced run strategy). Perhaps interact with usuer in
-"interactive" mode. So we could just load a model and "visualize" it with a VEQuery. Default the
-VEQuery for the first one defined for the model? Can get into some time-consuming BS, so maybe
-don't want to run by default.
-
-###### Deeper architecture follows:
-
-Change how the queries manage their results and make other adjustments to scenario stage building so
-all the information needed by the visualizer is available. Keep very raw results from running the
-query. Only build data.frames for the tabular export formats (csv, data.frame, sql, perhaps
-tableau). For the visualizer, we make a complex pile of JSON structures and function calls which
-can either be exported into a file or injected into a JRC-hosted page.
-
 When we process scenario ModelStages that were build from Category/Scenario, we need to keep the
 list of Scenario/Level for each set of results. The StartFrom stage goes in as a stage where all the
 Levels are set to zero (the "base case"). Levels are only defined for inputs that deviate. Scenarios

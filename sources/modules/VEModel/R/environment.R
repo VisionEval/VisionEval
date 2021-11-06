@@ -110,6 +110,7 @@ default.parameters.table = list(
   DisplayUnitsFile    = "display_units.csv",
   QueryFileName       = "New-Query",
   QueryOutputTemplate = "Query_%queryname%.Rda",
+  QueryExtractTemplate= "QueryExtract_%queryname%_%timestamp%",
   RunStatusDelay      = 60,               # seconds between status updates when multi-processing
   RunPollDelay        = 2                 # seconds between status poll for multi-process completion
 )
