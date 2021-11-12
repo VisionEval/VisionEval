@@ -2,7 +2,7 @@
 # zzz.R - visioneval package .onLoad function
 
 # This file contains an .onAttach function that loads the VisionEval
-# runtime environment and 
+# runtime environment
 
 # .onAttach is called when a library attached to
 

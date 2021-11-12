@@ -95,10 +95,10 @@ VisualVE = function( catconfig, scenconfig, outputconfig, VEdata ) {
   var outputXticks = [];
   var dataTableColumns = [];
   $.each(outputData, function(index,values){
-      outputCol[index] = values.COLUMN;
+      outputCol[index] = values.NAME;
       dataTableColumns[index] = function(d) { return d[outputCol[index]]; };
       outputXticks[index] = values.XTICKS;
-      var outputName = values.NAME;
+      var outputName = values.DISPLAYNAME;
       var outputLabel = values.LABEL;
       var outputDesc = values.DESCRIPTION;
       var outputInst = values.INSTRUCTIONS;

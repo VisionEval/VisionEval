@@ -575,13 +575,21 @@ ve.query.getlist <- function(Geography=NULL) {
 # "Name" is always included to support cbind
 defaultMetadata <- c("Units","Description")
 
+# Other available metadata includes:
+# Label,Instructions,Metric,DisplayName and XTicks (for the Visualizer)
+# Names requested but not present are given a NULL value
+
 # make a data.frame of all (and only) the valid query results
-ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NULL,GeoValues=NULL, metadata=TRUE, data=TRUE) {
+ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NULL,GeoValues=NULL, metadata=TRUE, data=TRUE, exportOnly=FALSE) {
   # Visit each of the valid results in the Model (or Results list) and add its years as columns
   #  to the resulting data.frame, then return the accumulated result
-  # Metadata will generate default columns (or a list of metadata names as first columns in
-  #  results); NOT IMPLEMENTED except for default columns
-  # if "data" is true, include data columns. If false, only generate metadata
+  # if "metadata" is true, include default metadata in the output table
+  # if "metadata" is a character vector, include only the named metadata items (the "Measure" name is
+  #   always included whether or not metadata is requested)
+  # if "data" is true, include data columns. If false, only generate metadata (used, e.g., by the
+  #   visualizer JSON generation function)
+  # exportOnly, if TRUE, only includes metrics with the Export attribute set (conventionally to
+  #   TRUE, but we're considering only present/mssing)
 
   Results <- self$results(Results) # Results will contain list of valid query results
   if ( length(Results)==0 ) {
@@ -649,13 +657,19 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
     }
     seekMeasures <- seekMeasures[ whichGeoMeasures ]
   }
+
+  if ( exportOnly ) {
+    whichExport <- sapply( private$QuerySpec[seekMeasures], function(m) return( ! is.null(attr(m,"Export")) ) )
+    seekMeasures <- seekMeasures[ whichExport ]
+  }
+    
   # Keep only measures that are being sought
   # Filter the measures using for loops rather than lapply to ensure names stay up to date
   for ( scenario in seq(valueList) ) {
     for ( year in names(valueList[[scenario]]) ) {
       valueList[[scenario]][[year]] <- valueList[[scenario]][[year]][seekMeasures]
     }
-  }
+  } # TODO: verify that it works if we've accidentally filtered seekMeasures down to nothing
 
   # Build data.frame with requested measure results (filtered to specific GeoValues), and metadata
   results.df <- NULL
@@ -1474,7 +1488,8 @@ makeMeasure <- function(measureSpec,thisYear,currentMeasures=list(),QPrep_ls) {
       writeLog(as.character(measure),Level="error")
       measure <- as.numeric(NA) # Fall through with measure being scalar NA
     }
-    # TODO: Require GeoType and GeoValues in Function specification
+    # TODO: Figure out GeoType and GeoValues from Function components
+    #   A complex calculation on the parsed function - examining the values used
     measure <- structure(
       measure,
       Units=measureSpec$Units,
@@ -1510,14 +1525,52 @@ makeMeasure <- function(measureSpec,thisYear,currentMeasures=list(),QPrep_ls) {
         GeoValues <- names(measure)
       }
     }
+
+    # Compute some metric attributes needed by visualizer
+
+    Export <- measureSpec$Export  # NULL if not present - don't care about Export value, only presence
+    Instructions <- if ( !is.na(measureSpec$Instructions) ) {
+      measureSpec$Instructions
+    } else {
+      measureSpec$Description
+    }
+    DisplayName <- if ( !is.na(measureSpec$DisplayName) ) {
+      measureSpec$DisplayName
+    } else {
+      measureSpec$Name
+    }
+    Metric <- if ( !is.na(measureSpec$Metric) ) {
+      measureSpec$Metric
+    } else {
+      ""
+    }
+    XTicks <- if ( !is.na(measureSpec$XTicks) ) {
+      measureSpec$XTicks
+    } else {
+      5
+    }
+    Label <- if ( !is.na(measureSpec$Label) ) {
+      measureSpec$Label
+    } else {
+      DisplayName # either explicit or itself defaulted further
+    }
+
     # Add GeoValues as an attribute to the measure
     # GeoType is found in the Spec
+
     measure <- structure(
       measure,
       Units=measureSpec$Units,
       Description=measureSpec$Description,
       GeoType=GeoType,
-      GeoValues=GeoValues
+      GeoValues=GeoValues,
+      # The next series of QuerySpec elements support the Visualizer
+      Export=Export,
+      Instructions=Instructions,
+      DisplayName=DisplayName,
+      Metric=Metric,
+      XTicks=XTicks,
+      Label=Label,
     ) # used during export to filter on Geography
   } else {
     writeLog(paste(measureName,"Invalid Measure Specification (must be 'Summarize' or 'Function')"),Level="error")

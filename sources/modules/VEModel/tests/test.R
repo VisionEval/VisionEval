@@ -1145,9 +1145,6 @@ test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TR
     testStep("Run the query again on the bare results (should do nothing)...")
     rs <- jr$results()
     qry$run(rs) # Won't re-run if query results are up to date with the scenario runs
-    # TODO: It is actually running the query again...
-    # TODO: should always re-run if the query specification file itself is newer than results
-    # Currently just looks at timestamp on results versus last changed time for the model stage
 
     testStep("Force the query to run on the bare results rather than the model...")
     qry$run(rs,Force=TRUE) # Won't re-run if query is up to date
@@ -1187,7 +1184,7 @@ test_multiquery <- function(reset=FALSE,log="info") {
   jr$addstage(
     Name="Scenario-1",
     Dir="Scenario-1",
-    ModelDir=jr$modelPath,
+    ModelDir=jr$modelPath, # TODO: Why do we need this?
     # TODO: InputPath = NULL, # from one of the category test scenarios
     Scenario="Scenario 1",
     Description="Same as original...",

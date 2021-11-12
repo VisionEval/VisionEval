@@ -41,6 +41,32 @@ variants:
         - stage-pop-synth
         - stage-pop-base
         - stage-pop-future
+  scenarios-ms:
+    # Similar to pop but includes "scenarios" for ModelStages
+    description: VERSPM 3.0 with ModelStage Scenarios
+    scripts: scripts-pop
+    config: visioneval-pop.cnf
+    inputs: inputs-base # Some files are overridden in stages
+    defs: defs
+    queries: scenario-queries
+    scenarios: scenarios-ms
+    stages: # copied as they are
+        - stage-pop-synth
+        - stage-pop-base
+        - stage-pop-future
+  scenarios-cat:
+    # Similar to pop but includes "scenarios" for Category/Scenario
+    description: VERSPM 3.0 with Category Combination Scenarios
+    scripts: scripts-pop
+    config: visioneval-pop.cnf
+    inputs: inputs-base # Some files are overridden in stages
+    defs: defs
+    queries: scenario-queries
+    scenarios: scenarios-cat
+    stages: # copied as they are
+        - stage-pop-synth
+        - stage-pop-base
+        - stage-pop-future
   load:
     # scripts, inputs and years all differ by stage
     description: VERSPM 3.0 Staged Population Synthesis

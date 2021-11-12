@@ -104,7 +104,7 @@ for(Year in getYears()) {
     RunYear = Year)
   runModule(
     ModuleName = "ReportRPATMetrics",
-    PackageName = "VEReports",
+    PackageName = "VERPAT",
     RunFor = "NotBaseYear",
     RunYear = Year)
 }

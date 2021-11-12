@@ -2561,40 +2561,64 @@ print.VEAvailableVariants <- function(x,...) {
 #  'model' is bare name of standard model
 #  returns the full path to that model template
 findStandardModel <- function( model, variant="" ) {
-  standardModels <- system.file("models",package="VEModel")
-#   if ( ! nzchar(standardModels) ) {
-#     # The following is for testing purposes...
-#     standardModels <- getOption("VEStandardModels",default=normalizePath("inst/models"))
-#   }
-  # Covid Joke
+
+  pkgs <- utils::installed.packages(fields=c("Package","LibPath"))
+  VE.pkgs <- pkgs[ grep("^VE",pkgs[,"Package"]),"LibPath"] # named character vector of paths
+  modelPaths <- dir(file.path(VE.pkgs,names(VE.pkgs),"models"),pattern="model-index.cnf",recursive=TRUE,full.names=T)
+  modelIndex <- list()
+  for ( confPath in modelPaths ) {
+    index <- try( yaml::yaml.load_file(confPath) )
+    if ( ! "variants" %in% names(index) ) {
+      modelName <- names(index)
+    } else {
+      modelName <- basename(dirname(confPath)) # sub-directory in VEModel/models
+      tmp <- list()
+      tmp[modelName] <- list(variants=index)
+      index <- tmp
+    }
+    # Get here with modelIndex a list of model names, whose elements are a list of model variants
+    for ( m in names(index) ) {
+#      cat("Processing model source:",confPath,":",m,"\n")
+      if ( ! "variants" %in% names(index[[m]]) ) {
+        cat("No variants in",m,"\n")
+        print(names(index[[m]]))
+        next
+      }
+      vars <- index[[m]]$variants
+      if ( length(vars)>0 ) {
+        if ( any(dupes <- names(vars) %in% modelIndex[[m]]) ) {
+          writeLog(paste("Duplicated model variant",paste0(m,":",paste(names(vars)[dupes],collapse=","))),Level="warn")
+        }
+        modelIndex[[m]][ names(vars) ] <- vars
+        for ( v in names(vars) ) {
+          modelIndex[[m]][[v]]$ModelDir <- confPath
+        }
+#        cat("Variants in",m,"\n")
+#        print(names(modelIndex[[m]]))
+      } else {
+        cat("No variants in",modelName)
+      }
+    }
+  }
+  # COVID-19 Joke
   if ( toupper(variant)=="DELTA" ) return( "Cough, Cough!" )
 
   if ( missing(model) || is.null(model) || ! nzchar(model)) {
-    available.models <- dir(standardModels)
+    available.models <- names(modelIndex)
     class(available.models) <- "VEAvailableModels"
     return( available.models )
   }
 
   # Locate the model
   model <- model[1]
-  model_ls <- list()
-  model_ls$Name <- model
-  model_ls$ModelDir <- file.path(standardModels,model)
-  if ( ! dir.exists(model_ls$ModelDir) ) {
+  if ( ! model %in% names(modelIndex) ) {
     writeLog(paste("No standard model called ",model),Level="error")
     return( findStandardModel("") ) # recursive call to keep return directory in one place
   }
 
   # Read the model index to identify variants ("base" should always exist)
-  confPath <- file.path(model_ls$ModelDir,"model-index.cnf")
-  modelIndex <- try( yaml::yaml.load_file(confPath) )
-  if ( ! "variants" %in% names(modelIndex) ) {
-    writeLog(paste0("No model variants defined in ",confPath),Level="error")
-    writeLog(c(class(modelIndex),names(modelIndex)),Level="error")
-    return(c("No model variant:",variant))
-  }
-  if ( missing(variant) || ! nzchar(variant) || ( ! variant %in% names(modelIndex$variants) ) ) {
-    variantMsg <- names(modelIndex$variants)
+  if ( missing(variant) || ! nzchar(variant) || ( ! variant %in% names(modelIndex[[model]]) ) ) {
+    variantMsg <- names(modelIndex[[model]])
     attr(variantMsg,"Model") <- model
     class(variantMsg) <- "VEAvailableVariants"
     if ( nzchar(variant) ) { # not in list of variants
@@ -2606,17 +2630,20 @@ findStandardModel <- function( model, variant="" ) {
   }
 
   # Load the variant configuration
+  model_ls <- list()
+  model_ls$Name <- model
   model_ls$Variant <- variant
-  variantConfig <- modelIndex$variants[[variant]]
+  variantConfig <- modelIndex[[model]][[variant]]
 
   # Get config file and description
+  model_ls$ModelDir <- variantConfig$ModelDir
   model_ls$Description <- variantConfig$description
   if ( "config" %in% names(variantConfig) ) {
     model_ls$Config <- normalizePath(file.path(model_ls$ModelDir,variantConfig$config))
   } # if no Config, move contents of scripts directory to installPath (hack for classic model)
 
   # Get standard directories to copy (including stage directories if any)
-  modelTo <- c("scripts","inputs","defs","queries")
+  modelTo <- c("scripts","inputs","defs","queries","scenarios")
   modelTo <- modelTo[ modelTo %in% names(variantConfig) ]
   modelFrom <- unlist( variantConfig[modelTo] )
   modelStages <- unlist(variantConfig$stages)
@@ -2644,7 +2671,8 @@ findStandardModel <- function( model, variant="" ) {
 ## install a standard model with data identified by "variant"
 #  We're still expecting to distribute standard models in the runtime (but for now, those will
 #   be the "classic" models)
-installStandardModel <- function( modelName, modelPath, confirm, overwrite=FALSE, variant="base", log="error" ) {
+
+installStandardModel <- function( modelName, modelPath, confirm=TRUE, overwrite=FALSE, variant="base", log="error" ) {
   # Locate and install standard modelName into modelPath
   #   modelName says which standard model to install. If it is missing or empty, return a
   #     list of available models
@@ -2653,7 +2681,7 @@ installStandardModel <- function( modelName, modelPath, confirm, overwrite=FALSE
   #   Otherwise, modelPath is presumed to be the directory into which modelName will be installed
   #     (and basename(modelPath) will become the target model name, disambiguated).
   #   If dirname(modelPath) also does not exist, tell user dirname(modelPath) does not exist and
-  #     they have to try again
+  #     they have to try again.
 
   model <- findStandardModel( modelName, variant )
   if ( ! is.list(model) ) {

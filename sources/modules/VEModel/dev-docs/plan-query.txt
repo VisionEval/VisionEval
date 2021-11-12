@@ -1,8 +1,164 @@
-TODO: queries can be done for all the years in the results, but when visualizing we typically have
-to pick one year (default, the last one in the StartFrom Stage). When exporting, we can limit to a
-year, but by default include all of them. BaseYear is not included unless it is forced to be
-Reportable.
+Additional things for NextGen:
+  Verify that installModel is looking through packages for "models".
+  Seems to be working.
 
+  (LATER) Create an installVEPackages function to install packages and update package manifest
+    Create a DRAT repository for just the VE Packages (in suitable R versions)
+    If you install just the visioneval/VEModel package, have a function in the framework to install the rest of
+      visioneval and launch the runtime.
+    So the installation is two steps: install visioneval/VEModel, then install a model.
+
+  Make a package for the VERPAT model
+    (DONE) VEReports => VERPAT, plus alter the model in both VEModel and VERPAT.
+    Created the model as installable from that package.
+  Likewise VE-State (now VEState).
+  Model package contains:
+    bare model
+    sample model
+    vignettes (module_docs here? Tutorial for model)
+    extra modules (e.g. the VEReport module)
+    man for moduels/module_docs - integrate all that better
+
+  Clear out the models directory - should show up empty or just with a ReadMe.pdf
+
+  Saving visualizer creates in ResultsDir for model: Visualize-<QueryName>-<Timestamp>
+
+  Modularize output modules (for data.frames with metadata, mostly from queries)
+  Those modules can attach additional metadata from scenario or whatever (in particular,
+  the scenario stuff).
+
+For walkthrough:
+  Make a slide show of key elements of NextGen
+  Core principles: modular, simple, extensible in every dimension
+  Basic recap
+  Show stuff that works (and hint at the future)
+    Configurations
+    ModelStages
+      Unit that runs
+      Unit that can be interrogated for raw export
+    "Runnable" ModelStage (it's not a model stage if it's not runnable)
+    "Reportable" ModelStage
+    StartFrom stages
+      Share scripts
+      Share earlier results
+    LoadModel / LoadStage that we saw before:
+      Copies over the Datastore from a different model or model stage
+    Scenarios
+      ModelStages
+      Auto-organization (category scenarios - work in progress)
+    Scenarios versus standard stages
+    Reporting on ModelStages and Scenarios
+      SummarizeDatasets (Queries)
+      How to set up queries - examples
+    Exporting Query results
+    Visualizing Query results
+      Standard reportable model stages
+      Category/scenario stages
+      
+
+Use a single MeasureEnv environment for all of the makeMeasure calls for a single scenario (don't
+keep going back and forth). Retreat to a list at the end (make sure metadata attributes are
+preserved).
+
+Make sure BreakNames are getting set up properly (once per query spec prior to doQuery).
+
+Make sure we include additional named elements in the query spec list that are used just to tag
+the query spec (e.g. for Visualizer Displayname, Instructions, XTicks, etc). They get elevated
+to attributes of the individual metrics to facilitate generating the metadata table.
+So find any code that filters down the fields to "known" values and let anything at all creep in.
+
+Visualizer metrics from VEScenarios are simple, but a lot of intermediates are generated. We need an
+"Export" flag to decide whether to extract it or not. The extract function will export everything by
+default. But the Visualizer will only generate "Export" metrics. We can elaborate that later...
+
+VEQuery needs a function to dump the output configuration for the visualizer (as JSON)
+Eventually need additional query metadata, like this:
+
+Add Instructions, Label, Metric, XTicks, DisplayName as below as options for the QuerySpec
+
+{
+  "DISPLAYNAME": "Walk Trips Per Capita",
+  "LABEL": "Walk Travel Per Capita",
+  "DESCRIPTION": "annual residents walk trips (not including recreation or walk to transit) divided by population",
+  "INSTRUCTIONS": "annual residents walk trips (not including recreation or walk to transit) divided by population",
+  "METRIC": "Average",
+  "UNIT": "annual trips",
+  "NAME": "WalkTravelPerCapita",
+  "XTICKS" : 3
+}
+
+Change Visualizer so it uses NAME for COLUMN, and DISPLAYNAME for NAME
+
+Create these as additional
+
+  EXPORT (Default is Not Present)
+    - indicates measure should not be output to Visualizer unless named
+    - Visualizer will only consider export metrics
+  DISPLAYNAME (Default is NAME)
+  LABEL (default = DISPLAYNAME = NAME)
+  METRIC (default = "")
+  XTICKS (default = 5)
+  INSTRUCTIONS (default = DESCRIPTION)
+
+  XTICKS is a visualizer tweak
+  METRIC is descriptive (needs a value - is actually used? - make it an empty strin for now)
+  COLUMN is the specific metric name (from existing query specification structure)
+  NAME can just be the same as LABEL and is a short version of DESCRIPTION
+  INSTRUCTIONS can just be the DESCRIPTION
+
+Set up a stock model variant VERSPM variant="scenario" which installs a couple of scenario
+variant folders - one a ModelStages version that emulates the in-memory version we'll build in
+tests/test.R, and one a Category version that uses the setup from the old VERSPM-scenarios. The
+model should also include queries for making visualizer-friendly metrics.
+
+So the sample model needs:
+  1. ScenarioDir for ModelStages
+  2. ScenarioDir for CategoryStages
+  3. Queries directory with a sample query emulating metrics from original VERSPM metrics
+  4. Base it on the VERSPM-pop variant
+  5. Maybe do a pair of variants: one for "scenario-stages" and one for "scenario-categories"
+  6. They just copy different scenario dir (with different visioneval.cnf and sub-folders)
+  7. Same test data can get copied into each
+
+Things to put into the scenario test:
+  1. In-memory stages added (addstage should let us push it into the file but also the memory
+     RunParam_ls)
+     Visualizer: see each stage added to master "Scenarios" Category/Scenario, and the stage
+     becomes its own level
+  1. Adjust in-memory stages to add an explicit category to them
+     Visualier: see two categories instead of one
+  2. ScenarioDir with ModelStages descriptions of scenarios (same as In-Memory except we've
+     added those specific stages plus StartFrom to the ScenarioDir visioneval.cnf)
+     Visualizer: Should have explicit Categories? or not? Won't differ much from the earlier
+  3. ScenarioDir with Category/Scenario descriptions - spins up 
+     Visualizer: Check for full elaboration of Category/Scenario structure with a bunch of
+     scenarios
+
+Additional visualizer tests:
+  1. Limiting to a subset of categories
+  2. Limiting to a subset of measures
+  3. Limiting to a subset of scenarios/model stages
+
+Need to finish scenario construction and stage building, and handle all the ways stages can be
+visualized - get the visualizer working first for a set of 1 or more reportable stages and a set of
+measures from that stage (via running a VEQuery on it). Then expand out to more refined types of
+Categories and Scenarios (combination build, including StartFrom).
+
+visualize function (VEModel$visualize, VEQuery$visualize) will run the VEModel or the VEQuery or
+both, with control via a reset flag (or more nuanced run strategy). Perhaps interact with usuer in
+"interactive" mode. So we could just load a model and "visualize" it with a VEQuery. Default the
+VEQuery for the first one defined for the model? Can get into some time-consuming BS, so maybe
+don't want to run by default.
+
+###### Deeper architecture follows:
+
+Change how the queries manage their results and make other adjustments to scenario stage building so
+all the information needed by the visualizer is available. Keep very raw results from running the
+query. Only build data.frames for the tabular export formats (csv, data.frame, sql, perhaps
+tableau). For the visualizer, we make a complex pile of JSON structures and function calls which
+can either be exported into a file or injected into a JRC-hosted page.
+
+=======
 When we process scenario ModelStages that were build from Category/Scenario, we need to keep the
 list of Scenario/Level for each set of results. The StartFrom stage goes in as a stage where all the
 Levels are set to zero (the "base case"). Levels are only defined for inputs that deviate. Scenarios

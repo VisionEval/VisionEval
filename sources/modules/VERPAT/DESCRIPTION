@@ -1,4 +1,4 @@
-Package: VEReports
+Package: VERPAT
 Type: Package
 Title: Create reports for performance metrics using VE framework
 Version: 2.0.0

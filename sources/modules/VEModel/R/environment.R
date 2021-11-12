@@ -157,6 +157,9 @@ loadRuntimeConfig <- function() {
   # ParamDir defaults to ve.runtime
   ve.env <- runtimeEnvironment()
   if ( is.null(ve.env$ve.runtime) ) setRuntimeDirectory() # VE_RUNTIME or getwd()
+  # TODO: load/build VE package manifest (for installModel, plus list
+  # of modules).
+  # buildPackageManifest() # file called .VE-packages.lst (hidden attribute like .REnviron).
   return( visioneval::loadConfiguration(ParamDir=ve.env$ve.runtime) )
 }
 

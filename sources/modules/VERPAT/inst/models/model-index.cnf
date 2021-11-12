@@ -1,0 +1,16 @@
+  # Variant is selected when installing
+# Sample data is also installed
+# Eventually need to document or provide helper function for reducing to template
+VERPAT:
+  variants:
+    base:
+      # "description" is used to echo back what is being installed
+      description: VERPAT 3.0
+      # Configuration is all in the model root directory
+      config: visioneval.cnf
+      scripts: scripts
+      inputs: inputs
+      defs: defs
+  #   queries: queries # TBD: queries for VERPAT model using 3.0 query mechanism
+
+# Also need Category-based scanarios based on original VERPAT-scenarios (for visualizer)

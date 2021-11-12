@@ -20,18 +20,14 @@ Components:
     Path: sources/framework
     Test: { Script: tests/scripts/test.R, Group: 0 }
     CRAN: 
-      - knitr
+      - futile.logger
       - jsonlite
       - yaml
       - stringr
-      - futile.logger
+      - knitr
     BioC:
       - rhdf5
-  VE2001NHTS:
-    Type: module
-    Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 1 }
-  VEModel:
+  VEModel: # End-user R API
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
@@ -39,25 +35,29 @@ Components:
       - futile.logger
       - jsonlite
       - yaml
-      - R6
       - stringr
-      - jrc
+      - R6
       - parallelly
       - future
       - future.callr
+      - jrc
 #    Github:
 #      - anders-biostat/jrc
 #    To build properly, need to do externals after creating ve.lib!
 #    which requires a change to the Makefile sequencing.
-  VEScenario:
-    Type: module
-    Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 1 }
-    CRAN:
-      - data.table
-      - future
-      - future.callr
-      - jsonlite
+#    The CRAN version may be sufficient
+#  VEScenario:
+#   Type: module
+#   Path: sources/modules
+#   Test: { Script: tests/scripts/test.R, Group: 1 }
+#   CRAN:
+#     - data.table
+#     - future
+#     - future.callr
+#     - jsonlite
+
+# Core Modules for building models
+
   VESimHouseholds:
     Type: module
     Path: sources/modules
@@ -83,6 +83,13 @@ Components:
     Type: module
     Path: sources/modules
     Test: { Script: tests/scripts/test.R, Group: 1 }
+
+  VE2001NHTS:
+    # VE2001NHTS is only used internally for estimating other models
+    # Rethink how it is packaged and used for local re-estimation (future change)
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 1 }
   VEHouseholdTravel:
     Type: module
     Path: sources/modules
@@ -93,17 +100,6 @@ Components:
       - pscl
     VE:
       - VE2001NHTS
-  VETravelDemandMM:
-    Type: module
-    Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 2 }
-    CRAN:
-      - dplyr
-      - purrr
-      - tidyr
-      - splines
-      - MASS 
-      - pscl
   VEHouseholdVehicles:
     Type: module
     Path: sources/modules
@@ -113,15 +109,6 @@ Components:
       - reshape2
     VE:
       - VE2001NHTS
-#   VEHouseholdVehiclesWithAdj:
-#     Type: module
-#     Path: sources/modules
-#     Test: { Script: tests/scripts/test.R, Group: 2 }
-#     CRAN:
-#       - ordinal
-#       - reshape2
-#     VE:
-#       - VE2001NHTS
   VELandUse:
     Type: module
     Path: sources/modules
@@ -141,18 +128,6 @@ Components:
     VE:
       - VE2001NHTS
       - VEHouseholdTravel
-      - VETravelDemandMM      
-  VEReports:
-    Type: module
-    Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 3 }
-    CRAN:
-      - filesstrings
-      - jsonlite
-    VE:
-      - VEHouseholdTravel
-      - VETravelDemandMM
-
   VESimLandUse:
     Type: module
     Path: sources/modules
@@ -181,15 +156,58 @@ Components:
       - VESimLandUse
       - VETransportSupply
 
+# Module / Model packages (include installable sample models)
+
+# VERSPM:
+#   Type: module
+#   Path: sources/modules
+#   Test: { Script: tests/scripts/test.R, Group: 2 }
+#   # VERSPM has no package dependencies (only an installable model)
+#   VE:
+#      - # TODO: list all the packages used in VERSPM model
+# VEState:
+#   Type: module
+#   Path: sources/modules
+#   Test: { Script: tests/scripts/test.R, Group: 2 }
+#   # VEState has no package dependencies (only an installable model)
+#   VE:
+#      - # TODO: list all packages used in VE-State model
+  VETravelDemandMM:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    CRAN:
+      - dplyr
+      - purrr
+      - tidyr
+      - splines
+      - MASS
+      - pscl
+  VERPAT:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 3 }
+    CRAN:
+      - filesstrings
+      - jsonlite
+    VE:
+      - VEHouseholdTravel
+
 # "Type: test" components are copied verbatim to "src" environment under its name
-# May need to rethink this...
+# Need to rethink this...
 #   Test_Data:
 #     Type: test
 #     Path: sources/modules
 
+# VE NextGen does not install models, just an empty-ish "models" directory in runtime
+  Readme-Models.md:
+    # Explains how to install a model
+    Type: model
+    Path: sources/models
+
 # "Type: model" components may have tests, and are copied to "models" folder of runtime under their name
-# The "group" is unused for testing - it is always the "last" group for the models
-# The test script relative path is copied to the "test" environment
+# The test script relative path is copied to the "test" directory
+# Model installation architecture is different in NextGen (installs models through packages)
 #   VERPAT:
 #     Type: model
 #     Path: sources/models
@@ -231,28 +249,6 @@ Components:
   LICENSE:
     Type: script
     Path: "."
-#   VEScenarioViewer:
-#     Type: script
-#     Path: sources
-#   VEGUI:
-#     Type: script
-#     Path: sources
-#     Test: { Script: run_vegui_test.R, Group: 5 }
-#     CRAN:
-#       - DT
-#       - envDocument
-#       - rhandsontable
-#       - shiny
-#       - shinyBS
-#       - shinyFiles
-#       - shinyjs
-#       - shinytest
-#       - testit
-#       - testthat
-#     BioC:
-#       - rhdf5
-#     Github:
-#       - tdhock/namedCapture
   tools:
     Type: script
     Path: sources
