@@ -2591,7 +2591,7 @@ findStandardModel <- function( model, variant="" ) {
         }
         modelIndex[[m]][ names(vars) ] <- vars
         for ( v in names(vars) ) {
-          modelIndex[[m]][[v]]$ModelDir <- confPath
+          modelIndex[[m]][[v]]$ModelDir <- dirname(confPath)
         }
 #        cat("Variants in",m,"\n")
 #        print(names(modelIndex[[m]]))
