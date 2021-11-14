@@ -10,8 +10,9 @@ Additional things for NextGen:
 
   Make a package for the VERPAT model
     (DONE) VEReports => VERPAT, plus alter the model in both VEModel and VERPAT.
-    Created the model as installable from that package.
-  Likewise VE-State (now VEState).
+    (DONE) Created the model as installable from that package.
+  (TODO) Likewise VE-State (now VEState module).
+
   Model package contains:
     bare model
     sample model
@@ -19,13 +20,15 @@ Additional things for NextGen:
     extra modules (e.g. the VEReport module)
     man for moduels/module_docs - integrate all that better
 
-  Clear out the models directory - should show up empty or just with a ReadMe.pdf
+  (TEST) Clear out the models directory - should show up empty or just with a ReadMe.pdf
 
   Saving visualizer creates in ResultsDir for model: Visualize-<QueryName>-<Timestamp>
 
   Modularize output modules (for data.frames with metadata, mostly from queries)
   Those modules can attach additional metadata from scenario or whatever (in particular,
   the scenario stuff).
+
+Ability to add metadata to measure data.frame (Scenario stuff)...
 
 For walkthrough:
   Make a slide show of key elements of NextGen
@@ -55,7 +58,6 @@ For walkthrough:
       Standard reportable model stages
       Category/scenario stages
       
-
 Use a single MeasureEnv environment for all of the makeMeasure calls for a single scenario (don't
 keep going back and forth). Retreat to a list at the end (make sure metadata attributes are
 preserved).
