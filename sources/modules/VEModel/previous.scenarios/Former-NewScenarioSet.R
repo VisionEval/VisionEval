@@ -118,7 +118,6 @@ visioneval::savePackageDataset(NewScenarioSetSpecifications, overwrite = TRUE)
 #' @return A list containing the components specified in the Set
 #' specifications for the module.
 #' @name NewScenarioSetInterior
-#' @import jsonlite 
 #' @export
    NewScenarioSetInterior <- function(ScenarioInputFolder=NULL, ScenarioManagerFile, ModelFolder, ScenarioBaselineInputFolder=NULL){
      assign("%>%",getFromNamespace("%>%","magrittr"))
@@ -313,7 +312,6 @@ visioneval::savePackageDataset(NewScenarioSetSpecifications, overwrite = TRUE)
 #' @return A list containing the components specified in the Set
 #' specifications for the module.
 #' @name NewScenarioSet
-#' @import jsonlite 
 #' @export
 NewScenarioSet <- function(L){
   # Setup

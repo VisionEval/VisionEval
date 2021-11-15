@@ -17,6 +17,7 @@ Imports:
     stringr,
     yaml,
     futile.logger,
+    jsonlite,
     parallelly,
     future,
     future.callr,

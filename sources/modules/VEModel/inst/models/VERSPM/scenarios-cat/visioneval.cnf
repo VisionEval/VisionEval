@@ -123,7 +123,7 @@ Scenarios:
         Description: "Income growth of 14% w.r.t reference."
 
 Categories:
-  StartFrom: "stage-pop-future" # or could just leave it out since it's the same as overall
+#  StartFrom: "stage-pop-future" # or could just leave it out since it's the same as overall
   Category:
     - Name: "Community Design"
       Description: "Local policies to enable shorter trips and travel by alternate modes."

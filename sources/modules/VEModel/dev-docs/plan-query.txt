@@ -1,7 +1,5 @@
 Additional things for NextGen:
-  Verify that installModel is looking through packages for "models".
-  Seems to be working.
-
+006145
   (LATER) Create an installVEPackages function to install packages and update package manifest
     Create a DRAT repository for just the VE Packages (in suitable R versions)
     If you install just the visioneval/VEModel package, have a function in the framework to install the rest of
@@ -20,15 +18,19 @@ Additional things for NextGen:
     extra modules (e.g. the VEReport module)
     man for moduels/module_docs - integrate all that better
 
-  (TEST) Clear out the models directory - should show up empty or just with a ReadMe.pdf
+  (DONE) Clear out the models directory - should show up empty or just with a ReadMe.pdf
 
   Saving visualizer creates in ResultsDir for model: Visualize-<QueryName>-<Timestamp>
 
-  Modularize output modules (for data.frames with metadata, mostly from queries)
-  Those modules can attach additional metadata from scenario or whatever (in particular,
-  the scenario stuff).
+Ability to add metadata to measure data.frame (Scenario stuff)... Each scenario has properties that
+need to be attached to the visualizer output. So probably we want to use the query results pretty
+directly for the model stages (and we'll iterate over the stages to build VEdata, attaching scenario
+level information that will get pushed to VEdata). We'll use the Category/Scenario configuration structure
+to build catconfig and scenconfig. We'll use the query spec to generate the outputconfig.
 
-Ability to add metadata to measure data.frame (Scenario stuff)...
+Since jrc does an R-to-JSON conversion, we just need to build a suitable R object for each of those
+components. We can build the JSON ourselves and use sendCommand to send it. But sendData seems to
+work though perhaps a bit inflexibly.
 
 For walkthrough:
   Make a slide show of key elements of NextGen

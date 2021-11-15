@@ -3,6 +3,7 @@
 # VEModel Package Code
 
 #' @include environment.R
+#' @import visioneval
 NULL
 
 # R6 Class documentation example:
@@ -130,6 +131,7 @@ NULL
 #' $run). "continue" is used for debugging and development and will load the existing Datastore and
 #' proceed from the first stage or RunStep that is not marked as "complete".
 #'
+#' @import jsonlite
 #' @importFrom R6 R6Class
 #' @name VEModel
 NULL
@@ -1566,7 +1568,6 @@ summarizeSpecs <- function(AllSpecs_ls,stage) {
     package <- packmod$PackageName
     module <- packmod$ModuleName
     spc <- packmod$Specs;
-    # TODO: Add Package and Module to specSummary
     for ( spectype in c("Inp","Get","Set") ) {
       if ( ! spectype %in% names(spc) ) next
       addSpecs <- lapply(spc[[spectype]],
@@ -1602,7 +1603,7 @@ summarizeSpecs <- function(AllSpecs_ls,stage) {
 ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=character(0),reset=FALSE) {
   # "inputs" lists the input files (Inp) by package and module (details = field attributes)
   # "outputs" lists the fields that are Set in the Datastore (details = field attributes)
-  # if both are true, we also liet the Get elements
+  # if both are true, we also list the Get elements
   # "details" FALSE lists units and description plus pacakge/module/group/table/name
   # "details" TRUE lists all the field attributes (the full data.frame of specSummary)
   # "stage" is a list of stage names (default = all stages) to appear in the output
@@ -1648,7 +1649,7 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
   listRows <- unique(c(inputRows,outputRows,usedRows))
 
   # which fields to return
-  listFields <- c("SPEC","PACKAGE","MODULE","GROUP","TABLE","NAME")
+  listFields <- c("SPEC","STAGE","PACKAGE","MODULE","GROUP","TABLE","NAME")
   addFields <- character(0)
   if ( ! is.null(details) ) {
     if ( is.character(details) ) {
@@ -1669,6 +1670,26 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
 
 # Visualize model results
 ve.model.visual <- function(stages=list(),query=NULL,save=FALSE) {
+
+  print(htmlRoot<-system.file("visualizer",package="VEModel"))
+  print(dir(htmlRoot))
+  jrc::openPage(
+    useViewer=FALSE,
+    rootDirectory=htmlRoot,
+    startPage=file.path(htmlRoot,"visualizer.html") #,
+#    browser="C:/Users/jeremy.raw/AppData/Local/Vivaldi/Application/vivaldi.exe"
+  )
+
+  # The following just fakes some data and visualizes it
+  jsonvars <- jsonlite::read_json(file.path(system.file("visualizer",package="VEModel"),"visualizer-sample.js"))
+  
+  jrc::sendData("catconfig",jsonvars$catconfig,keepAsVector=TRUE) # keepAsVector -> otherwise flattens inconveniently
+  jrc::sendData("scenconfig",jsonvars$scenconfig)
+  jrc::sendData("outputconfig",jsonvars$outputconfig)
+  jrc::sendData("VEdata",jsonvars$VEdata)
+  
+  # Consider using onStart to then populate with data and call VisualVE function
+
   # TODO: visualizer should filter query results by Year
   # Introduce Year as the first "Measure", but it's not in the list of VEQuery measures so
   # event though it is produced (and we produce simplified metadata for it), it won't get
@@ -1760,43 +1781,41 @@ ve.model.visual <- function(stages=list(),query=NULL,save=FALSE) {
   # Don't need to stay live with the page (leave it in the browser, but close
   #  everything on our side).
 
-  visualizer.json <- character(0)
-
   # always return the JSON so the caller can write a file if desired
-  return(invisible(visualizer.json))
+  return(invisible(jsonvars))
 }
 
 
 
 # Print a summary of the VEModel, including its run status
 ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
-  cat("Model:",self$modelName,"\n")
+  cat("Model:",self$modelName,"/n")
   if ( details ) {
-    cat("Path:","\n")
-    cat(self$modelPath,"\n")
-    cat("Configurations:","\n")
-    cat(paste("  ",uniqueSources(self$RunParam_ls,shorten=self$modelPath)),sep="\n") # Generates one row for each unique source
+    cat("Path:","/n")
+    cat(self$modelPath,"/n")
+    cat("Configurations:","/n")
+    cat(paste("  ",uniqueSources(self$RunParam_ls,shorten=self$modelPath)),sep="/n") # Generates one row for each unique source
   }
-  cat("Status:", self$printStatus(),"\n")
+  cat("Status:", self$printStatus(),"/n")
   if ( private$p.valid ) {
     scenarioStages <- sapply( self$modelStages, function(s) s$Scenario )
-    cat("Model Stages:\n")
+    cat("Model Stages:/n")
     for ( s in self$modelStages[ ! scenarioStages ] ) {
       s$print(details,configs)
     }
     scenarioCount <- length(which(scenarioStages))
     if ( scenarioCount > 0 || is.null(self$modelScenarios) ) {
       if ( ! scenarios ) {
-        cat(scenarioCount,"Scenario stages defined in",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
+        cat(scenarioCount,"Scenario stages defined in",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"/n")
       } else {
-        cat("Scenario Stages from",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
+        cat("Scenario Stages from",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"/n")
         for ( s in self$modelStages[ scenarioStages ] ) {
           s$print(details,configs=FALSE) # don't show configs for scenarios...
         }
       }
     } else if (scenarioCount > 0 && is.null(self$modelScenarios) ) {
-      cat("Program error: scenarioCount",scenarioCount,"but modelScenarios is NULL\n")
-    } else cat("No scenarios defined.\n")
+      cat("Program error: scenarioCount",scenarioCount,"but modelScenarios is NULL/n")
+    } else cat("No scenarios defined./n")
   }
   private$p.valid
 }
@@ -1810,7 +1829,7 @@ ve.model.log <- function(shorten=TRUE) {
     if ( is.null(logFile) ) {
       # See if there's one in the RunPath anyway...
       p <- s$RunPath
-      logFile <- dir(p,pattern="\\.log$",full.names=TRUE)
+      logFile <- dir(p,pattern="//.log$",full.names=TRUE)
     }
     if ( is.character(logFile) && length(logFile)>0 ) {
       if ( ! shorten ) logFile <- normalizePath(file.path(s$RunPath,logFile))
@@ -2456,8 +2475,8 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
 #     cat("QueryDir:"); print(QueryDir)
 #     cat("Query Directory:"); print(QueryPath)
 #     cat("Query Directory Exists:"); print(dir.exists(QueryPath))
-#     cat("Available Queries:\n")
-    queries <- dir(QueryPath,pattern="\\.(VEqry|R)$",ignore.case=TRUE)
+#     cat("Available Queries:/n")
+    queries <- dir(QueryPath,pattern="//.(VEqry|R)$",ignore.case=TRUE)
     if ( length(queries)==0 ) queries <- "No queries defined"
     return(queries)
   }
@@ -2480,7 +2499,7 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
 #' Open a VisionEval Model
 #'
 #' @description
-#' \code{openModel} opens a VisionEval model and returns a VEModel object (q.v.) through
+#' /code{openModel} opens a VisionEval model and returns a VEModel object (q.v.) through
 #'    which it can be manipulated (run or queried)
 #'
 #' @details
@@ -2536,78 +2555,21 @@ openModel <- function(modelPath="",log="error") {
 #                      MANAGE "STANDARD MODELS" (VEModel Examples)                       #
 ##########################################################################################
 
-#' pretty print a list of standard models
-#' 
-#' @param x a character vector of standard model names
-#' @param ... Other parameters for generic print function
+#' Look up a standard model in the index of avaialble models
+#' @param model bare name of standard model (if not provided, list available models)
+#' @param variant name of variant with the model (use "" to get list of available variants)
+#' @return the full path to that model template
 #' @export
-print.VEAvailableModels <- function(x,...) {
-  cat("Available Models:\n")
-  print(as.character(x),...)
-}
-
-#' pretty print a list of variants for a standard model
-#' 
-#' @param x a character vector of variant names with a "Model" attribute naming the model
-#' @param ... Other parameters for generic print function
-#' @export
-print.VEAvailableVariants <- function(x,...) {
-  model <- attr(x,"Model")
-  cat("Available Variants for ",model,":\n",sep="")
-  print(as.character(x),...)
-}
-
-## Look up a standard model
-#  'model' is bare name of standard model
-#  returns the full path to that model template
 findStandardModel <- function( model, variant="" ) {
 
-  pkgs <- utils::installed.packages(fields=c("Package","LibPath"))
-  VE.pkgs <- pkgs[ grep("^VE",pkgs[,"Package"]),"LibPath"] # named character vector of paths
-  modelPaths <- dir(file.path(VE.pkgs,names(VE.pkgs),"models"),pattern="model-index.cnf",recursive=TRUE,full.names=T)
-  modelIndex <- list()
-  for ( confPath in modelPaths ) {
-    index <- try( yaml::yaml.load_file(confPath) )
-    if ( ! "variants" %in% names(index) ) {
-      modelName <- names(index)
-    } else {
-      modelName <- basename(dirname(confPath)) # sub-directory in VEModel/models
-      tmp <- list()
-      tmp[modelName] <- list(variants=index)
-      index <- tmp
-    }
-    # Get here with modelIndex a list of model names, whose elements are a list of model variants
-    for ( m in names(index) ) {
-#      cat("Processing model source:",confPath,":",m,"\n")
-      if ( ! "variants" %in% names(index[[m]]) ) {
-        cat("No variants in",m,"\n")
-        print(names(index[[m]]))
-        next
-      }
-      vars <- index[[m]]$variants
-      if ( length(vars)>0 ) {
-        if ( any(dupes <- names(vars) %in% modelIndex[[m]]) ) {
-          writeLog(paste("Duplicated model variant",paste0(m,":",paste(names(vars)[dupes],collapse=","))),Level="warn")
-        }
-        modelIndex[[m]][ names(vars) ] <- vars
-        for ( v in names(vars) ) {
-          modelIndex[[m]][[v]]$ModelDir <- dirname(confPath)
-        }
-#        cat("Variants in",m,"\n")
-#        print(names(modelIndex[[m]]))
-      } else {
-        cat("No variants in",modelName)
-      }
-    }
-  }
   # COVID-19 Joke
   if ( toupper(variant)=="DELTA" ) return( "Cough, Cough!" )
 
+  modelIndex <- getModelIndex()
+
   if ( missing(model) || is.null(model) || ! nzchar(model)) {
-    available.models <- names(modelIndex)
-    class(available.models) <- "VEAvailableModels"
-    return( available.models )
-  }
+    return( unique(showModelIndex()[,c("Model","Package")]) )
+  }    
 
   # Locate the model
   model <- model[1]
@@ -2618,15 +2580,11 @@ findStandardModel <- function( model, variant="" ) {
 
   # Read the model index to identify variants ("base" should always exist)
   if ( missing(variant) || ! nzchar(variant) || ( ! variant %in% names(modelIndex[[model]]) ) ) {
-    variantMsg <- names(modelIndex[[model]])
-    attr(variantMsg,"Model") <- model
-    class(variantMsg) <- "VEAvailableVariants"
     if ( nzchar(variant) ) { # not in list of variants
-      msg <- writeLog(paste0("Unknown variant '",variant,"'"),Level="error")
-      print(variantMsg)
-      stop(msg)
+      msg <- writeLog(paste0("Unknown variant '",variant,"' in model '",model,"'"),Level="error")
     }
-    return(variantMsg)
+    index_df <- showModelIndex()
+    return(index_df[index_df$Model==model,])
   }
 
   # Load the variant configuration
@@ -2684,8 +2642,8 @@ installStandardModel <- function( modelName, modelPath, confirm=TRUE, overwrite=
   #     they have to try again.
 
   model <- findStandardModel( modelName, variant )
-  if ( ! is.list(model) ) {
-    return(model) # Expecting a character vector of available information about standard models
+  if ( is.data.frame(model) ) {
+    return(model) # Data.frame is a subset of the model index
   } # Otherwise model is a list with details on the model we need to install
 
   if ( ! "Description" %in% names(model) ) model$Description <- paste(modelName,variant,sep="-")
@@ -2710,7 +2668,7 @@ installStandardModel <- function( modelName, modelPath, confirm=TRUE, overwrite=
   # Confirm installation if requested
   install <- TRUE
   if ( confirm && interactive() ) {
-    msg <- paste0("Install standard model '",model$Name,"' into ",installPath,"?\n")
+    msg <- paste0("Install standard model '",model$Name,"' into ",installPath,"?/n")
     install <- confirmDialog(msg)
   }
 
@@ -2870,11 +2828,7 @@ visualize <- function(Model, Query, Year, categories, measures,saveTo,maxMeasure
   # generate the results into a folder with that name inside Model$ResultsDir
   # default saveTo (if not character) is "visualizer" in ResultsDir
 
-  visualizer.json <- character(0)
-
   # Cache the visualizer.json somewhere? Return it?
-
-  return(invisible(visualizer.json))
 }
 
 ################################################################################
@@ -2924,7 +2878,8 @@ VEModel <- R6::R6Class(
     archive=ve.model.archive,               # apply framework archive function if results exist
     results=ve.model.results,               # Create a VEResults object (if model is run); option to open a past result
     findstages=ve.model.findstages,         # Report the path to the model results for a stage
-    query=ve.model.query                    # Create a VEQuery object (or show a list of queries).
+    query=ve.model.query,                   # Create a VEQuery object (or show a list of queries).
+    visual=ve.model.visual                  # Visualize query results on this model
   ),
   active = list(                            # Object interface to "set" function; "set" called explicitly has additional options
     settings=function(Param_ls) {

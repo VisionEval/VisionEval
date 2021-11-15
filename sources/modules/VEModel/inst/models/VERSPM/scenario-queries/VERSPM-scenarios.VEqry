@@ -1,6 +1,7 @@
+# Queries to generate the classic VERSPM visualizer metrics
 QuerySpec <- list(
-
-# All of these are Region queries
+  # All of these are Region queries
+  list()
 
   TotalPop <- sum(Bzone$Pop)  # Summarize
   HhDvmt <- sum(Household$Dvmt) # Summarize
@@ -66,7 +67,6 @@ verspm_output_config_txt <-
   "DISPLAYNAME": "Walk Trips Per Capita",
   "LABEL": "Walk Travel Per Capita",
   "DESCRIPTION": "annual residents walk trips (not including recreation or walk to transit) divided by population",
-  "INSTRUCTIONS": "annual residents walk trips (not including recreation or walk to transit) divided by population",
   "METRIC": "Average",
   "UNIT": "annual trips",
   "NAME": "WalkTravelPerCapita"
@@ -77,10 +77,9 @@ verspm_output_config_txt <-
   "DISPLAYNAME": "CO2 Emissions",
   "LABEL": "CO2 Emissions",
   "DESCRIPTION": "daily metric tons of CO2 emitted by all households.",
-  "INSTRUCTIONS": "daily metric tons of CO2 emitted by all households.",
   "METRIC": "Average",
   "UNIT": "daily metric tons",
-    "NAME": "AirPollutionEm"
+  "NAME": "AirPollutionEm"
 },
 {
   Summarize expression: (sum(Household$DailyGGE) +
@@ -91,10 +90,9 @@ verspm_output_config_txt <-
   "DISPLAYNAME": "Annual Fuel Use",
   "LABEL": "Annual Fuel Use",
   "DESCRIPTION": "annual million gallons of gasoline and other fuels consumed by all light-duty vehicle travel.",
-  "INSTRUCTIONS": "annual million gallons of gasoline and other fuels consumed by all light-duty vehicle travel.",
   "METRIC": "Average",
   "UNIT": "million gallons",
-    "NAME": "FuelUse"
+  "NAME": "FuelUse"
 },
 {
   Summarize expression:
@@ -106,7 +104,6 @@ verspm_output_config_txt <-
   "DISPLAYNAME": "Household Vehicle Cost as Percentage of Income",
   "LABEL": "Vehicle Cost % (All Income)",
   "DESCRIPTION": "average percentage of income spent by all households on owning and operating light-duty vehicles.",
-  "INSTRUCTIONS": "average percentage of income spent by all households on owning and operating light-duty vehicles.",
   "METRIC": "Average",
   "UNIT": "%",
     "NAME": "VehicleCost"
@@ -122,7 +119,6 @@ verspm_output_config_txt <-
   "DISPLAYNAME": "Low Income Household Vehicle Cost as Percentage of Income",
   "LABEL": "Vehicle Cost % (Low Income)",
   "DESCRIPTION": "average percentage of income spent by low-income (< $20,000 USD BaseYear) households on owning and operating light-duty vehicles.",
-  "INSTRUCTIONS": "average percentage of income spent by low-income (< $20,000 USD BaseYear) households on owning and operating light-duty vehicles.",
   "METRIC": "Average",
   "UNIT": "%",
     "NAME": "VehicleCostLow"
