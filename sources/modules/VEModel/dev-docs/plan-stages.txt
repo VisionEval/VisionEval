@@ -1,4 +1,4 @@
-Configuration for stages
+Configuration for stages [ DONE Pretty close to what was implemented ]
 
 stageParam_ls (not strictly a configuration file):
   DONE: StageName identifies the Stage (unique within containing Model)

@@ -715,7 +715,7 @@ ve.query.export <- function(format="csv",OutputDir=NULL,SaveTo=NULL,Results=NULL
     firstResult <-Results$results()[[1]] 
     OutputPath <- firstResult$resultsPath # Results for this scenario
     Param_ls <- firstResult$ModelState()$RunParam_ls
-    if ( needOutputDir ) OutputDir <- visionval::getRunParameter("OutputDir",Param_ls=Param_ls)
+    if ( needOutputDir ) OutputDir <- visioneval::getRunParameter("OutputDir",Param_ls=Param_ls)
     QueryExtractFile <- visioneval::getRunParameter("QueryExtractTemplate",Param_ls=Param_ls)
   } else {
     stop( writeLog("No Query Results to export.",Level="error") )
@@ -1079,7 +1079,9 @@ deepPrint <- function(ell,join=" = ",suffix="",newline=TRUE) { # x may be a list
 }
 
 specOverallElements <- c(
-  "Name", "Description", "Units", "Function", "Summarize", "Require", "RequireNot"
+  "Name", "Description", "Units", "Function", "Summarize", "Require", "RequireNot",
+  # Following for use by the Visualizer:
+  "Export","Displayname","Label","Metric","Xticks","Instructions"
 )
 
 specSummarizeElements <- c(
@@ -1159,6 +1161,8 @@ ve.spec.check <- function(Names=NULL, Clean=TRUE) {
     if ( Clean ) {
       self$QuerySpec[ ! nm.test.spec %in% specOverallElements] <- NULL
     } else {
+      # TODO: extra names should not be an error
+      # Real problem should be required names that are missing
       have.names <- nm.test.spec %in% specOverallElements
       spec.valid <- length(have.names)>0 && all(have.names)
       if ( ! spec.valid ) {

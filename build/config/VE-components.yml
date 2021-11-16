@@ -165,13 +165,19 @@ Components:
 #   # VERSPM has no package dependencies (only an installable model)
 #   VE:
 #      - # TODO: list all the packages used in VERSPM model
-# VEState:
-#   Type: module
-#   Path: sources/modules
-#   Test: { Script: tests/scripts/test.R, Group: 2 }
-#   # VEState has no package dependencies (only an installable model)
-#   VE:
-#      - # TODO: list all packages used in VE-State model
+  VEState:
+    Type: module
+    Path: sources/modules
+    Test: { Script: tests/scripts/test.R, Group: 2 }
+    # VEState has no package dependencies (only an installable model)
+    VE:
+      - VEHouseholdTravel
+      - VEHouseholdVehicles
+      - VEPowertrainsAndFuels
+      - VESimHouseholds
+      - VESimLandUse
+      - VESimTransportSupply
+      - VETravelPerformance
   VETravelDemandMM:
     Type: module
     Path: sources/modules
@@ -183,6 +189,15 @@ Components:
       - splines
       - MASS
       - pscl
+    VE:
+      - VEHouseholdTravel
+      - VEHouseholdVehicles
+      - VELandUse
+      - VEPowertrainsAndFuels
+      - VESimHouseholds
+      - VETransportSupply
+      - VETravelPerformance
+
   VERPAT:
     Type: module
     Path: sources/modules
@@ -192,6 +207,12 @@ Components:
       - jsonlite
     VE:
       - VEHouseholdTravel
+      - VEHouseholdVehicles
+      - VELandUse
+      - VESimHouseholds
+      - VESyntheticFirms
+      - VETransportSupply
+      - VETransportSupplyUse
 
 # "Type: test" components are copied verbatim to "src" environment under its name
 # Need to rethink this...

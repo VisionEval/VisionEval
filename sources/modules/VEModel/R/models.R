@@ -2267,6 +2267,7 @@ ve.stage.watchlog <- function(stop=FALSE,delay=2) {
     }
     if ( file.exists(Logfile) ) {
       writeLogMessage(paste0(self$Name,": Watching Log file"),Level="warn")
+      writeLogMessage(Logfile,Level="info")
       private$log.to.watch <- file(Logfile,blocking=FALSE,open="r")
     }
   }
@@ -2747,14 +2748,14 @@ installStandardModel <- function( modelName, modelPath, confirm=TRUE, overwrite=
 #' @param log a string describing the minimum level to display
 #' @return A VEModel object of the model that was just installed
 #' @export
-installModel <- function(modelName=NULL, modelPath=NULL, variant="base", confirm=TRUE, overwrite=FALSE, log="info") {
+installModel <- function(modelName=NULL, modelPath=NULL, variant="base", confirm=TRUE, overwrite=FALSE, log="warn") {
   # Load system model configuration (clear the log status)
   initLog(Save=FALSE,Threshold=log, envir=new.env())
   model <- installStandardModel(modelName, modelPath, confirm=confirm, overwrite=overwrite, variant=variant, log=log)
-  if ( is.list(model) ) {
+  if ( ! is.data.frame(model) ) { # returns a list if we found a model
     return( VEModel$new( modelPath=model$modelPath ) )
   } else {
-    return( model ) # should be a character vector of information about standard models
+    return( model ) # should be a data.frame of information about standard models
   }
 }
 

@@ -21,8 +21,8 @@ for(Year in getYears()) {
   runModule("AssignVehicleAge",                "VEHouseholdVehicles",   RunFor = "AllYears",    RunYear = Year)
   runModule("CalculateVehicleOwnCost",         "VEHouseholdVehicles",   RunFor = "AllYears",    RunYear = Year)
   runModule("AdjustVehicleOwnership",          "VEHouseholdVehicles",   RunFor = "AllYears",    RunYear = Year)
-  runModule("CalculateHouseholdDvmt",          "VETravelDemandMM",     RunFor = "AllYears",    RunYear = Year)
-  runModule("CalculateAltModeTrips",           "VETravelDemandMM",     RunFor = "AllYears",    RunYear = Year)
+  runModule("CalculateHouseholdDvmt",          "VETravelDemandMM",      RunFor = "AllYears",    RunYear = Year)
+  runModule("CalculateAltModeTrips",           "VETravelDemandMM",      RunFor = "AllYears",    RunYear = Year)
   runModule("CalculateVehicleTrips",           "VEHouseholdTravel",     RunFor = "AllYears",    RunYear = Year)
   runModule("DivertSovTravel",                 "VEHouseholdTravel",     RunFor = "AllYears",    RunYear = Year)
   runModule("CalculateCarbonIntensity",        "VEPowertrainsAndFuels", RunFor = "AllYears",    RunYear = Year)
@@ -36,8 +36,8 @@ for(Year in getYears()) {
     runModule("BudgetHouseholdDvmt",           "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
     runModule("BalanceRoadCostsAndRevenues",   "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   }
-  runModule("CalculateComEnergyAndEmissions",   "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
-  runModule("CalculatePtranEnergyAndEmissions", "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
+  runModule("CalculateComEnergyAndEmissions",  "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
+  runModule("CalculatePtranEnergyAndEmissions","VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   # runModule("CalculateSafetyMeasures",           "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   # In principle, the SafetyMeasures can be computed; in practice, bike miles are not available
   # TODO: debug the safety performance measures and make sure it can work

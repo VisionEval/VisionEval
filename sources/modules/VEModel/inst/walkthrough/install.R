@@ -48,6 +48,7 @@ installModel()
 
 # Show avaialble variants for one of the models
 installModel("VERSPM",var="") # "var" is short for "variant" - you can spell it out
+# Empty string for variant requests the list of available variants for VERSPM
 
 # Install the base variant as "VERSPM" (with a confirm dialog)
 dir("models") # Setup.R already installed and ran "VERSPM-run" (using the "pop" variant - more on that below)

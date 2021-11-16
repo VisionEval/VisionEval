@@ -66,8 +66,8 @@ mini.1$dir()
 #  combinations of inputs, where we are only interested in the model results
 
 mini.1$addstage(
+  Name="AltFuture",
   stageParam_ls=list(
-    Name="AltFuture",
     Dir="AltFuture"
   ),
   Scenario="Mini-Model Alternative Future",
@@ -104,3 +104,7 @@ write.csv(adj.input,row.names=FALSE,file=file.path(stage3.input,basename(scenari
 
 mini.1$run() # Watch closely: will only run the new stage!
 mini.1$run() # just reports each stage status
+
+mini.1$plan("multisession") # Run stages in parallel
+mini.1$run("save") # Move existing results aside to timestamped results folder and re-run
+mini.1$run("reset") # Blow away existing results and re-run the model

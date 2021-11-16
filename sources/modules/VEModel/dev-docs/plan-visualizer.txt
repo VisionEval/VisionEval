@@ -1,3 +1,10 @@
+Saving visualizer creates subdirectory in ResultsDir for model: Visualize-<QueryName>-<Timestamp>
+
+We can subset the visualization for a model by listing just specific categories to include - as
+if those were all that were configured. If we export (instead of visualize) a result subset, we
+get a data.frame/csv/sql for all the levels withing those categories (missing categories are
+treated as if we asked for "Level 0"). Or do we filter Scenarios, which are the actual files...
+
 Break the Query run into layers like the model run: we accumulate the list of reportable stages at
 the overall level, generate a Values structure (all the metrics) for each one of them, and save
 those Values into the QueryResults file for the stage. Then at the Model level, we're also

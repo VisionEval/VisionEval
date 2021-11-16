@@ -1,3 +1,240 @@
+###### Deeper architecture follows:
+
+Set up a stock model variant VERSPM variant="scenario" which installs a couple of scenario
+variant folders - one a ModelStages version that emulates the in-memory version we'll build in
+tests/test.R, and one a Category version that uses the setup from the old VERSPM-scenarios. The
+model should also include queries for making visualizer-friendly metrics.
+
+So the sample model needs:
+  1. ScenarioDir for ModelStages
+  2. ScenarioDir for CategoryStages
+  3. Queries directory with a sample query emulating metrics from original VERSPM metrics
+  4. Base it on the VERSPM-pop variant
+  5. Maybe do a pair of variants: one for "scenario-stages" and one for "scenario-categories"
+  6. They just copy different scenario dir (with different visioneval.cnf and sub-folders)
+  7. Same test data can get copied into each
+
+Things to put into the scenario test:
+  1. In-memory stages added (addstage should let us push it into the file but also the memory
+     RunParam_ls)
+     Visualizer: see each stage added to master "Scenarios" Category/Scenario, and the stage
+     becomes its own level
+  1. Adjust in-memory stages to add an explicit category to them
+     Visualier: see two categories instead of one
+  2. ScenarioDir with ModelStages descriptions of scenarios (same as In-Memory except we've
+     added those specific stages plus StartFrom to the ScenarioDir visioneval.cnf)
+     Visualizer: Should have explicit Categories? or not? Won't differ much from the earlier
+  3. ScenarioDir with Category/Scenario descriptions - spins up 
+     Visualizer: Check for full elaboration of Category/Scenario structure with a bunch of
+     scenarios
+
+Need to finish scenario construction and stage building, and handle all the ways stages can be
+visualized - get the visualizer working first for a set of 1 or more reportable stages and a set of
+measures from that stage (via running a VEQuery on it). Then expand out to more refined types of
+Categories and Scenarios (combination build, including StartFrom).
+
+When we process scenario ModelStages that were build from Category/Scenario, we need to keep the
+list of Scenario/Level for each set of results. The StartFrom stage goes in as a stage where all the
+Levels are set to zero (the "base case"). Levels are only defined for inputs that deviate. Scenarios
+are only built for Categories (which map over to Scenarios). Categories can be made for manual
+scenarios (see below).
+
+If we add a new Category or a new Level (e.g. by way of a new Scenario) we should not have to re-run
+everything. If a new Category appears, we just mark the ModelStage for all the other built stages as
+having Level=0 for that Category so we're done (if a Category/Level is not part of the list of how a
+ModelState scenario was defined, we presume it is Level=0). If a new Level appears, we will build
+that Category/Level scenario in combination with all others and just do the additional stages that
+for combinations of the new Level. Likewise, if we drop a Category (for export or otherwise), we
+just ignore its components and do not build model stages for it.
+
+That suggests that the built name of scenarios for Category/Level should not include explicit
+reference to Level=0 - if the Category/Level was not used for the scenario, the implication is that
+it is the base state. That also means we don't explicitly have to assign Category/Level to the
+StartFrom stage since the default for all Categories is Level=0.
+
+When we are tagging scenario ModelStages for use in the VEData structure for the Visualizer, we look
+at what Categories are requested for the Visualization (default = all defined categories) and we
+only pull scenarios for combinations of the requested Category/Levels (there will always be a "zero
+level" for the missing Category where we just vary the others). So the build tree of category/level
+looks like this:
+
+StartFrom
+C1/L1
+C1/L2
+C2/L1 (level 0 for C1)
+C2/L2
+C2/L3
+C3/L1
+C1/L1/C2/L1 (inclues level 0 for C3)
+C1/L1/C2/L1/C3/L1
+C1/L2/C2/L1
+C1/L2/C2/L1/C3/L1
+C1/L1/C2/L2
+C1/L1/C2/L2/C3/L1
+C1/L2/C2/L2
+C1/L2/C2/L2/C3/L1
+C1/L1/C2/L3
+C1/L1/C2/L3/C3/L1
+C1/L2/C2/L3
+C1/L2/C2/L3/C3/L1
+
+So we just do stages for (just)
+                levels of the first category (L1 stages)
+Then stages for levels of second category (L2 stages)
+Then stages for levels of third category (L3 stages)
+Then stages for levels of first category plus second category (L1 * L2 stages)
+Then stages for levels of first category plus third category (L1 * L3 stages)
+Then stages for levels of first category plus second plus third category (L1 * L2 * L3 stages)
+Then stages for levels of second category plus third category (L2 * L3 stages)
+
+If we add another Category with L4 levels we'll just do another version of each of those stages
+with all combinations of L4 levels, as well as the L4 levels alone. The permutations go up fast,
+but keeping track is easy, and we don't have to rename or redefine anything to run.
+
+We do need to look at the indexing in the Visualizer and make sure we generate the categories
+with the initial Level 0 into categoryconfig. It's all keyed off the Name so we should be good.
+
+VEModel Adjustments
+
+  - Need to update the "dir" and "clear" functions for the model to manage queries. QueryDir
+    contains query templates. They are not managed by "clear" which looks only at results.
+    Need to recognize queries in the ResultsDir and treat those like log files with respect to
+    listing and clearing. Clearing results will take out the QueryRun-*.Rda along with Logs.
+    The Query outputs are .Rda files called QueryRun-<QueryName>.Rda where the QueryName is
+    same one that was loaded to run the query.
+  - VEQuery uses an attached model to manage query results (and we can call up results - which
+    internally calls run if there are no results yet). Do VEQuery$results to get results (report "No
+    Model" if a model is not attached; report "Model run status: X" if the model is not "Run
+    Complete").
+  - Accessing a query through a model automatically attaches the model. Otherwise use
+    VEQuery$model(VEModel object) to attach. Opional Save parameter will create QueryDir for the
+    model (if it doesn't exist) and save to VEQuery name if there is no corresponding .VEqry yet.
+  - Archiving Results should also archive query results (like Log files)
+
+Run ModelStage Punch List:
+
+  - When we run a ModelStage, we need to save key features of the ModelStage into the ModelState.Rda
+    In particular, we want to keep the Scenario/Level list. The RunParam_ls for the ModelStage
+    (if it was built as a scenario) should include the "Scenario/Level" descriptors as
+    built when we identify scenarios - that's the "ScenarioConfig" key described below. Any
+    ModelStage that is a scenario needs to have that key.
+
+Setting up scenario ModelStages:
+
+  - For manual scenarios, the ModelStage should include a "Category" key, referring to the
+    "Categories" tag (which should only contain "NAME", "LABEL" and "DESCRIPTION", not "LEVELS").
+    If there is no Category key, it gets a default one called "Scenarios". If there are Category
+    keys but no "Categories" tag, build the latter from whatever is present (at a minimum, a
+    "Scenarios" category).
+
+  - If no "Scenarios" tag, but "Categories" exists, use that to classify any manual scenarios - drop
+    any Categories that are not referred to by any of the defined ModelStages. If the "Levels"
+    element of "Categories" is provided, only include the scenario ModelStages listed there (by
+    their ModelStage Name) and give it Level=1. The default is to include all scenario model stages
+    as levels in the corresponding Category if no levels are defined for the Category.
+
+  - If "Scenarios" tag exists but no Categories, just do a one-to-one mapping from "Scenarios"
+    to "Categories". Name and Description are elevated from the Scenario Label and Description
+    respectively, and the Category levels just track over to the Scenario/Level list from
+    "Scenarios". Amounts to renaming "Scenarios" into "Categories"
+
+  - If no "Categories" and "Scenarios" are pre-defined:
+      - "Categories" and "Scenarios" tags will be created as the set of unique "Category" tags in
+        each Reportable ModelStage (if no "Category" tag, create a default Category="Scenarios")
+      - Each reportable ModelStage:
+        - Adds a Scenario/Level to the scenarios list (NAME=Scenario Name/Dir, LEVEL=1)
+        - Adds a Category/Level (or just a level to the Categories table)
+          - If the stage has no Category, its category is "Scenarios"
+          - If the stage category does not exist it is created in the categories table
+          - The stage is appended to the list of category levels (NAME = next available number)
+          - The Category level only has one scenario (NAME=ModelStage name, LEVEL=1)
+
+  - If there are both "Categories" and "Scenarios" defined
+      - "Categories" must contain "LEVELS", which is a list of the defined NAME and LEVEL from
+        the "Scenarios" tag
+      - FILES tag goes on "Scenarios", not "Categories" in the visualizer scheme.
+      - The Scenario Name/Level is sought as an input folder in ScenarioDir (paste0(Name,Level))
+        Input path for the Scenario/Level is the corresponding input folder. Description for
+        the Scenario/Level is placed in the "Scenarios" tag.
+      - We build model stages from combinations of Category/Level (where each Category/Level
+        supplies the vector of InputPaths from its Scenario/Level elements as well as the structure
+        that identifies the active set of Scenario/Level for that Scenario ).
+          - Visit all the Scenario/Levels and add InputPath (normalized) and Level NAME
+          - When building a ModelStage for a combination of Category/Level, add the InputPaths
+            of all the Scenario/Levels in the Category/Levels and accumulate a named vector of
+            Scenario/Level
+          - A special "Level 0" is added to the front of the list of Category/Levels, with
+            description "Base Conditions" and Name "0"
+      - The StartFrom stage is also tagged: it is tagged with level zero for each possible
+        Scenario entry
+
+Extracting information from ModelStages:
+
+  - When building a ModelStage from scenario categories, add a "ScenarioConfig" tag to RunParam_ls
+    which is a list of items with the following elements:
+      Name
+      Level
+    Build the Scenario name by concatenating the selected NameLevel for each scenario element. The
+    combinations are composed by permuting the Scenario/Level listed for the category levels.
+    The defined levels in the scenario configuration file will be numbered starting from 1,
+    but there will be a folder with the scenario name joined to the level number for each level
+    of 1 or greater.
+
+  - The only thing we're interested in for creating a runnable stage is the Dir/Name for the
+    ModelStage (build by concatenating the Name+Level for each scenario component) and the InputPath
+    (build by concatenating the normalized directory path for each ScenarioName-Level) and setting
+    the StartFrom, which comes from the overall ScenarioDir/visioneval.cnf or from
+    "CategorySettings" within that file. Generally, the overall StartFrom will refer to a ModelStage
+    in the base model, whereas a stage set in CategorySettings is expected to be a folder-based
+    scenario within ScenarioDir - because StartFrom is only processed after the stages have been
+    loaded (as they are evaluated as "runnable"), it doesn't matter which place "StartFrom" refers
+    to: any runnable ModelStage defined in either place will work (except that in the Category
+    world, the stage does need to be a folder stage - i.e. not one of the auto-generated ones).
+
+  - Add tose tags retroactively (with Level=0 through all the scenario categories) to the
+    StartFrom ModelStage.
+
+  - When exporting data from this scenario for the Visualizer, put out these columns ahead of the
+    query values:
+    "Scenario" : RunParam_ls$Scenario // composed name of this scenario combining category pieces
+    "ScenarionName" : ScenarioLevel
+    // dump the ScenarioConfig tag, using Name (ideally one character) and Level (one
+    // character)
+
+  - When exporting the "scenarioconfig" descriptor for the Visualizer, put out the structure
+    for that file. Note that the Level always includes the StartFrom stage as the first level.
+    So what we need to define in ScenarioDir/visioneval.cnf are just the "extra" levels (so
+    there may only be one additional level defined there).
+     {
+        "NAME": Scenario$Name
+        "LABEL": Scenario$Label
+        "DESCRIPTION": Scenario$OverallDescription
+        "LEVELS": [
+          {
+            "NAME": "0", // auto-generated "no-build"; adds nothing to InputPath
+            "LABEL": "Base",
+            "DESCRIPTION": ["Base Scenario"] // auto-generated
+          },
+          {  // For example... This and subsequent are defined in "Scenario Land"
+            "NAME": "1",
+            "LABEL": "Double divesion",
+            "DESCRIPTION": ["Increase diversion of SOV tours to 20%"]
+          }
+        ]
+      },
+
+  - Generate the output config from the QuerySpecification (just dumping description for up to the
+    first N measures)
+
+  - Generate the category config from the scenario's category descripion (including map to the
+    Scenario/Level elements for each config level.  We'll only generate scenario combinations as
+    needed to do come up with one scenario for each combination of category level (not each
+    combination of scenario level). The Category config needed by the visualizer is pretty much
+    a dump of the (possibly augmented/auto-generated) "Categories" structure in the scenario
+    configuration.
+
+=== Earlier notes follow
+
 Changes to scenario setup to support visualizer:
   Rename the basic unit of scenario input as "Scenarios"
   Rename the units used to build model runs as "Categories"
@@ -341,4 +578,3 @@ Printing the scenarios object will say if scenarios are defined.
   In the VEModel print function, we need to distinguish scenario model stages from those that
     are intrinsic to the base model. We can do that by factoring out ModelStages whose names
     are present/not present in the scenario list
-

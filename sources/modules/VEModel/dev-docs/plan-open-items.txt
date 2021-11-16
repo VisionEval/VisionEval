@@ -1,0 +1,104 @@
+For the visualizer:
+
+  see plan-visualizer.txt
+
+For running models:
+
+  When multiprocessing, a race condition may lead to invalid log file being accessed, leading to an error.
+  The watch log file may not be thread-safe...
+
+BUG: When re-runnign the walkthrough with files already built in another directory, the Datastore
+path ends up wrong. TODO: when we open a ModelState.Rda in a particular working directory, we need
+to look at the actual location of ModelState and the current ve.runtime path and relocate the
+Datastore path in the ModelState.Rda (otherwise it craps out because the path is wrong).
+
+New features:
+  Add a VE package manifest as a hidden file to the runtime root (based on what's in ve-lib)
+  Package manifest initialized for installation based on modules slated for install.
+  Create visioneval::installVEPackages function to install packages and update package manifest
+  Should know about (configure option) the VE repository (DRAT repository just for VE packages)
+  Should be able to update packages from the VE repository (or an alternate).
+    Will update local ve-lib with new dependencies
+    Will add new package
+    Will add VE<package> to the package manifest (should rebuild the manifest from the ground up)
+  Can be used for a local/custom VE repository (new or experimental package)
+
+Make a package for the VE-State model (now VEState model within VEModelhow to write r vignette
+).
+
+  Model package contains:
+    bare model
+    sample model
+    vignettes (module_docs here? Tutorial for model)
+    R directory with extra modules (see VETravelDemandMM or VERPAT)
+    man for modules/module_docs - integrate all that better
+
+Modularize output modules (for data.frames with metadata, mostly from queries)
+  extract function takes a format and dispatches to installed format
+    Iterate across the furnished model stages; get query results for the model stage
+    Pass ModelStage and Query Results to the extractor
+    Don't keep more than one QueryResults in memory at a time - make a list of processed results
+    TODO later: make the installed format list extensible via API/lookup in other packages or runtime tools
+  export function runs the corresponding extractor then generates the output
+    visualizer opens a browser (or saves everything to a subdirectory)
+    csv saves to a file by default
+
+Make "visual" an output format (original plan, return to this approach) for query results.
+
+For walkthrough:
+  Make a slide show of key elements of NextGen
+  Core principles: modular, simple, extensible in every dimension
+  Basic recap
+  Show stuff that works (and hint at the future)
+    Configurations
+    ModelStages
+      Unit that runs
+      Unit that can be interrogated for raw export
+    "Runnable" ModelStage (it's not a model stage if it's not runnable)
+    "Reportable" ModelStage
+    StartFrom stages
+      Share scripts
+      Share earlier results
+    LoadModel / LoadStage that we saw before:
+      Copies over the Datastore from a different model or model stage
+    Scenarios
+      ModelStages
+      Auto-organization (category scenarios - work in progress)
+    Scenarios versus standard stages
+    Reporting on ModelStages and Scenarios
+      SummarizeDatasets (Queries)
+      How to set up queries - examples
+    Exporting Query results
+    Visualizing Query results
+      Standard reportable model stages
+      Category/scenario stages
+      
+Changes to uniform export architecture:
+
+  For VEResults, also improve the export: format can be "csv", "data.frame" (return), or "sql" (where
+  the SQL database DBI connection is provided). The .csv export also produces a metadata file
+  indicating what was selected for export, as is currently the case, and the results go into a
+  timestamped sub-folder.
+
+  So the only difference in exporting VEResults versus exporting a .VEqry is how the data.frame list
+  is generated. We can ask for .VEqry metadata, which does a text dump of the results .Rdata file,
+  without the Value key.
+
+  Internally, VEResults and VEModel can use the same mechanism for generating their output. We start
+  by generating data.frame(s) (a list if more than one), then use the output formatter to generate
+  the return. If we ask for data.frames, they are returned visibly. If we ask for some other format,
+  we get an invisible named list of data.frames (with a special class VEExport that tells "print" to
+  list their names not their values) - probably do that via a class-specific "as.character" function
+  (and an as.data.frame function which just removes the "VEExport" class).
+
+  If we ask for .csv (either exporting a query or extracted tables) then the data.frames are written
+  out to a series of .csv files named after the data.frames. Overwriting is not an issue for .csv
+  since they will just keep piling up in OutputDir.
+
+  If we ask for SQL and provide a connection to a database, the data.frames are written to tables (the
+  names are the data.frame names, only SQL-ized), and if those tables already exist they are first
+  dropped (if overwrite=TRUE) or the transaction is cancelled with an error message (if
+  overwrite=FALSE). For SQL, if instead of a dbiconnecton we provide a filename, a text .SQL file will
+  be generated in a SQL dump format (dropping and recreating tables, and providing INSERT statements
+  to load the data).
+

@@ -18,7 +18,7 @@ Imports:
     filesstrings,
     jsonlite
 Suggests:
-    knitr
+    rmarkdown, knitr
 VignetteBuilder: knitr
 Encoding: UTF-8
 Roxygen: list(load='source')

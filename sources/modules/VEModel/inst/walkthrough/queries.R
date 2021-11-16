@@ -258,7 +258,40 @@ qry$run(rs,OutputRoot=vrb$modelResults)
 
 message("Run the full query on the model...")
 qry <- vrb$query("Full-Query")
-# Full query requires geography specification
-qry$run(vrb,Geography="Marea",GeoValue="RVMPO")
+# Automatically attaches model to query
 
-print(vrb$dir(output=TRUE,all.files=TRUE))
+# Runn
+qry$run()     # uses attached model - will give error if no model attached
+# Query results are added to each stage results
+print(vrb$dir(results=TRUE,all.files=TRUE))
+
+# Running again does as little work as possible
+qry$run(vrb)  # re-attach the model; does nothing if query is up to date
+  # Will re-run for new model stages are present, or if the stage
+  # results had been re-generated
+
+# Can always force a complete re-do
+qry$run(Force=TRUE) # Ignore existing query results and run again
+
+# If you forget what model is attached to the query:
+print(qry$Model) # Shows vrb...
+
+# Explicitly set the query model (without running)
+qry$model(vrb)
+
+# Extract query results from attached model
+# Makes a data.frame from the results files created for each model stage
+# Work in Progress: filter by geography type or specific geography
+# value, filter by Scenario Year, filter by list of measure names
+df <- qry$extract()
+print(df) # rows are meaasures; columns are model stages/scenarios
+
+# Export query results to a CSV file
+qry$export(format="csv") # Default CSV file name in output directory
+vrb$dir(outputs=TRUE)
+
+qry$export() # Does the same thing again, possibly overwriting (file is timestamped)
+vrb$dir(outputs=TRUE)
+
+qry$export(format="csv",SaveTo=paste0("TestQuery_%timestamp%",qry$Name)) # use our own file name template
+vrb$dir(outputs=TRUE)

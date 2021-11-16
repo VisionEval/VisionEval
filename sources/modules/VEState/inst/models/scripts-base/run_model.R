@@ -40,7 +40,7 @@ for(Year in getYears()) {
     runModule("BudgetHouseholdDvmt",           "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
     runModule("BalanceRoadCostsAndRevenues",   "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
   }
-  runModule("CalculateComEnergyAndEmissions",   "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
-  runModule("CalculatePtranEnergyAndEmissions", "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
+  runModule("CalculateComEnergyAndEmissions",  "VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
+  runModule("CalculatePtranEnergyAndEmissions","VETravelPerformance",   RunFor = "AllYears",    RunYear = Year)
 }
 message('VE-State: Run Complete\n')

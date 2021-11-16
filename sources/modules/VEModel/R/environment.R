@@ -524,7 +524,7 @@ showModelIndex <- function(reset=FALSE) {
         modelSources$Model <- c(modelSources$Model,m)
         modelSources$Variant <- c(modelSources$Variant,v)
         modelSources$Package <- c(modelSources$Package,attr(modelIndex[[m]][[v]],"Package"))
-        writeLog(paste("Added model",m,"Variant",v,"\n"),Level="info")
+        writeLog(paste("Added model",m,"Variant",v),Level="info")
       }
     }
   }
