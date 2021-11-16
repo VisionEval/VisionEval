@@ -58,7 +58,7 @@ evalq(
   }
 
   # Get VisionEval release version (used in installer file.names
-  ve.version <- Sys.getenv("VE_VERSION","2.0")
+  ve.version <- Sys.getenv("VE_VERSION","3.0")
   cat("Building VisionEval version",ve.version,"\n")
 
   # Specify dependency repositories for known R versions
