@@ -5,67 +5,22 @@ if those were all that were configured. If we export (instead of visualize) a re
 get a data.frame/csv/sql for all the levels withing those categories (missing categories are
 treated as if we asked for "Level 0"). Or do we filter Scenarios, which are the actual files...
 
-Break the Query run into layers like the model run: we accumulate the list of reportable stages at
-the overall level, generate a Values structure (all the metrics) for each one of them, and save
-those Values into the QueryResults file for the stage. Then at the Model level, we're also
-accumulating the Values into a list by stage. Further simplification: don't save the stage query
-results - just stick all of them into the model level results. Obviously, when we run the query,
-we should be able to give a list of stages (to override the default Reportable ones).
+Choosing breaks and geography happens when we export the query results. Can also choose exportable
+measures (default is all for tabular formats, but Reportable for visualizer - we'll pick off the
+format to determine that before calling a format function - certain formats are "special cases").
 
 The Category/Level structure for a generated scenario should be retained in the scenario's
-ModelStage RunParams_ls so we have it ready to generate the visualizer files.
+ModelStage RunParams_ls so we have it ready to generate the visualizer files. There should be
+defaults when we ask for those (Category = "Scenarios", Level descriptor based on model stage
+position in the model list).
 
-The query will do all breaks and all geographies. Only one Sub-regional geography can be specified
-(Azone or Bzone). but we can filter the metrics to only include certain zones.
+By going through the export function for query, we can pick specific stages (special value
+"Scenarios"), specific metrics (default = Reportable)
 
-And we can filter a subset of the metrics or a subset of the stages after the query is run.
+The Visualizer HTML should show the Timestamp for the query run that generated the results that are being
+displayed.
 
-When we run a query, we generate VEQueryResults for each VEResults object and save that out into the
-VEResults output path (query and date). Done like that, we can just save the query spec and add a
-"Value" structure into the list. The "Value" structure is just a nested list with a single numeric
-value (named after the Metric) if it is scalar, with a named numeric vector if there is either a set
-of zones or a set of breaks, and a named array if there is a set of zones AND a set of breaks. We'll
-flatten the array or vector into multiple rows when exporting into CSV or data.frame or when
-visualizing.
-
-It would be nice to be able to subset VEQueryResults. Get a list of metric fields defined in the
-results and then provide a vector of names to create a VEQueryResult with just the named metrics
-in it (reduce both the QuerySpecification and the Results list). We have to give the extract a name
-(it will also get a new Timestamp) and it gets saved. Likewise, we may also wish to limit to 
-a smaller set of ModelStages.
-
-A VEQueryResults is a sub-class of VEQuery. VEQueryResults can handle two cases: the results for
-running the query on a specific set of VEResults (a model stage), or the results for running the
-query on a model (with a set of model stages). Perhaps they could just be one form: the list of
-ModelStages may have length 1, and there is the OPTIONAL Values list, which has the same number of
-elements as the number of Stages. Typically, it will only be present for results associated with a
-single model stage, but that gives us the option to package the entire set of results in one single
-.Rda file that we can reopen ("openQueryResults") and then work on, even if the model and
-directories are not available. That's one way of bundling the results in a quasi-portable form.
-
-And a VEQueryResults differs from VEQuery in that it has ModelStage names, Timestamp, and Values.
-Probably also want to track what VEModel it's associated with (and the model's ResultsDir and
-each ModelStage's StageDir). We need the VEModel in order to access ScenarioCategory information -
-or that information (the Categories and Levels in particular, with their ScenarioGroup element)
-could also be included alongside the ModelStages.
-
-For the single model stage, the results are stored in a named list of Value elements, which will be
-a named numeric vector (length 1 or more) or a named numeric array (with 2 dimensions). The
-VEQueryResults also has a Timestamp corresponding to when the query was run (a conventional time
-from calling VEQuery$run).
-
-For the set of model stages (full model with direct stages or scenarios), the VEQueryResults stores
-a list of ModelStages - their Name and RunPath - and the Timestamp (no Values - those are acquired
-indirectly by visiting each of the ModelStages.
-
-When a Query is run, the Query results are saved in the ResultsDir (for a Model with scenarios) or
-in the ResultsDir/StageDir (for a single model stage). The results are always saved in a file called
-Query-<QueryName>-Timestamp.Rda (an RData file).
-
-We can ask a VEModel for its query results (list of all available results) or a list of its known
-queries (which may or may not have results). Or we can ask a VEQuery for its results given a
-particular model (or run it on that model). We can open Query results directly by providing the file
-path (which implies a RunPath, a ModelState and thus a Model).
+# Implement the following with new data format architecture
 
 With VEQueryResults, we have two options: export(data.frame return, CSV file, Tableau CSV(s),
 Visualizer) or visualize (function which uses JRC to launch the Visualizer). Exports go into
@@ -75,40 +30,6 @@ named Query-<QueryName>-Visualizer-<Timestamp>, and inject a script command into
 body that will load the visualizer.js file. The .js could include "VisualVE" function call at the
 end after the required data has been defined - so it's just one line of Javascript that we could
 insert through a template substitution into the same HTML used by the JRC "live" visualizer.
-
-The Visualizer HTML should show the Timestamp for the query run that generated the results that are being
-displayed.
-
-So then we can just use the SummarizeDatasets at a very low level to inject the results directly
-into the QuerySpec, which we can then save out (along with metadata indicating that this QuerySpec
-contains run results). That result obeject will be written into
-VEResults$Path/OutputDir/QueryName-TimeStamp.veqry. If we load a VEQry that has run results, it just
-loads as a query. Any editing will remove all the results (and we can re-save it). If we visit
-multiple results, their query results all get the same TimeStamp, and the model and its scenarios
-get (in the Model's ResultsDir/OutputDir) a timestamp for the query run (present in all stages that
-completed). The .veqry output in that case lists ModelStage Results that were processed by the query
-run (by ModelStage Dir) as well as the QuerySpec. So if we load the Query object in the model
-results, it will assemble all the stage results.
-
-Need to ponder the management a bit: a QuerySpec is rather model-independent. a QueryRun (in
-OutputDir/queries) contains the QuerySpec used to generate the results, plus the results themselves.
-The results for a single stage are a "Value" element in the QuerySpec list structure itself - and
-we probably want to do a "save.image" with a list of objects and have the results stored as .Rdata
-files. The results for a set of scenarios contains the key elements of the scenario setup: the
-model stages (and their directory locations), the Timestamp identifying the Query Run, and the
-Categories and Levels if they are available.
-
-From there, we can export into a variety of formats:
-  1. (export) Query metadata (row = metric, columns = metadata)
-  2. (export) Query values as CSV (row=flattened metric (zones,breaks), column=value)
-  3. (export) Query values as Tableau format (possibly multiple files, key structure)
-  4. (export) Visualizer (writes an entire local HTML hierarchy like VEScenario did)
-  5. (visualize) Query values as Visualizer javascript (single file defining Javascript data objects for
-     VisualVE plus function call to force the page). Visualizer uses a different base page
-     depending on whether it is looking at the VEQuery result for
-     a. one scenario
-     b. a set of manual (ModelStage or folder) scenarios, or
-     c. a set of Category/Level scenarios
 
 Could just distribute the query results (as QueryName-Timestamp) directly into the Stage's RunPath.
 And if we run for a model (with or without scenarios), we generate a QueryName-Timestamp in the
@@ -121,18 +42,8 @@ the associated stage or model. We have a framework function to Visualize such a 
 apply the $visualize function to an unexported VEQueryResults object loaded from a time-stamped
 run).
 
-If we have a VEQuery open, we can give it a model and either run the Query again or report on
-existing runs in the Model's ResultsDir (and even report if it's out of date by looking at the
-model last run timestamp compared to query results timestamp) and then open one of those.
-
-Once we have the VEQueryResults, we can export or visualize. Very nice workflow!
-
 When handling scenario groups - if no scenario group is listed for a category, the category is
 promoted to a one-category scenario group.
-
-So running a query on a VEResults object creates a VEQueryResults which contains a reference to the
-VEQuery (which defines the metrics that get generated) and a reference to the VEResults object used
-to generate the data. So the basic query on the results
 
 If we run a Query on a model with VEModelScenarios, then all the Reportable stages in the model are
 processed (we get one VEQueryResults for each stage) and the run returns a VEQueryScenarios object

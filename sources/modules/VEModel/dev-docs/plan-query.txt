@@ -1,3 +1,15 @@
+From there, we can export into a variety of formats:
+  1. (export) Query metadata (row = metric, columns = metadata)
+  2. (export) Query values as CSV (row=flattened metric (zones,breaks), column=value)
+  3. (export) Query values as Tableau format (possibly multiple files, key structure)
+  4. (export) Visualizer (writes an entire local HTML hierarchy like VEScenario did)
+  5. (visualize) Query values as Visualizer javascript (single file defining Javascript data objects for
+     VisualVE plus function call to force the page). Visualizer uses a different base page
+     depending on whether it is looking at the VEQuery result for
+     a. one scenario
+     b. a set of manual (ModelStage or folder) scenarios, or
+     c. a set of Category/Level scenarios
+
 Make sure BreakNames are getting set up properly (once per query spec prior to doQuery).
 
 Make sure we can include arbitrary additional named elements in the query spec list that are used
@@ -56,19 +68,17 @@ both, with control via a reset flag (or more nuanced run strategy). Perhaps inte
 VEQuery for the first one defined for the model? Can get into some time-consuming BS, so maybe
 don't want to run by default.
 
+Add diagnostic to put GeoType onto function specification.
+
 Query Punch List:
 
   - Change Geography not to include specific zones (GeoValue). Just include GeoType - and only
     process metrics compatible with that type (interior conversion). This will need clean-up
     later.
 
-  - Change the VEQuery $run function to deal exclusively with its attached model. We can provide a
-    list of ModelStage names, in which case the VEQuery will only be run for those (and we do not
-    update the VEModel root results) - intended to re-do a particular scenario. So you can fix one
-    scenario within hundreds (if a particular scenario/level was wrong on input).
-
   - Make the VEQuery much more particular about what it processes. It needs an attached model,
-    and it can be told only to run on certain stages.
+    and it can be told only to run on certain stages (default=Reportable). Export can also specify
+    stages.
 
   - Basic approach is to take a VEModel object, run its $query function supplying the path of
     a query (relative to modelPath/QueryDir or a full path). The result of that is a VEQuery object
@@ -109,7 +119,7 @@ Query Punch List:
     defaults to TRUE for .csv and visualize to a "file", and FALSE/ignored for data.frame
     and SQL).
 
-  - Can $clear VEQueryResults.
+  - Can $clear VEQueryResults for a stage (model$clear function)
 
   - Can extract a VEQuery from a VEQueryResults ($query function recovers the original
     query from the version saved in the results).
@@ -165,8 +175,6 @@ Query Punch List:
      - For JRC management, we keep the web socket as a field in the VEModel. If there is something
        already in that field, we start by closing it and then recreate everything from the ground
        up.
-
-Don't use the .VEqry suffix for the query output .Rdata - just make it an .Rdata file.
 
 In the .Rdata file, The QuerySpecification list for the Query is joined by a "Value" object which
 contains either a scalar, named vector or named matrix/array (convention for which is the first

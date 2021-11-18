@@ -5,6 +5,9 @@ variant folders - one a ModelStages version that emulates the in-memory version 
 tests/test.R, and one a Category version that uses the setup from the old VERSPM-scenarios. The
 model should also include queries for making visualizer-friendly metrics.
 
+Need a model stage scenario variant that includes altered input files. Test needs to ensure
+that InputPath is being implemented correct for the stages.
+
 So the sample model needs:
   1. ScenarioDir for ModelStages
   2. ScenarioDir for CategoryStages
@@ -58,6 +61,8 @@ only pull scenarios for combinations of the requested Category/Levels (there wil
 level" for the missing Category where we just vary the others). So the build tree of category/level
 looks like this:
 
+expand.grid does what we need, but must have the zero level explicit (we drop it again)
+
 StartFrom
 C1/L1
 C1/L2
@@ -109,7 +114,14 @@ VEModel Adjustments
   - Accessing a query through a model automatically attaches the model. Otherwise use
     VEQuery$model(VEModel object) to attach. Opional Save parameter will create QueryDir for the
     model (if it doesn't exist) and save to VEQuery name if there is no corresponding .VEqry yet.
-  - Archiving Results should also archive query results (like Log files)
+  - Archiving Results should also archive query results (like Log files) - and outputs should also
+    probably come along for the ride generally.
+  - Copying a model has the option to copy its results and dataset. If we have the model name in
+    the results ModelState.Rda, it needs to change, as does the ModelDir and everything derived from
+    it - that's also the case with just archiving the results (make sure RunPath is correct - the
+    archive should look just like results that were genereated if ResultsDir = ArchiveDir).
+  - Suggests we need a function to operate on the ModelState and fix everything up (certain
+    parameters get replaced and rebuilt).
 
 Run ModelStage Punch List:
 
@@ -377,9 +389,6 @@ The scenarios become "part" of the model they are attached to. The model (baseMo
 of the scenario management object, so certain model functions (like reloading the model or running
 the scenarios) can be performed by acting on the set of scenarios.
 
-TODO: keep track of whether the scenarios are explicit (implemented as model stages) or
-  categories. Changes how $files works and what happens when we $build (and whether we
-  can $add a scenario).
 TODO: develop VEModelScenario$add function to add a manual scenario; creates a folder
   and drops visioneval.cnf into it (with InputPath set) pivoting off BaseModel/StartFrom.
 TODO: add nuance to "files" function; if we're doing manual scenarios, then we need
