@@ -180,14 +180,17 @@ test_install <- function(modelName="VERSPM",variant="base",installAs="",log="inf
 test_all_install <- function() {
 
   testStep("Installing all models")
-  models       <- test_install("")               # List available models
-  variants <- list(                              # List available variants
+  models   <- test_install("")               # List available models
+  models   <- unique(models$Model)           # Vector of available model names
+  variants <- list(                          # List available variants
     "VERSPM"   =test_install("VERSPM",var=""),
     "VERPAT"   =test_install("VERPAT",var=""),
     "VE-State" =test_install("VE-State",var="")
   )
+  variants <- lapply(variants,function(v) v$Variant)
 
-  installed <- lapply(
+  browser()
+  installed <- sapply(
     models,
     function(m) {
       cat("\nInstalling model",m,"\n")

@@ -464,9 +464,8 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
     }
 
     scenarioStages <- list()
-#     Disabling model scenarios until we rebuild the parameters source tracking
-#     scenarios <- self$scenarios(fromFile=fromFile)  # re-create VEModelScenario object from file
-#     scenarioStages <- scenarios$stages()            # scenario stages may be an empty list
+    scenarios <- self$scenarios(fromFile=fromFile)  # re-create VEModelScenario object from file
+    scenarioStages <- scenarios$stages()            # scenario stages may be an empty list
 
     # It is possible for a model to ONLY have scenarios (if they are "manually" created)
     # Each "scenario" in that case must be a complete model run
@@ -1803,8 +1802,8 @@ ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
   }
   cat("Status:", self$printStatus(),"\n")
   if ( private$p.valid ) {
-    scenarioStages <- sapply( self$modelStages, function(s) s$Scenario )
-    cat("Model Stages:/n")
+    scenarioStages <- sapply( self$modelStages, function(s) !is.null(s$ScenarioData) )
+    cat("Model Stages:\n")
     for ( s in self$modelStages[ ! scenarioStages ] ) {
       s$print(details,configs)
     }
@@ -1819,8 +1818,8 @@ ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
         }
       }
     } else if (scenarioCount > 0 && is.null(self$modelScenarios) ) {
-      cat("Program error: scenarioCount",scenarioCount,"but modelScenarios is NULL/n")
-    } else cat("No scenarios defined./n")
+      cat("Program error: scenarioCount",scenarioCount,"but modelScenarios is NULL\n")
+    } else cat("No scenarios defined.\n")
   }
   private$p.valid
 }
@@ -2484,7 +2483,7 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
 #     cat("QueryDir:"); print(QueryDir)
 #     cat("Query Directory:"); print(QueryPath)
 #     cat("Query Directory Exists:"); print(dir.exists(QueryPath))
-#     cat("Available Queries:/n")
+#     cat("Available Queries:\n")
     queries <- dir(QueryPath,pattern="//.(VEqry|R)$",ignore.case=TRUE)
     if ( length(queries)==0 ) queries <- "No queries defined"
     return(queries)
@@ -2677,7 +2676,7 @@ installStandardModel <- function( modelName, modelPath, confirm=TRUE, overwrite=
   # Confirm installation if requested
   install <- TRUE
   if ( confirm && interactive() ) {
-    msg <- paste0("Install standard model '",model$Name,"' into ",installPath,"?/n")
+    msg <- paste0("Install standard model '",model$Name,"' into ",installPath,"?\n")
     install <- confirmDialog(msg)
   }
 

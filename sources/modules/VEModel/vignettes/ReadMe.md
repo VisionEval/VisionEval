@@ -1,7 +1,21 @@
+---
+title: "Overview of the VisionEval End-User API"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
 # Vignettes go here.
 
 Vignettes will be a better form for documenting VEModel than the R help system (which focuses on
 individual functions and doesn't do well with R6 classes).
 
-Build the vignettes from narrative wrapped around the walkthrough.
+Build the vignettes from a narrative wrapped around the walkthrough.
 
+Some topics for vignettes:
+  1. Installing and running a sample model
+  2. Looking at model vignettes for instructions on how to localize them
+  3. Using the VEModel API
+  4. Extracting data from VE model runs
