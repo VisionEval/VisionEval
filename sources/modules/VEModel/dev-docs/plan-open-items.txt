@@ -1,3 +1,14 @@
+For building parameter lists
+  Since RunParam_ls is a list, each of its elements is an object that can carry attributes.
+  So rather than keep a data.frame on the list of parameters, just make sure that each
+  parameter has a "source" attribute. Then we can move them around with much less trouble
+  (and the Source we provide along the way is "advisory"; use the one already on the
+  parameter unless we reset it explicitly).
+  That will require revisiting the visioneval framework parameter manipulation functions,
+  then how we use them throughout. It will greatly simplify everything ultimately.
+
+  Let's first get to a working place (drop the scenarios business from model initialization)
+
 For the visualizer:
 
   see plan-visualizer.txt

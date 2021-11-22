@@ -1,3 +1,14 @@
+## Rethink on loading scenarios:
+
+# Load the RunParameters for the ScenarioDir (if no scenario dir, then no scenarios)
+  - Overlay onto base model run parameters
+
+# Set the StartFrom for the scenarios (from the base model).
+  - Explicit StartFrom in the ScenarioDir/visioneval.cnf
+  - Implicit StartFrom as the last Reportable stage in the base model
+# Load te
+
+
 ###### Deeper architecture follows:
 
 Set up a stock model variant VERSPM variant="scenario" which installs a couple of scenario

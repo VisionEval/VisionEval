@@ -222,6 +222,11 @@ viewSetup <- function(object=NULL,Param_ls=NULL,fromFile=FALSE,...) {
   } # else view Param_ls from function parameters
   Paraml <- yaml::as.yaml(Param_ls)
   cat(Paraml,...)
+  # TODO: any way to add the parameter source as a comment to the YAML?
+  # Since only the top level YAML elements have a source (their inner components don't)
+  # we could just look at the top level names (pick them back out) line by line in the
+  # generated YAML, look up the item name, and then get its source...
+  # Add a "viewSource" parameter set to FALSE by default to trigger that deeper dive
 }
 
 #UPDATE SETUP
@@ -440,7 +445,7 @@ initLog <- visioneval::initLog
 # ===============================================
 # List unique sources in a parameter list
 uniqueSources <- function(Param_ls,shorten=NULL) {
-  sources <- attr(Param_ls,"source")
+  sources <- sapply(Param_ls,function(p) attr(p,"source"))
   if ( is.null(sources) ) {
     writeLog("'sources' attribute is null in uniqueSources",.traceback(1),Level="info")
     sources <- "NULL"

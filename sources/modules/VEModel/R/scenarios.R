@@ -21,7 +21,7 @@ ve.scenario.init <- function( baseModel=NULL, fromFile=FALSE ) {
   self$scenarioPath <- normalizePath(file.path(self$baseModel$modelPath,self$scenarioDir))
   if ( dir.exists(self$scenarioPath) ) {
     self$load(fromFile=fromFile)
-  }
+  } # else there are no scenarios apart from baseModel stages
 }
 
 # Load scenario's visioneval.cnf (constructing self$RunParam_ls and self$loadParam_ls)
@@ -33,13 +33,21 @@ ve.scenario.load <- function(fromFile=FALSE) {
     visioneval::loadConfiguration(ParamDir=self$scenarioPath, mustWork=FALSE)
   } else list()
 
-  # Layer in the base model run parameters as basis for scenarios
-  # Must ignore keys that we may read for Scenarios that are distinct from base model
-  scenarioParams <- c("ModelStates","Categories","Scenarios")
-  baseParam_ls <- self$baseModel$RunParam_ls[ ! names(self$baseModel$RunParam_ls) %in% scenarioParams ]
+  # Layer in the base run parameters as basis for scenarios
+
+  # If StartFrom is defined in the scenario RunParam_ls, use the parameters from that stage as the
+  # basis for the current scenarios. Otherwise, just load the parameters from the base model.
+  if ( "StartFrom" %in% names(self$loadedParam_ls) ) {
+    startFrom <- baseModel$modelStages[[ self$loadedParam_ls$StartFrom ]]
+    baseParam_ls <- startFrom$RunParam_ls
+    # Drop keys that we will force stages here to define
+    baseParam_ls <- baseParam_ls[ - which( names(baseParam_ls) %in% c("Scenario","Description") ) ]
+  } else {
+    baseParam_ls <- baseModel$RunParam_ls
+  }
 
   # Now add the loaded scenario parameters (scenarioParams, but possibly others)
-  modelParam_ls <- visioneval::mergeParameters(self$baseModel$RunParam_ls,self$loadedParam_ls)
+  modelParam_ls <- visioneval::mergeParameters(baseParam_ls,self$loadedParam_ls)
 
   # Load different types of scenarios and build ModelStages for them
   writeLog("Loading model Scenarios",Level="info")
@@ -73,9 +81,8 @@ ve.scenario.load <- function(fromFile=FALSE) {
     # Get CategorySettings if any and overlay on self$RunParam_ls for use in building these stages
     # Only present to support setting a StartFrom from among the explicit ModelStages in the
     # ScenarioDir - that stage will always use a StartFrom from the BaseModel (or have no start
-    # from). All tahe Category/Scenario stages will StartFrom the CategorySetting/StartFrom
-    if ( "StartFrom" %in% names(modelParam_ls$Categories) ) {
-      categoryParam_ls <- visioneval::addParameterSource(list(StartFrom=modelParam_ls$Categories$StartFrom),Source="Category Setting")
+    # from). All the Category/Scenario stages will StartFrom the CategorySetting/StartFrom
+    if ( "StartFrom" %in% names(modelParam_ls$Categories) ) {addr
       modelParam_ls <- visioneval::mergeParameters(modelParam_ls,categoryParam_ls)
       # Set the StartFrom (if any) to use for the individual categories
       # Supports starting from an explicit ModelStage defined in ScenarioDir
@@ -225,7 +232,9 @@ ve.scenario.load <- function(fromFile=FALSE) {
     )
   }
   self$RunParam_ls <- modelParam_ls # save scenarios RunParam_ls
-  # Get here with self$modelStages containg a list of VEModelStage objects
+  # Get here with self$modelStages containing a list of VEModelStage objects
+  # Plus a table we can use to extract the Category/Level status of each model stage,
+  # including the StartFrom stage.
 }
 
 # Return the scenario ModelStages

@@ -81,7 +81,8 @@ initializeModel <- function(
   # Perform classic model initialization steps if runnign "standalone"
 
   # Initialize ve.model$ModelState_ls and ve.model$RunParam_ls
-  RunParam_ls <- getModelParameters(DotParam_ls=list(...), DatastoreName, LoadDatastore)
+  DotParam_ls <- addParameterSource(list(...),"visioneval::initializeModel")
+  RunParam_ls <- getModelParameters(DotParam_ls, DatastoreName, LoadDatastore)
 
   # Archive previous results if SaveDatastore true in RunParam_ls and previous results exist
   archiveErrors <- archiveResults(RunParam_ls=RunParam_ls)
@@ -199,6 +200,7 @@ getModelParameters <- function(DotParam_ls=list(),DatastoreName=NULL,LoadDatasto
   # Incorporate existing run parameters from model environment
   # getModelParameters is typically only called for a classic source("run_model.R") execution
   ve.model <- modelEnvironment()
+  Source <- "visioneval::getModelParameters()"
   Param_ls <- if ( "RunParam_ls" %in% names(ve.model) ) {
     ve.model$RunParam_ls
   } else {
@@ -207,15 +209,17 @@ getModelParameters <- function(DotParam_ls=list(),DatastoreName=NULL,LoadDatasto
 
   ModelDir <- getRunParameter("ModelDir",Default=".",Param_ls=Param_ls) # Default is working directory
   if ( ! "ModelDir" %in% names(Param_ls) ) {
-    Param_ls$ModelDir <- normalizePath(ModelDir,winslash="/",mustWork=FALSE)
+    Param_ls <- addRunParameter(Param_ls,Source=Source,
+      ModelDir=normalizePath(ModelDir,winslash="/",mustWork=FALSE)
+    )
   }
 
   # Propagate explicit arguments into DotParam_ls
   if ( is.character(DatastoreName) ) { # the function parameter, not the Run Parameter
-    DotParam_ls[["LoadDatastoreName"]] <- DatastoreName
+    DotParam_ls <- addRunParameter(DotParam_ls,Source=Source, LoadDatastoreName=DatastoreName)
   }
   if ( ! "LoadDatastore" %in% names(DotParam_ls) ) {
-    DotParam_ls[["LoadDatastore"]] <- LoadDatastore;
+    DotParam_ls <- addRunParameter(DotParam_ls,Source=Source, LoadDatastore=LoadDatastore)
   }
 
   # Always keep "Region", "BaseYear" and "Years" from configuration files (not manual override)
@@ -227,7 +231,6 @@ getModelParameters <- function(DotParam_ls=list(),DatastoreName=NULL,LoadDatasto
   }
 
   # Merge DotParam and configuration file with "safe" parameters from runtime
-  DotParam_ls <- addParameterSource(DotParam_ls,"initializeModel(...)")
   RunParam_ls <- loadConfiguration(ParamDir=ModelDir,keep=Param_ls,override=DotParam_ls)
 
   # Look for defs along InputPath, and run_parameters.json.
@@ -239,27 +242,37 @@ getModelParameters <- function(DotParam_ls=list(),DatastoreName=NULL,LoadDatasto
   
   if ( ! "ModelScriptPath" %in% names(RunParam_ls) ) {
     if ( "ModelScriptFile" %in% names(RunParam_ls) ) {
-      RunParam_ls$ModelScriptPath <- normalizePath(file.path(RunParam_ls$ModelDir,RunParam_ls$ModelScriptFile),winslash="/",mustWork=FALSE)
+      RunParam_ls <- addRunParameter(RunParam_ls,Source=Source,
+        ModelScriptPath=normalizePath(file.path(RunParam_ls$ModelDir,RunParam_ls$ModelScriptFile),winslash="/",mustWork=FALSE)
+      )
     }
   }
 
   # If ResultsDir is not present in RunParam_ls, set it to the current directory (classic version)
-  if ( ! "ResultsDir" %in% names(RunParam_ls) ) RunParam_ls[["ResultsDir"]] <- "."
+  if ( ! "ResultsDir" %in% names(RunParam_ls) ) {
+    RunParam_ls <- addRunParameter(RunParam_ls,Source=Source,ResultsDir=".")
+  }
 
   # Set up default InputPath, ParamPath and DatastorePath
   if ( ! "InputPath" %in% RunParam_ls ) {
-    RunParam_ls$InputPath <- normalizePath(
-      file.path(RunParam_ls$ModelDir,getRunParameter("InputDir",Param_ls=RunParam_ls)),
-      mustWork=FALSE,winslash="/"
+    RunParam_ls <- addRunParameter(RunParam_ls,Source=Source,
+      InputPath=normalizePath(
+        file.path(RunParam_ls$ModelDir,getRunParameter("InputDir",Param_ls=RunParam_ls)),
+        mustWork=FALSE,winslash="/"
+      )
     )
   }
   if ( ! "ParamPath" %in% RunParam_ls ) {
-    RunParam_ls$ParamPath <- normalizePath(
-      file.path(RunParam_ls$ModelDir,getRunParameter("ParamDir",Param_ls=RunParam_ls)),
-      mustWork=FALSE,winslash="/"
+    RunParam_ls <- addRunParameter(RunParam_ls,Source=Source,
+      ParamPath=normalizePath(
+        file.path(RunParam_ls$ModelDir,getRunParameter("ParamDir",Param_ls=RunParam_ls)),
+        mustWork=FALSE,winslash="/"
+      )
     )
   }
-  if ( ! "DatastorePath" %in% RunParam_ls ) RunParam_ls$DatastorePath <- RunParam_ls$ResultsDir
+  if ( ! "DatastorePath" %in% RunParam_ls ) {
+    RunParam_ls <- addRunParameter(RunParam_ls,Source=Source,DatastorePath=RunParam_ls$ResultsDir)
+  }
 
   # Check for any other missing parameters
   if ( length( missingParams <- verifyModelParameters(RunParam_ls) ) > 0 ) {

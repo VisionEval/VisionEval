@@ -69,28 +69,14 @@ modelRunning <- function(envir=modelEnvironment()) {
 #' locations for additional configuration information (e.g. model run_parameters in a
 #' non-standard model directory).
 #'
-#' Since cascading run parameters sometimes make it hard to determine where a parameter value
-#' came from, you can use the logSource=TRUE option to figure out where any particular parameter
-#' was defined.  Just run this command from your console after you have run your model (or after
-#' it crashed):
-#' \code{
-#' visioneval::getRunParameter("BadParameter",Default="Default",ve.model$RunParam_ls,logSource=TRUE)
-#' }
-#' You can also replace ve.model$RunParam_ls with some other list of run parameters (e.g. the
-#' RunParam_ls froma ModelState loaded in a VEModel object). To view the entire set of sources for a
-#' list of run parameters, just retrieve \code{attr(RunParam_ls,"source")}. see
-#' readConfigurationFile for more information on the "source" attribute of run parameters.
-#'
 #' @param Parameter character vector (length one) naming Parameter to retrieve
 #' @param Param_ls a list of run parameters to look within (otherwise RunParam_ls from
 #' "ve.model" environment if it exists, and if not just an empty list.
 #' @param Default is the value to provide if Parameter is not found in RunParam_ls
-#' @param Source re-add the parameter source to the value returned (see \code{addRunParameter})
-#' @param logSource a logical (default=FALSE); if TRUE, write an info-level log message reporting the
 #' source for the parameter value
 #' @return A parameter value or its default if not set
 #' @export
-getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,Source=FALSE,logSource=FALSE) {
+getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA) {
   param.source <- NULL
   defaultParams_ls <- list()
   defaultMissing <- missing(Default)
@@ -103,46 +89,27 @@ getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA,Source=FALSE,logS
     ve.model$VERuntimeDefaults <- defaultVERunParameters(defaultParams_ls)
   }
   if ( ! is.list(Param_ls) ) { # if provided, look only there, otherwise in ve.model
-    param.source <- "ve.model$RunParam_ls"
     Param_ls <- get0("RunParam_ls",envir=ve.model,ifnotfound=list())
-  }
-  if ( is.null(attr(Param_ls,"source")) ) {
-    if ( is.null(param.source) ) {
-      param.source <- paste("Unknown, called from:",as.character(.traceback(2)),collapse=", ")
+    # TODO: add source to any Param_ls elements that do not already have a source
+    Param_ls <- addParameterSource(Param_ls,"ve.model$RunParam_ls",onlyMissing=TRUE)
+  } else {
+    sources <- lapply(Param_ls,function(p) attr(p,"source"))
+    updateSources <- which( is.null(sources) )
+    if ( length(updateSources) > 0 ) {
+      if ( is.null(param.source) ) {
+        param.source <- paste("Unknown, called from:",as.character(.traceback(2)),collapse=", ")
+      }
+      Param_ls <- addParameterSource(Param_ls,param.source,onlyMissing=TRUE)
     }
-    Param_ls <- addParameterSource(Param_ls,param.source)
   }
 
   if ( length(Param_ls)==0 || ! Parameter %in% names(Param_ls) ) {
-    if ( logSource ) writeLog(
-      paste(Parameter,"using Default, called from:",as.character(.traceback(2)),collapse=", "),
-      Level="debug"
-    )
     if ( defaultMissing && Parameter %in% names(defaultParams_ls) ) {
       Default <- defaultParams_ls[[Parameter]]
     }
-    sources <- attr(defaultParams_ls,"source")
     paramVal <- Default
-    attr(paramVal,"source") <- sources[Parameter,]
   } else {
-    if ( logSource ) {
-      if ( is.null(sources) ) {
-        writeLog(
-          paste("Unknown source for",Parameter,"at",as.character(.traceback(2)),collapse=", "),
-          Level="debug"
-        )
-      } else {
-        writeLog(
-          paste("Source for",Parameter,":",sources[Parameter,"Source"]),
-          Level="debug"
-        )
-      }
-    }
     paramVal <- Param_ls[[Parameter]]
-    if ( Source ) {
-      sources <- attr(Param_ls,"source")
-      attr(paramVal,"source") <- sources[Parameter,]
-    }
   }
   return( paramVal )
 }
@@ -373,7 +340,6 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mu
     }
   } else writeLog(paste("No parameter file found in",ParamDir),Level="debug") # Just return an empty list
 
-  # The following works fine if ParamFile_ls is an empty list (it gets an empty "source" attribute)
   ParamFile_ls <- addParameterSource(ParamFile_ls,paste("File:",ParamPath))
   attr(ParamFile_ls,"FILE") <- ParamPath # convenience for keeping track of what was loaded
   return(ParamFile_ls)
@@ -390,9 +356,11 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mu
 #'
 #' @param Param_ls a named list of run parameters
 #' @param Source a character string describing the source
-#' @return Param_ls, with a "source" data.frame attached (if possible)
+#' @param onlyMissing a logicial; if TRUE, assign Source to all items in Param_ls, otherwise just
+#'   to those that have no Source
+#' @return Param_ls, with a "source" attached to each item
 #' @export
-addParameterSource <- function(Param_ls,Source="Manually added") {
+addParameterSource <- function(Param_ls,Source="Manually added",onlyMissing=FALSE) {
   if ( # Param_ls should be a named list of parameters in it
     is.list(Param_ls) && # must be a list
     (
@@ -403,28 +371,15 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
       )
     )
   ) {
-    rewrite <- FALSE
-    if ( length(Param_ls)>0 ) {
-      # Do not override any existing source for an item
-      src.df <- attr(Param_ls,"source")
-      if ( is.null(src.df) ) {
-        src.df <- data.frame(Source=Source,Name=names(Param_ls))
-        row.names(src.df) <- src.df$Name
-        rewrite <- TRUE
-      } else {
-        new.items <- names(Param_ls)[! names(Param_ls) %in% row.names(src.df) ]
-        if ( length(new.items)>0 ) {
-          addl.src.df <- data.frame(Source=Source,Name=new.items)
-          row.names(addl.src.df) <- addl.src.df$Name
-          src.df <- rbind(src.df,addl.src.df)
-          rewrite <- TRUE
+    # Make sure every element of Param_ls has a Source
+    Param_ls <- lapply( Param_ls,
+      function(p) {
+        if ( ! onlyMissing || is.null(attr(p,"source")) ) {
+          attr(p,"source") <- Source
         }
+        return( p )
       }
-    } else {
-      src.df <- data.frame()
-      rewrite <- TRUE
-    }
-    if (rewrite) attr(Param_ls,"source") <- src.df
+    )
   } else {
     # Invalid Param_ls
     writeLog(
@@ -443,7 +398,10 @@ addParameterSource <- function(Param_ls,Source="Manually added") {
 #' Convenience function for adding or updating a parameter to Param_ls
 #'
 #' \code{addRunParameter} a visioneval framework control function that adds an arbitrary parameter to a
-#' RunParam_ls.
+#' RunParam_ls. If you want to push a list of parameters into \code{Param_ls}, use
+#' \code{mergeParameters}. If that other list does not yet have a Source attribute, use
+#' addParameterSource first on that list. Or you can force each of the ... items to have a source
+#' just by running \code{attr(newParam,"source")<-forceSource} before calling this function.
 #'
 #' @param Param_ls the list whose parameters will be changed/added to
 #' @param Source a character string specifying the source for the changed/added parameters
@@ -454,7 +412,7 @@ addRunParameter <- function(Param_ls=list(),Source=NULL,...) {
   newParams_ls <- list(...)
   # if source not supplied, check if first item in newParams_ls has a source and use that
   if ( missing(Source) || is.null(Source) ) {
-    item.source <- attr(newParams_ls,"source")
+    item.source <- attr(newParams_ls[[1]],"source")
     if ( ! is.null(item.source) ) Source <- item.source
   }
   if ( is.null(Source) ) Source <- "Interactive"
@@ -467,31 +425,12 @@ addRunParameter <- function(Param_ls=list(),Source=NULL,...) {
   return( mergeParameters(Param_ls,newParams_ls) )
 }
 
-#EXTRACT PARAMETER LIST
-#' Extract a subset of a parameter list, preserving source
-#'
-#' \code{extractParameters} a visioneval framework control function that extracts
-#' a subset of a parameter list, including their "source" attribute (see \code{readConfigurationFile}
-#'
-#' @param ParamNames a character vector of names to extract (if empty, just return a copy of the
-#' list)
-#' @param Param_ls the list from which to extract parameters
-#' @return The subset of Param_ls with the sources preserved
-#' @export
-extractParameters <- function(ParamNames=NULL,Param_ls=list()) {
-  if ( ! is.character(ParamNames) || length(ParamNames)==0 ) return(Param_ls)
-  newSources <- attr(Param_ls,"source")[ParamNames,]
-  newParam_ls <- Param_ls[ ParamNames ]
-  attr(newParam_ls,"source") <- newSources
-  return(newParam_ls)
-}  
-
 #MERGE PARAMETER LISTS
 #=====================
 #' Merge configuration parameter lists with priority
 #'
 #' \code{mergeParameters} a visioneval framework control function that merges
-#' two parameter lists, including their "source" attribute (see \code{readConfigurationFile}
+#' two parameter lists (see \code{readConfigurationFile}
 #'
 #' The list in "Keep_ls" will be added to Param_ls, with duplicated names from keep replacing
 #' those in Param_ls.  The "source" attribute of each will be updated.
@@ -512,17 +451,16 @@ mergeParameters <- function(Param_ls,Keep_ls) {
     error.reason <- "Param_ls is not a list"
     merge.error <- TRUE
   } else if (
-    ( length(Param_ls)>0 &&
-      (
-        is.null(attr(Param_ls,"source")) ||
-        is.null(names(Param_ls)) ||
-        any(is.na(names(Param_ls)))
-      )
+    length(Param_ls)>0 &&
+    (
+      any( nullSources <- which(sapply(Param_ls,function(p) is.null(attr(p,"source")))) ) ||
+      is.null(names(Param_ls)) ||
+      any(is.na(names(Param_ls)))
     )
   ) {
     error.reason <- paste(
       "Param_ls",
-      "Source Null:",is.null(attr(Param_ls,"source")),
+      "Null Sources:",paste(names(Param_ls)[nullSources],collapse=","),
       "Names Null:",is.null(names(Param_ls)),
       "Names NA:",any(is.na(names(Param_ls)))
     )
@@ -533,14 +471,14 @@ mergeParameters <- function(Param_ls,Keep_ls) {
   } else if (
     length(Keep_ls)>0 &&
     (
-      is.null(attr(Keep_ls,"source")) ||
+      any( nullSources <- which(sapply(Keep_ls,function(p) is.null(attr(p,"source")))) ) ||
       is.null(names(Keep_ls)) ||
       any(is.na(names(Keep_ls)))
     )
   ) {
     error.reason <- paste(
       "Keep_ls",
-      "Source Null:",is.null(attr(Keep_ls,"source")),
+      "Null Sources:",paste(names(Keep_ls)[nullSources],collapse=","),
       "Names Null:",is.null(names(Keep_ls)),
       "Names NA:",any(is.na(names(Keep_ls)))
     )
@@ -562,19 +500,7 @@ mergeParameters <- function(Param_ls,Keep_ls) {
   }
 
   if ( length(Keep_ls)>0 ) {
-    keep.source <- attr(Keep_ls,"source")
-    param.source <- attr(Param_ls,"source")
-    orig.length <- length(Param_ls)
     Param_ls[ names(Keep_ls) ] <- Keep_ls
-    if ( orig.length>0 && !is.null(param.source) ) {
-      param.source[ row.names(keep.source), ] <- keep.source
-    } else {
-      param.source <- keep.source
-    }
-    row.names(param.source) <- param.source$Name
-    attr(Param_ls,"source") <- param.source
-    # propagate any file attribute
-    if ( ! is.null( keepFile <- attr(Keep_ls,"FILE") ) ) attr(Param_ls,"FILE") <- keepFile
   }
  return(Param_ls)
 }
@@ -661,12 +587,19 @@ loadConfiguration <- function( # if all arguments are defaulted, return an empty
   # This is a backstop; use addParameterSource for any keep or override parameter
   #   before calling loadConfiguration
   keep.origin <- deparse(substitute(keep))
-  if ( is.list(keep) && length(keep)>0 && is.null(attr(keep,"source") ) ) {
-    keep <- addParameterSource(keep,keep.origin)
+  if (
+    is.list(keep) &&
+    length(keep)>0 &&
+    any( sapply(keep,function(p) is.null(attr(p,"source"))) )
+  ) {
+    keep <- addParameterSource(keep,keep.origin,onlyMissing=TRUE)
   }
   override.origin <- deparse(substitute(override))
-  if ( is.list(override) && length(override)>0 && is.null(attr(override,"source") ) ) {
-    override <- addParameterSource(override,override.origin)
+  if ( is.list(override) &&
+    length(override)>0 &&
+    any( sapply(override,function(p) is.null(attr(p,"source"))) )
+  ) {
+    override <- addParameterSource(override,override.origin,onlyMissing=TRUE)
   }
 
   # if providing a ParamFile name, default to error if the file does not exist

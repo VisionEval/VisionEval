@@ -51,7 +51,7 @@ if(!file.exists(file.path(working_dir,fileName))){
 }
 
 mystring <- read_file(file.path(working_dir, fileName))
-api_key <- gsub('/r/n', '', mystring) #clean up in case text file has breaks
+api_key <- gsub('\r\n', '', mystring) #clean up in case text file has breaks
 
 # load census api key (get one here: https://api.census.gov/data/key_signup.html)
 census_api_key(api_key, install = TRUE)

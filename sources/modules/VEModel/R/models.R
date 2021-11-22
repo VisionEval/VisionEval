@@ -464,8 +464,9 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
     }
 
     scenarioStages <- list()
-    scenarios <- self$scenarios(fromFile=fromFile)  # re-create VEModelScenario object from file
-    scenarioStages <- scenarios$stages()            # scenario stages may be an empty list
+#     Disabling model scenarios until we rebuild the parameters source tracking
+#     scenarios <- self$scenarios(fromFile=fromFile)  # re-create VEModelScenario object from file
+#     scenarioStages <- scenarios$stages()            # scenario stages may be an empty list
 
     # It is possible for a model to ONLY have scenarios (if they are "manually" created)
     # Each "scenario" in that case must be a complete model run
@@ -947,7 +948,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
 ################################################################################
 
 # Load the stage configuration
-ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NULL,stageParam_ls=list(),StageIsScenario=FALSE) {
+ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NULL,stageParam_ls=list()) {
   # Name can force the stage name (otherwise use stageParam_ls)
   # Model is the model the stage is attached to
   # ScenarioDir is the root directory to seek the stage folder (default: Model$modelPath)
@@ -979,21 +980,13 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
     stop("No VEModel provided to own model stage ",Name)
   } else self$Model <- Model
 
-  # Mark as model-based (StageIsScenario==FALSE) or scenario-based (StageIsScenario=TRUE)
-  self$Scenario <- StageIsScenario
-
   # Initialize model parameters
   ModelName     <- Model$modelName
 
   # Set root in which to seek stages
-  if ( StageIsScenario ) {
-    if ( missing(ScenarioDir) || is.null(ScenarioDir) ) {
-      stop(
-        writeLog("Program Error in VEModelStage$initialize: Must provide ScenarioDir for Scenario stage",Level="error")
-      )
-    } else {
-      ModelDir <- ScenarioDir
-    }
+  # Scenarios will start at a subdirectory of the base model
+  if ( ! missing(ScenarioDir) && is.character(ScenarioDir) ) {
+    ModelDir <- ScenarioDir
   } else {
     ModelDir <- Model$modelPath # Should already be a normalized path
   }
@@ -1011,11 +1004,11 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
     if ( ! is.null(msp) ) stageParam_ls <- msp
   }
 
-  # Warn if stage is not unique at level "info"
+  # Warn if stage is not unique
   if ( Name %in% names(Model$modelStages) ) {
     writeLog(paste0("Model name ",self$Name," is already defined in ",ModelName),Level="info")
     # Not an error, as this object may replace the one already in the Model
-    # That error is trapped when this stage is pushed back into the model
+    # That condition is trapped when this stage is pushed back into the model
   } else writeLog(paste0("Initializing Model Stage:",self$Name),Level="info")
 
   # Parse the stageParam_ls (any of these may still be NULL)
@@ -1525,7 +1518,7 @@ ve.stage.completed <- function( runStatus=NULL ) {
 
 # Print a model stage summary
 ve.stage.print <- function(details=FALSE,configs=FALSE) {
-  cat(if(self$Scenario) "Scenario" else "Stage",": ",self$Name,sep="")
+  cat(if(!is.null(self$ScenarioData)) "Scenario" else "Stage",": ",self$Name,sep="")
   if ( details ) {
     startFrom <- if ( length(self$StartFrom)>0 && nzchar(self$StartFrom) ) paste0("StartFrom: ",self$StartFrom)
   } else startFrom <- NULL
@@ -1669,6 +1662,7 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
 }
 
 # Visualize model results
+# TODO: Consider again whether it is more appropirate to visualize a query with an attached model
 ve.model.visual <- function(stages=list(),query=NULL,save=FALSE) {
 
   print(htmlRoot<-system.file("visualizer",package="VEModel"))
@@ -1721,10 +1715,11 @@ ve.model.visual <- function(stages=list(),query=NULL,save=FALSE) {
   #   VEQUery can format the generated query results for a list of VEResults into a data.frame
   #     (or really a list of vectors of measures). Then we can lapply across the data.frame to generate
   #     one row of JSON measure values for each column. TODO: see above about Year as a
-  #     pseudo-metric.
+  #     pseudo-metric or filterable parameter
   #   VEModelStage, given a list of "scenarios" (elements from VEModelScenarios Scenarios tag) can say
   #     what level the stage has for that scenario (possibly zero if scenario did not supply changed
-  #     files)
+  #     files) - goes in ScenarioData structure (added after scenario stages are built but before
+  #     they are handed back to the model).
   #   VEModelScenarios can take the exported VEQuery data.frame of results (suitably filtered by
   #     selecting which results and the Year) and generate everything needed for the visualizer
   #     (VEQuery provides the outputconfig - export metadata to get the pieces;
@@ -1732,8 +1727,18 @@ ve.model.visual <- function(stages=list(),query=NULL,save=FALSE) {
   #     categoryconfig and scenarioconfig, and the VEModelScenarios$stages (which also give the
   #     VEResults) can provide the tags indicating which Scenario/Level the stage belongs to (the
   #     VEModelStage does that)
-  #   So the Visualizer is (ta-da) something we do to the VEModel, giving it a VEQuery for the measures
-  #     and using the VEModelScenarios element to provide Category/Scenario.
+  #   So the Visualizer could work like this:
+  #     VEQuery has attached model
+  #     VEQuery supplies metrics for outputconfig
+  #     Attached VEModel supplies VEResultsList on which the VEQuery runs and from which it gets
+  #     query results.
+  #     VEModel provides VEModelScenarios, which provides ModelStages (and organizes them by
+  #     Category / Scenario). Keep all the category information by stage name in the scenarios.
+  #     So we ask VEModelScenarios for the Category/Stage for a list of stages (kept externally
+  #     because it depends on where the stage is in relation to other stages).
+  #     If there are no VEModelScenarios, or the stage is not among them, return default category
+  #     and just create a distinct category/scenario structure (name, category level, etc).
+  #     
   #   That let's us "visualize" a standard model with stages, where each Reportable stage becomes a
   #     "Scenario" level in the single "Scenarios" category without actually defining a ScenarioDir.
   #   If we build standard ModelStages for VEModelScenarios, those should have Scenario/Level injected
@@ -1789,14 +1794,14 @@ ve.model.visual <- function(stages=list(),query=NULL,save=FALSE) {
 
 # Print a summary of the VEModel, including its run status
 ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
-  cat("Model:",self$modelName,"/n")
+  cat("Model:",self$modelName,"\n")
   if ( details ) {
-    cat("Path:","/n")
-    cat(self$modelPath,"/n")
-    cat("Configurations:","/n")
-    cat(paste("  ",uniqueSources(self$RunParam_ls,shorten=self$modelPath)),sep="/n") # Generates one row for each unique source
+    cat("Path:","\n")
+    cat(self$modelPath,"\n")
+    cat("Configurations:","\n")
+    cat(paste("  ",uniqueSources(self$RunParam_ls,shorten=self$modelPath)),sep="\n") # Generates one row for each unique source
   }
-  cat("Status:", self$printStatus(),"/n")
+  cat("Status:", self$printStatus(),"\n")
   if ( private$p.valid ) {
     scenarioStages <- sapply( self$modelStages, function(s) s$Scenario )
     cat("Model Stages:/n")
@@ -1806,9 +1811,9 @@ ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
     scenarioCount <- length(which(scenarioStages))
     if ( scenarioCount > 0 || is.null(self$modelScenarios) ) {
       if ( ! scenarios ) {
-        cat(scenarioCount,"Scenario stages defined in",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"/n")
+        cat(scenarioCount,"Scenario stages defined in",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
       } else {
-        cat("Scenario Stages from",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"/n")
+        cat("Scenario Stages from",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
         for ( s in self$modelStages[ scenarioStages ] ) {
           s$print(details,configs=FALSE) # don't show configs for scenarios...
         }
@@ -2290,7 +2295,10 @@ ve.stage.watchlog <- function(stop=FALSE,delay=2) {
 
 ve.model.scenarios <- function( fromFile=FALSE  ) {
   if ( is.null(self$modelScenarios) || fromFile ) {
-    self$modelScenarios <- VEModelScenarios$new(baseModel=self,fromFile=fromFile) # may still be NULL
+    self$modelScenarios <- VEModelScenarios$new(baseModel=self,fromFile=fromFile)
+  }
+  if ( is.null(self$modelScenarios) ) {
+    writeLog("Programming error: scenarios structure is broken [ve.model.scenarios]",Level="error")
   }
   return( self$modelScenarios )
 }
@@ -2907,7 +2915,6 @@ VEModelStage <- R6::R6Class(
     Path = NULL,                    # Normalized path to folder holding InputDir and ParamDir
     Config = NULL,                  # File relative to ModelDir (optional); 
     Reportable = NULL,              # If TRUE, include in default result set for extract and queries
-    Scenario = FALSE,               # FALSE (defined in model) or TRUE (defined in ScenarioDir)
     StartFrom = "",                 # Name of another model stage to extend
     RunParam_ls = list(),           # RunParameters to initialize the stage
     loadedParam_ls = NULL,          # Loaded parameters (if any) present in stage configuration file
@@ -2918,13 +2925,7 @@ VEModelStage <- R6::R6Class(
     RunStarted = NULL,              # Sys.time() when model stage run started
     RunCompleted = NULL,            # Sys.time() when model stage run completed
     Results = NULL,                 # A VEResults object (create on demand)
-    Category = "Scenarios",         # Vector of categories for which this stage provides non-default results
-                                    # Standard reportable stage goes into default "Scenarios"
-                                    # If standard stages are visualized and no Scenarios are
-                                    # configured, each stage becomes a single Scenario/Level and
-                                    # is mapped into a single level for the "Scenarios" category.
-                                    # See ve.model.visual for how it is used in that case
-    ScenarioLevels = list(),         # List of Scenarios (names) and Levels (values) for this scenario
+    ScenarioData = NULL,            # Scenario descriptor for visualizer
 
     # Methods
     initialize=ve.stage.init,       # Create a stage and set its Runnable flag
