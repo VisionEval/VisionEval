@@ -1,0 +1,71 @@
+- Local package data architecture
+
+  # Runtime has optional local.data location (at root, like "models")
+  # Subdirectory structure should consider estimation data perhaps differently from pre-cooked
+    tables. The intent here is to proxy everything that might be found in the package/data.
+  # Structure is local.data/Package/data and then data elements are located within
+  # Support RunScript directive by using special "LocalScripts" package
+  # Module re-estimation is supported in local.data/Package/raw-data (or estimation-data)
+    using the same convention as the Github for where to find stuff
+  # Framework will hunt up data/ for any named package by looking here first, then
+    retreat to the standard system data search within the built or loaded package
+  # In essence, anything we might pull out of the Github or Package to build a module
+    can be over-ridden by putting something here with the right name (either in the
+    Package root (== data/) or in the "raw-data" or "estimation-data" subdirectory).
+
+  Goal is to move the estimation task into a parameterized function within the module .R script in
+  the package.
+
+  Then adjust the build process to run each R script in the package (which should just create
+  functions and simple objects), then look for and execute the "MyModuleEstimate" function. That
+  function will push estimated data sets into the package data directory.
+
+  Adjust the framework to have functions to "createModuleDataset" and "fetchModuleData",
+  parameterized by the name of the package, the module and the target directory - look in the
+  existing framework for the build flag (environment variable set during the build). The create
+  function can be called in user space (default destination is the "local/Package/data" folder in
+  ve.runtime; input files are in "local/Package/extdata" or "Package/extdata" for the defaults).
+
+  The module specifications are also created (and perhaps retrieved) through the create/fetch
+  functions, so should push those into a Specify<Module> function (to go with Estimate<Module>).
+  Perhaps allow the <Module> function to be sought also as Run<Module>. Add a Document<Module> for
+  the fourth part of each standard module structure.
+
+  Also need to change the name of Initialize.R to force "Initialize<Package>.R" and look for it
+  by that name - so we can tell WHICH initialize created various things. Still find the old one,
+  if we don't have a new style one, but force an error log message when running the model to
+  warn that package is using a deprecated format. Alternatively, just leave it as it is but make
+  sure that when we log to AllSpecs, we append the package name to Initialize.
+
+  Also need a function to fetchEstimationData (reading a tabular file with a given name,
+  also expand to use the new ViEIO mechanism so the file can be anywhere).
+
+  Per plan-build.txt, probably want to establish distinctive non-R directory names for the
+  estimation input data (could be raw-data like devtools, or "estimation-data" to be more
+  descriptive).
+
+  We'll also use those folders to support "runScript" directives (package is "LocalScripts").
+
+  Adjust all module scripts to have an Estimate function, and adjust the data access functions to
+  use fetchModuleData for every dataset (to allow local overrides). Fetch can happen either while
+  a model is running (look in ModelState_ls/RunParam_ls for "LocalDataDir" defaulting to the \
+  RunPath/local.data or ModelDir/local.data) or during the build, in which case we'll do a data
+  lookup in the already-built visioneval packages.
+
+  createModuleDataset is run within the estimation function (perhaps we want to expand the
+  Inp style specifications of what needs to go in and come out of the estimation function...),
+  plus a Set style specification of what gets built. Don't rush to do that: need to consider
+  the "ins" and "outs" to see how general-purpose we can get (and how hard it would be). It
+  reads from subdirectory of working directory called "estimation-data" and writes to a 
+  subdirectory called "data". So a runtime estimation will root in LocalDataDir, and a build
+  estimation will root in the package src root.
+
+  Finish re-architecting NHTS so there is a "master" package configured to look for a
+  version-specific package (VE2001NHTS, VE2009NHTS, VE2017NHTS). Local Household Survey is
+  incorporated by creating a "local package" of data - drop the survey suitably formatted into the
+  local/extdata folder, run the NHTS "Estimate" function to create the NHTS dataset for other
+  modules,then re-run Estimate for all the modules that depend on NHTS. That can either be done
+  at build time (by making a new NHTS-like package and configuring to use it) or in local user space
+  by building into local/NHTS/data and then re-running each package's Estimate function (could do
+  that on the fly as part of running a model).
+

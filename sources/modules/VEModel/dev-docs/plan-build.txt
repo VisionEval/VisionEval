@@ -1,22 +1,14 @@
+Implementation plan:
+
+# Create new runtime-lib (comparable to dev-lib and ve-lib). Put the dependency packages there.
+  Build only the VE packages into ve-lib.
+  dev-lib continues to have development-only files
+  Runtime startup looks for two libraries: runtime-lib and ve-lib
+  If ve-lib can't be found, fail. If runtime-lib is not found, offer to create it by installing
+    the dependencies from an available internet connection (want to distribute that list, which
+    won't be very large and which is currently built when the config is constructed).
+
 Issues for ve.build / Makefile / new Github architecture
-
-- Package build sequence:
-
-  # New library structure
-    # dev-lib: packages from CRAN etc used only during build
-    # VEBase-lib: packages from VE needed to build other packages
-      # visioneval framework itself
-      # NHTS and SLD package for estimation
-      # VEModel package
-    # runtime-lib: packages from CRAN etc needed at runtime
-    # ve-lib: packages built from VisionEval for runtime distribution
-    # .libPaths() during build includes all of those
-    # runtime now finds TWO libraries, not just one:
-      # runtime-lib: only dependencies (updated from CRAN etc)
-      # ve-lib: VE Packages (maintained by new VE.install.packages + manifest)
-      # runtime .libPaths() sets both on the path (VE first)
-    # Reduced installer option: only include VE packages and pull the others
-      from the internet - install those with dependencies using CRAN mirror
 
 - Reorganize runtime libraries (set up for new module sequence below)
 
@@ -29,21 +21,17 @@ Issues for ve.build / Makefile / new Github architecture
        runtime-lib if runtime-lib is not present)
     2. Runtime library (which can be installed into local runtime-lib)
     3. Src folder (installed into local 'src' folder for debugging)
-  # Could add a fourth: VEBase-lib that includes framework, NHTS and SLD, and VEModel
-    1. User can construct their own packages to put there
 
-- Local package data architecture
-
-  # Runtime has optional local.data location (at root, like "models")
-  # Structure is local.data/Package/data and then data elements are located within
-  # Support RunScript directive by using special "LocalScripts" package
-  # Module re-estimation is supported in local.data/Package/raw-data (or estimation-data)
-    using the same convention as the Github for where to find stuff
-  # Framework will hunt up data/ for any named package by looking here first, then
-    retreat to the standard system data search within the built or loaded package
-  # In essence, anything we might pull out of the Github or Package to build a module
-    can be over-ridden by putting something here with the right name (either in the
-    Package root (== data/) or in the "raw-data" or "estimation-data" subdirectory).
+  # We're probably stuck still distributing vast datasets for (re-)estimation.
+    1. Could change the distribution so that users can download (into their ve.runtime/local folder)
+       the estimation data for packages so they only have to retrieve it if they expect to re-estimate.
+    2. So we leave that crap out of the ve-lib built package (just keep estimation results in data
+       directory). Local estimation always revolves around ve.runtime/local, even if using the
+       package data.
+    3. Change the build to create a zip file with ALL the estimation data (but nicer to allow users
+       to download only what they need).
+    4. So we bundle estimation data by package into the estimation zip deliverable (that will create
+       local/<packages>/estimation-data).
 
 - Module build sequence
     

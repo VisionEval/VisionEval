@@ -24,7 +24,8 @@ Imports:
     jrc
 Suggests:
     knitr,
-    pkgload
+    pkgload,
+    markdown
 Encoding: UTF-8
 VignetteBuilder: knitr
 RoxygenNote: 7.1.1

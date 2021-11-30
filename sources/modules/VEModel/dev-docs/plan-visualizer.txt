@@ -1,3 +1,5 @@
+# Following describes the UI for launching the visualizer
+
 Saving visualizer creates subdirectory in ResultsDir for model: Visualize-<QueryName>-<Timestamp>
 
 We can subset the visualization for a model by listing just specific categories to include - as

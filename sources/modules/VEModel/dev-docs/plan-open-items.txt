@@ -1,14 +1,28 @@
-For building vignettes:
+Tableau and NHTS branches...
 
-  Figure out how to get the "vignettes" directory to build into "inst/docs"
+  Rebase on nextgen
+  look at differences to see if they are "fast-forwardable"/independent
+
+For scenarios
+
+  See plan-scenario.txt
+
+For local data estimation task:
+
+  See plan-estimate.txt
+
+For build/install restructuring:
+
+  See plan-build.txt
 
 For the visualizer:
 
   see plan-visualizer.txt
 
-  Make "visual" an output format (original plan, return to this approach) for query results
+  Make "visual" an output format (original plan, return to this approach) for query results (not on
+  the model).
 
-  Visual be sent through export function for query
+  Visual will be sent through export function for query
     must have attached model
     model must be Run Complete
     Draw categories/scenarios from model states
@@ -17,8 +31,37 @@ For the visualizer:
 
 For building models:
 
+  Allow the build process to be a "multi-core"/parallel activity (with the dependency groups of the
+  packages set up so we build independent modules in parallel) - how to handle logging the outputs
+  of each - possible enlarging how the build log is maintained (create a log folder for the specific
+  dated build, and sub-folder for each element built in modules). Enable multi-tasking by setting
+  number of available workers (via environment/Makefile variable) to something more than one.
+
   From a model's run script, generate an empty set of input table specifications in some arbitrary output format
-  (default in-memory data.frame). This would be the "skeleton" function. 
+  (default in-memory data.frame). This would be the "skeleton" function. Use the new ViEIO approach.
+
+  # Generate skeleton files for models and model stages
+
+    Inside the model, have a "structure" sub-directory that we can create and populate on demand by
+    exporting model metadata
+
+    It should list the model contents base on the AllSpecs_ls structure, focusing on the Inp and Set
+    specifications for each of the models.
+
+    Could also generate that by digging into the dataset attributes in the Datastore (where they
+    ride around). The SQL implementation of a Datastore will maintain the Datastore index table
+    that has all the attributes for each G/T/N.
+
+    More reliable to generate from AllSpecs since the Datastore may not exist yet.
+
+    Add a structure function that will list input and output fields (evolution of list/index
+    functions). Generates a data.frame that we can export. Option to saveTo creates CSV files where
+    tables are input files or G/T/N and their names are the names they have either in inputs or in
+    the datastore, and their rows are the various metadata items from the specification.
+
+    visioneval can furnish an exportDataFrame function that takes format, connection, location and
+    that simply delegates to the format's version of that function. Can perhaps explity that within
+    VEModel to avoid having to mess with the format directly...
 
 For running models:
 
@@ -31,6 +74,10 @@ For running models:
   Datastore path in the ModelState.Rda (otherwise it craps out because the path is wrong).
 
 For extraction:
+
+  Two parts: extract (which builds a data.frame or list thereof) and export (which writes to an
+  output using a data formatter API. Extract is, in effect, an internal function (export has an
+  option to dish up data.frames in memory).
 
   # Immediately: Deprecate the whole selection thing for extract/export
 
@@ -69,29 +116,6 @@ For extraction:
 
     When selecting stages for output from the model, can use shortcut "Scenarios" to refer to all
     scenario model stages (only, including the StartFrom stage).
-
-  # Generate skeleton files for models and model stages
-
-    Inside the model, have a "structure" sub-directory that we can create and populate on demand by
-    exporting model metadata
-
-    It should list the model contents base on the AllSpecs_ls structure, focusing on the Inp and Set
-    specifications for each of the models.
-
-    Could also generate that by digging into the dataset attributes in the Datastore (where they
-    ride around). The SQL implementation of a Datastore will maintain the Datastore index table
-    that has all the attributes for each G/T/N.
-
-    More reliable to generate from AllSpecs since the Datastore may not exist yet.
-
-    Add a structure function that will list input and output fields (evolution of list/index
-    functions). Generates a data.frame that we can export. Option to saveTo creates CSV files where
-    tables are input files or G/T/N and their names are the names they have either in inputs or in
-    the datastore, and their rows are the various metadata items from the specification.
-
-    visioneval can furnish an exportDataFrame function that takes format, connection, location and
-    that simply delegates to the format's version of that function. Can perhaps explity that within
-    VEModel to avoid having to mess with the format directly...
 
   # Establish internal API via framework for export functions
 
@@ -447,4 +471,9 @@ Structurally turn vignettes into docs
     man for modules/module_docs - integrate all that better
 
   Turn module_docs into regular docs (vignettes)
+
+For building vignettes:
+
+  [DONE] Vignettes will now build from "vignettes" into "docs" during package build
+  [LATER] Come up with some coding standards for writing vignettes
 

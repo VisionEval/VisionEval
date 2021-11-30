@@ -3,3 +3,5 @@ runtime*
 .Renviron
 .Rhistory
 launch.bat
+dev-docs
+previous.scenarios

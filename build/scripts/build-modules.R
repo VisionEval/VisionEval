@@ -14,20 +14,26 @@ source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 # Build tool dependencies
 require(tools,quietly=TRUE)
-if ( ! suppressWarnings(require("devtools",quietly=TRUE)) ) {
+if ( ! suppressWarnings(requireNamespace("devtools",quietly=TRUE)) ) {
   install.packages("devtools", lib=dev.lib, type=.Platform$pkgType )
 }
-if ( ! suppressWarnings(require("roxygen2",quietly=TRUE)) ) {
+if ( ! suppressWarnings(requireNamespace("roxygen2",quietly=TRUE)) ) {
   install.packages("roxygen2", lib=dev.lib, type=.Platform$pkgType )
 }
-if ( ! suppressWarnings(require("rcmdcheck",quietly=TRUE)) ) {
+if ( ! suppressWarnings(requireNamespace("rcmdcheck",quietly=TRUE)) ) {
   install.packages("rcmdcheck", lib=dev.lib, type=.Platform$pkgType )
-}
-if ( ! suppressWarnings(require("rmarkdown",quietly=TRUE)) ) {
-  install.packages("rmarkdown", lib=dev.lib, type=.Platform$pkgType )
 }
 if ( ! suppressWarnings(requireNamespace("withr",quietly=TRUE)) ) {
   install.packages("withr", lib=dev.lib, type=.Platform$pkgType )
+}
+# We're not using 'markdown', but some vignette creation fails if it's not present.
+# even though we're using knitr as the vignette engine, which gets dragged in from
+# elsewhere...
+if ( ! suppressWarnings(requireNamespace("markdown",quietly=TRUE)) ) {
+  install.packages("markdown", lib=dev.lib, type=.Platform$pkgType )
+}
+if ( ! suppressWarnings(requireNamespace("rmarkdown",quietly=TRUE)) ) {
+  install.packages("rmarkdown", lib=dev.lib, type=.Platform$pkgType )
 }
 
 message("========== BUILD MODULES ==========")

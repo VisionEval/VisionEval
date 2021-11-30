@@ -1,13 +1,30 @@
 ## Rethink on loading scenarios:
 
-# Load the RunParameters for the ScenarioDir (if no scenario dir, then no scenarios)
-  - Overlay onto base model run parameters
+Use "ModelStages" in ScenarioDir/visioneval.cnf to do manual scenarios
+Use "Categories" to specify
+  a) Top-level categories for the visualizer
+     Scenarios to run for each category (levels)
 
-# Set the StartFrom for the scenarios (from the base model).
-  - Explicit StartFrom in the ScenarioDir/visioneval.cnf
-  - Implicit StartFrom as the last Reportable stage in the base model
-# Load te
+There are two possible types of scenario folders (within ScenarioDir):
 
+  1. Model Stages - just another location for them
+  2. Scenario Components - a tree of components and "variations"
+
+Old-style, we want to permute the components (using the StartFrom stage as "ground zero") to
+manufacture model stages. The permutation just sets up alternate input paths (plus Scenario tag and
+Description) and established a Dir/RunPath for the scenario.
+
+see plan-visualizer for thoughts on Categories versus Scenarios/Scenario components. We want to
+completely hide the latter from the visualizer (gratuitous complexity). We use Scenario Components
+associated with the Category/ScenarioLevel (may be more than one) to generate the InputPath, but
+that's the only application (add to Description to say what is intended to be there?).
+
+If we remove the Scenario layer, we can simplify the visualizer lookup to just directly use category
+and scenario-level.
+
+Each scenario model stage has a Scenario/Level tag in each defined Category (default is just its
+Scenario name, default Category is "Scenarios"). So there is a list of Category+ScenarioLevel, which
+we'll match when doing the crossfilter for the visualizer. Missing Category gets ScenarioLevel zero.
 
 ###### Deeper architecture follows:
 
