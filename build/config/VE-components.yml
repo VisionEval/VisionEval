@@ -29,7 +29,7 @@ Components:
       - rhdf5
   VEModel: # End-user R API
     Type: module
-    Path: sources/modules
+    Path: sources/framework
     Test: { Script: tests/scripts/test.R, Group: 1 }
     CRAN:
       - futile.logger
@@ -197,7 +197,6 @@ Components:
       - VESimHouseholds
       - VETransportSupply
       - VETravelPerformance
-
   VERPAT:
     Type: module
     Path: sources/modules
@@ -257,9 +256,6 @@ Components:
 #   VE-State-Staged:
 #     Type: model
 #     Path: sources/models
-  VEScenarios:
-    Type: model
-    Path: sources/models
 
 # "Type: runtime" components are copied recursively to the runtime root
 # Their name is used to find them under the Path but unlike "script" components
