@@ -189,7 +189,6 @@ test_all_install <- function() {
   )
   variants <- lapply(variants,function(v) v$Variant)
 
-  browser()
   installed <- sapply(
     models,
     function(m) {
@@ -1318,6 +1317,33 @@ test_setup <- function(model=NULL) {
   cat("Setting source...\n")
   print(setup$setting("Seed",defaults=TRUE,source=TRUE)) # Show source for Seed parameter: now default
   unlink(conf.file) # Don't leave the runtime visioneval.cnf around
+}
+
+test_load_scenarios <- function(useStages=TRUE, run=NULL, log="info") {
+  if ( ! missing(log) ) logLevel(log)
+
+  testStep(paste("Installing scenario model"))
+  if ( dir.exists(modelPath <- file.path("models","VERSPM-scenario")) ) unlink(modelPath,recursive=TRUE)
+  print(modelPath)
+
+  # useStages==TRUE will do the model stage scenario, otherwise combinations
+  scenarioVariant <- if ( useStages) "scenarios-ms" else "scenarios-cat"
+  testStep(paste("Installing opening variant:",scenarioVariant))
+
+  # Just install and then open it
+  mod <- installModel("VERSPM-scenario",variant=scenarioVariant,modelName="VERSPM",log=log,confirm=FALSE)
+
+  if ( missing(run) || is.null(run) ) run <- useStages # don't run combinatorial scenarios unless explicitly requested
+
+  if ( run ) {
+    mod$run()
+    qr <- mod$query("VERSPM-scenarios")
+    qr$run()
+    qr$extract()
+  }
+
+  print(mod,scenarios=TRUE)
+  return(invisible(mod))
 }
 
 # Now set it all up

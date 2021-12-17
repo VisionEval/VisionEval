@@ -199,11 +199,11 @@ cullInputPath <- function(InputPath) {
   InputPath <- InputPath[ nzchar(InputPath) & InputPath != "." ]
 
   # Normalize remaining InputPath elements, if any, and remove duplicates
-  writeLog(paste("Culling Input Path:\n",paste(InputPath,collapse="\n")),Level="info")
+  writeLog(paste("Culling Input Path:\n",paste(InputPath,collapse="\n")),Level="debug")
   InputPath <- unique(normalizePath(InputPath,winslash="/",mustWork=FALSE))
 
   InputPath <- InputPath[dir.exists( InputPath )]
-  writeLog(paste("InputPath length after culling:",length(InputPath)),Level="info")
+  writeLog(paste("InputPath length after culling:",length(InputPath)),Level="debug")
 
   return(InputPath)
 }
@@ -273,7 +273,7 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
     # Load default parameter or get from larger runtime environment
     modelParam_ls <- visioneval::addRunParameter(
       Param_ls=modelParam_ls,
-      visioneval::getRunParameter("ResultsDir",Param_ls=Param_ls,Source=TRUE)
+      visioneval::getRunParameter("ResultsDir",Param_ls=Param_ls)
     )
   }
 
@@ -462,27 +462,6 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
         }
       )
     }
-
-    scenarioStages <- list()
-    scenarios <- self$scenarios(fromFile=fromFile)  # re-create VEModelScenario object from file
-    scenarioStages <- scenarios$stages()            # scenario stages may be an empty list
-
-    # It is possible for a model to ONLY have scenarios (if they are "manually" created)
-    # Each "scenario" in that case must be a complete model run
-    # Usually in such cases, it may be easier just to make them Reportable modelStages
-    if ( ! is.list(modelStages) ) {
-      if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
-        modelStages <- scenarioStages
-      } else {
-        # If no stages remain, model is invalid
-        writeLog("No model stages found!",Level="error")
-        return(self)
-      }
-    } else if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
-      sapply(modelStages, function(s) s$Reportable <- scenarios$reportable(s$Name))
-      modelStages <- c( modelStages, scenarioStages )
-    }
-
   } else {
     # all stage edits in memory should be made to stage$RunParam_ls, not stage$loadedParam_ls
     # stage changes mediated through their files should be reloaded with fromFile=TRUE
@@ -496,9 +475,35 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
     writeLog(paste("Model Stages:",stageNames,collapse=","),Level="info")
   }
 
-  # Save the model RunParam_ls and link the stages
+  # Done with base stages (except for initializing below after scenarios are loaded)
+  self$modelStages <- modelStages
+
+  # Load any scenarios from subfolder
+  scenarios <- self$scenarios(fromFile=fromFile)  # re-create VEModelScenario object from file
+  scenarioStages <- scenarios$stages()            # scenario stages may be an empty list
+
+  if ( length(scenarioStages) > 0 ) { # some scenarios are defined
+
+    # It is possible for a model to ONLY have scenarios (if they are "manually" created)
+    # Each "scenario" in that case must be a complete model run
+    # Usually in such cases, it may be easier just to make them Reportable modelStages
+    if ( ! is.list(self$modelStages) ) {
+      if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
+        self$modelStages <- scenarioStages
+      } else {
+        # If no stages remain, model is invalid
+        writeLog("No model stages found!",Level="error")
+        return(self)
+      }
+    } else if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
+      sapply(self$modelStages, function(s) s$Reportable <- scenarios$reportable(s$Name))
+      self$modelStages <- c( self$modelStages, scenarioStages )
+    }
+  }
+
+  # Link the stages
   writeLog("Initializing Model Stages",Level="info")
-  self$modelStages <- self$initstages( modelStages )
+  self$modelStages <- self$initstages( self$modelStages )
 
   # Update the model status
   self$specSummary <- NULL # regenerate when ve.model.list is next called
@@ -519,7 +524,6 @@ ve.model.initstages <- function( modelStages ) {
       stage$RunParam_ls$LoadDatastore <- FALSE
       stage$RunParam_ls[["LoadDatastoreName"]] <- NULL
     }
-    writeLog(paste("Evaluating ",stage$Name),Level="info")
     if ( stage$runnable(runnableStages) ) {   # complete stage initialization
       writeLog(paste("Stage",stage$Name,"is runnable"),Level="info")
       runnableStages <- c( runnableStages, stage )
@@ -952,7 +956,6 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   # Model is the model the stage is attached to
   # ScenarioDir is the root directory to seek the stage folder (default: Model$modelPath)
   # modelParam_ls is the configuration to be used (defaults to Model$RunParam_ls)
-  # StageIsScenario identifies role of stage as a core stage (FALSE) or a scenario (TRU)
   # stageParam_ls has the following elements (which are explicitly provided or come from
   #  a ModelStages specification in the model parameters):
   #
@@ -1028,10 +1031,19 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
     stageConfig_ls <- list()
   }
   if ( length(stageConfig_ls) > 0 ) {
-    writeLog(paste("Stage",self$Name,"stageConfig_ls contains:"),Level="info")
-    writeLog(paste(names(stageConfig_ls),collapse=", "),Level="info")
+    writeLog(paste("Stage",self$Name,"stageConfig_ls contains:"),Level="debug")
+    writeLog(paste(names(stageConfig_ls),collapse=", "),Level="debug")
   } else {
-    writeLog("stageConfig_ls has no additional parameters",Level="info")
+    writeLog("stageConfig_ls has no additional parameters",Level="debug")
+  }
+
+  # Set up ScenarioElements if present
+  if ( "ScenarioElements" %in% names(stageConfig_ls) ) {
+    writeLog(paste("Scenario elements detected in",self$Name),Level="debug")
+    self$ScenarioElements <- stageConfig_ls$ScenarioElements
+  } else {
+    writeLog(paste("No ScenarioElements in",self$Name),Level="debug")
+    if ( length(stageConfig_ls)>0 ) writeLog(paste(names(stageConfig_ls),collapse=", "),Level="debug")
   }
 
   # Set up self$Path (input location)
@@ -1050,13 +1062,13 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
     } else {
       self$Path <- normalizePath(file.path(ModelDir,self$Name))
     }
-    writeLog(paste("Stage path candidate:",self$Path),Level="info")
+    writeLog(paste("Stage path candidate:",self$Path),Level="debug")
     if ( ! dir.exists(self$Path) ) self$Path <- NULL
   }
   if ( ! is.null(self$Path) ) {
-    writeLog(paste("Initializing Stage",self$Name,"from",self$Path),Level="info")
+    writeLog(paste("Initializing Stage",self$Name,"from",self$Path),Level="debug")
   } else {
-    writeLog("Stage path is NULL",Level="info")
+    writeLog("Stage path is NULL",Level="debug")
   }
   # self$Path may still be NULL, in which case we need self$Config
   #   or suitable values in stageConfig_ls to specify the required stage inputs
@@ -1090,19 +1102,19 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
     ParamDir <- self$Path
     ParamFile <- NULL
   } else {
-    writeLog("No ParamDir for stage",Level="info")
+    writeLog("No ParamDir for stage",Level="debug")
   }
   # If ParamDir is defined (and perhaps ParamFile), laod the configuration file
   if ( ! is.null(ParamDir) ) {
-    writeLog(paste("Loading configuration from",ParamDir),Level="info")
+    writeLog(paste("Loading configuration from",ParamDir),Level="debug")
     self$loadedParam_ls <- visioneval::loadConfiguration(ParamDir=ParamDir,ParamFile=ParamFile)
   } else {
-    writeLog("No configuration file for stage",Level="info")
+    writeLog("No configuration file for stage",Level="debug")
     self$loadedParam_ls <- list()
   }
   if ( length(self$loadedParam_ls) > 0 ) {
-    writeLog(paste("Stage",self$Name,"loadedParam_ls contains:"),Level="info")
-    writeLog(paste(names(self$loadedParam_ls),collapse=", "),Level="info")
+    writeLog(paste("Stage",self$Name,"loadedParam_ls contains:"),Level="debug")
+    writeLog(paste(names(self$loadedParam_ls),collapse=", "),Level="debug")
     self$RunParam_ls <- visioneval::mergeParameters(modelParam_ls,self$loadedParam_ls) # config file overrides model
   } else {
     self$RunParam_ls <- modelParam_ls
@@ -1110,13 +1122,13 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   if ( length(stageConfig_ls) > 0 ) { # already logged stageConfig_ls
     self$RunParam_ls <- visioneval::mergeParameters(self$RunParam_ls,stageConfig_ls)   # parameters in ModelStage or command line override
   }
-  writeLog(paste("Stage",self$Name,"RunParam_ls contains:"),Level="info")
-  writeLog(paste(names(self$RunParam_ls),collapse=", "),Level="info")
+  writeLog(paste("Stage",self$Name,"RunParam_ls contains:"),Level="debug")
+  writeLog(paste(names(self$RunParam_ls),collapse=", "),Level="debug")
 
   # Stage Output
   self$RunPath <- file.path(Model$modelResults,self$Dir)
   self$RunPath <- normalizePath(self$RunPath)
-  writeLog(paste("Stage RunPath:",self$RunPath),Level="info")
+  writeLog(paste("Stage RunPath:",self$RunPath),Level="debug")
 
   # Set stage InputPath
   # If InputPath defined explicitly for the stage, look no further
@@ -1125,7 +1137,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   #   Otherwise, add ModelDir/StageDir if it exists
   if ( "InputPath" %in% names(self$RunParam_ls) ) {
     stageInput <- self$RunParam_ls$InputPath
-    writeLog(paste(nzchar(stageInput),"Stage InputPath is set",paste("'",stageInput,"'"),collapse="\n"),Level="info")
+    writeLog(paste(nzchar(stageInput),"Stage InputPath is set",paste("'",stageInput,"'"),collapse="\n"),Level="debug")
   } else {
     if ( "InputPath" %in% names(modelParam_ls) ) {
       modelInputPath <- modelParam_ls$InputPath # base InputPath from model, if defined
@@ -1142,7 +1154,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
         stageInput <- modelInputPath
       }
       if ( ! is.null(stageInput) ) {
-        writeLog(paste("Stage InputPath is",stageInput),Level="info")
+        writeLog(paste("Stage InputPath is",stageInput,collapse="\n"),Level="debug")
         self$RunParam_ls <- visioneval::addRunParameter(
           self$RunParam_ls,
           Source="VEModelStage$initialize",
@@ -1150,7 +1162,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
         )
       } else {
         # Not an error if there is a runnable StartFrom stage with InputPath
-        writeLog("No Stage Input File.",Level="info")
+        writeLog("No Stage Input File.",Level="debug")
       }
     }
   } # Still may have no explicit InputPath for Stage
@@ -1161,10 +1173,10 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
     # StartFrom was not set previously from stageParam_ls
     if ( "StartFrom" %in% names(self$RunParam_ls) ) {
       self$StartFrom <- self$RunParam_ls$StartFrom
-      writeLog(paste("Starting From:",self$StartFrom),Level="info")
+      writeLog(paste("Starting From:",self$StartFrom),Level="debug")
     } else {
-      writeLog("No StartFrom in self$RunParam_ls:",Level="info")
-      writeLog(paste(names(self$RunParam_ls),collapse=","),Level="info")
+      writeLog("No StartFrom in self$RunParam_ls:",Level="debug")
+      writeLog(paste(names(self$RunParam_ls),collapse=","),Level="debug")
       self$StartFrom <- character(0)
     }
   }
@@ -1217,7 +1229,7 @@ ve.stage.runnable <- function(priorStages) {
     }
     StartFromScriptPath <- startFrom$ModelScriptPath
   } else {
-    writeLog("No StartFrom for stage",Level="info")
+    writeLog("No StartFrom for stage",Level="debug")
     startFrom     <- list()
     DatastorePath <- character(0)             # Default is to contribute no DatastorePath
     ParamPath <- self$RunParam_ls$ParamPath   # May be NULL
@@ -1232,9 +1244,9 @@ ve.stage.runnable <- function(priorStages) {
       Source="VEModelStage$runnable",
       InputPath=cullInputPath( InputPath=InputPath )
     )
-    writeLog(paste("InputPath for",self$Name,":",self$RunParam_ls$InputPath,collapse="; "),Level="info")
+    writeLog(paste("InputPath for",self$Name,":",self$RunParam_ls$InputPath,collapse="; "),Level="debug")
   } else {
-    writeLog(paste("No InputPath for stage",self$Name),Level="info")
+    writeLog(paste("No InputPath for stage",self$Name),Level="debug")
   }
 
   # Construct DatastorePath, prepending ModelDir/ResultsDir/StageDir as
@@ -1244,13 +1256,13 @@ ve.stage.runnable <- function(priorStages) {
     Source="VEModelStage$runnable",
     DatastorePath=c( self$RunPath, DatastorePath)
   )
-  writeLog(paste0("DatastorePath for ",self$Name,": ",self$RunParam_ls$DatastorePath),Level="info")
+  writeLog(paste0("DatastorePath for ",self$Name,": ",self$RunParam_ls$DatastorePath),Level="debug")
 
   # Underlay run_parameters.json from StagePath/ParamDir/ParamFile if it is out there
   # run_parameters.json is deprecated, and is expected only to provide "descriptive" parameters
   # e.g. Scenario or Description, possibly Years
   # New style model will set those in StageDir/visioneval.cnf
-  writeLog("Looking for run_parameters.json",Level="info")
+  writeLog("Looking for run_parameters.json",Level="debug")
   self$RunParam_ls <- visioneval::loadParamFile(Param_ls=self$RunParam_ls,ModelDir=self$Path)
 
   # Set up ModelScriptPath if current stage has different ModelScript from overall model
@@ -1281,7 +1293,7 @@ ve.stage.runnable <- function(priorStages) {
     # same script)
   }
   if ( length(stageModelScriptPath)>0 && nzchar(stageModelScriptPath) ) {
-    writeLog(paste("Parsing stage ModelScriptFile:",stageModelScriptPath),Level="info")
+    writeLog(paste("Parsing stage ModelScriptFile:",stageModelScriptPath),Level="debug")
     self$RunParam_ls <- visioneval::addRunParameter(
       self$RunParam_ls,
       Source="VEModelStage$runnable",
@@ -1517,7 +1529,7 @@ ve.stage.completed <- function( runStatus=NULL ) {
 
 # Print a model stage summary
 ve.stage.print <- function(details=FALSE,configs=FALSE) {
-  cat(if(!is.null(self$ScenarioData)) "Scenario" else "Stage",": ",self$Name,sep="")
+  cat(if(!is.null(self$ScenarioElements)) "Scenario" else "Stage",": ",self$Name,sep="")
   if ( details ) {
     startFrom <- if ( length(self$StartFrom)>0 && nzchar(self$StartFrom) ) paste0("StartFrom: ",self$StartFrom)
   } else startFrom <- NULL
@@ -1717,7 +1729,7 @@ ve.model.visual <- function(stages=list(),query=NULL,save=FALSE) {
   #     pseudo-metric or filterable parameter
   #   VEModelStage, given a list of "scenarios" (elements from VEModelScenarios Scenarios tag) can say
   #     what level the stage has for that scenario (possibly zero if scenario did not supply changed
-  #     files) - goes in ScenarioData structure (added after scenario stages are built but before
+  #     files) - goes in ScenarioElements structure (added after scenario stages are built but before
   #     they are handed back to the model).
   #   VEModelScenarios can take the exported VEQuery data.frame of results (suitably filtered by
   #     selecting which results and the Year) and generate everything needed for the visualizer
@@ -1802,7 +1814,7 @@ ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
   }
   cat("Status:", self$printStatus(),"\n")
   if ( private$p.valid ) {
-    scenarioStages <- sapply( self$modelStages, function(s) !is.null(s$ScenarioData) )
+    scenarioStages <- sapply( self$modelStages, function(s) !is.null(s$ScenarioElements) )
     cat("Model Stages:\n")
     for ( s in self$modelStages[ ! scenarioStages ] ) {
       s$print(details,configs)
@@ -2484,7 +2496,7 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
 #     cat("Query Directory:"); print(QueryPath)
 #     cat("Query Directory Exists:"); print(dir.exists(QueryPath))
 #     cat("Available Queries:\n")
-    queries <- dir(QueryPath,pattern="//.(VEqry|R)$",ignore.case=TRUE)
+    queries <- dir(QueryPath,pattern="\\.VEqry|R)$",ignore.case=TRUE)
     if ( length(queries)==0 ) queries <- "No queries defined"
     return(queries)
   }
@@ -2492,6 +2504,7 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
   return(
     VEQuery$new(
       QueryName=QueryName,
+      Model=self,                 # Attach this model
       ModelPath=self$modelPath,
       QueryDir=QueryDir,
       FileName=FileName,
@@ -2571,7 +2584,7 @@ openModel <- function(modelPath="",log="error") {
 findStandardModel <- function( model, variant="" ) {
 
   # COVID-19 Joke
-  if ( toupper(variant)=="DELTA" ) return( "Cough, Cough!" )
+  if ( toupper(variant) %in% c("DELTA","OMICRON") ) return( "Cough, Cough!" )
 
   modelIndex <- getModelIndex()
 
@@ -2630,6 +2643,9 @@ findStandardModel <- function( model, variant="" ) {
     modelDirs[[d]]$To <- d
   }
   model_ls$Directories <- modelDirs
+
+  writeLog("findStandardModel: Source path:",Level="info")
+  writeLog(modelFrom,Level="info")
 
   return(model_ls) # model structure for installation
 }
@@ -2924,7 +2940,7 @@ VEModelStage <- R6::R6Class(
     RunStarted = NULL,              # Sys.time() when model stage run started
     RunCompleted = NULL,            # Sys.time() when model stage run completed
     Results = NULL,                 # A VEResults object (create on demand)
-    ScenarioData = NULL,            # Scenario descriptor for visualizer
+    ScenarioElements = NULL,        # Scenario descriptor for visualizer
 
     # Methods
     initialize=ve.stage.init,       # Create a stage and set its Runnable flag

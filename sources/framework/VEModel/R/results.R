@@ -124,7 +124,7 @@ ve.results.index <- function() {
   InputDir[ is.na(InputDir) ] <- ""
   File <- sapply(ds$attributes, attributeGet, "FILE",simplify=TRUE) # should yield a character vector
   File[ is.na(File) ] <- ""
-  scenario <- visioneval::getRunParameter("Scenario",Default="Unknown Scenario",Param_ls=private$RunParam_ls)
+  scenario <- rep(visioneval::getRunParameter("Scenario",Default="Unknown Scenario",Param_ls=private$RunParam_ls),length(Description))
 
   splitGroupTableName <- strsplit(ds$groupname, "/")
   if ( length(Description) != length(splitGroupTableName) ) stop("Inconsistent table<->description correspondence")

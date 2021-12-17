@@ -102,6 +102,15 @@ ve.query.init <- function(
     stop(writeLogMessage(paste("Could not make a VEQuery from OtherQuery:",class(OtherQuery))))
   }
 
+  # Set up model and model path
+  if ( is.null(ModelPath) ) {
+    if ( ! is.null(Model) ) {
+      ModelPath <- Model$modelPath
+    } else {
+      ModelPath <- getRuntimeDirectory()
+    }
+  }
+
   # Add remaining defaults for saving the query out again
   self$attach(OtherQuery=OtherQuery,ModelPath=ModelPath,QueryDir=QueryDir,QueryName=QueryName)
 
@@ -823,8 +832,8 @@ ve.query.reload <- function( Results ) {
 }
 
 # Attach a Model and pre-load QueryResults if present
-ve.query.model <- function( Model ) {
-  if ( ! missing(Model) ) {
+ve.query.model <- function( Model=NULL ) {
+  if ( ! is.null(Model) ) {
     self$Model <- Model  # update attached model
     self$outputfile()    # Set file name for query results output
     self$results()       # cache results if available
@@ -904,7 +913,9 @@ ve.query.run <- function(
 
   if ( ! Force && length(Results)>0 ) {
     # Reload cached results (updates self$QueryResults and check for validity)
-    # private$reload returns all the Results, whether or not they have query results
+    # private$reload returns all the Results, whether or not they
+    # have query results
+    writeLog("Using cached query results",Level="warn")
     upToDate <- sapply( private$reload(Results) ,
       function(r) {
         if (
@@ -938,7 +949,7 @@ ve.query.run <- function(
   # Run the query on any out-of-date results
   # ResultsToUpdate is a list of VEResults
   if ( length(ResultsToUpdate) > 0 ) {
-    writeLog(paste("Updating Results:",sapply(ResultsToUpdate,function(x)x$Name),collapse=", "),Level="info")
+    writeLog(paste("Updating Results:",sapply(ResultsToUpdate,function(x)x$Name),collapse=", "),Level="warn")
     doQuery(
       Results=ResultsToUpdate,         # list of VEResults objects for which to generate results
       Specifications=self$getlist(),   # A list of VEQuerySpec

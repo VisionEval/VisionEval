@@ -1,0 +1,32 @@
+# Getting Started
+
+How to install VisionEval etc. This document may supplant the Getting
+Started that is installed in the VE runtime root.
+
+Introduction to VE directory, package and settings structure, how to
+install a standard model and test-run it, links across to tutorials
+for different models (their own vignettes)
+
+RSPM tutorial will be here as one of the other vignettes - possibly
+more than one (e.g. how to set up zones, how to set up model settings,
+how to structure model stages, how to create scenarios).
+
+There is a dual need to document the user API for the framework, and
+to use the RSPM model tutorial to elaborate that as a series of steps
+and procedures.
+
+Other important vignette topics:
+
+.Rmd walkthrough
+Details of model settings
+Installing and using the sample models (complete index and explanation)
+Items that need to be set up to make a model
+Learning about input files
+Understanding model outputs
+Working with model stages
+Running models
+Extracting model results
+Running Queries
+Setting up scenarios
+Using the built-in R visualizer
+Debugging models

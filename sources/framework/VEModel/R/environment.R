@@ -450,7 +450,7 @@ uniqueSources <- function(Param_ls,shorten=NULL) {
     writeLog("'sources' attribute is null in uniqueSources",.traceback(1),Level="info")
     sources <- "NULL"
   } else {
-    sources <- unique(sources$Source)
+    sources <- unique(sources)
     if ( ! is.null(shorten) ) sources <- sub(paste0(shorten,"/"),"",sources)
   }
   return(sources)
@@ -467,10 +467,12 @@ getModelIndex <- function(reset=FALSE) {
   # Uses the package global ve.env to cache models and variants
   if ( ! reset && "modelIndex" %in% names(ve.env) ) return(ve.env$modelIndex)
 
-  # WARNING: if using pkgload, this will still reach for the installed package version
-  pkgs <- utils::installed.packages(fields=c("Package","LibPath"))
-  VE.pkgs <- pkgs[ grep("^VE",pkgs[,"Package"]),"LibPath"] # named character vector of paths
-  modelPaths <- dir(file.path(VE.pkgs,names(VE.pkgs),"models"),pattern="model-index.cnf",recursive=TRUE,full.names=T)
+  # Hack for developing VEModel with pkgload
+  pkgs <- utils::installed.packages(fields="Package")
+  VE.pkgs <- grep("^VE",pkgs[,"Package"],value=TRUE)
+  if ( ! "VEModel" %in% VE.pkgs ) VE.pkgs <- c(VE.pkgs,VEModel="VEModel")
+  modelPaths <- sapply(VE.pkgs, function(p) system.file("models",package=p))
+  modelPaths <- dir(modelPaths,pattern="model-index.cnf",recursive=TRUE,full.names=T)
   modelIndex <- list()
   for ( confPath in modelPaths ) {
     confPackage <- basename(sub("[/\\]models[/\\].*","",confPath))

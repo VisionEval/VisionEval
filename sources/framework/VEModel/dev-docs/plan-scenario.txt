@@ -1,30 +1,122 @@
+## Next steps
+
+Implement the detailed steps below and make sure they work with the two sample models (model states
+and combinations). Probably want a smaller version of the combination one that is "proof of concept"
+for testing.
+
+Take the results all the way through to the Visualizer. Key activities there:
+  Generate the queries and output configuration, the data, the category and scenario configuration
+
+Make sure the installable scenario models are up to date with required structures.
+  The combinatorial version should just do a few categories and levels
+  The model stage version should lack category/scenario element
+  Later, in the tests.R, modify those base model settings to introduce/handle some errors and
+    to do the partial specifications described below.
+
+Finish the queries for the installable models (to track original visualizer - that will exercise the
+query mechanism very well!).
+
 ## Rethink on loading scenarios:
 
 Use "ModelStages" in ScenarioDir/visioneval.cnf to do manual scenarios
-Use "Categories" to specify
-  a) Top-level categories for the visualizer
-     Scenarios to run for each category (levels)
 
-There are two possible types of scenario folders (within ScenarioDir):
+Use "ScenarioCategories" to specify
 
-  1. Model Stages - just another location for them
-  2. Scenario Components - a tree of components and "variations"
+  a) ScenarioCategory Name/Description plus Levels (each of which incorporates one or more
+     ScenarioElement levels)
+  b) Various defaults collapse that down to allow a single Category in which each ModelStage
+     scenario is a level.
+  d) Categories will be permuted if ScenarioElements each define a proper subset of the
+     input files (which are all and only the files in each ScenarioElement Level directory)
+  e) Permutation will develop ModelStages with appropriate properties for the visualizer.
+     Those ModelStages will be dumped into a metadata configuration file so the resulting
+     RunPaths can be related back to how they were set up.
 
-Old-style, we want to permute the components (using the StartFrom stage as "ground zero") to
-manufacture model stages. The permutation just sets up alternate input paths (plus Scenario tag and
-Description) and established a Dir/RunPath for the scenario.
+In the ModelStage, construct ScenarioCategory with description plus level for this stage.
+(Visualizer uses "Categories" to understand the universe).
 
-see plan-visualizer for thoughts on Categories versus Scenarios/Scenario components. We want to
-completely hide the latter from the visualizer (gratuitous complexity). We use Scenario Components
-associated with the Category/ScenarioLevel (may be more than one) to generate the InputPath, but
-that's the only application (add to Description to say what is intended to be there?).
+When the visualizer runs, it looks only at the scenarios portion of the overall model configuration,
+and the ModelStages identified therein.
 
-If we remove the Scenario layer, we can simplify the visualizer lookup to just directly use category
-and scenario-level.
+We also need a ScenarioElement categorizer (if ScenarioElements exist) that maps the structure of
+the Category levels to one or more ScenarioElements and Levels. The visualizer uses that to identify
+which ModelStages are "in" or "out" for purposes of filtering.
 
-Each scenario model stage has a Scenario/Level tag in each defined Category (default is just its
-Scenario name, default Category is "Scenarios"). So there is a list of Category+ScenarioLevel, which
-we'll match when doing the crossfilter for the visualizer. Missing Category gets ScenarioLevel zero.
+The Permutation approach to auto-generating ModelStages has the following requirements (to reconcile
+with the ScenarioCategory and ScenarioElement). Do not do this expansion if ScenarioElements are
+defined explicitly.
+  Scenario Category
+    Defaults to a single Category called "Scenarios", with one Category Level per Scenario Element
+    Level.
+
+    If no Scenario Elements are explicitly defined, the scenario ModelStages (plus StartFrom)
+    each become one Level of a single Scenario Element entitled "Scenario" and the Levels are named
+    for the (already defined) ModelStages. Their visualizer ID is sequential (the full name appears
+    in the data table at the bottom of the visualizer). The Scenario Element name need not be specifically
+    identified, and the Level Name must match one of the scenario ModelStages (and the descriptive
+    information for the level will be pulled from the ModelStage).
+
+    If more than one Category is specified, Category levels will be permuted if all the Scenario
+    Elements are permutable. It is an error to have more than one Category if all the Scenario
+    Elements are NOT permutable.
+
+    A permutable Scenario Element Level includes a File definition identifying all (and only) the
+    files that must be present in the Scenario Element Level directory, and no listed File can
+    appear in more than one Scenario Element. It is an error to have more than one Category if
+    Scenario Elements are not permutable. The directory for the Scenario Element Level must
+    contain only those files. The user will be warned if all the files in any two Levels are
+    identical (we expect at least one to be different).
+
+    If there is more than one Scenario Element Level for a single Category Level, all the Category
+    Levels will be permuted (with each Scenario Element Level contributing its InputPath to the
+    resulting ModelStage).
+
+    The main objection to more than one Category with non-permuted Scenario Elements is that the
+    R visualizer will want to crossfilter them.
+
+    When permutation is performed, the resulting ModelStages should get dumped into a
+    configuration-like file listing the ModelStage parameters (notably descriptions and InputPaths,
+    plus the category/scenario element identifiers needed to cross-filter in the R Visualizer).
+    The purpose of that file is to have a human-readable index of what the different scenario model
+    stages are about.
+    
+###### Concrete steps
+
+These should be tested out in "test_scenarios" in tests/test.R.
+
+    Are ScenarioCategories defined:
+      No: Create a default ScenarioCategory called "Scenarios". Create a default ScenarioElement
+          called "Scenario". Create ScenarioCategory Levels keyed one-to-one to ScenarioElement
+          "Scenario" Levels, which are in turn built from each ModelStage plus StartFrom defined
+          in the scenario section.
+    If one ScenarioCategory is defined, does it have defined Category Levels?
+      No: Just like default, except we've named the Category (for the Visualizer)
+    If it has defined Category Levels, does each of those have a ScenarioElement Level
+      No: Error; each category level has to be associated with one or more ScenarioElement Levels
+      CategoryLevel can also include a Name (default is definition sequence) and Description
+      Level includes a list of one more more ScenarioElement/Level pairs. The ScenarioElement/Level
+      can only appear in one CategoryLevel.
+    If Category Level has ScenarioElement Levels, do we have a ScenarioElement structure
+      No: Just like default, but interpret ScenarioElement Levels as scenario ModelStage names,
+      and only include those explicitly named model stages in visualization (ignore the rest)
+    If the ScenarioElement structure is defined, are the ScenarioElements permutable
+      Requirement: has Files defined for each ScenarioElement. Directories attached to each
+        element have (error) all and only those Files and (warning) at least one directory
+        file differs among each of the levels.
+      No: If Files descriptor is missing, exactly one ScenarioELement Level is allowed. The Level
+          Name must belong to a scenario ModelStage. The ScenarioElement will supply descriptive
+          information (rather than interpolating ModelStage values)
+    Does each ScenarioElement Level appear in either zero or exactly one ScenarioCategory Level?
+      No: error
+    Permute the ScenarioCategory Levels and generate a summary of each resulting ModelStage
+      (including the StartFrom) - provides documentation of what is being run.
+      Permutation should work even if there is just one ScenarioCategory (permutations are based
+      on InputPaths associated with each ScenarioElement Level)
+      ModelStage must include ScenarioElement Name:Value pairs for each ScenarioElement Level
+        included in the permuted ModelStage. A Name:Value pair is added for each ScenarioElement, if
+        a non-zero Level for that ScenarioElement does not appear in the permutation (missing), then
+        the Value is zero. Might start by making them all zero, then just dropping in the permuted
+        non-zero values.
 
 ###### Deeper architecture follows:
 

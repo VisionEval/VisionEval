@@ -4,6 +4,10 @@ Notes:
   - Dir element of each stage is optional (if directory has name of stage)
   - Better to make explicit in order to document that input files are being changed
   - If stage has no Dir and Dir does not exist, it's no error and stage gets only the StartFrom inputs
+  - Notice from the example stages that only inputs that deviate from the StartFrom stage need to be
+    included. It is bad practice to include an unmodified file in the scenario ModelStages inputs
+  - ScenarioCategories / ScenarioElements are auto-generated - a single Category, with one level mapping
+    directly to each ModelStage
 
 StartFrom: "stage-pop-future"       # StartFrom stage for ModelStages (adjust for your model)
 

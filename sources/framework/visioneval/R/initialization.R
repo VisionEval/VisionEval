@@ -1803,7 +1803,7 @@ loadModelParameters <- function(FlagChanges=FALSE,envir=modelEnvironment()) {
 #' @return A list of parsed parameters for each of the VisionEval model elements found in the script.
 #' @export
 parseModelScript <- function(FilePath) {
-  writeLog(c("Parsing model script",FilePath),Level="info")
+  writeLog(c("Parsing model script",FilePath),Level="debug")
   if (!file.exists(FilePath)) {
     Msg <- c(
       paste0("Specified model script file does not exist."),
@@ -1842,7 +1842,7 @@ parseModelScript <- function(FilePath) {
   if ( length(InitParams_ls) > 0 ) InitParams_ls <- InitParams_ls[[1]] # Ignore more than one
   RequiredVEPackages <- sapply(extractElement("requirePackage"),function(x)x$requirePackage$Package) # Vector of package names
 
-  writeLog("Done parsing model script",Level="info")
+  writeLog("Done parsing model script",Level="debug")
   return(
     list(
       AllCalls_ls        = Elements,

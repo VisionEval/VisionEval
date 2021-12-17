@@ -19,3 +19,5 @@ Some topics for vignettes:
   2. Looking at model vignettes for instructions on how to localize them
   3. Using the VEModel API
   4. Extracting data from VE model runs
+
+See the 0-GettingStarted.md file (not yet structured to be a vignette)

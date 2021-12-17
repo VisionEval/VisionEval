@@ -25,7 +25,9 @@ ve.scenario.init <- function( baseModel=NULL, fromFile=FALSE ) {
 }
 
 # Load scenario's visioneval.cnf (constructing self$RunParam_ls and self$loadParam_ls)
+# Then build whatever model stages are defined there
 ve.scenario.load <- function(fromFile=FALSE) {
+
   if ( ! fromFile && ! is.null(self$modelStages) ) return(NULL) # do not reload model stages
 
   # Reload scenario configuration file and then build the scenario stages
@@ -36,12 +38,13 @@ ve.scenario.load <- function(fromFile=FALSE) {
   # Layer in the base run parameters as basis for scenarios
 
   # If StartFrom is defined in the scenario RunParam_ls, use the parameters from that stage as the
-  # basis for the current scenarios. Otherwise, just load the parameters from the base model.
+  # basis for the current scenarios. Otherwise, just load the parameters from the base model,
+  # expecting to fill in the required missing ones here.
   if ( "StartFrom" %in% names(self$loadedParam_ls) ) {
     startFrom <- self$baseModel$modelStages[[ self$loadedParam_ls$StartFrom ]]
     baseParam_ls <- startFrom$RunParam_ls
     # Drop keys that we will force stages here to define
-    baseParam_ls <- baseParam_ls[ - which( names(baseParam_ls) %in% c("Scenario","Description") ) ]
+    baseParam_ls <- baseParam_ls[ - which( names(baseParam_ls) %in% c("Scenario","Description","ModelStages") ) ]
   } else {
     baseParam_ls <- self$baseModel$RunParam_ls
   }
@@ -51,23 +54,22 @@ ve.scenario.load <- function(fromFile=FALSE) {
 
   # Load different types of scenarios and build ModelStages for them
   writeLog("Loading model Scenarios",Level="info")
-  self$modelStages <- NULL
+
   # Explicit ModelStages are defined first (available to use as StartFrom for Category stages)
   # These will use the top-level StartFrom for the scenarios
-  if ( "ModelStages" %in% names(modelParam_ls) ) {
+  if ( "ModelStages" %in% names(self$loadedParam_ls) ) {
     writeLog(paste("Parsing explicit Scenarios from",self$scenarioDir),Level="info")
-    # TODO: overlay self$RunParam_ls on self$baseModel$RunParam_ls
-    modelStages <- lapply(names(modelParam_ls$ModelStages), # Use pre-defined structures
+    modelStages <- lapply(names(self$loadedParam_ls$ModelStages), # Use pre-defined structures
       # At a minimum, must provide Dir or Config
       function(stage) {
-        obj <- modelParam_ls$ModelStages[[stage]] # Get the stageParam_ls structure
+        obj <- self$loadedParam_ls$ModelStages[[stage]] # Get the stageParam_ls structure
+        if ( ! "ScenarioElements" %in% names(obj) ) obj$ScenarioElements <- list() # mark as scenario
         writeLog(paste("Model Stage:",stage),Level="info")
         VEModelStage$new(
           Name=stage,
           Model=self$baseModel,
           ScenarioDir=self$scenarioPath,
           modelParam_ls=modelParam_ls,
-          StageIsScenario=TRUE,
           stageParam_ls=obj
         )
       }
@@ -75,162 +77,216 @@ ve.scenario.load <- function(fromFile=FALSE) {
   } else modelStages <- list()
   self$modelStages <- modelStages
 
-  if ( all("Categories","Scenarios") %in% names(modelParam_ls) ) {
-    writeLog(paste("Parsing Category combination Scenarios from",self$ScenarioDir),Level="info")
+  # Trigger for combination scenarios is presence of ScenarioElements
+  if ( "ScenarioElements" %in% names(modelParam_ls) ) {
+    writeLog(paste("Parsing Category combination Scenarios from",self$scenarioDir),Level="info")
 
-    # Get CategorySettings if any and overlay on self$RunParam_ls for use in building these stages
-    # Only present to support setting a StartFrom from among the explicit ModelStages in the
-    # ScenarioDir - that stage will always use a StartFrom from the BaseModel (or have no start
-    # from). All the Category/Scenario stages will StartFrom the CategorySetting/StartFrom
-    if ( "StartFrom" %in% names(modelParam_ls$Categories) ) {
-      categoryStartFrom <- visioneval::addParameterSource(
-        list(StartFrom=modelParam_ls$Categories["StartFrom"]),
-        Source=attr(modelParam_ls$Categories,"source")
-      )
-      modelParam_ls <- visioneval::mergeParameters(modelParam_ls,categoryStartFrom)
-    }
+    self$Elements <- modelParam_ls$ScenarioElements
 
-    # TODO: It might be handy to have a ModelStage diagnostic that reports where the ModelStage gets
-    # all its input files (get the list of required files for the stage via index, and report each
-    # InputDir and the set of files pulled from that location). Make that a function on the
-    # ModelStage. Try VEModel$list(inputs=TRUE,stage=Stage$Name,details="INPUTDIR"). Should be able
-    # to run that on arbitrary stages and just get their list of inputs. We'll need that eventually
-    # to ensure that the InputPath is working right and the scenarios are set up correctly.
+    # Add the fully built input path to each Level in the Element.
+    # Those will be composed via the Category Levels into the InputPath vector for finding
+    #   the input files that make up the scenario category level.
+    self$Elements <- lapply( self$Elements,
+      function(element) {
+        scenarioRoot <- if ( "ScenarioRoot" %in% names(element) ) { element$ScenarioRoot } else { element$Name }
+        element$Levels <- lapply(element$Levels,
+          function(level) {
+            level$Path <- file.path(
+              self$scenarioPath,scenarioRoot,level$Name # level$Name is subdirectory inside element$ScenarioRoot
+            )
+            return(level)
+          }
+        )
+        names(element$Levels) <- sapply(element$Levels,function(lvl) lvl$Name)
+        element
+      }
+    )
+    names(self$Elements) <- sapply(self$Elements,function(e) e$Name)
 
-    # Once we've loaded a model with such "defective" scenarios, we can retrieve
-    # BaseModel$scenarios() and use the "build" and "verify" functions to see if everything is
-    # complete and present. "verify" will report inconsistent file space compared to definitions
-    # and "built" will create the scenario structure (copying files from the ScenarioDir's StartFrom
-    # stage - ignoring the StartFrom for categories)
+    # TODO: for diagnostic purposes, list out any Element Levels that do not have at least one
+    # unique file. That should probably just be a separate VEModelScenarios function. Here, we're
+    # just building the structures and throwing errors if we can't find what we need.
 
-    # Categories key needs these elements:
-    # see inst/scenarios/VERSPM-pop for current data we need to process
-    # We can refer to (undefined) Level: 0 when defining a Scenario Level for a Category
-    # That specification will simply be dropped since refers to the base case for the scenarios
-    # Files. That can help visually validate Categories that access multiple scenarios. so we could
-    # see combinations like A:1, B:0 then A:0, B:1 and finally A:1,B:1. While those could be
-    # specified as A:1, B:1, A:1 + B:1, it reads better to explicitly state the zero case.
-
-    # TODO: expand.grid is our friend - need to include the zero levels.
-    # We can prepend NA to the vector of values and we just ignore those as we compile the list of
-    # Scenario properties for building model stages - zero length list (pure base case) means do
-    # not create a ModelStage, otherwise for each Category (column) and Level (value of column)
-    # that is not NA, build a list of the Scenario-Level item. Ultimately for the Scenario-Level
-    # need the Scenario Name (for use by visualizer) and level Name, plus the ScenarioDir/LevelDir
-    # (can just compose - don't need to keep ScenarioDir separately). The ModelStage Dir (and Name)
-    # will be built by flattening character renditions of Scenario Name and Level Name
-    # (SN-SL+...).
-
-    # Look at previous BuildScenarios for ideas - it's too complex and messy, but has the idea of
-    # filtering the scenarios by categories - doesn't have the "StartFrom" idea obviously. Does
-    # check for presence of required files (which are attached to "scenarios",
-    # not "categories") Set that up from the extended example.
-
-    # TODO: visit each scenario that is part of the category level included in the stage and add its
-    # InputPath and descriptor (Scenario Tag, Level) to the ModelStage Levels list.
-    
-    scenarioList <- list()
-    # Process Categories
-    for ( category in modelParam_ls$Categories ) {
-      writeLog(paste("Processing category",category$Name),Level="info")
-
-      # Construct levels for this category
-      levels <- category$Levels
-
-      catLevel <- lapply(
-        levels,
-        function(level) {
-          catLevelName <- paste0(category,"-",level$Name)
+    # Compose the ScenarioCategories
+    if ( "ScenarioCategories" %in% names(modelParam_ls) ) {
+      # All the Category/Scenario stages will StartFrom the CategorySetting/StartFrom, which is
+      # expected to be an explicit ModelStage in ScenarioDir. That explicit stage will use the
+      # overall StartFrom, if any.
+      if ( ! "Category" %in% names(modelParam_ls$ScenarioCategories) ) {
+        stop(
+          writeLog("No ScenarioCategories present in model scenario configuration",Level="error")
+        )
+      }
+      self$Categories <- modelParam_ls$ScenarioCategories$Category
+      if ( "StartFrom" %in% names(modelParam_ls$ScenarioCategories) ) {
+        categoryStartFrom <- visioneval::addParameterSource(
+          list(StartFrom=modelParam_ls$ScenarioCategories["StartFrom"]),
+          Source=attr(modelParam_ls$ScenarioCategories,"source")
+        )
+        modelParam_ls <- visioneval::mergeParameters(modelParam_ls,categoryStartFrom)
+      }
+    } else {
+      # Construct default Scenario Categories from Scenario Elements
+      self$Categories <- lapply(
+        self$Elements,
+        function(element) {
           list(
-            Name=catLevelName,
-            Description=paste0("(Category: ",category$Label,") ",level$Description),
-            InputPath=file.path(self$scenarioPath,catLevelName)
+            Name = element$Label, # Category has Name, Description, Levels
+            Description = element$Description,
+            Levels = lapply(element$Levels,
+              function(level) {
+                list(
+                  Name=level$Name, # Levelhas Name, Inputs
+                  Inputs=lapply(level,
+                    function(input) {
+                      list(
+                        Name=element$Name, # Input keys to Scenario Element by Name
+                        Level=level$Name   # Level says which Scenario Element Level to include
+                      )
+                    }
+                  )
+                )
+              }
+            )
           )
         }
       )
+    }
+    # Make Categories into a named list (for ease of access later when building ModelStages)
+    names(self$Categories) <- sapply(self$Categories,function(c) c$Name)
 
-      # Construct scenarios from combinations
-      if ( length(scenarioList)==0 ) scenarioList <- catLevel else {
-        augmentList <- list()
-        for ( nextLevel in catLevel ) {
-          augmentList <- c(augmentList,lapply(scenarioList,function(scen) c(scen,list(nextLevel))))
+    # Now that we have the Categories, add the full InputPath to each Level
+    for ( category in names(self$Categories) ) {
+      self$Categories[[category]]$Levels <- lapply(self$Categories[[category]]$Levels,
+        function(level) {
+          level$InputPath <- sapply(level$Inputs,
+            function(input) {
+              if ( as.numeric(input$Level)==0 ) return("")
+              e <- self$Elements[[input$Name]]
+              e$Levels[[input$Level]]$Path
+            }
+          )
+          level$InputPath <- level$InputPath[ nzchar(level$InputPath) ]
+          if ( ! is.character(level$InputPath) ) {
+            stop(writeLog(paste("Input path for category",level$Name,"is undefined"),Level="error"))
+          }
+          return(level)
         }
-        scenarioList <- augmentList
+      )
+    }
+    # TODO: It might be handy to have a ModelStage diagnostic that reports where the finished
+    # ModelStages get their inputs (listing just the files that are different in each stage from
+    # the BaseStage. Perhaps use VEModel$list(inputs=TRUE,stage=Stage$Name,details="INPUTDIR"). 
+
+    # Expand Grid takes a named list where the names are all the Category Names and the Values
+    #   are the list of possible levels for that Category (treated as indexes into the Category's
+    #   Levels list - 0 drops out and is then ignored.
+    expandCategories <- lapply(self$Categories, function(c) 0:length(c$Levels))
+    names(expandCategories) <- sapply(self$Categories, function(c) c$Name )
+
+    # each row of stagesToBuild will become a model stage
+    stagesToBuild <- expand.grid(expandCategories,KEEP.OUT.ATTRS=FALSE,stringsAsFactors=FALSE)
+
+    # Make a ModelStage from each resulting combination of Category/Level. Additional information in
+    # each ModelStage:
+    #   1. Combined InputPath (just concatenate the previously built level InputPath from each
+    #      included Category Level).
+    #   2. named list of Element Name : Element Level Name to identify the ModelStage to the
+    #      Visualizer
+    # Need to construct Scenario Name and Description in order to have a Runnable model stage
+    # Also need to create the Stage Directory (conventional name)
+
+    scenarioList <- list()
+    for ( stage in 1:nrow(stagesToBuild ) ) {
+      # Pull out each non-zero level category
+      catLevels <- stagesToBuild[stage,]
+      catLevels <- unlist(catLevels[ , catLevels != 0, drop=FALSE ])
+      if ( length(catLevels)==0 ) next # StartFrom stage (no non-zero catLevels)
+
+      # Concatenate the category description
+      catNames <- names(catLevels)
+      scenarioName <- paste( collapse="+", paste( gsub("[^[:alnum:]]","_",catNames), catLevels, sep="=" ) )
+
+      # Now get the Level information
+      inputPath <- character(0)
+      description <- character(0)
+      elements <- character(0)
+      for ( levelIndex in seq_along(catLevels) ) {
+        catValues <- self$Categories[[catNames[levelIndex]]]
+        levelValues <- catValues$Levels[[catLevels[levelIndex]]]
+        inputPath <- c(inputPath,levelValues$InputPath)
+        description <- if(length(description)>0) paste(description,catValues$Description,sep=":") else catValues$Description
+        elementLevels <- sapply(levelValues$Inputs,function(v) v$Level)
+        names(elementLevels) <- sapply(levelValues$Inputs,function(v) v$Name)
+        elementLevels <- elementLevels[ as.numeric(elementLevels)!=0 ] # don't explicitly save base level
+        elements <- c( elements,elementLevels )
       }
+      description <- paste(description,collapse="//")
+      scenarioList[[length(scenarioList)+1]] <- list(
+        Scenario=scenarioName,    # Also becomes ScenarioDir for results output
+        Description=description,
+        InputPath=inputPath,
+        ScenarioElements=elements
+      )
     }
 
     # Convert Category-Level construction to ModelStage objects
-    modelStages <- lapply(
-      scenarioList,
-      function(scen) {
-        Dir = paste(sapply(scen,function(sc) sc$Name),collapse="")
-        return(
-          c(
-            list(
-              Name=paste(sapply(scen,function(sc) sc$Name),collapse=""),
-              Dir=Dir
-            ),
-            modelParam_ls[ ! names(modelParam_ls) %in% c("Name","Dir","Description") ]
-          )
-        )
-      }
-    )
+    # Remove Scenario/Description from "StartFrom" model run parameters
+    modelParam_ls <- modelParam_ls[ ! names(modelParam_ls) %in% c("Scenario","Description") ]
+    # Construct model stages
     self$modelStages <- lapply(scenarioList,
       function(stage) {
-        Dir <- paste(sapply(stage,function(sc) sc$Name),collapse="")
-        stageParam_ls <- list(
-          Dir=Dir,                    # For stage output
-          Name=Dir,                   # Root for stage
-          InputPath=sapply(stage,function(sc) sc$InputPath), # character vector
-          Description=paste(sapply(stage,function(sc) sc$Description),collapse="\n")
-        )
+        Dir <- stage$Scenario
+        stage$Dir <- Dir
+        stage$Name <- Dir
         VEModelStage$new(
           Name = Dir,
           Model = self$baseModel,
           ScenarioDir=self$scenarioPath,
           modelParam_ls=modelParam_ls,
-          stageParam_ls=stageParam_ls
+          stageParam_ls=stage
         )
       }
     )
-  } else modelStages <- list()
-  self$modelStages <- c(self$modelStages,modelStages)
-  
-  # If no stage definitions in the configuration, try to do folder-based stages (only)
-  if ( length(self$modelStages)==0 && ! any(c("ModelStages","Categories") %in% names(modelParam_ls)) ) {
-    # Attempt to make sub-folders of self$scenarioPath into stages
-    # In general, to avoid errors with random sub-directories becoming stages
-    #  it is best to explicitly set ModelStages in the model's main visioneval.cnf
-    writeLog("Parsing implicit Scenarios from directories",Level="info")
-    stages <- list.dirs(self$scenarioPath,full.names=FALSE,recursive=FALSE)
-    structuralDirs <- c(
-      self$baseModel$setting("DatastoreName"),
-      self$baseModel$setting("QueryDir"),
-      self$baseModel$setting("ScriptsDir"),
-      self$baseModel$setting("InputDir"),
-      self$baseModel$setting("ParamDir"),
-      self$baseModel$setting("ScenarioDir"),
-      self$baseModel$setting("ResultsDir")
-    )
-    stages <- stages[ ! stages %in% structuralDirs ]
-    writeLog(paste0("Scenario Stage directories:\n",paste(stages,collapse=",")),Level="info")
-    self$modelStages <- lapply(stages,
-      function(stage) {
-        stageParam_ls <- list(
-          Dir=stage,                              # Relative to modelPath
-          Name=stage,                             # Will only change root directory
-          Path=file.path(self$scenarioPath,stage) # Root for stage inputs
-        )
-        VEModelStage$new(
-          Name = stageParam_ls$Name,
-          Model = self$baseModel,
-          ScenarioDir=self$scenarioPath,
-          modelParam_ls=modelParam_ls,
-          stageParam_ls=stageParam_ls
-        )
-      }
-    )
+  } else {
+    # If still no stage definitions in the configuration, try to do folder-based stages (only)
+    if ( length(self$modelStages)==0 && ! any(c("ModelStages","ScenarioCategories") %in% names(modelParam_ls)) ) {
+      # Attempt to make sub-folders of self$scenarioPath into stages
+      # In general, to avoid errors with random sub-directories becoming stages
+      #  it is best to explicitly set ModelStages in the model's main visioneval.cnf
+      writeLog("Parsing implicit Scenarios from directories",Level="info")
+      stages <- list.dirs(self$scenarioPath,full.names=FALSE,recursive=FALSE)
+      structuralDirs <- c(
+        self$baseModel$setting("DatastoreName"),
+        self$baseModel$setting("QueryDir"),
+        self$baseModel$setting("ScriptsDir"),
+        self$baseModel$setting("InputDir"),
+        self$baseModel$setting("ParamDir"),
+        self$baseModel$setting("ScenarioDir"),
+        self$baseModel$setting("ResultsDir")
+      )
+      stages <- stages[ ! stages %in% structuralDirs ]
+      writeLog(paste0("Scenario Stage directories:\n",paste(stages,collapse=",")),Level="info")
+      self$modelStages <- lapply(stages,
+        function(stage) {
+          stageParam_ls <- list(
+            Dir=stage,                              # Relative to modelPath
+            Name=stage,                             # Will only change root directory
+            Path=file.path(self$scenarioPath,stage),# Root for stage inputs
+            ScenarioElements=list()                 # Empty list marks it as a scenario
+          )
+          VEModelStage$new(
+            Name = stageParam_ls$Name,
+            Model = self$baseModel,
+            ScenarioDir=self$scenarioPath,
+            modelParam_ls=modelParam_ls,
+            stageParam_ls=stageParam_ls
+          )
+        }
+      )
+    }
   }
+
   self$RunParam_ls <- modelParam_ls # save scenarios RunParam_ls
   # Get here with self$modelStages containing a list of VEModelStage objects
   # Plus a table we can use to extract the Category/Level status of each model stage,
@@ -372,6 +428,8 @@ VEModelScenarios <- R6::R6Class(
     modelStages = list(),               # list of VEModelStage object, built during $load, empty if undefined/invalid
     startFrom = NULL,                   # ModelStage to start from (from config, set during $load)
     invalidStages = list(),             # List of diagnostics (generated during "load" by calling "verify")
+    Elements = NULL,                    # list of ScenarioELements for this scenario set
+    Categories = NULL,                  # list of ScenarioCategories for this scenario set
 
     # Functions
     initialize=ve.scenario.init,        # Initializes VEModelScenarios object
