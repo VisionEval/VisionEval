@@ -282,9 +282,6 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
 #' are entirely missing in each table.
 #' @export
 readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
-  #Select datastore read function
-  readFromTable <- assignDatastoreFunctions(QueryPrep_ls$DstoreType,FunctionName="readFromTable",envir=new.env())
-
   #Extract the datastore listings
   MS_ls <- QueryPrep_ls$Listing;
   #Datastore locations
@@ -305,6 +302,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
       # ModelState; DstoreLoc will then no longer be a list.
       query.env <- new.env()
       query.env$ModelState_ls <- MS_ls[[Loc]]
+      assignDatastoreFunctions(envir=query.env) # uses modelstate type
       HasTable <- checkTableExistence(tb, Group, envir=query.env)
       if (HasTable) {
         for (ds in Ds) {
@@ -316,6 +314,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
                 readFromTable(ds, tb, Group, ReadAttr = TRUE, envir=query.env)
               if ( !is.na(Tables_ls[[tb]][ds]) && Tables_ls[[tb]][ds] != "" ) { # NA or "" means use default units
                 DsetType <- attributes(Dset_)$TYPE
+                browser( expr = (is.null(DsetType)) )
                 DsetUnits <- attributes(Dset_)$UNITS
                 ToUnits <- Tables_ls[[tb]][ds]
                 if ( !is.null(ToUnits) && is.na(ToUnits) ) ToUnits <- NULL # NULL and NA will mean the same

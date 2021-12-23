@@ -79,8 +79,6 @@ For extraction:
   output using a data formatter API. Extract is, in effect, an internal function (export has an
   option to dish up data.frames in memory).
 
-  Query is working like that. Check models.
-
   Implement two functions for extracting Datastores: extract and export.
 
   extract

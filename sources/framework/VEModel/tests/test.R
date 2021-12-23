@@ -1342,14 +1342,32 @@ test_scenarios <- function(
     mod <- openModel("VERSPM-scenario")
   }
 
-  if ( run ) mod$run()             # does nothing if existing model has "run complete status"
+  if ( run ) {
+    testStep("Running model...")
+    mod$run()             # does nothing if existing model has "run complete status"
+  }
 
+  testStep("Loading scenario query")
   qr <- mod$query(querySpec) # Fails if model has not been run
   qf <- qr$QueryFile
+  cat("QueryFile:",qf,"\n")
+
+  testStep("Running Query")
   qr$run(Force=TRUE)
   print(qr)
-  qrs <- NULL # qr$extract()
 
+  testStep("Examine Query Results")
+  qrr <- qr$results()
+  print(str(qrr))
+
+  testStep("Extracting Query Results")
+  qrs <- qr$extract()
+  print(qrs)
+
+  testStep("Exporting Query Results")
+  qr$export()
+
+  testStep("Returning scenario model")
   print(mod,scenarios=TRUE)
   return(invisible(list(
     Model=mod, Query=qr, QueryFile=qf, QueryResults=qrs

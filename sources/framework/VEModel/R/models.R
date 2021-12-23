@@ -1135,37 +1135,40 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   # Otherwise:
   #   Add ModelDir/StageDir/InputDir if it exists
   #   Otherwise, add ModelDir/StageDir if it exists
-  if ( "InputPath" %in% names(self$RunParam_ls) ) {
-    stageInput <- self$RunParam_ls$InputPath
+  if ( "InputPath" %in% names(self$loadedParam_ls) ) {
+    stageInput <- self$loadedParam_ls$InputPath
     writeLog(paste(nzchar(stageInput),"Stage InputPath is set",paste("'",stageInput,"'"),collapse="\n"),Level="debug")
   } else {
-    if ( "InputPath" %in% names(modelParam_ls) ) {
-      modelInputPath <- modelParam_ls$InputPath # base InputPath from model, if defined
-    } else {
-      modelInputPath <- NULL
-    }
-    # Add on stage input path
+    # Construct stage input path
     if ( is.character(self$Path) && dir.exists(self$Path) ) {
       stageInput <- file.path(self$Path,visioneval::getRunParameter("InputDir",self$RunParam_ls))
       if ( ! file.exists(stageInput) ) stageInput <- self$Path
-      if ( file.exists(stageInput) ) {
-        stageInput <- c( stageInput, modelInputPath )
-      } else {
-        stageInput <- modelInputPath
-      }
-      if ( ! is.null(stageInput) ) {
-        writeLog(paste("Stage InputPath is",stageInput,collapse="\n"),Level="debug")
-        self$RunParam_ls <- visioneval::addRunParameter(
-          self$RunParam_ls,
-          Source="VEModelStage$initialize",
-          InputPath=stageInput
-        )
-      } else {
-        # Not an error if there is a runnable StartFrom stage with InputPath
-        writeLog("No Stage Input File.",Level="debug")
-      }
-    }
-  } # Still may have no explicit InputPath for Stage
+      writeLog(paste("Input path for",self$Name,":",stageInput,"(",file.exists(stageInput),")"),Level="info")
+    } else stageInput <- NULL
+  }
+    
+  if ( "InputPath" %in% names(modelParam_ls) ) {
+    modelInputPath <- modelParam_ls$InputPath # base InputPath from model, if defined
+  } else {
+    modelInputPath <- NULL
+  }
+  if ( file.exists(stageInput) ) {
+    stageInput <- c( stageInput, modelInputPath )
+  } else {
+    stageInput <- modelInputPath
+  }
+  if ( ! is.null(stageInput) ) {
+    writeLog(paste("Stage InputPath is",stageInput,collapse="\n"),Level="info")
+    self$RunParam_ls <- visioneval::addRunParameter(
+      self$RunParam_ls,
+      Source="VEModelStage$initialize",
+      InputPath=stageInput
+    )
+  } else {
+    # Not an error if there is a runnable StartFrom stage with InputPath
+    writeLog("No Input Path for Stage",Level="info")
+  }
+  # Still may have no explicit InputPath for Stage
 
   # Identify "startFrom" stage (VEModelStage$runnable will complete setup)
   # Can find StartFrom through ModelStages or from the stage configuration file/parameters
@@ -1244,7 +1247,7 @@ ve.stage.runnable <- function(priorStages) {
       Source="VEModelStage$runnable",
       InputPath=cullInputPath( InputPath=InputPath )
     )
-    writeLog(paste("InputPath for",self$Name,":",self$RunParam_ls$InputPath,collapse="; "),Level="debug")
+    writeLog(paste("InputPath for",self$Name,":",self$RunParam_ls$InputPath,collapse="; "),Level="info")
   } else {
     writeLog(paste("No InputPath for stage",self$Name),Level="debug")
   }
