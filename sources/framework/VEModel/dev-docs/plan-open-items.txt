@@ -12,25 +12,28 @@ For build/install restructuring:
 
 For the visualizer:
 
-  see plan-visualizer.txt
+  see plan-scenario.txt (setting up inputs) and plan-visualizer.txt
 
   Make "visual" an output format (original plan, return to this approach) for query results (not on
   the model).
 
-  Visual will be sent through export function for query
+  Visual will be sent through export/extract function for query
     must have attached model
     model must be Run Complete
     Draw categories/scenarios from model states
     Draw data from results
     Draw outputconfig from query
 
-For building models:
+For building visioneval and models:
 
   Allow the build process to be a "multi-core"/parallel activity (with the dependency groups of the
   packages set up so we build independent modules in parallel) - how to handle logging the outputs
-  of each - possible enlarging how the build log is maintained (create a log folder for the specific
-  dated build, and sub-folder for each element built in modules). Enable multi-tasking by setting
+  of each - possible enlarging how the build log is maintained - use sink to re-route standard output
+  and perhaps standard error (risky) to a file specific to each "future". Enable multi-tasking by setting
   number of available workers (via environment/Makefile variable) to something more than one.
+    - Factor out the build steps into a function.
+    - Loop over the build creating futures (okay to block)
+    - With only one worker, skip the future - just run the function
 
   From a model's run script, generate an empty set of input table specifications in some arbitrary output format
   (default in-memory data.frame). This would be the "skeleton" function. Use the new ViEIO approach.
@@ -66,7 +69,9 @@ For running models:
   BUG: When re-running the walkthrough with files already built in another directory, the Datastore
   path ends up wrong. TODO: when we open a ModelState.Rda in a particular working directory, we need
   to look at the actual location of ModelState and the current ve.runtime path and relocate the
-  Datastore path in the ModelState.Rda (otherwise it craps out because the path is wrong).
+  Datastore path in the ModelState.Rda (otherwise it craps out because the path is wrong). When
+  loading the ModelState, identify key paths (like DatastorePath) that may be relative to ModelDir,
+  and update ModelDir to the parent of ResultsDir and replace throughout.  
 
 For extraction:
 
@@ -74,43 +79,40 @@ For extraction:
   output using a data formatter API. Extract is, in effect, an internal function (export has an
   option to dish up data.frames in memory).
 
-  # Immediately: Deprecate the whole selection thing for extract/export
+  Query is working like that. Check models.
 
-    Can still implement off the selection internally, but build it on the fly from parameters
-      to export/extract - those can just set up a selection
+  Implement two functions for extracting Datastores: extract and export.
 
-    Implement two functions for extracting Datastores
+  extract
+    Operates on a set of Group/Table/Name (given a ModelStage with its Datastore)
+      Produces a list of unit-converted data.frames (selecting only named Group, Table or Name)
+      Uses readDatastoreTables
+        Does unit conversion plus field subsetting
+        Auto-generatea the bizarre structure required for readDatastoreTables
+    Basic structure tracks with current VEResults$extract, except we generate a list of
+      data.frames - this will apply to results from one model stage
+    Export iterates over Group/Table/Name and extracts, then writes the data.frame (so we
+      don't put them all in memory at once). export passes Group and Table explicitly to extract.
+    Extract only exists for a ModelStage - for a model, it's just (as currently) an alias for export
+      but possibly with a different configuration of default parameters (e.g. extract will do all
+      stages, whereas export only does Reportable or perhaps vice versa)
+  export
+    Applied to a ModelStage will iterate over requested Group/Table/Name in the specified format
+      Extracts each Group/Table to a data.frame then writes a table to the connection
+        specified in the output format.
+      Default is to iterate over all Groups. Group can be a specific name or the shortcut "Years"
+        whic is set (internally or externally) via a selection
+      Writes one Table per Group formatting the output table as ModelStage_Group_Table
+      Output location has "connection" (directory) and "table" (ModelState_Group_Table name)
+      Default directory is RunPath/OutputDir
+    Applied to a Model will visit each requested ModelStage (default=Reportable) and export it
+      After configuring the selection for the ModelStage per the function arguments for Group,
+        Table, Field
+    Export needs a directory to write into (default is ResultsDir/OutputDir for the model,
+      or RunPath/OutputDir if just working on a single ModelStage
 
-    extract
-      Operates on a set of Group/Table/Name (given a ModelStage with its Datastore)
-        Produces a list of unit-converted data.frames (selecting only named Group, Table or Name)
-        Uses readDatastoreTables
-          Does unit conversion plus field subsetting
-          Auto-generatea the bizarre structure required for readDatastoreTables
-      Basic structure tracks with current VEResults$extract, except we generate a list of
-        data.frames - this will apply to results from one model stage
-      Export iterates over Group/Table/Name and extracts, then writes the data.frame (so we
-        don't put them all in memory at once). export passes Group and Table explicitly to extract.
-      Extract only exists for a ModelStage - for a model, it's just (as currently) an alias for export
-        but possibly with a different configuration of default parameters (e.g. extract will do all
-        stages, whereas export only does Reportable or perhaps vice versa)
-    export
-      Applied to a ModelStage will iterate over requested Group/Table/Name in the specified format
-        Extracts each Group/Table to a data.frame then writes a table to the connection
-          specified in the output format.
-        Default is to iterate over all Groups. Group can be a specific name or the shortcut "Years"
-          whic is set (internally or externally) via a selection
-        Writes one Table per Group formatting the output table as ModelStage_Group_Table
-        Output location has "connection" (directory) and "table" (ModelState_Group_Table name)
-        Default directory is RunPath/OutputDir
-      Applied to a Model will visit each requested ModelStage (default=Reportable) and export it
-        After configuring the selection for the ModelStage per the function arguments for Group,
-          Table, Field
-      Export needs a directory to write into (default is ResultsDir/OutputDir for the model,
-        or RunPath/OutputDir if just working on a single ModelStage
-
-    When selecting stages for output from the model, can use shortcut "Scenarios" to refer to all
-    scenario model stages (only, including the StartFrom stage).
+  When selecting stages for output from the model, can use shortcut "Scenarios" to refer to all
+  scenario model stages (only, including the StartFrom stage).
 
   # Establish internal API via framework for export functions
 

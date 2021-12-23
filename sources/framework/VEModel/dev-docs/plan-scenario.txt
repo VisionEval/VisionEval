@@ -1,11 +1,13 @@
 ## Next steps
 
-Implement the detailed steps below and make sure they work with the two sample models (model states
-and combinations). Probably want a smaller version of the combination one that is "proof of concept"
-for testing.
+ModelStage and Combination models both appear to be working.
+Develop a smaller subset of combinations to test all the way through running the combinations.
 
-Take the results all the way through to the Visualizer. Key activities there:
-  Generate the queries and output configuration, the data, the category and scenario configuration
+Take the results through to the visualizer:
+  - Finish developing the visualizer standard queries
+  - Generate data (with ScenarioElement identifiers) from query results
+  - Generate category and scenario (element) tables for visualizer
+  - Construct default category and scenario (elements) for ModelStage scenarios
 
 Make sure the installable scenario models are up to date with required structures.
   The combinatorial version should just do a few categories and levels

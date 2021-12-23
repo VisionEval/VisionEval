@@ -25,7 +25,7 @@ QuerySpec <- list(
       Table = "Household"
     ),
     Units = "MI/DAY",
-    Description = "Household DVMT"
+    Description = "All DVMT"
   ),
   list(
     # DVMTPerCapita <- HhDvmt/TotalPop # Function
@@ -34,53 +34,181 @@ QuerySpec <- list(
     Units = "MI/DAY",
     Description = "Per Capita DVMT"
     # EXPORT
-    # Additionl items to integrate with visualizer?
+  ),
+  list(
+    # HhWalkTrips <- sum(WalkTrips)
+    Name = "HhWalkTrips",
+    Summarize = list(
+      Expr = "sum(WalkTrips)",
+      Units = c(
+        WalkTrips = "TRIP"
+      ),
+      Table = "Household"
+    ),
+    Units = "TRIP",
+    Description = "All Walk Trips"
+  ),
+  list(
+    # DVMTPerCapita <- HhDvmt/TotalPop # Function
+    Name = "WalkTravelPerCapita",
+    Function = "WalkTrips/TotalPop",
+    Units = "TRIP/PRSN",
+    Description = "Per Capita Walk Trips"
+    # EXPORT
+  ),
+  list(
+    # AirPollutionEm <- sum(Household$DailyCO2e) # Summarize
+    Name = "AirPollutionEm",
+    Summarize = list(
+      Expr = "sum(DailyCO2e)",
+      Units = c(
+        DailyCO2e = "GM/DAY"
+      ),
+      Table = "Household"
+    ),
+    Units = "GM/DAY",
+    Description = "Daily Household Air Pollution"
+    # EXPORT
+  ),
+  list(
+    # HhDailyGGE <- sum(Household$DailyGGE) # Summarize
+    Name = "DailyGGE",
+    Summarize = list(
+      Expr = "sum(DailyGGE)",
+      Units = c(
+        DailyCO2e = "GGE/DAY"
+      ),
+      Table = "Household"
+    ),
+    Units = "GGE/DAY",
+    Description = "Daily HH Greenhouse Gas Emissions"
+  ),
+  list(
+    # ComSvcUrbanGGE <- sum(Marea$ComSvcUrbanGGE) # Summarize
+    Name = "ComSvcUrbanGGE",
+    Summarize = list(
+      Expr = "sum(ComSvcUrbanGGE)",
+      Units = c(
+        DailyCO2e = "GGE/DAY"
+      ),
+      Table = "Marea"
+    ),
+    Units = "GGE/DAY",
+    Description = "Daily Urban Vehicle Greenhouse Gas Emissions"
+  ),
+  list(
+    # ComSvcUrbanGGE <- sum(Marea$ComSvcUrbanGGE) # Summarize
+    Name = "ComSvcRuralGGE",
+    Summarize = list(
+      Expr = "sum(ComSvcRuralGGE)",
+      Units = c(
+        DailyCO2e = "GGE/DAY"
+      ),
+      Table = "Marea"
+    ),
+    Units = "GGE/DAY",
+    Description = "Daily Rural Commercial Vehicle Greenhouse Gas Emissions"
+  ),
+  list(
+    # FuelUse <- 365 * ( HhDailyGGE + ComSvcUrbanGGE + ComSvcRuralGGE )  # Function
+    Name = "FuelUse",
+    Function = "365 * ( HhDailyGGE + ComSvcUrbanGGE + ComSvcRuralGGE )",
+    Units = "GGE/DAY",
+    Description = "Annual Fuel Use"
+    # EXPORT
+  ),
+  list(
+    Name = "TotalCost",
+    Summarize = list(
+      Expr = paste(sep="\n", # TODO: one day check if braces are needed...
+        "{",
+        "OwnCostHh <- OwnCost",
+        "OpCostHh <- AveVehCostPM  * Dvmt",
+        "sum(OwnCostHh+OpCostHh)",
+        "}"
+      ),
+      Units = c(
+        OwnCost = "USD",
+        AveVehCostPM = "USD/MILE",
+        Dvmt = "MILE"
+      ),
+      Table = "Household"
+    ),
+    Units = "USD",
+    Description = "Daily Total Vehicle Cost"
+  ),
+  list(
+    # HhIncome <- sum(Household$Income) # Summarize
+    Name = "HhIncome",
+    Summarize = list(
+      Expr = "sum(Income)",
+      Units = c(
+        Income = "USD"
+      ),
+      Table = "Household"
+    ),
+    Units = "USD",
+    Description = "Total Regional Income"
+  ),
+  list(
+    # VehicleCost = TotalCost / HhIncome  # Function
+    Name = "VehicleCost",
+    Function = "100 * TotalCost / HhIncome",
+    Units = "",
+    Description = "Vehicle Cost as Percent of HhIncome "
+    # EXPORT
+  ),
+  list(
+    Name = "HhIncomeLow",
+    Summarize = list(
+      Expr = paste(sep="\n", # TODO: one day check if braces are needed...
+        "{",
+        "isLowIncome <- Income < 20000",
+        "sum(Income[isLowIncome])",
+        "}"
+      ),
+      Units = c(
+        Income = "USD",
+        OwnCost = "USD",
+        AveVehCostPM = "USD/MILE",
+        Dvmt = "MILE"
+      ),
+      Table = "Household"
+    ),
+    Units = "USD",
+    Description = "Vehicle Cost as Fraction of HhIncome [Low Income Households]"
+  ),
+  list(
+    Name = "TotalCostLow",
+    Summarize = list(
+      Expr = paste(sep="\n", # TODO: one day check if braces are needed...
+        "{",
+        "isLowIncome <- Income < 20000",
+        "OwnCostHh <- OwnCost[isLowIncome]",
+        "OpCostHh <- AveVehCostPM[isLowIncome]  * Dvmt[isLowIncome]",
+        "sum(OwnCostHh+OpCostHh)",
+        "}"
+      ),
+      Units = c(
+        Income = "USD",
+        OwnCost = "USD",
+        AveVehCostPM = "USD/MILE",
+        Dvmt = "MILE"
+      ),
+      Table = "Household"
+    ),
+    Units = "USD",
+    Description = "Vehicle Cost as Percent of HhIncome [Low Income Households]"
+  ),
+  list(
+    # VehicleCost = TotalCost / HhIncome  # Function
+    Name = "VehicleCostLow",
+    Function = "100 * TotalCostLow / HhIncomeLow",
+    Units = "",
+    Description = "Vehicle Cost as Percent of HhIncome [Low Income Households]"
+    # EXPORT
   )
 )
-
-# NotUsed <- function() {
-#   HhWalkTrips <- sum(Household$Dvmt) # Summarize
-# 
-#   WalkTravelPerCapita <- HhWalkTrips / TotalPop # Function
-#     # EXPORT
-# 
-#   AirPollutionEm <- sum(Household$DailyCO2e) # Summarize
-#     # EXPORT
-# 
-#   HhDailyGGE <- sum(Household$DailyGGE) # Summarize
-#   ComSvcUrbanGGE <- sum(Marea$ComSvcUrbanGGE) # Summarize
-#   ComSvcRuralGGE <- sum(Marea$ComSvcRuralGGE) # Summarize
-#   
-#   FuelUse <- 365 * ( HhDailyGGE + ComSvcUrbanGGE + ComSvcRuralGGE )  # Function
-#     # EXPORT
-# 
-#   TotalCost <- {            # Summarize
-#     OperationCost <- Household$AveVehCostPM  * Household$Dvmt
-#     OwnCost <- Household$OwnCost
-#     sum(OwnCost+OperationCost)
-#     }
-# 
-#   HhIncome <- sum(Household$Income) # Summarize
-# 
-#   VehicleCost <- TotalCost / HhIncome # Function
-#     # EXPORT
-# 
-#   TotalCostLow <- {          # Summarize
-#     isLowIncome <- Household$Income < 20000
-#     OperationCost <- Household$AveVehCostPM[isLowIncome]  * Household$Dvmt[isLowIncome]
-#     OwnCost <- Household$OwnCost[isLowIncome]
-#     sum(OwnCost+OperationCost)
-#     }
-# 
-#   HhIncomeLow <- {           # Summarize
-#     isLowIncome <- Household$Income < 20000
-#     sum(Household$Income[isLowIncome])
-#     }
-# 
-#   VehicleCostLow <- TotalCostLow / HhIncomeLow * 100 {         # Function
-#     # EXPORT
-#   }
-# }
 
 # verspm_output_config_txt <-
 # '[

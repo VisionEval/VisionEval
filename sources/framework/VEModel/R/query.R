@@ -189,14 +189,14 @@ ve.query.save <- function(saveTo=TRUE,overwrite=TRUE) {
       number <- number + 1
     }
     if ( file.exists(actualFile) && number>=10 ) {
-      writeLog(
+      msg <- writeLog(
         c(
           paste("Too many files piled up trying not to overwrite",saveTo),
           "You should save with overwrite=TRUE and/or remove some of them."
         ),
         Level="error"
       )
-      stop()
+      stop(msg)
     }
     saveTo <- actualFile
   }
@@ -227,6 +227,7 @@ ve.query.load <- function(FileName=NULL,QuerySpec=NULL,ModelPath=NULL,QueryDir=N
     if ( !is.null(FileName) && file.exists(FileName) ) {
       # Load the query from FileName, commandeering the modelEnvironment
       ve.model <- visioneval::modelEnvironment() # Don't need to clear ve.model
+      writeLog(paste("Loading Query:",FileName),Level="info")
       sys.source(self$QueryFile,envir=ve.model)
       self$add(ve.model$QuerySpec) # will interpret the list of lists as a list of VEQuerySpec
     }
@@ -421,6 +422,7 @@ asQuery <- function(obj,QueryName="Temp-Query") {
     # check if it's a query spec or a list of query specs
     if ( is.list(obj) ) {
       qry.spec <- asSpecList(obj)
+      # TODO: may have errors that need to be reported...
       if ( ! all(sapply(qry.spec,function(s) { "VEQuerySpec" %in% class(s) && s$valid() } )) ) {
         # Second, if it wasn't a list of specs, perhaps it is an individual spec
         qry.spec <- list()

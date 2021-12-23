@@ -591,7 +591,10 @@ checkQuerySpec <- function(
         #------------------------------
         #Check that all operands have units
         if (!all(Operands_ %in% names(Units))) {
-          Errors_ <- "Some of the operands in the expression don't have specified units."
+          Errors_ <- c(
+            "Some of the operands in the expression don't have specified units.",
+            paste( Operands_[! Operands_ %in% names(Units)], sep=", " )
+          )
           break
         }
         #Check that all datasets named in the By argument have units

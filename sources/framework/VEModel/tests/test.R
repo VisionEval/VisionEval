@@ -845,7 +845,7 @@ test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TR
   # Process the standard query list for the test model
   # If multiple==TRUE, copy the test model and its results a few times, then submit the
   # list of all the copies to VEQuery. Each column of results will be the same (see
-  # test_scenarios (TODO) for a run that will generate different results in each column).
+  # test_scenarios for a run that will generate different results in each column).
 
   testStep("Set up Queries and Run on Model Results")
   testStep("Opening test model and caching its results...")
@@ -1319,31 +1319,41 @@ test_setup <- function(model=NULL) {
   unlink(conf.file) # Don't leave the runtime visioneval.cnf around
 }
 
-test_load_scenarios <- function(useStages=TRUE, run=NULL, log="info") {
-  if ( ! missing(log) ) logLevel(log)
+test_scenarios <- function(
+  useStages=TRUE,
+  run=useStages,
+  querySpec="VERSPM-scenarios",
+  install=FALSE,
+  log="info"
+) {
+  logLevel(log)
 
-  testStep(paste("Installing scenario model"))
-  if ( dir.exists(modelPath <- file.path("models","VERSPM-scenario")) ) unlink(modelPath,recursive=TRUE)
-  print(modelPath)
+  testStep(paste("Checking and installing scenario model"))
+  existingModel <- dir.exists(modelPath <- file.path("models","VERSPM-scenario"))
+  if ( install || ! existingModel ) {
+    if ( install && existingModel ) unlink(modelPath,recursive=TRUE)
+    cat( sep="", if ( existingModel) "Existing" else "Installing",":\n", modelPath, "\n" )
 
-  # useStages==TRUE will do the model stage scenario, otherwise combinations
-  scenarioVariant <- if ( useStages) "scenarios-ms" else "scenarios-cat"
-  testStep(paste("Installing opening variant:",scenarioVariant))
-
-  # Just install and then open it
-  mod <- installModel("VERSPM-scenario",variant=scenarioVariant,modelName="VERSPM",log=log,confirm=FALSE)
-
-  if ( missing(run) || is.null(run) ) run <- useStages # don't run combinatorial scenarios unless explicitly requested
-
-  if ( run ) {
-    mod$run()
-    qr <- mod$query("VERSPM-scenarios")
-    qr$run()
-    qr$extract()
+    # useStages==TRUE will do the model stage scenario, otherwise combinations
+    if ( ! existingModel  ) scenarioVariant <- if (useStages) "scenarios-ms" else "scenarios-cat"
+    mod <- installModel("VERSPM-scenario",variant=scenarioVariant,modelName="VERSPM",log=log,confirm=FALSE)
+  } else {
+    cat(sep="","Using exiting model:\n",modelPath,"\n")
+    mod <- openModel("VERSPM-scenario")
   }
 
+  if ( run ) mod$run()             # does nothing if existing model has "run complete status"
+
+  qr <- mod$query(querySpec) # Fails if model has not been run
+  qf <- qr$QueryFile
+  qr$run(Force=TRUE)
+  print(qr)
+  qrs <- NULL # qr$extract()
+
   print(mod,scenarios=TRUE)
-  return(invisible(mod))
+  return(invisible(list(
+    Model=mod, Query=qr, QueryFile=qf, QueryResults=qrs
+  )))
 }
 
 # Now set it all up

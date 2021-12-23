@@ -1733,7 +1733,8 @@ ve.model.visual <- function(stages=list(),query=NULL,save=FALSE) {
   #     they are handed back to the model).
   #   VEModelScenarios can take the exported VEQuery data.frame of results (suitably filtered by
   #     selecting which results and the Year) and generate everything needed for the visualizer
-  #     (VEQuery provides the outputconfig - export metadata to get the pieces;
+  #     (VEQuery provides the outputconfig - export metadata to get
+  #     the pieces);
   #     VEQuery$export(data=TRUE) provides the results for VEData, VEModelScenarios can produce the
   #     categoryconfig and scenarioconfig, and the VEModelScenarios$stages (which also give the
   #     VEResults) can provide the tags indicating which Scenario/Level the stage belongs to (the
@@ -1990,16 +1991,18 @@ futureStrategyName <- function(strategy) {
   )
 }
 
-# Report status of model stages
-ve.model.status <- function(stage=NULL,statusCode=NULL,limit=10) {
-  # TODO: function to check on which stages are running.
-  # Report the status of each stage
-  # stage parameter: character vector stage names to list (or numeric vector, indices in modelStages list)
-  # statusCode parameter: vector of statusCodes to list
-  # limit parameter: show first limit number of stages (only applies if other parameters are not supplied)
-  # With no parameters, only show running stages if any are running
-  # If none are running, only show completed stages if any are completed
-  # If none are completed, show all stages (but apply "limit" and report how many more there are)
+# Report status of model stages (use model$printStatus for overall)
+ve.model.stageStatus <- function(stage=NULL,statusCode=codeStatus("Run Complete"),limit=10) {
+  if ( is.null(stage) ) stage <- names(self$modelStages)
+  cat(sep="","Model stages with status '",printStatus(statusCode),"' (",statusCode,")\n")
+  countdown <- limit
+  for ( s in self$modelStages[stage] ) {
+    cat(sep="",s$RunStatus==statusCode," (",s$RunStatus,"): ",s$Name,"\n")
+    if ( limit>0 && (countdown <- countdown-1) == 0 ) {
+      cat("... Stopping display after",limit,"stages (out of ",length(stage),")\n")
+      break
+    }
+  }
 }
 
 knownPlans <- c("inline", "sequential", "callr", "multisession")
@@ -2888,8 +2891,8 @@ VEModel <- R6::R6Class(
     load=ve.model.load,                     # load the model state for each stage (slow - defer until needed)
     plan=ve.model.plan,                     # Choose a multiprocessing plan
     run=ve.model.run,                       # run a model (or just a subset of stages)
-    status=ve.model.status,                 # report status of running or complete stages
     print=ve.model.print,                   # provides generic print functionality
+    stageStatus=ve.model.stageStatus,       # report status of stages
     printStatus=ve.model.printStatus,       # turn integer status into text representation
     updateStatus=ve.model.updateStatus,     # fill in overall status based on individual stage status
     scenarios=ve.model.scenarios,           # Create a VEModelScenarios object to manage scenarios
