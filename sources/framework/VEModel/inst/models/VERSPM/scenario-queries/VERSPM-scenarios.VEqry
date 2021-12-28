@@ -51,7 +51,7 @@ QuerySpec <- list(
   list(
     # DVMTPerCapita <- HhDvmt/TotalPop # Function
     Name = "WalkTravelPerCapita",
-    Function = "WalkTrips/TotalPop",
+    Function = "HhWalkTrips/TotalPop",
     Units = "TRIP/PRSN",
     Description = "Per Capita Walk Trips"
     # EXPORT
@@ -72,11 +72,11 @@ QuerySpec <- list(
   ),
   list(
     # HhDailyGGE <- sum(Household$DailyGGE) # Summarize
-    Name = "DailyGGE",
+    Name = "HhDailyGGE",
     Summarize = list(
       Expr = "sum(DailyGGE)",
       Units = c(
-        DailyCO2e = "GGE/DAY"
+        DailyGGE = "GGE/DAY"
       ),
       Table = "Household"
     ),
@@ -89,7 +89,7 @@ QuerySpec <- list(
     Summarize = list(
       Expr = "sum(ComSvcUrbanGGE)",
       Units = c(
-        DailyCO2e = "GGE/DAY"
+        ComSvcUrbanGGE = "GGE/DAY"
       ),
       Table = "Marea"
     ),
@@ -100,14 +100,14 @@ QuerySpec <- list(
     # ComSvcUrbanGGE <- sum(Marea$ComSvcUrbanGGE) # Summarize
     Name = "ComSvcRuralGGE",
     Summarize = list(
-      Expr = "sum(ComSvcRuralGGE)",
+      Expr = "sum(ComSvcNonUrbanGGE)",
       Units = c(
-        DailyCO2e = "GGE/DAY"
+        ComSvcNonUrbanGGE = "GGE/DAY"
       ),
       Table = "Marea"
     ),
     Units = "GGE/DAY",
-    Description = "Daily Rural Commercial Vehicle Greenhouse Gas Emissions"
+    Description = "Daily NonUrban (Rural) Commercial Vehicle Greenhouse Gas Emissions"
   ),
   list(
     # FuelUse <- 365 * ( HhDailyGGE + ComSvcUrbanGGE + ComSvcRuralGGE )  # Function
@@ -120,13 +120,7 @@ QuerySpec <- list(
   list(
     Name = "TotalCost",
     Summarize = list(
-      Expr = paste(sep="\n", # TODO: one day check if braces are needed...
-        "{",
-        "OwnCostHh <- OwnCost",
-        "OpCostHh <- AveVehCostPM  * Dvmt",
-        "sum(OwnCostHh+OpCostHh)",
-        "}"
-      ),
+      Expr = "sum(OwnCost + (AveVehCostPM * Dvmt))",
       Units = c(
         OwnCost = "USD",
         AveVehCostPM = "USD/MILE",
@@ -161,34 +155,19 @@ QuerySpec <- list(
   list(
     Name = "HhIncomeLow",
     Summarize = list(
-      Expr = paste(sep="\n", # TODO: one day check if braces are needed...
-        "{",
-        "isLowIncome <- Income < 20000",
-        "sum(Income[isLowIncome])",
-        "}"
-      ),
+      Expr = "sum(Income[Income < 20000])",
       Units = c(
-        Income = "USD",
-        OwnCost = "USD",
-        AveVehCostPM = "USD/MILE",
-        Dvmt = "MILE"
+        Income = "USD"
       ),
       Table = "Household"
     ),
     Units = "USD",
-    Description = "Vehicle Cost as Fraction of HhIncome [Low Income Households]"
+    Description = "Total Income of low-income households"
   ),
   list(
     Name = "TotalCostLow",
     Summarize = list(
-      Expr = paste(sep="\n", # TODO: one day check if braces are needed...
-        "{",
-        "isLowIncome <- Income < 20000",
-        "OwnCostHh <- OwnCost[isLowIncome]",
-        "OpCostHh <- AveVehCostPM[isLowIncome]  * Dvmt[isLowIncome]",
-        "sum(OwnCostHh+OpCostHh)",
-        "}"
-      ),
+      Expr = "sum(OwnCost[Income < 20000]+( AveVehCostPM[Income<20000]*Dvmt[Income<20000] ) )",
       Units = c(
         Income = "USD",
         OwnCost = "USD",

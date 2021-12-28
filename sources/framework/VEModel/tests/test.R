@@ -1353,6 +1353,7 @@ test_scenarios <- function(
   testStep("Loading scenario query")
   qr <- mod$query(querySpec) # Fails if model has not been run
   qf <- qr$QueryFile
+  print(qr)
   cat("QueryFile:",qf,"\n")
 
   testStep("Running Query")
@@ -1361,7 +1362,8 @@ test_scenarios <- function(
 
   testStep("Examine Query Results")
   qrr <- qr$results()
-  print(str(qrr))
+  print(class(qrr))
+  print(length(qrr))
 
   testStep("Extracting Query Results")
   qrs <- qr$extract()

@@ -248,7 +248,7 @@ ve.query.check <- function(verbose=FALSE) {
   self$names(update=TRUE) # Make sure QuerySpec named list names are consistent
   self$CheckMessages <- character(0)
   query.names <- character(0)
-  for ( spec in self$QuerySpec ) {
+  for ( spec in private$QuerySpec ) {
     if ( ! "VEQuerySpec" %in% class(spec) ) {
       self$CheckMessages <- c(
         self$CheckMessages,
@@ -649,7 +649,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
   }
   if ( length(seekMeasures) == 0 ) {
     stop(
-      writeLog(paste("Requested Measures are not in Query:",seekMeasures,collapse=", "),Level="error")
+      writeLog(paste("Measures Not Found in Query.",seekMeasures,collapse=", "),Level="error")
     )
   }
 
@@ -1123,7 +1123,7 @@ getNames <- function(AST) {
   if ( length(AST)==1 ) {
     if ( is.name(AST) ) deparse(AST) else NULL # return character rendition of R symbol
   } else {
-    unlist( lapply(AST, function(x) Recall(x) ) )
+    unlist( lapply(AST, function(x) getNames(x) ) )
   }
 }
 
