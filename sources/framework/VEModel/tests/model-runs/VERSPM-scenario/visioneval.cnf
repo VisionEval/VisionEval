@@ -1,0 +1,29 @@
+Notes:
+- VisionEval.cnf for VERSPM with "horizontal" population synthesis stage (and "vertical" years)
+- Model Structural Parameters: ScriptsDir, InputDir, ParamDir, Seed
+- Model Description: Model, Region, State, ModelStages
+- See individual ModelStages for scenario descriptions
+
+# Model Structural Parameters
+ScriptsDir  : scripts
+InputDir    : inputs # model_parameters.json is located here
+    # Full set of model inputs is included in model base directory
+    # InputPath in stages will look there first
+    # Stages include just the minimal input data they need to run
+ParamDir    : defs # default parameter location
+Seed        : 1  # Same seed used for all scenarios
+
+# Model description
+Model       : VERSPM 3.0 ("Horizontal" stages)
+Region      : RVMPO
+State       : OR
+ModelStages : # specify explicitly to avoid processing base scenario
+    "stage-pop-synth":
+      Dir: stage-pop-synth
+      Reportable: false
+    "stage-pop-base":
+      Dir: stage-pop-base
+      Reportable: true
+    "stage-pop-future":
+      Dir: stage-pop-future
+      Reportable: true

@@ -1,0 +1,40 @@
+Notes:
+  - Some static scenarios implemented as ModelStages
+  - Stage directory goes onto the InputPath
+  - Dir element of each stage is optional (if directory has name of stage)
+  - Better to make explicit in order to document that input files are being changed
+  - If stage has no Dir and Dir does not exist, it's no error and stage gets only the StartFrom inputs
+  - Notice from the example stages that only inputs that deviate from the StartFrom stage need to be
+    included. It is bad practice to include an unmodified file in the scenario ModelStages inputs
+  - ScenarioCategories / ScenarioElements are auto-generated - a single Category, with one level mapping
+    directly to each ModelStage
+
+StartFrom: "stage-pop-future"       # StartFrom stage for ModelStages (adjust for your model)
+
+ModelStages:
+  "Design-1":
+     # Inherit year, base year, etc plus the model scripts from stage-pop-future
+     Scenario: Design Level 1
+     Description: All the Design Level 1 input adjustments
+     Category: Design
+     Dir: Design-Level-1
+  "Design-2":
+     Scenario: Design Level 2
+     Description: All the Design Level 2 input adjustments
+     Category: Design
+     Dir: Design-Level-2
+  "Design-3":
+     Scenario: Design Level 3
+     Description: All the Design Level 3 input adjustments
+     Category: Design
+     Dir: Design-Level-2
+  "Pricing-1":
+     Scenario: Pricing Level 1
+     Description: All the Pricing Level 1 input adjustments
+     Category: Pricing
+     Dir: Pricing-Level-1
+  "Pricing-2":
+     Scenario: Pricing Level 2
+     Description: All the Pricing Level 2 input adjustments
+     Category: Pricing
+     Dir: Pricing-Level-2

@@ -1,0 +1,11 @@
+Notes:
+- Descriptive elements of Future Year stage
+- Clone this future year with different inputs for alternate scenarios
+
+# Scenario description
+ModelScript : run_scenario.R
+Scenario    : VERSPM RVMPO Future Year
+Description : Future Year Build (using pre-built population)
+BaseYear    : 2010
+Years       : [ 2038 ]
+StartFrom   : stage-pop-base # Certain values are needed from BaseYear

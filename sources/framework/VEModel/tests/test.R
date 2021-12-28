@@ -1338,13 +1338,16 @@ test_scenarios <- function(
     if ( ! existingModel  ) scenarioVariant <- if (useStages) "scenarios-ms" else "scenarios-cat"
     mod <- installModel("VERSPM-scenario",variant=scenarioVariant,modelName="VERSPM",log=log,confirm=FALSE)
   } else {
-    cat(sep="","Using exiting model:\n",modelPath,"\n")
+    cat(sep="","Using existing model:\n",modelPath,"\n")
     mod <- openModel("VERSPM-scenario")
   }
 
   if ( run ) {
     testStep("Running model...")
     mod$run()             # does nothing if existing model has "run complete status"
+  }
+  if ( mod$printStatus() != "Run Complete" ) {
+    stopTest("Scenario model is not yet run")
   }
 
   testStep("Loading scenario query")

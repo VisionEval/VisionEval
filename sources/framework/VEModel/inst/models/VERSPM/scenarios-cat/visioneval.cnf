@@ -167,51 +167,51 @@ ScenarioCategories:
               Level: 1
             - Name: E
               Level: 1
-    - Name: "Pricing"
-      Description: "State-led policies that move towards true cost pricing."
-      Levels: 
-        - Name: 1
-          Inputs: 
-            - Name: C
-              Level: 1
-        - Name: 3
-          Inputs: 
-            - Name: C
-              Level: 2
-    - Name: "Vehicles/Fuels"
-      Description: "Factors representing changes to future vehicles and fuels."
-      Levels: 
-        - Name: 1
-          Inputs: 
-            - Name: V
-              Level: 1
-            - Name: F
-              Level: 0
-        - Name: 2
-          Inputs: 
-            - Name: V
-              Level: 1
-            - Name: F
-              Level: 1
-    - Name: "Fuel Price"
-      Description: "Context factor on the assumed market price of gasoline (exclusive of fuel taxes.)"
-      Levels: 
-        - Name: 1
-          Inputs: 
-            - Name: G
-              Level: 1
-        - Name: 2
-          Inputs: 
-            - Name: G
-              Level: 2
-    - Name: "Income"
-      Description: "Context factor on the assumed growth of statewide average per capita income."
-      Levels: 
-        - Name: 1
-          Inputs: 
-            - Name: I
-              Level: 1
-        - Name: 2
-          Inputs: 
-            - Name: I
-              Level: 2
+#     - Name: "Pricing"
+#       Description: "State-led policies that move towards true cost pricing."
+#       Levels: 
+#         - Name: 1
+#           Inputs: 
+#             - Name: C
+#               Level: 1
+#         - Name: 3
+#           Inputs: 
+#             - Name: C
+#               Level: 2
+#     - Name: "Vehicles/Fuels"
+#       Description: "Factors representing changes to future vehicles and fuels."
+#       Levels: 
+#         - Name: 1
+#           Inputs: 
+#             - Name: V
+#               Level: 1
+#             - Name: F
+#               Level: 0
+#         - Name: 2
+#           Inputs: 
+#             - Name: V
+#               Level: 1
+#             - Name: F
+#               Level: 1
+#     - Name: "Fuel Price"
+#       Description: "Context factor on the assumed market price of gasoline (exclusive of fuel taxes.)"
+#       Levels: 
+#         - Name: 1
+#           Inputs: 
+#             - Name: G
+#               Level: 1
+#         - Name: 2
+#           Inputs: 
+#             - Name: G
+#               Level: 2
+#     - Name: "Income"
+#       Description: "Context factor on the assumed growth of statewide average per capita income."
+#       Levels: 
+#         - Name: 1
+#           Inputs: 
+#             - Name: I
+#               Level: 1
+#         - Name: 2
+#           Inputs: 
+#             - Name: I
+#               Level: 2

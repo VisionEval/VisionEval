@@ -1142,7 +1142,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
     # Construct stage input path
     if ( is.character(self$Path) && dir.exists(self$Path) ) {
       stageInput <- file.path(self$Path,visioneval::getRunParameter("InputDir",self$RunParam_ls))
-      if ( ! file.exists(stageInput) ) stageInput <- self$Path
+      if ( is.null(stageInput) || ! file.exists(stageInput) ) stageInput <- self$Path
       writeLog(paste("Input path for",self$Name,":",stageInput,"(",file.exists(stageInput),")"),Level="info")
     } else stageInput <- NULL
   }
@@ -1152,7 +1152,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   } else {
     modelInputPath <- NULL
   }
-  if ( file.exists(stageInput) ) {
+  if ( !is.null(stageInput) && file.exists(stageInput) ) {
     stageInput <- c( stageInput, modelInputPath )
   } else {
     stageInput <- modelInputPath
