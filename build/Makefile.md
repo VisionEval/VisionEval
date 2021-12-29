@@ -61,8 +61,8 @@ but you can override them by doing something like
        module (only) so it gets completely rebuilt the next time. Usually you
        won't need it; it crept into the Makefile while we were debugging a
        failure of package data to rebuild. Generally, it will be enough to
-       set VE_EXPRESS=NO, or to use VE_ONLY_BUILD.</dd>
-    <dt>VE_ONLY_BUILD</dt>
+       set VE_EXPRESS=NO, or to use VE_MBUILD.</dd>
+    <dt>VE_MBUILD</dt>
     <dd>This environment variable is used in the build-modules.R script, and does
        not appear in the Makefile, but it can be useful.  You can set it to a
        comma-separated list (**no spaces**), and the named modules will be
@@ -70,9 +70,60 @@ but you can override them by doing something like
        scratch. But modules that you do not name will **not** be rebuilt, even
        if they are out of date. Do something like this:
        ```
-       VE_ONLY_BUILD=VEHouseholdVehicles,VETravelPerformance make modules
+       make modules VE_MBUILD=VEHouseholdVehicles,VETravelPerformance
        ```
-</dd>
+     </dd>
+    <dt>VE_MCLEAR</dt>
+    <dd>This environment variable is used in the build-modules.R script, and does
+       not appear in the Makefile, but it can be useful. Set it to "yes" or "no"
+       (without the quotes).
+     </dd>
+
+VE_MBUILD (replaces VE_ONLY_BUILD)
+
+If unset, build all modules, otherwise only those with names matching a comma-separated list.
+
+VE_MCLEAR
+
+This is processed before anything afterwards in the build
+
+Remove module files (src folder) prior to building. Must have one of these values (or it is
+ignored), or a comma-separated subset:
+
+"all"  - same as make modules-clean, but only for VE_MODBUILD (and ignored if no VE_MODBUILD set)
+"docs" - clear the module_docs and regular man folders
+"data" - clear the data/ folder
+"init" - clear the NAMESPACE and Collation
+
+Related TODO: create a framework function for locating needed package data, that will work through a
+script-only load (e.g. via pkgload), or when there is no package for the regular R data() function
+to work in. Should route through <model>/<local>/<module>, then looking in
+<runtime>/<local>/<module>; with sub-directories for data/ and extdaa/. Local extdata/ is used
+during estimation, Local data/ is used when we want to retrieve built data files. Need a framework
+version of system.file() that can get us data/ and extdata/ consistently (so we get the right file
+when the R scripts are being run during check, build, etc.)
+
+VE_MDOCS
+
+Mutually exclusive options (strip everything from a comma on)
+
+"all"  - generate everything
+"init" - generate NAMESPACE and Collation (not the function docs) (will run if they are not present)
+"docs" - Run the roxygen step to generate .Rd files (will run if they are not present)
+
+VE_MTEST
+
+Can have different values. If not set, do not do R CMD check at all, and no tests. Otherwise:
+"all" - do all tests (run, chk, pkg)
+"chk" - run R CMD check but --no-tests
+"pkg" - do package tests (run R CMD check with tests enabled) (unit testing)
+"run" - do runtime tests (is it working?) after the package has been built (good for developers)
+"none"- do no tests (VE_EXPRESS sets that)
+
+Should be able to do the "run" tests from a pkgload installation. Also should have an
+incremental set of data in a Datastore (with a ModelState) that can be used for the local
+module test (a snapshot of the datastore from the sample or mini model run).
+
 </dl>
 
 There are some variables in the Makefile that are set automatically, and you won't
