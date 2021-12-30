@@ -84,20 +84,27 @@ cat("ve.pkgs.name:",basename(ve.pkgs),"\n",sep="",file=file.path(ve.runtime,"r.v
 
 cat("Script sources...\n")
 
-copy.scripts <- pkgs.db[pkgs.script,c("Root","Path","Package")]
+copy.scripts <- pkgs.db[pkgs.script,c("Root","Path","Package","Target")]
 copy.paths <- file.path(copy.scripts$Root, copy.scripts$Path, copy.scripts$Package)
 if ( length(copy.paths) > 0 ) {
-  any.newer <- FALSE
   for ( f in seq_along(copy.paths) ) {
-    target <- file.path(ve.runtime,copy.scripts$Package[f])
-    newer <- newerThan(copy.paths[f], target)
-    any.newer <- any( any.newer, newer )
-  }
-  if ( any.newer ) {
-    cat(paste("Copying Scripts: ", copy.paths),sep="\n")
-    invisible(file.copy(copy.paths, ve.runtime, recursive=TRUE))
-  } else {
-    cat("Script files are up to date.\n")
+    if ( nzchar(copy.scripts$Target[f]) ) {
+      out.dir <- file.path(ve.runtime,copy.scripts$Target[f])
+      if ( ! dir.exists(out.dir) ) dir.create(out.dir,recursive=TRUE)
+    } else {
+      out.dir <- ve.runtime
+    }
+    target.path <- file.path(out.dir,copy.scripts$Package[f])
+    cat("Copying Script: ", copy.paths[f],"\n")
+    if ( dir.exists(copy.paths[f]) && ! dir.exists(target.path) ) {
+      cat("Creating directory:",target.path,"\n")
+      dir.create(target.path)
+      target.path <- dirname(target.path) # otherwise it duplicates the script name redundantly as a sub-directory
+    } else {
+      cat("Target",target.path,"is directory:",dir.exists(target.path),"\n")
+      if ( dir.exists(target.path) ) target.path <- dirname(target.path)
+    }
+    invisible(file.copy(copy.paths[f], target.path, recursive=dir.exists(copy.paths[f])))
   }
 }
 

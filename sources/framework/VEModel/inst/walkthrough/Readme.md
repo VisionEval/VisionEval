@@ -18,8 +18,8 @@ tree), set up `R_LIBS_USER` in your `.Renviron` to locate your local visioneval 
 If `walkthrough` is a sub-directory of your VisionEval runtime, it will find `ve-lib` automatically.
 
 1 Start R from the walkthrough directory in one of these ways:
-  1. Start RGUI 4.1.1 and set the working directory to your walkthrough
-  1. Make sure your R_HOME variable points to an R 4.1.1 installation and then run `launch.bat` to
+  1. Start RGUI from the R version of the runtime and set the working directory to your walkthrough
+  1. Make sure your R_HOME variable points to the runtime R version and then run `launch.bat` to
   open a basic R terminal window.
   1. Open the walkthrough.Rproj in RStudio
 
@@ -49,3 +49,5 @@ run one of the "test_*" functions. The `test.R` script is the basis for test-dri
 of those tests do what they are supposed to and provide extensive examples of what is possible
 within VNG.
 
+The test.R script (plus the corresponding test_run.R from the visioneval package itself) is also
+available for inspection (though it won't run right) in the walkthrough/tests directory.

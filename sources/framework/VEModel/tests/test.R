@@ -2,6 +2,21 @@
 # Comprehensively test VEModel and related interfaces
 # Also provides working examples of the API
 
+# You should run this from the VEModel package root.
+# Make sure your .libPaths includes the built ve-lib (e.g. by
+# creating a suitable .REnviron file).
+# If you're looking at this file in a built runtime, the individual test_*
+# functions are code you can try interactively to test the framework.
+# You should NOT run the "rewind" or "setup" functions...
+# The test functions are a more detailed and up-to-date version of what the
+# walkthrough does: those are the target of test-based development for the
+# framework.
+
+# starting in the root of the package, just do this
+#  source("tests/test_run.r")
+# It will create a temporary folder to use as a runtime
+# and list the available test functions.
+
 # function: pseudo_package
 # 
 if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
@@ -54,6 +69,8 @@ setup <- function(ve.runtime=NULL) {
   setwd(ve.env$ve.runtime)
 
   if ( ! dir.exists("models") ) dir.create("models")
+  message("Available Test Functions:")
+  print(ls(pattern="^test_",envir=parent.frame(2)))
 
   logLevel("info") # Can override for specific test functions
 }

@@ -279,6 +279,14 @@ Components:
   walkthrough:
     Type: script
     Path: sources/framework/VEModel/inst
+  test.r: # VEModel tests (sample code)
+    Type: script
+    Target: tools/tests/VEModel
+    Path: sources/framework/VEModel/tests
+  test_run.r: # visioneval tests (sample code)
+    Type: script
+    Target: tools/tests/visioneval
+    Path: sources/framework/visioneval/tests
   api:                               # "package" for 'docs' type is the last element (can be file name)
     Type: docs
     Path: "."                        # base directory below root to gather docs
