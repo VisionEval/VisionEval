@@ -1,3 +1,4 @@
+# This is VisionEval Makefile Version 3.0 ("NextGen")
 # You can override VE_CONFIG, VE_RUNTESTS, VE_EXPRESS, VE_BRANCH and VE_R_VERSION
 # on the command line or export them from your environment
 # ve.build() handles useful defaults
@@ -252,10 +253,6 @@ installer installer-bin: installer-reset installer-build
 
 installer-build installer-bin-build: $(VE_LOGS)/installer-bin.built
 
-# TODO: Docs build no longer working in Next Generation - need to look at
-# hardcoded need for exported functions from the framework.
-
-# $(VE_LOGS)/docs.built 
 $(VE_LOGS)/installer-bin.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/runtime.built\
             scripts/build-runtime-packages-bin.R scripts/build-installer-base.R scripts/build-installer-bin.R
 	$(RSCRIPT) scripts/build-runtime-packages-bin.R

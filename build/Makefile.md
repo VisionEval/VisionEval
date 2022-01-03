@@ -1,32 +1,40 @@
 ## Makefile ##
 
-This file provides extensive explanation and commentary on the Makefile used to build
-VisionEval with `ve.build()`.
+This file provides explanation and commentary on the Makefile used to build
+VisionEval with `ve.build()`
 
 You'll be most interested in the Makefile Build Targets section below.
 
 ### Makefile Environment
 
 The first part of the Makefile sets up necessary environment variables. Here is the list
-of key environment configuration variables, all of which have useful defaults. The
-Makefile will do error checking to see if a suitable R version is installed. The
-configuration variables VE_CONFIG, VE_EXPRESS and VE_RUNTESTS work in their default form,
-but you can override them by doing something like
+of environment configuration variables, all of which have useful defaults. The Makefile
+will do error checking to see if a suitable R version is installed. The configuration
+variables VE_CONFIG, VE_EXPRESS and VE_RUNTESTS work in their default form, but you can
+override them by doing something like
 
 `Sys.setenv(VE_CONFIG="config/VE-config-release.yml")`.
 
-(Inside R Studio, VE_R_VERSION is set up by something like `ve.build(r.version='3.6.1')`).
+You can also set them (or any other environment variable) permanently to non-standard
+values in your operating system or your .Renviron file.
+
+(Inside R Studio, VE_R_VERSION can also set up by something like
+`ve.build(r.version='3.6.1')`). By default, R Studio builds VisionEval for whatever
+version of R it starts up with. By setting VE_R_VERSION, you can build VisionEval for a
+different version of R (as long as it is installed on your system). That works because the
+build process starts independent R processes for each step, and VE_R_VERSION tells the
+Makefile which R to use for those processes.
 
 <dl>
     <dt>VE_CONFIG</dt>
     <dd>Location of the configuration file for this run. Defaults to
-       `config/VE-config.yml` whose default version will build the
-       branch of visioneval that it is checked out into (or a
-       pseudo-branch called "visioneval" if you just copied rather than
-       cloned the repository). You can override it by setting it as an
-       environment variable or putting a flag into ve.build (it would
-       say `ve.build(flags="VE_CONFIG=/path/to/my/VE-config.yml".</dd>
-       See the "config" folder for documentation of the config format.
+       `config/VE-config.yml` whose default version will build the branch of visioneval
+       that it is checked out into (or a pseudo-branch called "visioneval" if you just
+       copied rather than cloned the repository). You can override it by setting it as an
+       environment variable or putting a flag into ve.build (it would say
+       `ve.build(flags="VE_CONFIG=/path/to/my/VE-config.yml". See the "config" folder
+       for documentation of the config format.
+    </dd>
     <dt>VE_RUNTESTS</dt>
     <dd>Generally, just leave this as "Default".  If TRUE, tests will
        be run when the VE modules are built. If FALSE tests will be
@@ -34,96 +42,75 @@ but you can override them by doing something like
        overridden by setting an environment variable, or by specifying it
        on the make command line. **Warning: Nobody has tried the tests recently
        because it is easier to just run test models, so this may not build
-       successfully. Re-doing the tests is already in the issues list.**</dd>
+       successfully. Re-doing the tests is already in the issues list.**
+    </dd>
     <dt>VE_EXPRESS</dt>
     <dd>If set to YES, skip the R CMD CHECK operations in build-modules, and do not
        rebuild data files if they already exist. If you are developing packages that
        change their `/data` directory, you should set VE_EXPRESS to anything other
        than `YES`.
+    </dd>
     <dt>VE_BRANCH</dt>
     <dd>This defaults to "visioneval". If you're checking out different
        branches, you can set this to the currently checked out branch (or
        leave it blank and the Makefile will fill it in). If you're using
        ve.build() from within RStudio, there is a flag ("use.git") which you
        can set to true to use the Git branch; otherwise it will still use
-       "visioneval".</dd>
+       "visioneval".
+    </dd>
     <dt>VE_R_VERSION</dt>
     <dd>The R Version for which to build VisionEval. On Linux or the Mac,
-       this variable is forced to match whatever R is installed.  On
-       Windows, it uses a helper batch file to find (and optionally
-       install) the requested version of R.  This must be one of the
-       versions identifed in r-versions.yml in the build directory
-       (that file is easy to extend yourself if needed - just open it
-       and make a similar entry with the numbers adjusted).</dd>
+       this variable is forced to match whatever R is installed. On Windows, it uses a
+       helper batch file to find (and optionally install) the requested version of R. This
+       must be one of the versions identifed in r-versions.yml in the build directory
+       (that file is easy to extend yourself if needed - just open it and make a similar
+       entry with the numbers adjusted).
+    </dd>
     <dt>VE_DELETE</dt>
-    <dd>See the rm-module target below. If you set this environment variable
-       to the name of a module, rm-module will remove every trace of that
-       module (only) so it gets completely rebuilt the next time. Usually you
-       won't need it; it crept into the Makefile while we were debugging a
-       failure of package data to rebuild. Generally, it will be enough to
-       set VE_EXPRESS=NO, or to use VE_MBUILD.</dd>
+    <dd>See the rm-module target below. If you set this environment variable to the name
+       of a module, rm-module will remove every trace of that module (only) so it gets
+       completely rebuilt the next time. Usually you won't need it; it crept into the
+       Makefile while we were debugging a failure of package data to rebuild. Generally,
+       it will be enough to set VE_EXPRESS=NO, or to use VE_MBUILD.
+    </dd>
     <dt>VE_MBUILD</dt>
-    <dd>This environment variable is used in the build-modules.R script, and does
-       not appear in the Makefile, but it can be useful.  You can set it to a
-       comma-separated list (**no spaces**), and the named modules will be
-       cleared (similar to using rm-module with VE_DELETE) and rebuilt from
-       scratch. But modules that you do not name will **not** be rebuilt, even
-       if they are out of date. Do something like this:
+    <dd>This environment variable is used within the build-modules.R script and does not
+       appear in the Makefile. You can set it to a comma-separated list (**no spaces**),
+       and the named modules will be cleared (similar to using rm-module with VE_DELETE)
+       and rebuilt from scratch. But modules that you do not name will **not** be rebuilt,
+       even if they are out of date. Do something like this:
        ```
        make modules VE_MBUILD=VEHouseholdVehicles,VETravelPerformance
        ```
      </dd>
-    <dt>VE_MCLEAR</dt>
-    <dd>This environment variable is used in the build-modules.R script, and does
-       not appear in the Makefile, but it can be useful. Set it to "yes" or "no"
-       (without the quotes).
+     <dt>VE_MCLEAR</dt>
+     <dd>This environment variable is used in the build-modules.R script, and does
+        not appear in the Makefile. Set it to "yes" or "no" (without the quotes). If set to
+        "yes", it will remove the package source folder prior to building (unlike
+        VE_DELETE, it leaves behind the built packages). Useful if you are just removing
+        some folders from the package build source.
      </dd>
-
-VE_MBUILD (replaces VE_ONLY_BUILD)
-
-If unset, build all modules, otherwise only those with names matching a comma-separated list.
-
-VE_MCLEAR
-
-This is processed before anything afterwards in the build
-
-Remove module files (src folder) prior to building. Must have one of these values (or it is
-ignored), or a comma-separated subset:
-
-"all"  - same as make modules-clean, but only for VE_MODBUILD (and ignored if no VE_MODBUILD set)
-"docs" - clear the module_docs and regular man folders
-"data" - clear the data/ folder
-"init" - clear the NAMESPACE and Collation
-
-Related TODO: create a framework function for locating needed package data, that will work through a
-script-only load (e.g. via pkgload), or when there is no package for the regular R data() function
-to work in. Should route through <model>/<local>/<module>, then looking in
-<runtime>/<local>/<module>; with sub-directories for data/ and extdaa/. Local extdata/ is used
-during estimation, Local data/ is used when we want to retrieve built data files. Need a framework
-version of system.file() that can get us data/ and extdata/ consistently (so we get the right file
-when the R scripts are being run during check, build, etc.)
-
-VE_MDOCS
-
-Mutually exclusive options (strip everything from a comma on)
-
-"all"  - generate everything
-"init" - generate NAMESPACE and Collation (not the function docs) (will run if they are not present)
-"docs" - Run the roxygen step to generate .Rd files (will run if they are not present)
-
-VE_MTEST
-
-Can have different values. If not set, do not do R CMD check at all, and no tests. Otherwise:
-"all" - do all tests (run, chk, pkg)
-"chk" - run R CMD check but --no-tests
-"pkg" - do package tests (run R CMD check with tests enabled) (unit testing)
-"run" - do runtime tests (is it working?) after the package has been built (good for developers)
-"none"- do no tests (VE_EXPRESS sets that)
-
-Should be able to do the "run" tests from a pkgload installation. Also should have an
-incremental set of data in a Datastore (with a ModelState) that can be used for the local
-module test (a snapshot of the datastore from the sample or mini model run).
-
+     <dt>VE_MCLEAR</dt>
+     <dd>This environment variable is used in the build-modules.R script, and does
+        not appear in the Makefile. Set it to "yes" or "no" (without the quotes). If set to
+        "yes", it will remove the package source folder prior to building (unlike
+        VE_DELETE, it leaves behind the built packages). Useful if you are just removing
+        some folders from the package build source.
+      </dd>
+      <dt>VE_MDOCS</dt>
+      <dd> Mutually exclusive options (strip everything from a comma on) that can be set
+         to "all" (generate all documents), "init" (regenerate only NAMESPACE and
+         Collation, not the function docs), or "docs" - (regenerate .Rd files using
+         Roxygen).
+      </dd>
+      <dt>VE_MTEST</dt>
+      <dd> Control which tests will run. Can have different values. If not set, only do R
+         CMD check. Otherwise: "all" says do all tests (run, chk, pkg); "chk" says run R
+         CMD check but with `--no-tests` (the default); "pkg" says do package tests (run R
+         CMD check with tests enabled) (unit testing); "run" says do runtime tests after
+         the package has been built (good for developers); or "none"- do no tests (usually
+         it is simplest to set `VE_MTEST="none"` indirectly by setting `VE_EXPRESS=yes`)
+      </dd>
 </dl>
 
 There are some variables in the Makefile that are set automatically, and you won't
@@ -141,11 +128,12 @@ want to change them. They are documented here so you won't worry.
 </dl>
 
 ~~~
+# This is VisionEval Makefile Version 3.0 ("NextGen")
 # You can override VE_CONFIG, VE_RUNTESTS, VE_EXPRESS, VE_BRANCH and VE_R_VERSION
 # on the command line or export them from your environment
 # ve.build() handles useful defaults
 VE_CONFIG?=config/VE-config.yml
-VE_VERSION?=2.0
+VE_VERSION?=3.0
 VE_RUNTESTS?=Default
 VE_EXPRESS?=YES # should be NO, or unset, for standard use
 VE_BRANCH?=$(shell git branch --show-current 2>/dev/null || echo visioneval)
@@ -181,11 +169,10 @@ VE_MAKEVARS?=ve-output-$(VE_BRANCH)-$(VE_R_VERSION).make
 export VE_BRANCH VE_MAKEVARS
 ~~~
 
-The "include" directive forces the file identified by VE_MAKEVARS to
-be rebuilt if it is out of date compared to VE-Config.yml. The
-makefile is then reloaded.  VE_MAKEVARS includes definitions of lots
-of important locations that are set up in the configuration so the
-makefile can inspect and build them suitably.
+The "include" directive forces the file identified by VE_MAKEVARS to be rebuilt if it is
+out of date compared to config/VE-Config.yml. The makefile is then reloaded. VE_MAKEVARS
+includes definitions of lots of important locations that are set up in the configuration
+so the makefile can inspect and build them suitably.
 
 ~~~
 include $(VE_MAKEVARS)
@@ -357,24 +344,21 @@ Finally, we get down to the targets that do real work:
    <dt>modules</dt><dd>Builds source and binary packages from the VE
       frameowrk modules and installs them into the local library, ve-lib</dd>
    <dt>runtime</dt><dd>Copies non-package modules into the runtime -
-      the startup scripts will locate ve-lib to complete the
-      local installation.</dd>
+      the startup scripts will locate ve-lib to complete the local installation.</dd>
    <dt>docs</dt><dd>Builds PDF documentation from configured locations</dd>
    <dt>installer</dt><dd>Builds a binary installer for the development
-      machine architecture. On Windows, the installer includes installed
-      versions of the packages (which just become an R library). On a Mac,
-      the installer includes installable packages - we can't pre-install
-      a library due to Mac security constraints. On Linux, the installer
-      is identical to the "full" installer and includes source packages,
-      which means the installation will be _slow_ as everything needs to
-      get recompiled from the ground up. We may one day create installable
+      machine architecture. On Windows, the installer includes installed versions of the
+      packages (which just become an R library). On a Mac, the installer includes
+      installable packages - we can't pre-install a library due to Mac security
+      constraints. On Linux, the installer is identical to the "full" installer and
+      includes source packages, which means the installation will be _slow_ as everything
+      needs to get recompiled from the ground up. We may one day create installable
       packages for common Linux variants (`.deb`, `.rpm`, etc.) and different
-      architectures, but we're not bothering yet since the market is still so
-      small for Linux.</dd>
-   <dt>installer-full</dt><dd>Buils a source installer that will work
-      on any architecture with R and a development environment. This
-      is only needed if the system does not have RStudio and a graphic
-      environment.</dd>
+      architectures, but we're not bothering yet since the market is still so small for
+      Linux.</dd>
+   <dt>installer-full</dt><dd>Builds a source installer that will work
+      on any architecture with R and a development environment. This is only needed if the
+      system does not have RStudio and a graphic environment.</dd>
    <dt>installers</dt><dd>Builds installer-bin and installer-full</dd>
 </dl>
 
@@ -464,7 +448,7 @@ installer installer-bin: installer-reset installer-build
 
 installer-build installer-bin-build: $(VE_LOGS)/installer-bin.built
 
-$(VE_LOGS)/installer-bin.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/docs.built $(VE_LOGS)/runtime.built\
+$(VE_LOGS)/installer-bin.built: $(VE_RUNTIME_CONFIG) $(VE_LOGS)/runtime.built\
             scripts/build-runtime-packages-bin.R scripts/build-installer-base.R scripts/build-installer-bin.R
 	$(RSCRIPT) scripts/build-runtime-packages-bin.R
 	$(RSCRIPT) scripts/build-installer-base.R

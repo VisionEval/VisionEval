@@ -101,25 +101,33 @@ config=character(0), flags=character(0), express=TRUE)`
 `targets` - a character vector of build targets (see build/Makefile.md for a list and explanation); the
 default will build the targets needed for a local runtime.
 
-`r.version` - a character string (if a vector, only the first element will be used) in the format '4.0.1'
-identifying the R major and minor version. The default is to use the version of R that is running in RStudio.
+`r.version` - a character string (if a vector, only the first element will be used) in the format
+'4.0.1' identifying the R major and minor version. The default is to use the version of R that is
+running in RStudio.
 
-`use.git` - a logical flag (`TRUE` or (default) `FALSE`) that says whether to name the built branch after the
-git branch. The default is to always use the "visioneval" branch. If you are checking out and building different
-branches in the same worktree, or using the command-line `make` build process, you should set it to `TRUE`.
+`use.git` - a logical flag (`TRUE` or (default) `FALSE`) that says whether to name the built branch
+after the git branch. The default is to always use the "visioneval" branch. If you are checking out
+and building different branches in the same worktree, or using the command-line `make` build
+process, you should set it to `TRUE`.
 
-`config` - a character string (if a vecotr, only the first element will be used) with a relative path (to the
-'build' directory) or absolute path to the alternate `VE-config.yml` file. See the 'build/config' directory for
-instructions about how to build or modify that file. The default should be good for development purposes. The
-release version (which includes documentation from the wiki) is build from "build/config/VE-config-release.yml"
+`config` - a character string (if a vector, only the first element will be used) with a relative
+path (to the 'build' directory) or absolute path to the alternate `VE-config.yml` file. See the
+'build/config' directory for instructions about how to build or modify that file. The default should
+be good for development purposes. Use this if you're building a new module or model that needs a
+different configuration; this setting is used in practice to be used to access an alternate
+configuration that included additional documentation for an "installer" version of VisionEval rather
+than a "development" version.
 
-`flags` - a character vector flags that can be passed to the `make` program. In general, the only one you might
-consider using is "-n", which does a "dry run" (it will build the configuration file).
+`flags` - a character vector of flags that can be passed to the `make` program. In general, the only
+one you might consider using is "-n", which does a "dry run" (it will build the configuration file
+but nothing else). You can also use this vector to set environment variables (e.g. adding
+"M_CLEAN=yes"
 
-`express` - a boolean value (default is TRUE): the devtools::check step will be skipped, and package /data directories
-will not be rebuilt if the needed files already exist.  **Warning** If you are developing a new module that has data
-requirements (e.g. it estimates a model during the package build), you should run `ve.build(express=FALSE)`. It will
-take longer to build, but you'll be sure to get updated data.
+`express` - a boolean value (default is TRUE): the devtools::check step will be skipped, and package
+/data directories will not be rebuilt if the needed files already exist. **Warning** If you are
+developing a new module that has data requirements (e.g. it estimates a model during the package
+build), you should run `ve.build(express=FALSE)`. It will take longer to build, but you'll be sure
+to get updated data. This argument is the same as setting "VE_EXPRESS=yes" in the environment.
 
 ### `ve.build()` Additional Notes
 
@@ -136,11 +144,14 @@ build a different branch in the same place), you should clean your output:
 ve.build(c("clean")
 ```
 
-You can build an installer by doing this:\
+You can build an installer by doing this:
+
 ```
 ve.build("installer")
-```\
-If you ask for an installer and you have not already built the runtime, it will go ahead and do that for you anyway.
+```
 
-The complete set of build targets is documented in build/Makefile.md. Some of the "-clean" targets can be helpful for
+If you ask for an installer and you have not already built the runtime, it will back up and make
+sure everything else (modules, dependencies) is up to date.
+
+The complete set of build targets is documented in build/Makefile.md. Some of the "*-clean" targets can be helpful for
 doing a complete rebuild of certain targets (e.g. ve-lib, or the runtime models, or the documentation)
