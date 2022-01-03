@@ -1,4 +1,15 @@
-Implementation plan:
+Multicore improvements for the build process itself
+
+  Allow the build process to be a "multi-core"/parallel activity (with the dependency groups of the
+  packages set up so we build independent modules in parallel) - how to handle logging the outputs
+  of each - possible enlarging how the build log is maintained - use sink to re-route standard output
+  and perhaps standard error (risky) to a file specific to each "future". Enable multi-tasking by setting
+  number of available workers (via environment/Makefile variable) to something more than one.
+    - Factor out the build steps into a function.
+    - Loop over the build creating futures (okay to block)
+    - With only one worker, skip the future - just run the function
+
+Implementation plan possibilities
 
 # Create new runtime-lib (comparable to dev-lib and ve-lib). Put the dependency packages there.
   Build only the VE packages into ve-lib.

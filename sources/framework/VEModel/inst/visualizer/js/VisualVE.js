@@ -29,18 +29,27 @@ $(document).ready( function() {
 
 // Define the VisualVE (Visualizer) function that operates on loaded data
 // Expect catconfig, scenconfig, outputconfig and VEdata defined globally
+
 VisualVE = function( ) {
-  // scenconfig from scenario-cfg.js
-  var categdata = catconfig;       // from category-cfg.js = Scenario Group elements ("Community Design" etc.) - configures Scenario Input Levels
+  var scenarioData = scenconfig;
+  var categoryData = catconfig;       // from category-cfg.js = Scenario Group elements ("Community Design" etc.) - configures Scenario Input Levels
   var outputData = outputconfig;   // from output-cfg.js = Output Measure elements ( "DVMT Per Capita", etc.) - configures Model Outputs
   // VEdata from verspm.js
 
-  var categoryInputChartCount = categdata.length;
-  var outputMeasureChartCount = outputData.length;    
+  var categoryInputChartCount = categoryData.length;
+  var outputMeasureChartCount = outputData.length;
+
+  $('#ScenarioDisplayTitle').html(scentitle)
+
+  // Check if category Levels are 0-based or 1-based
+  // TODO: Ultimately rewrite description appending not to rely on numeric levels
+  // Later use of levels only checks them for "sameness", and they could be text
+  var levelOffset = 0; // Integer value of first actual scenarioData level (for compatibility with old samples)
+  if ( parseInt(categoryData[0].LEVELS[0].NAME[0])>0 ) levelOffset = 1;
 
   var scenData = [];
   var DataObjects = [];
-  $.each(catconfig,function(index,values) {
+  $.each(categoryData,function(index,values) {
       var scenarioName = values.NAME;         
       var scenarioDescription = values.DESCRIPTION;           
       var scenarioLevels = values.LEVELS;
@@ -65,10 +74,15 @@ VisualVE = function( ) {
       $('#scen' + index + '-popover-content').append('<p><strong>' + scenarioName + ':</strong> ' + scenarioDescription + '</p>');
       $.each(scenarioLevels, function(i,val){
           $.each(val.INPUTS,function(k,v){
-              $.each(scenconfig, function(idx,scenario){
+              $.each(scenarioData, function(idx,scenario){
                   if(v.NAME[0] == scenario.NAME[0]) {
                       $('#scen' + index + '-popover-content')
-                      .append('<p><strong>L'+i+': ' + scenario.LABEL + ':</strong> ' + scenario.LEVELS[parseInt(v.LEVEL)-1].DESCRIPTION + '</p>');
+                      .append('<p><strong>L'+i+': ' + scenario.LABEL + ':</strong> ' + scenario.LEVELS[parseInt(v.LEVEL)-levelOffset].DESCRIPTION + '</p>');
+                      // hange to 0-based indexing
+                      // [NOTE weird dependency on text names really being index-like integers
+                      // (i.e. 0 to N items).
+                      // The following line must be in place instead to run the "hidden" visioneval.js
+                      //.append('<p><strong>L'+i+': ' + scenario.LABEL + ':</strong> ' + scenario.LEVELS[parseInt(v.LEVEL)-1].DESCRIPTION + '</p>');
                   }
               });
           });
@@ -85,7 +99,7 @@ VisualVE = function( ) {
 
   // Add low-level scenarios to DataTable
   var scenarioTableColumns = [];
-  $.each(scenconfig,function(index,values) {
+  $.each(scenarioData,function(index,values) {
       scenarioTableColumns[index] = function(d) { return d[values.NAME]; }
       var scenarioName = values.NAME+":"+values.LABEL;
       $('#Scenario-Results thead tr.header').append("<th>"+scenarioName+"</th>");

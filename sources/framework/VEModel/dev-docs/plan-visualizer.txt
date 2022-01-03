@@ -1,26 +1,14 @@
 # Following describes the UI for launching the visualizer
 
-Saving visualizer creates subdirectory in ResultsDir for model: Visualize-<QueryName>-<Timestamp>
+There's a likely bug in the visualizer in that it doesn't display scenarios correctly that are
+pinned at the ends of the horizontal axes. It's invisible in most cases with lots of scenarios that
+have a range of values.
 
-We can subset the visualization for a model by listing just specific categories to include - as
-if those were all that were configured. If we export (instead of visualize) a result subset, we
-get a data.frame/csv/sql for all the levels withing those categories (missing categories are
-treated as if we asked for "Level 0"). Or do we filter Scenarios, which are the actual files...
+Subset visualization by selecting only certain categories at runtime (when the visualizer is generated).
 
-Choosing breaks and geography happens when we export the query results. Can also choose exportable
-measures (default is all for tabular formats, but Reportable for visualizer - we'll pick off the
-format to determine that before calling a format function - certain formats are "special cases").
+# Problems with current data formatting:
 
-The Category/Level structure for a generated scenario should be retained in the scenario's
-ModelStage RunParams_ls so we have it ready to generate the visualizer files. There should be
-defaults when we ask for those (Category = "Scenarios", Level descriptor based on model stage
-position in the model list).
-
-By going through the export function for query, we can pick specific stages (special value
-"Scenarios"), specific metrics (default = Reportable)
-
-The Visualizer HTML should show the Timestamp for the query run that generated the results that are being
-displayed.
+Scenario Data Table is not getting all its columns (missing Scenario, Year, 
 
 # Implement the following with new data format architecture
 

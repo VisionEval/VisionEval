@@ -79,6 +79,8 @@ ve.results.modelstate <- function(ModelState_ls=NULL) {
 
 ve.results.index <- function() {
   # Load model state from self$resultsPath
+  # Note that if the model is using a non-standard ModelState name,
+  # we might not find it here. ModelState name should be set globally.
   FileName=normalizePath( file.path(
     self$resultsPath, # Should already include ResultsDir
     visioneval::getModelStateFileName()
@@ -256,7 +258,6 @@ addDisplayUnits <- function(GTN_df,Param_ls) {
   # get here with displayUnits being GTN_df, augmented by matching DisplayUnits
   return(displayUnits) # Minimally includes Group, Table, Name, DisplayUnits, DisplayUnitsFile
 }
-  
 
 ve.results.inputs <- function( fields=FALSE, module="", filename="" ) {
   # fields=TRUE, show all Datasets that originated as file inputs (lists all columns within input files)
@@ -279,6 +280,18 @@ ve.results.inputs <- function( fields=FALSE, module="", filename="" ) {
 
   ret.value <- unique(self$modelIndex[ filter, ret.fields ])
   return( ret.value[order(ret.value$InputDir,ret.value$File),] )
+}
+
+# Return a named list of ScenarioElements and Levels
+ve.results.elements <- function() {
+  # Get scenario element names plus level values for associated model stage
+  # Model stage should always have scenario elements (if not, re-run)
+  elements <- private$RunParam_ls$ScenarioElements
+  if ( !is.character(elements) ) {
+    writeLog("No scenario elements in results!",Level="error")
+    return(list())
+  }
+  return(as.list(elements)) # converted named vector to named list
 }
 
 ve.results.units <- function(selected=TRUE,display=NULL) {
@@ -546,6 +559,7 @@ VEResults <- R6::R6Class(
     queryprep=ve.results.queryprep,  # For query or other external access
     print=ve.results.print,          # summary of model results (index)
     units=ve.results.units,          # Set units on field list (modifies self$modelIndex)
+    elements=ve.results.elements,    # Get scenario elements (named list of scenario levels) for this scenario
     ModelState=ve.results.modelstate # Set/Get the model state for these results
   ),
   private = list(

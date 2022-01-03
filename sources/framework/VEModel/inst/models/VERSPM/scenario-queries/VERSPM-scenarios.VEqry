@@ -32,8 +32,16 @@ QuerySpec <- list(
     Name = "DVMTPerCapita",
     Function = "HhDvmt/TotalPop",
     Units = "MI/DAY",
-    Description = "Per Capita DVMT"
-    # EXPORT
+    Description = "Per Capita DVMT",
+    Export = list(
+      DisplayName = "DVMT Per Capita",
+      Label = "Daily Vehicle Miles Traveled",
+      Description = "daily vehicle miles of travel of residents divided by population.",
+      Instructions = "daily vehicle miles of travel of residents divided by population.",
+      Metric = "Average",
+      Unit = "daily miles",
+      XTicks = 3
+    )
   ),
   list(
     # HhWalkTrips <- sum(WalkTrips)
@@ -53,8 +61,16 @@ QuerySpec <- list(
     Name = "WalkTravelPerCapita",
     Function = "HhWalkTrips/TotalPop",
     Units = "TRIP/PRSN",
-    Description = "Per Capita Walk Trips"
-    # EXPORT
+    Description = "Per Capita Walk Trips",
+    Export = list(
+      Displayname =  "Walk Trips Per Capita",
+      Label =  "Walk Travel Per Capita",
+      Description =  "annual residents walk trips (not including recreation or walk to transit) divided by population",
+      Instructions =  "annual residents walk trips (not including recreation or walk to transit) divided by population",
+      Metric =  "Average",
+      Unit =  "annual trips",
+      Xticks =  3
+    )
   ),
   list(
     # AirPollutionEm <- sum(Household$DailyCO2e) # Summarize
@@ -67,8 +83,16 @@ QuerySpec <- list(
       Table = "Household"
     ),
     Units = "GM/DAY",
-    Description = "Daily Household Air Pollution"
-    # EXPORT
+    Description = "Daily Household Air Pollution",
+    Export = list(
+      Displayname =  "Air Pollution Emissions",
+      Label =  "Air Pollution Emissions",
+      Description =  "daily metric tons of pollutants emitted from all light-duty vehicle travel (including hydrocarbons, carbon monoxide, nitrogen dioxide, and particulates).",
+      Instructions =  "daily metric tons of pollutants emitted from all light-duty vehicle travel (including hydrocarbons, carbon monoxide, nitrogen dioxide, and particulates).",
+      Metric =  "Average",
+      Unit =  "daily metric tons",
+      Xticks =  3
+    )
   ),
   list(
     # HhDailyGGE <- sum(Household$DailyGGE) # Summarize
@@ -114,8 +138,16 @@ QuerySpec <- list(
     Name = "FuelUse",
     Function = "365 * ( HhDailyGGE + ComSvcUrbanGGE + ComSvcRuralGGE )",
     Units = "GGE/DAY",
-    Description = "Annual Fuel Use"
-    # EXPORT
+    Description = "Annual Fuel Use",
+    Export = list(
+      Displayname =  "Annual Fuel Use",
+      Label =  "Annual Fuel Use",
+      Description =  "annual million gallons of gasoline and other fuels consumed by all light-duty vehicle travel.",
+      Instructions =  "annual million gallons of gasoline and other fuels consumed by all light-duty vehicle travel.",
+      Metric =  "Average",
+      Unit =  "million gallons",
+      Xticks =  3
+    )
   ),
   list(
     Name = "TotalCost",
@@ -149,8 +181,16 @@ QuerySpec <- list(
     Name = "VehicleCost",
     Function = "100 * TotalCost / HhIncome",
     Units = "",
-    Description = "Vehicle Cost as Percent of HhIncome "
-    # EXPORT
+    Description = "Vehicle Cost as Percent of HhIncome ",
+    Export = list(
+      Displayname =  "Household Vehicle Cost as Percentage of Income",
+      Label =  "Vehicle Cost % (All Income)",
+      Description =  "average percentage of income spent by all households on owning and operating light-duty vehicles.",
+      Instructions =  "average percentage of income spent by all households on owning and operating light-duty vehicles.",
+      Metric =  "Average",
+      Unit =  "%",
+      Xticks =  5
+    )
   ),
   list(
     Name = "HhIncomeLow",
@@ -184,8 +224,16 @@ QuerySpec <- list(
     Name = "VehicleCostLow",
     Function = "100 * TotalCostLow / HhIncomeLow",
     Units = "",
-    Description = "Vehicle Cost as Percent of HhIncome [Low Income Households]"
-    # EXPORT
+    Description = "Vehicle Cost as Percent of HhIncome [Low Income Households]",
+    Export = list(
+      Displayname =  "Low Income Household Vehicle Cost as Percentage of Income",
+      Label =  "Vehicle Cost % (Low Income)",
+      Description =  "average percentage of income spent by low-income (< $20,000 USD2005) households on owning and operating light-duty vehicles.",
+      Instructions =  "average percentage of income spent by low-income (< $20,000 USD2005) households on owning and operating light-duty vehicles.",
+      Metric =  "Average",
+      Unit =  "%",
+      Xticks =  5
+    )
   )
 )
 

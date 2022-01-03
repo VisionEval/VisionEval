@@ -121,7 +121,7 @@ ve.query.init <- function(
   }
 
   # Evaluate what is present
-  self$model(Model) # Requires QueryName; also looks up possibly existing QueryResults
+  self$model(Model) # Requires QueryName; also looks up possibly existing VEQueryResults
   self$check()
   invisible(self$valid())
 }
@@ -532,7 +532,7 @@ ve.query.print <- function(details=FALSE) {
   if ( self$valid() ) {
     cat("Valid query with",length(private$QuerySpec),"elements\n")
     if ( length(private$QuerySpec) ) {
-      if ( is.list(private$QueryResults) && length(private$QueryResults)>0 ) cat("Results are available.\n")
+      if ( is.list(self$QueryResults) && length(self$QueryResults)>0 ) cat("Results are available.\n")
       print(self$names())
       if ( details ) for ( spec in private$QuerySpec ) print(spec)
     }
@@ -592,6 +592,7 @@ defaultMetadata <- c("Units","Description")
 
 # make a data.frame of all (and only) the valid query results
 ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NULL,GeoValues=NULL, metadata=TRUE, data=TRUE, exportOnly=FALSE) {
+  # "Results" is a list of VEResults (or a VEResultsList) from a VEModel
   # Visit each of the valid results in the Model (or Results list) and add its years as columns
   #  to the resulting data.frame, then return the accumulated result
   # if "metadata" is true, include default metadata in the output table
@@ -602,15 +603,15 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
   # exportOnly, if TRUE, only includes metrics with the Export attribute set (conventionally to
   #   TRUE, but we're considering only present/mssing)
 
-  Results <- self$results(Results) # Results will contain list of valid query results
+  Results <- self$results(Results) # generate list of valid VEQueryResults
   if ( length(Results)==0 ) {
     stop(
       writeLog("No query results available; run the query first",Level="error")
     )
   }
 
-  valueList <- lapply(Results,function(r) structure(r$Results$Values,ScenarioName=r$Source$Name) )
-  valueList <- valueList[ ! sapply(valueList,is.null) ]
+  valueList <- lapply(Results,function(r) r$values() )
+  valueList <- valueList[ ! sapply(valueList,is.null) ] # Should be no NULLs, but just in case...
 
   if ( is.character(metadata) ) {
     wantMetadata <- TRUE
@@ -670,7 +671,11 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
   }
 
   if ( exportOnly ) {
-    whichExport <- sapply( private$QuerySpec[seekMeasures], function(m) return( ! is.null(attr(m,"Export")) ) )
+    whichExport <- sapply( private$QuerySpec[seekMeasures],
+      function(m) {
+        return( "Export" %in% names(m$QuerySpec) )
+      }
+    )
     seekMeasures <- seekMeasures[ whichExport ]
   }
     
@@ -684,10 +689,16 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
 
   # Build data.frame with requested measure results (filtered to specific GeoValues), and metadata
   results.df <- NULL
-  for ( value in valueList ) {
+  Scenarios <- character(0)
+  ScenarioYears <- character(0)
+  ScenarioElements <- list()
+  for ( value in valueList ) { # single set of filtered results
     ScenarioName <- attr(value,"ScenarioName")
+    Elements <- attr(value,"ScenarioElements")
     for ( year in names(value) ) {
       theseResults <- makeMeasureDataframe(value[[year]],year,GeoValues,data,wantMetadata)
+      writeLog(paste("Results for",ScenarioName,"Year",year),Level="info")
+      writeLog(paste(theseResults$Measure,collapse=","),Level="info")
 
       # plus initial columns for first results are metadata if requested
       if ( is.null(results.df) ) {
@@ -696,21 +707,175 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
           metadata <- character(0) # only keep the metadata columns this one time
           wantMetadata <- FALSE
         } else {
+          # after the first row, jut include the measures (not metadata)
           results.df <- data.frame(Measure=theseResults$Measure)
         }
       }
       if ( data ) {
-        results.df[paste0(ScenarioName,".",as.character(year))] <- theseResults$Value
+        # Note: following line may add more than one column to results.df
+        results.df[paste(ScenarioName,as.character(year),sep=".")] <- theseResults$Value
+        Scenarios <- c( Scenarios, ScenarioName ) # dupes if multiple years for scenarios
+        ScenarioYears <- c( ScenarioYears, year )
+        ScenarioElements[[length(ScenarioElements)+1]] <- Elements # Scenario metadata
       } else break # Only gathering metadata
     }
     if ( ! data ) break # don't loop if not generating data
   }
   if ( is.null(results.df) ) results.df <- data.frame()
-  return(results.df)
+  if ( length(Scenarios)>0 ) {
+    ScenarioColumns <- paste(Scenarios,ScenarioYears,sep=".")
+    if ( length(Scenarios) != length(results.df[,ScenarioColumns]) || length(Scenarios) != length(ScenarioYears) ) {
+      stop(
+        writeLog("Scenarios don't match up with number of measure columns (VEModel/query.R circa line 718)",Level="error")
+      )
+    }
+  } else ScenarioColumns <- character(0)
+  return(
+    structure(results.df,
+      Scenarios=Scenarios,
+      ScenarioYears=ScenarioYears,
+      ScenarioColumns=ScenarioColumns,
+      ScenarioElements=ScenarioElements
+    )
+  )
+}
+
+# Visualize query results
+ve.query.visual <- function(QueryResults=list(), SaveTo=NULL, overwrite=TRUE) {
+
+  # Get the query results
+  if ( missing(QueryResults) ) {
+    QueryResults <- self$extract(metadata=FALSE,exportOnly=TRUE)
+  }
+  # TODO: set this up as a helper within the ve.query.export function (format="visual")
+  # TOOD: pass this in: QueryResults <- self$extract(metadata=FALSE, exportOnly=TRUE)
+  if ( length(QueryResults)==0 )  {
+    stop(
+      writeLog("No query results available; run the query first",Level="error")
+    )
+  }
+
+  # Set up structural parameters for query results
+  measureNames <- QueryResults$Measure
+  scenarioElements <- attr(QueryResults,"ScenarioElements") # list of named lists
+  scenarioNames <- attr(QueryResults,"ScenarioColumns")
+  QueryResults <- QueryResults[,scenarioNames]
+  scenarioNames <- as.list(scenarioNames) # to include in VEdata below
+  
+  VEdata <- list()
+  for ( d in 1:length(QueryResults) ) { # index into results columns, plus ScenarioElement attributesd
+    chk <- VEdata[[length(VEdata)+1]] <- c( Scenario=scenarioNames[[d]], scenarioElements[[d]], as.list(structure(QueryResults[[d]],names=measureNames)) )
+  }
+
+  # Do the Category config
+  scenarios <- self$Model$scenarios()
+
+  catconfig <- scenarios$categoryConfig()
+  scenconfig <- scenarios$scenarioConfig()
+
+  # scentitle
+  scentitle <- paste(
+    "Results for Query",paste0("'<strong>",self$QueryName,"</strong>'"),
+    "on model",paste0("'<strong>",self$Model$modelName,"</strong>'"),
+    paste0("(",format(Sys.time(),"%Y/%m/%d at %H:%M"),")")
+  )
+
+  # Need to keep the following consistent with the results extraction
+  outputconfig <- self$outputConfig()
+
+  jsonvars <- list(
+    scentitle=jsonlite::toJSON(scentitle,pretty=TRUE),
+    catconfig=jsonlite::toJSON(catconfig,pretty=TRUE),
+    scenconfig=jsonlite::toJSON(scenconfig,pretty=TRUE),
+    outputconfig=jsonlite::toJSON(outputconfig,pretty=TRUE),
+    VEdata=paste("[", # process each result set onto a separate JSON line and present them all as an array
+      paste(lapply( VEdata,function(d) jsonlite::toJSON(d,auto_unbox=TRUE) ),collapse=",\n"),
+      "]",
+      sep="\n"
+    )
+  )
+
+  buildVisualizer <- ! missing(SaveTo)
+  popupVisualizer <- is.null(SaveTo)
+  if ( buildVisualizer ) {
+    htmlRoot<-system.file("visualizer",package="VEModel")
+    if ( popupVisualizer ) {
+      # Pop up the visualizer "live" using the jrc package
+      jrc::openPage(
+        useViewer=FALSE,
+        rootDirectory=htmlRoot, # try putting this back to htmlRoot...
+        startPage=file.path(htmlRoot,"visualizer.html"),
+        browser=getOption("browser")
+      )
+      # NOTE: jrc will do the toJSON conversion internally - just give it the R objects
+      jrc::sendData("scentitle",scentitle)
+      jrc::sendData("catconfig",catconfig,keepAsVector=TRUE) # keepAsVector -> otherwise flattens inconveniently
+      jrc::sendData("scenconfig",scenconfig)
+      jrc::sendData("outputconfig",outputconfig)
+      jrc::sendData("VEdata",VEdata)
+    } else {
+      # construct a visualizer directory
+      outputDir <- self$Model$setting("OutputDir")
+      if ( ! is.character(SaveTo) ) {
+        # Construct timestamped name for visualizer
+        SaveTo <- paste0("Visualizer-",self$QueryName)
+      }
+      SavePath <- normalizePath(file.path(self$Model$modelResults,outputDir,SaveTo))
+      if ( dir.exists(SavePath) && overwrite) {
+        unlink(SavePath,recursive=TRUE)
+      } else if ( ! overwrite ) {
+        file.rename(SavePath,paste0(SavePath,"-",format(Sys.time(),"%Y_%m_%d-%H_%M")))
+      }
+      ve.runtime <- getRuntimeDirectory()
+      writeLog(paste0("Creating Visualizer in ",gsub(ve.runtime,"",SavePath)),Level="info")
+      if ( ! dir.exists(SavePath) ) dir.create(SavePath,recursive=TRUE) else {
+        stop(writeLog("Renaming existing visualizer failed",Level="error"))
+      }
+      if ( ! dir.exists(SavePath) ) {
+        stopMsg <- writeLog("Failed to create visualizer directory:",Level="error")
+        writeLog(SavePath,Level="error")
+        stop(stopMsg)
+      }
+      for ( f in dir(htmlRoot,recursive=TRUE) ) {
+        dest <- file.path(SavePath,f)
+        showPath <- gsub(ve.runtime,"",dirname(dest))
+        writeLog(paste("Copying",f,"to",showPath),Level="info")
+        if ( ! dir.exists(dirname(dest)) ) {
+          writeLog(paste("Creating directory:",showPath))
+          dir.create(dirname(dest),recursive=TRUE)
+        }
+        from <- file.path(htmlRoot,f)
+        writeLog(paste("From:",from),Level="info")
+        writeLog(paste("  To:",gsub(ve.runtime,"",dest)),Level="info")
+        file.copy( from, dest )
+      }
+      visualizer.js <- file.path(SavePath,"visualizer.js")
+      cat(file=visualizer.js,"// Visualizer variables for Query",self$QueryName,"on Model",self$Model$modelName,"\n")
+      for ( js in names(jsonvars) ) {
+        cat( file=visualizer.js, paste(js,"=",jsonvars[[js]],";\n"), append=TRUE )
+      }
+      writeLog("Saved visualizer and data to:",Level="warn")
+      writeLog(gsub(ve.runtime,"",SavePath),Level="warn")
+    }
+  }
+  return(invisible(jsonvars))
+}
+
+ve.query.outputconfig <- function() {
+  outputconfig <- lapply(
+    private$QuerySpec,
+    function(spec) {
+      spec$outputConfig() # process Export tag if present
+    }
+  )
+  outputconfig <- structure(
+    names=NULL,
+    outputconfig[ sapply(outputconfig,function(x) !is.null(x)) ]
+  )
 }
 
 # Put the results of the query into a csv by default (or a data.frame, or sql, or other
-#  tabular receptacle.
+#  tabular receptacle.)
 # Option to save the data.frame in some tabular output format (data.frame, csv, sql)
 # Export should be able to filter by Measure name, Year of Data (some scenarios will have more than
 # one year), and specific ModelStage name (for Results).
@@ -718,6 +883,9 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
 # don't consider "Reportable").
 ve.query.export <- function(format="csv",OutputDir=NULL,SaveTo=NULL,Results=NULL,Years=NULL,GeoType=NULL,GeoValues=NULL) {
   needOutputDir <- missing(OutputDir) || ! is.null(OutputDir)
+  # TODO: Query extract template should be called QueryExportTemplate
+  # TODO: The template should probably belong to the ViEIO export format
+  # 
   if ( ! is.null(self$Model) ) {
     OutputPath <- self$Model$modelResults # Absolute path to ResultsDir for model
     if ( needOutputDir ) OutputDir <- self$Model$setting("OutputDir")
@@ -774,20 +942,21 @@ exportDir <- function(model=NULL,results=NULL) {
   return(exportDir)
 }
 
-# Find any existing Query Results
+# Find any existing VEQueryResults associated with (model) Results
+# The Results argument here is a list of model results (or a VEResultsList)
 # The "Results" element generated by doQuery includes:
 #   "Timestamp"
 #   "Values" (a named list of metrics)
 #   "Specifications" (redundant list of specs used to create "Values")
 # If results are not available for one of the VEResults, Results element is NULL
-ve.query.results <- function(Results=NULL) {
+ve.query.results <- function(Results=NULL, Reload=FALSE) {
   # Figure out where to look for results
   if ( missing(Results) || is.null(Results) ) {
     if ( "VEModel" %in% class(self$Model) ) {
       Results <- self$Model$results()
       # Output file was set when Model was attached
     } else {
-      return( list() ) # empty list if query has not been run
+      return( list() ) # empty list if query has not been attached to a model
     }
   } else {
     self$outputfile() # will use self$Model output file if model is available, or global
@@ -797,37 +966,23 @@ ve.query.results <- function(Results=NULL) {
     # downshift to list of VEResults
     Results <- Results$results()
   }
-  private$reload( Results ) # pulls up available results
-  if ( length(self$QueryResults) == 0 ) self$QueryResults <- NULL # No valid results
+  if ( Reload || is.null(self$QueryResults) || length(self$QueryResults) < length(Results) ) {
+    private$reload( Results ) # pulls up available query results
+    if ( length(self$QueryResults) == 0 ) self$QueryResults <- NULL # No valid results
+  }
   return(self$QueryResults) # Just return the results that are actually present
 }
 
 ve.query.reload <- function( Results ) {
   # Expects a list of VEResults (not VEResultsList)
-  # Returns the (possibly invalid) set of query results for each VEResults
+  # Returns the (possibly invalid) list of VEQueryResults (one for each of Results argument)
   # Also updates self$QueryResults to include only the valid query results
   allQueryResults <- lapply( Results,
     function(r) {
-      # expect VEResuls$resultsPath to be normalized path
-      resultsPath <- file.path(r$resultsPath,self$QueryResultsFile)
-      results <- if ( file.exists(resultsPath) ) {
-        # Load query results for this set of model stage results
-        results.env <- new.env() # where to load query results
-        items <- load.results <- try( load(resultsPath,envir=results.env) )
-        if ( class(items) == "try-error" || ! "Values" %in% items ) {
-          NULL
-        } else as.list(results.env)
-      } else NULL
-      return(
-        list(
-          Path=resultsPath,   # Location of QueryResults RData file
-          Results=results,    # Timestamp, Values, Geo, etc (generated by doQuery)
-          Source=r            # VEResults object for accessing data/modelstate
-        )
-      )
+      VEQueryResults$new(Query=self,VEResults=r)
     }
   )
-  validResults <- sapply( allQueryResults, function(qr) !is.null(qr$Results) )
+  validResults <- sapply( allQueryResults, function(qr) qr$valid() )
   self$QueryResults <- allQueryResults[ validResults ]
   return(allQueryResults) # use to get status of full list of Results parameter
   # Invalid query results will have NULL Results
@@ -864,6 +1019,7 @@ ve.query.run <- function(
   Force      = FALSE   # If true, re-run the query for all results even if they are up to date
   )
 {
+  writeLog(paste("Running query:",self$Name),Level="warn")
   if ( missing(Model) || is.null(Model) ) {
     Model <- self$Model # Use attached model if available
     if ( is.null(Model) ) stop( writeLog("No model results available to run query",Level="error") )
@@ -917,14 +1073,10 @@ ve.query.run <- function(
     # Reload cached results (updates self$QueryResults and check for validity)
     # private$reload returns all the Results, whether or not they
     # have query results
-    writeLog("Using cached query results",Level="warn")
+    writeLog("Checking for cached query results",Level="warn")
     upToDate <- sapply( private$reload(Results) ,
       function(r) {
-        if (
-          ! is.list(r) ||
-          ! all(c("Results","Path","Source") %in% names(r)) ||
-          ! all(c("Timestamp","Values","Specifications") %in% names(r$Results))
-        ) return(FALSE)
+        if ( ! "VEQueryResults" %in% class(r) || ! r$valid() ) return(FALSE)
         tempEnv <- new.env()
         load(r$Path,envir=tempEnv)
         Timestamp <- tempEnv$Timestamp # Timestamp when query results were generated
@@ -950,8 +1102,8 @@ ve.query.run <- function(
       
   # Run the query on any out-of-date results
   # ResultsToUpdate is a list of VEResults
-  if ( length(ResultsToUpdate) > 0 ) {
-    writeLog(paste("Updating Results:",sapply(ResultsToUpdate,function(x)x$Name),collapse=", "),Level="warn")
+  if ( (numResults<-length(ResultsToUpdate)) > 0 ) {
+    writeLog(paste(paste("Updating",numResults,"Results:"),paste(sapply(ResultsToUpdate,function(x)x$Name),collapse="\n"),sep="\n"),Level="warn")
     doQuery(
       Results=ResultsToUpdate,         # list of VEResults objects for which to generate results
       Specifications=self$getlist(),   # A list of VEQuerySpec
@@ -961,10 +1113,11 @@ ve.query.run <- function(
     # Results of doQuery are written to the QueryFile in Results$resultsPath
     # self$results will reload them
   } else {
-    writeLog("No results to query.",Level="info")
+    writeLog("No results to update.",Level="info")
   }
 
-  # Update self$QueryResults to the list of Results that were processed in this run and return those
+  # Update self$QueryResults to the list of VEQueryResults that were processed in this run and
+  # return those
   QueryResults <- if ( queryingModel ) self$results() else self$results(Results)
   return( invisible(QueryResults) )
 }
@@ -991,34 +1144,95 @@ VEQuery <- R6::R6Class(
     # Running the query will create a data file for each ModelStage/VEResults
     # So it really just works on a list of VEResults in all cases (we can get such a list from the
     # VEModel)
-    initialize=ve.query.init,       # initialize a new VEQuery object
-    save=ve.query.save,             # With optional file name prefix (this does an R 'dump' to source)
-    attach=ve.query.attach,         # Install consistent QueryName, QueryDir from request
-    clear=ve.query.clear,           # Throw away the query specifications
-    load=ve.query.load,             # Using installed file parameters, see if there's a file and load it
-    model=ve.query.model,           # Associate this query with a model (to run, or to generate or open results)
-    copy=ve.query.copy,             # Duplicates the query (for further editing) - new query is "unattached"
-    check=ve.query.check,           # Make sure all the specs work (including Function order)
-    valid=ve.query.valid,           # Just report validation results (run $check first)
-    add=ve.query.add,               # Add a VEQuerySpec (or list of them) to the VEQuery
-    update=ve.query.update,         # Update an existing VEQuerySpec in the VEQuery
-    remove=ve.query.remove,         # Remove a VEQuerySpec from the VEQuery
-    assign=ve.query.assign,         # Assign the QuerySpec from one VEQuery to another
-    names=ve.query.names,           # List (or update) names on internal QuerySpec list
-    subset=ve.query.subset,         # Return a new VEQuery with a subset (or reordered) list of specs
-    `[`=ve.query.index,             # Alternate notation for subset
-    spec=ve.query.spec,             # Return a single VEQuerySpec from the list
-    print=ve.query.print,           # List names of Specs in order, or optionally with details
-    getlist=ve.query.getlist,       # Extract he QuerySpec list (possibly filtering geography) for $run)
-    results=ve.query.results,       # report results of last run (available stage files)
-    extract=ve.query.extract,       # get requested (or all) results into a data.frame
-    export=ve.query.export,         # Export query results to .csv or something else (uses $extract)
-    outputfile=ve.query.outputfile, # expand the file name into which to save QueryResults
-    run=ve.query.run                # results are cached in self$QueryResults
+    initialize=ve.query.init,           # initialize a new VEQuery object
+    save=ve.query.save,                 # With optional file name prefix (this does an R 'dump' to source)
+    attach=ve.query.attach,             # Install consistent QueryName, QueryDir from request
+    clear=ve.query.clear,               # Throw away the query specifications
+    load=ve.query.load,                 # Using installed file parameters, see if there's a file and load it
+    model=ve.query.model,               # Associate this query with a model (to run, or to generate or open results)
+    copy=ve.query.copy,                 # Duplicates the query (for further editing) - new query is "unattached"
+    check=ve.query.check,               # Make sure all the specs work (including Function order)
+    valid=ve.query.valid,               # Just report validation results (run $check first)
+    add=ve.query.add,                   # Add a VEQuerySpec (or list of them) to the VEQuery
+    update=ve.query.update,             # Update an existing VEQuerySpec in the VEQuery
+    remove=ve.query.remove,             # Remove a VEQuerySpec from the VEQuery
+    assign=ve.query.assign,             # Assign the QuerySpec from one VEQuery to another
+    names=ve.query.names,               # List (or update) names on internal QuerySpec list
+    subset=ve.query.subset,             # Return a new VEQuery with a subset (or reordered) list of specs
+    `[`=ve.query.index,                 # Alternate notation for subset
+    spec=ve.query.spec,                 # Return a single VEQuerySpec from the list
+    print=ve.query.print,               # List names of Specs in order, or optionally with details
+    getlist=ve.query.getlist,           # Extract he QuerySpec list (possibly filtering geography) for $run)
+    results=ve.query.results,           # report results of last run (available stage files)
+    extract=ve.query.extract,           # get requested (or all) results into a data.frame
+    export=ve.query.export,             # Export query results to .csv or something else (uses $extract)
+    outputfile=ve.query.outputfile,     # expand the file name into which to save QueryResults
+    run=ve.query.run,                   # results are cached in self$QueryResults
+    visual=ve.query.visual,             # visualize query results: same as export(format="visual",...)
+    outputConfig=ve.query.outputconfig  # generate outputconfig for visualizer (using "Export" spec)
   ),
   private = list(
-    QuerySpec=list(),                 # access via public functions - list of VEQuerySpec objects
-    reload=ve.query.reload            # recreate self$QueryResults
+    QuerySpec=list(),                   # access via public functions - list of VEQuerySpec objects
+    reload=ve.query.reload              # recreate self$QueryResults
+  )
+)
+
+################################################
+#
+# Define VEQueryResults
+
+ve.queryresults.init <- function(Query=NULL,VEResults=NULL) {
+  # expect VEResuls$resultsPath to be normalized path
+  self$Source <- VEResults # "Source" is a VEResults object
+  if ( is.null(Query) || is.null(self$Source) ) return()
+
+  self$Path <- file.path(self$Source$resultsPath,Query$QueryResultsFile)
+  self$Results <- if ( file.exists(self$Path) ) {
+    # "Results" is the named list consisting of output from doQuery
+    results.env <- new.env() # where to load query results
+    items <- try( load(self$Path,envir=results.env) )
+    if ( class(items) != "try-error" && "Values" %in% items ) {
+      as.list(results.env) # placed in self$Results
+    } else NULL
+  } else NULL
+}
+
+ve.queryresults.valid <- function() {
+  resultsValid <- ( is.list(self$Results) && ! is.null(self$Source) )
+  resultsValid <- ( resultsValid && all(c("Timestamp","Values","Specifications") %in% names(self$Results)) )
+  return( resultsValid )
+}
+
+ve.queryresults.values <- function() {
+  if ( self$valid() ) {
+    structure(self$Results$Values,
+      ScenarioName=self$Source$Name,
+      ScenarioElements=self$Source$elements() # expanded list of ScenarioElements
+    )
+  } else NULL
+}
+
+ve.queryresults.print <- function() {
+  if ( self$valid() ) {
+    cat("Query Results for",self$Source$Name,"\n")
+    cat("Generated:",format(self$Results$Timestamp,"%Y/%m/%d at %H:%M"),"\n")
+    cat("Measures:",paste(names(self$Results$Specifications),collapse=","),"\n")
+  } else cat("No results yet.")
+}
+
+VEQueryResults <- R6::R6Class(
+  "VEQueryResults",
+  public = list(
+    # Data
+    Results = NULL,  # Query results structure as generated by doQuery
+    Source  = NULL,  # VEResults object (model run results) used to generate these (Query) Results
+    Path = NULL,     # Path to the file that was loaded into self$Results
+
+    # Methods
+    initialize = ve.queryresults.init,
+    valid = ve.queryresults.valid,
+    values = ve.queryresults.values,
+    print = ve.queryresults.print
   )
 )
 
@@ -1091,10 +1305,15 @@ deepPrint <- function(ell,join=" = ",suffix="",newline=TRUE) { # x may be a list
   return(result)
 }
 
-specOverallElements <- c(
-  "Name", "Description", "Units", "Function", "Summarize", "Require", "RequireNot",
-  # Following for use by the Visualizer:
-  "Export","Displayname","Label","Metric","Xticks","Instructions"
+specRequiredElements <- c(
+  # These elements are "required" (except that "Function" and "Summarize" are
+  # treated specially - there must be exactly one of them in the QuerySpec)
+  "Name", "Description", "Units", "Function", "Summarize", "Require", "RequireNot"
+)
+
+specOptionalElements <- c( # Contains "known" elements that generate no warning if present
+  # First row are optional for use by the Visualizer:
+  "Export"
 )
 
 specSummarizeElements <- c(
@@ -1109,10 +1328,14 @@ ve.spec.print <- function() {
     cat("Specification is not valid:\n")
     cat(paste(self$CheckMessages,collapse="\n"),"\n")
   } else {
-    nm <- specOverallElements[ specOverallElements %in% names(self$QuerySpec) ]
-    dummy <- lapply(nm,spec=self$QuerySpec,
-      function(s,spec) { cat("   ",s,"= "); cat(deepPrint(spec[[s]]),"\n") }
-    )
+    spec.print <- function(s,spec) { cat("   ",s,"= "); cat(deepPrint(spec[[s]]),"\n") }
+    nm.req <- specRequiredElements[ specRequiredElements %in% names(self$QuerySpec) ]
+    dummy <- lapply(nm.req,spec=self$QuerySpec,spec.print)
+    nm.opt <- specOptionalElements[ specOptionalElements %in% names(self$QuerySpec) ]
+    if ( length(nm.opt) > 0 ) {
+      cat("   Optional Spec Elements:\n")
+      dummy <- lapply(nm.opt,spec=self$QuerySpec,spec.print)
+    }
   }
 }
 
@@ -1172,16 +1395,14 @@ ve.spec.check <- function(Names=NULL, Clean=TRUE) {
       self$CheckMessages <- c(self$CheckMessages,paste(self$Name,"Specification"))
     }
     if ( Clean ) {
-      self$QuerySpec[ ! nm.test.spec %in% specOverallElements] <- NULL
+      self$QuerySpec[ ! nm.test.spec %in% c(specRequiredElements,specOptionalElements) ] <- NULL
     } else {
-      # TODO: extra names should not be an error
-      # Real problem should be required names that are missing
-      have.names <- nm.test.spec %in% specOverallElements
+      have.names <- nm.test.spec %in% c(specRequiredElements,specOptionalElements)
       spec.valid <- length(have.names)>0 && all(have.names)
       if ( ! spec.valid ) {
         self$CheckMessages <- c(
           self$CheckMessages,
-          paste("Unrecognized Specification elements:",paste(nm.test.spec[!have.names],collapse=","))
+          paste("Unknown Spec elements are present:",paste(nm.test.spec[!have.names],collapse=","))
         )
       }
     }
@@ -1233,6 +1454,28 @@ ve.spec.check <- function(Names=NULL, Clean=TRUE) {
         "Unknown Specification Type (Valid='Summarize' or 'Function')"
       )
     }
+
+    # process Export / visualizer elements (read-only)
+    if ( "Export" %in% nm.test.spec ) {
+      # Set up plausible defaults for Export tag
+      Export <- self$QuerySpec$Export  # NULL if not present - if present, it's a list of visualizer elements
+      if ( is.null(Export$Instructions) ) {
+        Export$Instructions <- self$QuerySpec$Description
+      }
+      if ( is.null(Export$DisplayName) ) {
+        Export$DisplayName <- self$QuerySpec$Name
+      }
+      if ( is.null(Export$Metric) ) {
+        Export$Metric <- ""
+      }
+      if ( is.null(Export$XTicks) ) {
+        Export$XTicks <- 5
+      }
+      if ( is.null(Export$Label) ) {
+        Export$Label <- Export$DisplayName # either explicit or itself defaulted further
+      }
+      self$QuerySpec$Export <- Export
+    }
   }
   return(self)
 }
@@ -1247,7 +1490,7 @@ ve.spec.copy <- function() {
 
 cleanSpecNames <- function(self)
 {
-  self$QuerySpec[ ! names(self$QuerySpec) %in% specOverallElements ] <- NULL
+  self$QuerySpec[ ! names(self$QuerySpec) %in% c(specRequiredElements,specOptionalElements) ] <- NULL
   if ( "Summarize" %in% names(self$QuerySpec) ) {
     self$QuerySpec$Summarize[ ! names(self$QuerySpec$Summarize) %in% specSummarizeElements ] <- NULL
   }
@@ -1432,6 +1675,23 @@ ve.spec.setgeo <- function(Geography=NULL) {
   return(test.spec)
 }
 
+ve.spec.outputconfig <- function() {
+  # Generate components for the visualizer (using the Export spec)
+  Export <- self$QuerySpec$Export
+  if ( !is.null(Export) ) {
+    list(
+      DISPLAYNAME  = Export$DisplayName,
+      LABEL        = Export$Label,
+      DESCRIPTION  = Export$Description,
+      INSTRUCTIONS = Export$Instructions,
+      METRIC       = Export$Metric,
+      UNIT         = Export$Unit,
+      NAME         = self$Name,
+      XTICKS       = Export$XTicks
+    )
+  } else NULL
+}
+
 # S3 helper - turn the R6 object into a standard list
 as.list.VEQuerySpec <- function(spec) return(spec$QuerySpec)
 
@@ -1448,12 +1708,14 @@ VEQuerySpec <- R6::R6Class(
     valid = ve.spec.valid,          # See if the spec is valid (sets self$CheckResults)
     type = ve.spec.type,            # return "Summarize" or "Function" or "Invalid"
     copy = ve.spec.copy,            # clone this VEQuerySpec
+    outputConfig = ve.spec.outputconfig, # format the specification for use in the visualizer
 
     # Data elements
     CheckMessages = "Empty",        # message explaining why VEQuerySpec$valid() returned FALSE, or "" if OK
     QuerySpec = list(),             # The actual specification
     Name = "Unnamed",               # Name of the spec, from its QuerySpec
-    CompiledSpec = NULL             # The compiled specification (checked and with derived elements added) see ve.spec.check
+    CompiledSpec = NULL,            # The compiled specification (checked and with derived elements added) see ve.spec.check
+    Export = NULL                   # Export specifications for visualizer
   )
 )
 
@@ -1538,33 +1800,6 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
 
     # Compute some metric attributes needed by visualizer
 
-    Export <- measureSpec$Export  # NULL if not present - don't care about Export value, only presence
-    Instructions <- if ( !is.null(measureSpec$Instructions) ) {
-      measureSpec$Instructions
-    } else {
-      measureSpec$Description
-    }
-    DisplayName <- if ( !is.null(measureSpec$DisplayName) ) {
-      measureSpec$DisplayName
-    } else {
-      measureSpec$Name
-    }
-    Metric <- if ( !is.null(measureSpec$Metric) ) {
-      measureSpec$Metric
-    } else {
-      ""
-    }
-    XTicks <- if ( !is.null(measureSpec$XTicks) ) {
-      measureSpec$XTicks
-    } else {
-      5
-    }
-    Label <- if ( !is.null(measureSpec$Label) ) {
-      measureSpec$Label
-    } else {
-      DisplayName # either explicit or itself defaulted further
-    }
-
     # Add GeoValues as an attribute to the measure
     # GeoType is found in the Spec
 
@@ -1574,13 +1809,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
       Description=measureSpec$Description,
       GeoType=GeoType,
       GeoValues=GeoValues,
-      # The next series of QuerySpec elements support the Visualizer
-      Export=Export,
-      Instructions=Instructions,
-      DisplayName=DisplayName,
-      Metric=Metric,
-      XTicks=XTicks,
-      Label=Label
+      Export=measureSpec$Export # visualizer elements...
     ) # used during export to filter on Geography
   } else {
     writeLog(paste(measureName,"Invalid Measure Specification (must be 'Summarize' or 'Function')"),Level="error")
@@ -1818,9 +2047,6 @@ makeMeasureDataframe <- function(Values,Year,GeoValues,wantData=TRUE,wantMetadat
 
 # doQuery processes a list of VEResults, and generates QueryFile in their Path
 # Returns full path of file QueryFile created
-# TODO: perhaps make this a private member function of the VEQuery, so we can
-# access self$QueryResults and cache the actual generated data, not just the
-# QueryFile name.
 doQuery <- function (
   Results,             # a list of VEResult object(s) corresponding to Reportable scenarios
   Specifications,      # validated query specification to process
@@ -1883,8 +2109,8 @@ doQuery <- function (
       queryEnv$Values[[thisYear]] <- as.list(measureEnv)
     }
     # Save results to the QueryFile in the VEResults path
-    queryResults <- file.path(results$resultsPath,QueryFile)
-    save(list=ls(queryEnv),envir=queryEnv,file=queryResults)
+    QueryResults <- file.path(results$resultsPath,QueryFile)
+    save(list=ls(queryEnv),envir=queryEnv,file=QueryResults)
   }
   return(NULL)
 }

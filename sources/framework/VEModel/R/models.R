@@ -483,7 +483,6 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
   scenarioStages <- scenarios$stages()            # scenario stages may be an empty list
 
   if ( length(scenarioStages) > 0 ) { # some scenarios are defined
-
     # It is possible for a model to ONLY have scenarios (if they are "manually" created)
     # Each "scenario" in that case must be a complete model run
     # Usually in such cases, it may be easier just to make them Reportable modelStages
@@ -496,7 +495,20 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
         return(self)
       }
     } else if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
-      sapply(self$modelStages, function(s) s$Reportable <- scenarios$reportable(s$Name))
+      sapply(self$modelStages,
+        function(s) {
+          # Locate the StartFrom stage (if any) among base model stages
+          s$Reportable <- scenarios$reportable(s$Name)
+          if ( s$Reportable ) {
+            elements <- scenarios$Elements # may be NULL
+            if ( ! is.null(elements) ) elements <- sapply(elements,function(e) e$Name)
+            s$elements(
+              Names=elements,
+              update="model$configure (scenario StartFrom)" # Source for run parameter
+            ) # push default elements into StartFrom stage
+          }
+        }
+      )
       self$modelStages <- c( self$modelStages, scenarioStages )
     }
   }
@@ -504,6 +516,40 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
   # Link the stages
   writeLog("Initializing Model Stages",Level="info")
   self$modelStages <- self$initstages( self$modelStages )
+
+  # Check for scenario element consistency (this should be taken care
+  # of automatically when ScenarioElements are loaded and built).
+  stageNames <- names(self$modelStages)
+  checkElements <- function(base,check) {
+    return(
+      length(base)>0 &&
+      ( length(base) == length(check) ) &&
+      ! is.null( names(base) ) &&
+      ! is.null( names(check) ) &&
+      all(names(base) %in% names(check))
+    )
+  }
+  scenarioElements <- character(0)
+  for ( s in seq_along(stageNames) ) {
+    stage <- self$modelStages[[s]]
+    if ( ! stage$Reportable ) next # only concerned about reportable stages
+
+    elements <- stage$ScenarioElements
+    if ( ! checkElements( elements, self$setting("ScenarioElements",stageNames[s],defaults=FALSE) ) ) {
+      writeLog(paste("Inconsistent ScenarioElements within",stageNames[s]),Level="error")
+      browser()
+    }
+    if ( length(scenarioElements)==0 ) {
+      scenarioElements = elements
+    } else if ( ! checkElements( scenarioElements, elements ) ) {
+      writeLog(paste("Different ScenarioElements in",stageNames[s]),Level="error")
+      browser()
+    }
+  }
+  if ( length(scenarioElements)==0 ) {
+    writeLog("No Stages have ScenarioElements!",Level="error")
+    browser()
+  }
 
   # Update the model status
   self$specSummary <- NULL # regenerate when ve.model.list is next called
@@ -514,6 +560,7 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
 
 ve.model.initstages <- function( modelStages ) {
   # Loop through modelStages, completing initialization using "StartFrom" stages
+
   writeLog("Finding runnable stages",Level="info")
   runnableStages <- list()
   for ( stage_seq in seq_along(modelStages) ) {
@@ -1008,7 +1055,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
 
   # Warn if stage is not unique
   if ( Name %in% names(Model$modelStages) ) {
-    writeLog(paste0("Model name ",self$Name," is already defined in ",ModelName),Level="info")
+    writeLog(paste0("Model Stage name ",self$Name," is already defined in ",ModelName),Level="info")
     # Not an error, as this object may replace the one already in the Model
     # That condition is trapped when this stage is pushed back into the model
   } else writeLog(paste0("Initializing Model Stage:",self$Name),Level="info")
@@ -1033,17 +1080,10 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   if ( length(stageConfig_ls) > 0 ) {
     writeLog(paste("Stage",self$Name,"stageConfig_ls contains:"),Level="debug")
     writeLog(paste(names(stageConfig_ls),collapse=", "),Level="debug")
+    writeLog(paste("Stage Input Path from stageConfig_ls:",stageConfig_ls$InputPath),Level="debug")
+    # TODO: stageConfig_ls$InputPath is correct here
   } else {
     writeLog("stageConfig_ls has no additional parameters",Level="debug")
-  }
-
-  # Set up ScenarioElements if present
-  if ( "ScenarioElements" %in% names(stageConfig_ls) ) {
-    writeLog(paste("Scenario elements detected in",self$Name),Level="debug")
-    self$ScenarioElements <- stageConfig_ls$ScenarioElements
-  } else {
-    writeLog(paste("No ScenarioElements in",self$Name),Level="debug")
-    if ( length(stageConfig_ls)>0 ) writeLog(paste(names(stageConfig_ls),collapse=", "),Level="debug")
   }
 
   # Set up self$Path (input location)
@@ -1135,15 +1175,16 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   # Otherwise:
   #   Add ModelDir/StageDir/InputDir if it exists
   #   Otherwise, add ModelDir/StageDir if it exists
-  if ( "InputPath" %in% names(self$loadedParam_ls) ) {
-    stageInput <- self$loadedParam_ls$InputPath
+  if ( "InputPath" %in% names(self$RunParam_ls) ) {
+    stageInput <- self$RunParam_ls$InputPath
     writeLog(paste(nzchar(stageInput),"Stage InputPath is set",paste("'",stageInput,"'"),collapse="\n"),Level="debug")
   } else {
     # Construct stage input path
     if ( is.character(self$Path) && dir.exists(self$Path) ) {
       stageInput <- file.path(self$Path,visioneval::getRunParameter("InputDir",self$RunParam_ls))
       if ( is.null(stageInput) || ! file.exists(stageInput) ) stageInput <- self$Path
-      writeLog(paste("Input path for",self$Name,":",stageInput,"(",file.exists(stageInput),")"),Level="info")
+      writeLog(paste0("Input path for ",self$Name,":"),Level="info")
+      writeLog(paste(paste(stageInput,"(",file.exists(stageInput),")"),collapse="\n"),Level="info")
     } else stageInput <- NULL
   }
     
@@ -1170,7 +1211,22 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   }
   # Still may have no explicit InputPath for Stage
 
-  # Identify "startFrom" stage (VEModelStage$runnable will complete setup)
+  # Mark this stage as a scenario
+  if ( "IsScenario" %in% names(stageConfig_ls) && stageConfig_ls$IsScenario ) {
+    self$IsScenario = TRUE
+  }
+  # Configure ScenarioElements (including defaults) so stage can be visualized
+  if ( "ScenarioElements" %in% names(stageConfig_ls) && length(stageConfig_ls$ScenarioElements)>0 ) {
+    writeLog(paste("Scenario elements detected in",self$Name),Level="debug")
+    self$elements(stageConfig_ls$ScenarioElements,update="VEModelStage$inititalize")
+  } else {
+    # Apply default scenario category
+    writeLog(paste("No ScenarioElements in",self$Name,"- using default"),Level="debug")
+    if ( length(stageConfig_ls)>0 ) writeLog(paste(names(stageConfig_ls),collapse=", "),Level="debug")
+    self$elements(update="VEModelStage$initialize")
+  }
+
+   # Identify "startFrom" stage (VEModelStage$runnable will complete setup)
   # Can find StartFrom through ModelStages or from the stage configuration file/parameters
   if ( !is.character(self$StartFrom) || length(self$StartFrom)==0 || ! nzchar(self$StartFrom) ) {
     # StartFrom was not set previously from stageParam_ls
@@ -1183,8 +1239,31 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
       self$StartFrom <- character(0)
     }
   }
-  # Wait for "runnable" setup to unpack StartFrom and to build final InputPath and
-  # DatastorePath
+
+ # Wait for "runnable" setup to unpack StartFrom and to build final InputPath and DatastorePath
+}
+
+# Set ScenarioElements (applyig default if needed)
+ve.stage.elements <- function(Elements=NULL,Names=NULL,update=NULL) {
+  if ( is.null(Elements) ) {
+    if ( is.null(Names) ) {
+      Elements <- self$Name
+      names(Elements) <- "Scenarios"
+    } else {
+      # Attach base levels to all elements (for StartFrom stage)
+      Elements <- rep("0",length(Names))
+      names(Elements) <- Names
+    }
+  }
+  self$ScenarioElements <- Elements
+  if ( is.character(update) ) {
+    self$RunParam_ls <- visioneval::addRunParameter(
+      self$RunParam_ls,
+      Source=update,
+      ScenarioElements=self$ScenarioElements
+    )
+  }
+  invisible( self$ScenarioElements )
 }
 
 # Prepare the stage to run in the model context
@@ -1195,6 +1274,8 @@ ve.stage.runnable <- function(priorStages) {
   # Will use short circuit if new stage is being added programmatically to the model
   # (VEModel$addstage)
   if ( ! is.null(private$complete) ) return(private$complete)
+
+  writeLog(paste("Checking stage",self$Name,"is runnable"),Level="info")
 
   # dig out the information from the StartFrom stage
   if ( length(self$StartFrom) > 0 && nzchar(self$StartFrom) ) {
@@ -1247,7 +1328,8 @@ ve.stage.runnable <- function(priorStages) {
       Source="VEModelStage$runnable",
       InputPath=cullInputPath( InputPath=InputPath )
     )
-    writeLog(paste("InputPath for",self$Name,":",self$RunParam_ls$InputPath,collapse="; "),Level="info")
+    writeLog(paste0("InputPath for ",self$Name,":"),Level="info")
+    writeLog(paste(self$RunParam_ls$InputPath,paste0("(",file.exists(self$RunParam_ls$InputPath),")"),collapse="\n"),Level="info")
   } else {
     writeLog(paste("No InputPath for stage",self$Name),Level="debug")
   }
@@ -1459,17 +1541,19 @@ ve.stage.levels <- function(level) {
 }
 
 ve.stage.pstatus <- function(start=FALSE) {
-  paste(
-    paste0(self$Name,":"),
-    if ( is.null(self$RunStarted) ) {
-      "has not started to run."
-    } else if ( start ) {
-      paste("Started at",tformat(self$RunStarted))
-    } else if ( ! is.null(self$RunCompleted) ) {
-      paste("Completed at",tformat(self$RunCompleted),"after",tdiff(self$RunStarted,self$RunCompleted))
-    } else {
-      paste("Running for",tdiff(self$RunStarted,Sys.time()),"since",tformat(self$RunStarted))
-    }
+  paste0(
+    paste(
+      if ( is.null(self$RunStarted) ) {
+        "Not started"
+      } else if ( start ) {
+        paste("Started at",tformat(self$RunStarted))
+      } else if ( ! is.null(self$RunCompleted) ) {
+        paste("Completed at",tformat(self$RunCompleted),"after",tdiff(self$RunStarted,self$RunCompleted))
+      } else {
+        paste("Running for",tdiff(self$RunStarted,Sys.time()),"since",tformat(self$RunStarted))
+      }
+    ),
+    ":",self$Name
   )
 }
 
@@ -1479,7 +1563,6 @@ ve.stage.run <- function(log="warn",UseFuture=TRUE) {
   self$RunStatus <- codeStatus("Running")
   self$RunStarted <- Sys.time()
   self$RunCompleted <- NULL
-  writeLog(self$processStatus(start=TRUE),Level="warn")
 
   # Remove any existing ModelState and run results from this stage
   # Will reload later once the run is complete
@@ -1532,7 +1615,7 @@ ve.stage.completed <- function( runStatus=NULL ) {
 
 # Print a model stage summary
 ve.stage.print <- function(details=FALSE,configs=FALSE) {
-  cat(if(!is.null(self$ScenarioElements)) "Scenario" else "Stage",": ",self$Name,sep="")
+  cat(if(!is.null(self$IsScenario)) "Scenario" else "Stage",": ",self$Name,sep="")
   if ( details ) {
     startFrom <- if ( length(self$StartFrom)>0 && nzchar(self$StartFrom) ) paste0("StartFrom: ",self$StartFrom)
   } else startFrom <- NULL
@@ -1613,10 +1696,12 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
   # if both are true, we also list the Get elements
   # "details" FALSE lists units and description plus pacakge/module/group/table/name
   # "details" TRUE lists all the field attributes (the full data.frame of specSummary)
+  # "details" can also be a character vector of specification field names (to generate a subset of details)
+  # If "details" is NULL (the default) it selects a small subset of (hopefully useful) field specifications
   # "stage" is a list of stage names (default = all stages) to appear in the output
-  #   The fields shown are just the ones accessed in that particular stage
-  # Currently reports local specifications (within stage) for each stage, and includes
-  #   both reportable and non-reportable stages.
+  #   The field specifications shown are just the ones accessed in that/those particular stages
+  # If you call "list" multiple times, it will use cached results. If you change the model after
+  # loading it, reset=TRUE will force a complete reload from the run_model.R script(s).
   # TODO: Include only Reportable stages unless name specified. If a reportable stage is
   #   requested, include the "StartFrom" tree for this stage as well. So augment the
   #   stage list by including "StartFrom" stages for each named stage (or each
@@ -1675,138 +1760,6 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
   return(self$specSummary[listRows,listFields])
 }
 
-# Visualize model results
-# TODO: Consider again whether it is more appropirate to visualize a query with an attached model
-ve.model.visual <- function(stages=list(),query=NULL,save=FALSE) {
-
-  print(htmlRoot<-system.file("visualizer",package="VEModel"))
-  print(dir(htmlRoot))
-  jrc::openPage(
-    useViewer=FALSE,
-    rootDirectory=htmlRoot,
-    startPage=file.path(htmlRoot,"visualizer.html") #,
-#    browser="C:/Users/jeremy.raw/AppData/Local/Vivaldi/Application/vivaldi.exe"
-  )
-
-  # The following just fakes some data and visualizes it
-  jsonvars <- jsonlite::read_json(file.path(system.file("visualizer",package="VEModel"),"visualizer-sample.js"))
-  
-  jrc::sendData("catconfig",jsonvars$catconfig,keepAsVector=TRUE) # keepAsVector -> otherwise flattens inconveniently
-  jrc::sendData("scenconfig",jsonvars$scenconfig)
-  jrc::sendData("outputconfig",jsonvars$outputconfig)
-  jrc::sendData("VEdata",jsonvars$VEdata)
-  
-  # Consider using onStart to then populate with data and call VisualVE function
-
-  # TODO: visualizer should filter query results by Year
-  # Introduce Year as the first "Measure", but it's not in the list of VEQuery measures so
-  # event though it is produced (and we produce simplified metadata for it), it won't get
-  # sucked up as a metric to visualize (but we can limit what we visualize to columns whose
-  # Year matches what we're looking for).
-
-  # the Query provides the measures (by running the query on model results for reportable stages)
-  # and looking up the results for the stages The model gets scenario information about the stages
-  # from each stage if the model has scenarios, we'll use model$scenarios()$stages to tell us what
-  # to iterate through (and model$modelStages[[model$scenarios()$StartFrom] to get the StartFrom
-  # stage if any prior to doing the scenarios()$stages(). If the model does not have scenarios, we
-  # can make the category and scenario structures using reportable stages - there is no base
-  # scenario, all stages are equal, each one is a single level in its own scenario, and each
-  # scenario maps one-to-one to a category level, with just the one "Scenarios" category (or
-  # possibly allowing a "CategoryName" to be injected into the ModelStage RunParam_ls so we can
-  # group the scenario ModelStages into different Categories. That tag is not used for
-  # Category/Scenario model stages, though perhaps we could (there would be multiple categories, and
-  # we would only record the ones where the category contributed a non-zero level). The base model
-  # should always be included if we filter categories (it belongs to all categories)
-
-  # New approach to visualizing:
-  # 
-  #   VEModel contains VEModelScenarios
-  #   VEModelScenarios can report VEModelStages with Scenario/Level for desired list of categories
-  #   VEModel can run VEModelStages
-  #   VEModelStage can report its run directory (location of VEResults)
-  #   VEModel can return list of VEResults for some or all VEModelStages
-  #   VEQuery can run on Model / list of VEResults to generate query results into the VEResults Path
-  #   VEQUery can format the generated query results for a list of VEResults into a data.frame
-  #     (or really a list of vectors of measures). Then we can lapply across the data.frame to generate
-  #     one row of JSON measure values for each column. TODO: see above about Year as a
-  #     pseudo-metric or filterable parameter
-  #   VEModelStage, given a list of "scenarios" (elements from VEModelScenarios Scenarios tag) can say
-  #     what level the stage has for that scenario (possibly zero if scenario did not supply changed
-  #     files) - goes in ScenarioElements structure (added after scenario stages are built but before
-  #     they are handed back to the model).
-  #   VEModelScenarios can take the exported VEQuery data.frame of results (suitably filtered by
-  #     selecting which results and the Year) and generate everything needed for the visualizer
-  #     (VEQuery provides the outputconfig - export metadata to get
-  #     the pieces);
-  #     VEQuery$export(data=TRUE) provides the results for VEData, VEModelScenarios can produce the
-  #     categoryconfig and scenarioconfig, and the VEModelScenarios$stages (which also give the
-  #     VEResults) can provide the tags indicating which Scenario/Level the stage belongs to (the
-  #     VEModelStage does that)
-  #   So the Visualizer could work like this:
-  #     VEQuery has attached model
-  #     VEQuery supplies metrics for outputconfig
-  #     Attached VEModel supplies VEResultsList on which the VEQuery runs and from which it gets
-  #     query results.
-  #     VEModel provides VEModelScenarios, which provides ModelStages (and organizes them by
-  #     Category / Scenario). Keep all the category information by stage name in the scenarios.
-  #     So we ask VEModelScenarios for the Category/Stage for a list of stages (kept externally
-  #     because it depends on where the stage is in relation to other stages).
-  #     If there are no VEModelScenarios, or the stage is not among them, return default category
-  #     and just create a distinct category/scenario structure (name, category level, etc).
-  #     
-  #   That let's us "visualize" a standard model with stages, where each Reportable stage becomes a
-  #     "Scenario" level in the single "Scenarios" category without actually defining a ScenarioDir.
-  #   If we build standard ModelStages for VEModelScenarios, those should have Scenario/Level injected
-  #     into them (zero for the Category StartFrom stage, or for the containing model's StartFrom
-  #     stage).
-
-  # TODO: visualizer generates JSON from model Reportable stages and query results data for the
-  #       stages that have results. Call helper function to dump query results into VEData JSON
-  #       Build outputconfig JSON from query specification. Build categoryconfig and scenarioconfig
-  #       from VEModel$scenarios object. If using bare results or model has no scenarios, create
-  #       default one-to-one category and scenario config with one scenario per result set.
-  #       Launch JRC live visualizer if OutputDir is missing. If OutputDir is NA or "", write a
-  #       "visualizer_QueryName_Timestamp" folder into default OutputDir. Find default OutputDir
-  #       from ModelDir/ResultsDir/OutputDir, or by way of implied Model for first of the Results
-  #       being visualized. Writing to a file versus launching JRC will produce a different
-  #       invocation at the end of visualizer.js
-
-  # If categories is numeric, first N categories
-  # if categories is character, only categories with those names (max length)
-  # if measures is numeric, first N measures
-  # if measures is charcter, only measures with those names (max length)
-
-  # TODO: think about filtering for a particular year
-  # Can we tie a category to a year?
-  
-  # Get the model's scenarios
-  # Identify the ones against categories we want to use
-  # Identify the full set of scenarios for each included category + level
-  # Visit each reportable model stage (start from)
-  # Request scenario levels for each stage. The first one with all zero levels stays (probably the
-  # first overall - the StartFrom stage). Later stages with all zeroes are not included in the
-  # output.
-  # VEData consists of one JSON row for each result
-
-  # Build the JSON for the visualizer:
-  #   VEData           From ModelStages scenario/level list
-  #   categoryconfig   From Model$scenarios()$categoryConfig(categories)
-  #   scenarioconfig   From Model$scenarios()$scenarioConfig(categoryconfig) # just the ones we used
-  #   outputconfig     From Query Specification filtered by "measures"
-
-  # if NOT save
-  # Start the browser with the Visualizer HTML/JS/CSS
-  # then inject visualizer.json via jrc::sendCommand
-  # then inject call to VisualVE(); via jrc::sendCommand
-  # Don't need to stay live with the page (leave it in the browser, but close
-  #  everything on our side).
-
-  # always return the JSON so the caller can write a file if desired
-  return(invisible(jsonvars))
-}
-
-
-
 # Print a summary of the VEModel, including its run status
 ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
   cat("Model:",self$modelName,"\n")
@@ -1818,14 +1771,15 @@ ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
   }
   cat("Status:", self$printStatus(),"\n")
   if ( private$p.valid ) {
-    scenarioStages <- sapply( self$modelStages, function(s) !is.null(s$ScenarioElements) )
+    scenarios <- self$modelScenarios
+    scenarioStages <- sapply( self$modelStages, function(s) s$IsScenario )
     cat("Model Stages:\n")
     for ( s in self$modelStages[ ! scenarioStages ] ) {
       s$print(details,configs)
     }
     scenarioCount <- length(which(scenarioStages))
-    if ( scenarioCount > 0 || is.null(self$modelScenarios) ) {
-      if ( ! scenarios ) {
+    if ( scenarioCount > 0 || ! is.null(self$modelScenarios) ) {
+      if ( ! details ) {
         cat(scenarioCount,"Scenario stages defined in",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
       } else {
         cat("Scenario Stages from",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
@@ -2016,11 +1970,11 @@ knownPlans <- c("inline", "sequential", "callr", "multisession")
 # "inline" is the default (and used for unknown plans).
 # other strategies can be implemented by directly modifying self$FuturePlan and self$Workers
 # deeper hacking may be required if the strategy does not take a "workers" parameter
+# or if it needs something else
 
 #' @import parallelly
 ve.model.plan <- function(plan="callr",workers=parallelly::availableCores(omit=1)) {
-  # options for the plan are
-  # validate plan
+  # options for the plan are described in knownPlans
   if ( ! is.character(plan) || ! plan %in% knownPlans ) plan <- knownPlans[1]
   self$FuturePlan <- plan
   self$Workers <- workers
@@ -2088,7 +2042,7 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
   SaveDatastore = NULL # ignore any pre-configured value for SaveDatastore
   if ( run == "restart" || run=="reset" ) {
     SaveDatastore <- FALSE
-    writeLog(paste("Removing previous Results from",workingResultsDir),Level="info")
+    writeLog(paste("Removing previous Results from",workingResultsDir),Level="warn")
     unlink(dir(workingResultsDir,full.names=TRUE),recursive=TRUE)
   } else if ( run == "save" ) {
     SaveDatastore <- TRUE
@@ -2227,7 +2181,7 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
         queueMsg <- paste("Queuing stage",ms)
         running <- length(runningList)
         if ( running > 0 ) queueMsg <- paste( queueMsg,paste0("(Joining ",running," already running)") )
-        writeLog(queueMsg,Level="info")
+        writeLog(queueMsg,Level="warn")
         runningList <- c(
           runningList,
           self$modelStages[[ms]]$run(log=LogLevel,UseFuture=TRUE)
@@ -2256,11 +2210,15 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
           runningList <- runningList[ - which( ! running ) ]
         }
         if ( length(runningList) > 0 ) { # will be zero if we just finished the last stage
-          if ( ! watchingLogs && length(runningList)==1 ) watchingLogs <- watch
+          if ( ! watchingLogs && length(runningList)==1 ) {
+            writeLog("Watching log file for last stage process",Level="info")
+            watchingLogs <- watch
+          }
           if ( watchingLogs ) { # only one stage running - watch its logs
             runningList[[1]]$watchLogfile() # There's a delay built into watchLogFile
           } else {
             if ( is.null(lastStatusReport) || tdiff(lastStatusReport,Sys.time(),units="secs") > statusDelay ) {
+              writeLog(paste(length(runningList),"processes are running"),Level="info")
               sapply(runningList,function(stg) {
                 writeLog( stg$processStatus(), Level="warn" )
               })
@@ -2268,6 +2226,8 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
             }
             Sys.sleep(delay)
           }
+        } else {
+          writeLog(paste("Stages complete for StartFrom:",rgn),Level="warn")
         }
       }
     }
@@ -2908,8 +2868,7 @@ VEModel <- R6::R6Class(
     archive=ve.model.archive,               # apply framework archive function if results exist
     results=ve.model.results,               # Create a VEResults object (if model is run); option to open a past result
     findstages=ve.model.findstages,         # Report the path to the model results for a stage
-    query=ve.model.query,                   # Create a VEQuery object (or show a list of queries).
-    visual=ve.model.visual                  # Visualize query results on this model
+    query=ve.model.query                    # Create a VEQuery object (or show a list of queries).
   ),
   active = list(                            # Object interface to "set" function; "set" called explicitly has additional options
     settings=function(Param_ls) {
@@ -2947,6 +2906,7 @@ VEModelStage <- R6::R6Class(
     RunCompleted = NULL,            # Sys.time() when model stage run completed
     Results = NULL,                 # A VEResults object (create on demand)
     ScenarioElements = NULL,        # Scenario descriptor for visualizer
+    IsScenario = FALSE,             # Flag TRUE if this stage is a scenario
 
     # Methods
     initialize=ve.stage.init,       # Create a stage and set its Runnable flag
@@ -2956,6 +2916,7 @@ VEModelStage <- R6::R6Class(
     run=ve.stage.run,               # Run the stage (build results)
     completed=ve.stage.completed,   # Gather results of multiprocessing
     running=ve.stage.running,       # Check if stage is still running
+    elements=ve.stage.elements,     # Update ScenarioElements and install in RunParam_ls
     scenariolevel=ve.stage.levels,  # Given a scenario name, return the level that this stage used to alter it (0 if base)
     processStatus=ve.stage.pstatus, # Return string describing stage run process status
     watchLogfile=ve.stage.watchlog  # Helper to watch a logfile as this stage runs in the background

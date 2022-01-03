@@ -1,51 +1,45 @@
+For documentation
+
+  Continue documenting VEModel functionality - find some useful way to do that beyond the tests/walkthrough
+  (Or perhaps by adding comments to those or doing a separate .md/.Rmd that goes over it.
+
+  Go back over the walkthrough elements and make sure they're still correct and working.
+
+  Complete basic Roxygen descriptions (a bit tricky for R6 classes)
+
 For scenarios
 
   See plan-scenario.txt
-
-  Grab and update the scenarios tutorial from the obsolete VEScenarios package.
-
-For local data estimation task:
-
-  See plan-estimate.txt
-
-For build/install restructuring:
-
-  See plan-build.txt
 
 For the visualizer:
 
   see plan-scenario.txt (setting up inputs) and plan-visualizer.txt
 
+  visual() is a now function of the VEQuery. Done generating JSON; just need to test
+  and get the visualizer to open and display correctly.
+
   Make "visual" an output format (original plan, return to this approach) for query results (not on
   the model).
 
-  Visual will be sent through export/extract function for query
-    must have attached model
-    model must be Run Complete
-    Draw categories/scenarios from model states
-    Draw data from results
-    Draw outputconfig from query
+For build/install restructuring:
+
+  See plan-build.txt
+
+For local data estimation task:
+
+  See plan-estimate.txt
 
 For building visioneval and models:
 
-  Allow the build process to be a "multi-core"/parallel activity (with the dependency groups of the
-  packages set up so we build independent modules in parallel) - how to handle logging the outputs
-  of each - possible enlarging how the build log is maintained - use sink to re-route standard output
-  and perhaps standard error (risky) to a file specific to each "future". Enable multi-tasking by setting
-  number of available workers (via environment/Makefile variable) to something more than one.
-    - Factor out the build steps into a function.
-    - Loop over the build creating futures (okay to block)
-    - With only one worker, skip the future - just run the function
-
   From a model's run script, generate an empty set of input table specifications in some arbitrary output format
-  (default in-memory data.frame). This would be the "skeleton" function. Use the new ViEIO approach.
+  (default in-memory data.frame). This would be the "skeleton" function.
 
   # Generate skeleton files for models and model stages
 
     Inside the model, have a "structure" sub-directory that we can create and populate on demand by
     exporting model metadata
 
-    It should list the model contents base on the AllSpecs_ls structure, focusing on the Inp and Set
+    It should list the model contents based on the AllSpecs_ls structure, focusing on the Inp and Set
     specifications for each of the models.
 
     Could also generate that by digging into the dataset attributes in the Datastore (where they
@@ -65,8 +59,8 @@ For building visioneval and models:
 
 For running models:
 
-  When multiprocessing, a race condition may lead to invalid log file being accessed, leading to an error.
-  The watch log file may not be thread-safe...
+  Add a "Workers" parameter for VE settings, defaulting to 1 (single-threading).
+  Make the "plan" operation more flexible to allow setting more elaborate future plans.
 
   BUG: When re-running the walkthrough with files already built in another directory, the Datastore
   path ends up wrong. TODO: when we open a ModelState.Rda in a particular working directory, we need
@@ -283,7 +277,7 @@ For extraction:
 
     The different Datastore type looks totally doable! Just make sure to handle the
       "copy datastore" functionality for archiving to ensure that non-local storage also
-      gets relocted.
+      gets relocated.
 
     The connection used for a Datastore belongs to the ModelStage. That implies one
     connection for the Datastore we're writing, and one for each of the Datastores we might be
@@ -291,11 +285,11 @@ For extraction:
     connections can be to the same database, but it gives the option to do one database per
     ModelStage / Scenario and not have to screw with table prefixes. SQL can easily have lots
     of databases. SQL syntax references both db and table as `db_name.table_name`. We can use
-    that to pull from a different database table...
+    that to pull from a different database...
 
     Separate from the model state, do we want to cache the RunParams_ls into the Datastore?
     Probably don't cache database passwords: use the my.cnf approach to cache passwords,
-    Othersie the dataFormat should always send password requests back to the user (and
+    Otherwise the dataFormat should always send password requests back to the user (and
       crap out if non-interactive). Don't allow saving passwords as a VE setting.
 
     initializeFormat applies regardless of "role" for format (output,datastore)
@@ -306,6 +300,8 @@ For extraction:
     Datastore functions:
       initDatastore    # initial setup (create/open database)
                        # should create the Datastore connection summary
+                       # check that the Datastore is available, clean (no tables)
+                       # and create it if necessary
       initTable        # set up to make a table (can demand a certain length)
                        # will check length if table exists and make a variant
                        # if it's wrong
@@ -323,10 +319,10 @@ For extraction:
       Pass through readFullTable (below) which can be implemented differently
       for different formats.
 
-    The RD and H5 are Dataset(column)-based. The DBI implementation will be
-      easier if we push the readDatastoreTables functionality into the "datastore"
-      format role, the top-level function uses some new DatastoreFunctions to
-      make that work efficient:
+    The RD and H5 are Dataset(column)-based. The DBI implementation will be easier if we push the
+      readDatastoreTables functionality (for queries) into the "datastore" format role, the
+      top-level function uses some new DatastoreFunctions to make that work efficient:
+
         openDatastore         # Hook function, called once when loading ModelState
                               # opportunity to find database, provide user credentials, etc
                               # may cache connection
@@ -355,11 +351,12 @@ For extraction:
 
     All formats will maintain a Datastore file in the RunPath, even for possibly
       non-local formats like server-based DBMS. FOr "access" and "sqlite", the
-      "Datastore" is a the database file, as for H5.
+      "Datastore" is the database file, as for H5.
     Non-local formats contain connection information. That's important because we
       may not be using the same credentials if we open the model somewhere else.
     Password is not retained (only user): set caching up through the database's own mechanisms.
-      Prompt the user for a password if model is running interactively, otherwise "stop" with erro.
+      Prompt the user for a password if model is running interactively, otherwise "stop" with
+      error.
 
     In general, for export, a DBI-based (non-local) Datastore should be "flattened"
       into a file-based format. That's a workflow thing.
@@ -471,6 +468,5 @@ Structurally turn vignettes into docs
 
 For building vignettes:
 
-  [DONE] Vignettes will now build from "vignettes" into "docs" during package build
   [LATER] Come up with some coding standards for writing vignettes
 
