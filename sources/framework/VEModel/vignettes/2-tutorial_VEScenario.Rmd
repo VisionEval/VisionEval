@@ -1,0 +1,159 @@
+---
+title: "Introduction to VEScenarios"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to VEScenarios}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, setup1, include=FALSE, eval=T}
+knitr::opts_chunk$set(echo=TRUE, eval=FALSE)
+```
+
+```{r, setup2, include=FALSE}
+# When running RMarkdown file, the working directory is the location of the file itself.
+# We want to run this from the root of the VisionEval installation. It may be 've.runtime' when testing a developer-built version, or ve.root # when using an end user installed version.
+use_dir = ifelse(grepl(ve.runtime, getwd()), ve.runtime, ve.root)
+
+knitr::opts_knit$set(root.dir = use_dir)
+```
+
+## Warning: Work in Progress
+
+This vignette documents the old VEScenario package that has been rolled up into the VEModel framework package. This vignette needs to be updated
+to work with the VEModel version of setting up, building, running and manipulating scenarios. Consider it a 'use case' for scenarios that should
+be tracked against the current VEModel implementation.
+
+## Overview
+
+Strategic planning often requires the assessment of large numbers of future scenarios, each assessing a different combination of prioritizations, policy decisions, and constraints. The VEScenario module provides the capability to quickly set up, run, and visualize large numbers of VisionEval scenarios using a baseline scenario combined with multiple changes to model inputs. 
+
+Both VERSPM and VERPAT models are capable of running multiple scenarios efficiently.
+
+
+### Scenario manager database
+
+The first step to run VEScenarios is to build the scenario manager database. 
+The database should be a csv file in standard format defined and has the following attributes:
+
+- strategy_label: A concise headline label for a Strategy used in downstream visualizations, e.g., Community Design.
+- strategy_description: A verbose description of the Strategy explaining its meaning, e.g., “Local policies to enable shorter trips and travel by alternate modes.” 
+- strategy_level: An integer index unique to each strategy level, e.g., “1”. 
+- category_name: A single unique letter used to define the relevant Category and used to name scenario folders, e.g., “L”. 
+- category_label: A concise headline label for the Category used in downstream visualizations, e.g., “Land Use”. 
+- category_description: A verbose description of the Category explaining its meaning, e.g., “Distribution of population and employment by place type”. 
+category_instructions: Additional meta-data describing the specific way in which the relevant model will impact this category, e.g., “The form in which development occurs (density, regional accessibility, mixed use, etc.) represented by the distribution of population and employment by place type”. 
+- policy_name: A single number used to define the relevant Policy and used to name scenario folders, e.g., “1”
+policy_label: A concise headline label for the Policy used in downstream visualizations, e.g., “Base”. The keywords Base or Baseline indicated that the files from the Scenario Baseline Input Folder (see below) are not expected to be edited.  
+- policy_description: A verbose description of the Policy explaining its meaning, e.g., “Maintain current distribution”. 
+- input_label: A numeric index uniquely identifying an input file needed to implement the Policy within the model. 
+- input_filename: The name of the file that implements the policy.
+
+A sample files is located in `models/VEScenarios/scenario_inputs/verspm_scenario_manager.csv`. You can 
+add as many scenarios as you want but the format of strategies and scenarios should be standard.
+
+First, you should define the strategies you want to run. These are the default list of VERSPM_Scenarios strategies:
+
+
+* **Community Design** :  Policies that seek to enable shorter trips and alternate modes such as promotion of mixed use land use, transit service, bicycling, and parking management. ( group of L, B, P , T ) 
+* **Marketing/Incentive** : Policies that improve driving efficiency such as eco driving, and Intelligent Transportation System efforts, as well as programs that reduce auto demand such as carsharing, and home or work-based transportation demand management.( group of D, E ) 
+* **Pricing : Policies** that move towards true cost pricing such as road user fees to pay for the cost of operating, maintaining and improving roads, pay-as-you-drive (PAYD) insurance, and environmental impact fees such as a carbon tax. ( C )
+* **Vehicles/Fuels** : Factors representing changes to future vehicles and fuels ( group of V, F ) 
+* **Income** : Context factor on the assumed growth of statewide average per capita income ( I )
+
+Each strategy covers couple of categories in a lower level.
+
+These are the current list of VERSPM_Scenarios categories:
+
+  - B - Bicycles (`azone_prop_sov_dvmt_diverted.csv`) : Network improvements, incentives, and technologies that encourage bicycling and other light-weight vehicle travel
+
+  - C - Vehicle Travel Cost (`azone_hh_veh_own_taxes.csv`) and (`region_prop_externalities_paid.csv`) : Combination of fuel prices and charges to pay for roadway costs and possibly externalities
+
+  - D - DemandManagement (`bzone_travel_demand_mgt.csv`) : Programs to encourage less private vehicle travel
+
+  - E - Driving Efficiency (`marea_operations_deployment.csv`) and (`marea_speed_smooth_ecodrive.csv`) and (`other_ops_effectiveness.csv`) : Driving efficiency by increasing implementation of ITS
+
+  - F - Technology Mix and CI (`marea_transit_powertrain_prop.csv`) and (`region_carsvc_powertrain_prop.csv`) and (region_comsvc_powertrain_prop.csv`) : Vehicle technology mix and carbon intensity of fuels.
+
+  - G - Fuel Price (`azone_fuel_power_cost.csv`) : Real fuel price in 2010 USD
+
+  - I - Income (`azone_fuel_power_cost.csv`) : Real average household income in 2010 USD
+
+  - L - LandUse (`azone_hhsize_targets.csv`) and (`bzone_urban_du_proportions.csv`) : Distribution of population and employment by place type
+
+  - P - Parking (`bzone_parking.csv`) : The extent of paid parking and its price
+
+  - T - Transit (`marea_transit_service.csv`) : The extent and frequency of transit service
+
+  - V - Vehicle Characteristics (`azone_hh_veh_mean_age.csv`) and (`azone_lttrk_prop`): The combination of fuel prices and vehicle travel charges to pay for roadways and to pay for externalities such as carbon pricing
+
+ For each category, you should define the levels you would like to run. For each category level you need to change a set of inputs based on the scenario definition. 
+ 
+ The input column should be populated with the input file names for each scenario level.
+
+You can completely delete the default list and add new strategies for your own specific scenarios.
+
+After creating this database when you run a sample VisionEval model, a directory with all the scenario levels and required inputs will be created; see `models/VEScenarios/scenario_inputs` for an example of the directory structure.
+
+## Running VEScenarios
+
+After creating scenario manager file, you need to run VEScenario::NewScenarioSetInterior() function to 
+create the scenario directories and populate with required inputs:
+
+```{r new_scenario_set}
+ScenarioManagerFile = "models/VEScenarios/scenario_inputs/verspm_scenario_manager.csv"
+ModelFolder = "models/VERSPM"
+VEScenario::NewScenarioSetInterior(ScenarioManagerFile,
+                                  ModelFolder,
+                                  ScenarioInputFolder = NULL,
+                                  ScenarioBaselineInputFolder = NULL)
+```
+
+
+This function requires 4 inputs by user:
+
+- **ScenarioInputFolder** — a file path identifying the location on the computer hard disk where the inputs for the scenarios will be located. In case ScenarioManagerFile is in this folder, it can be NULL.
+- **ScenarioManagerFile** — the file path of the CSV file described above, which is expected ( but not required) to be in the ScenarioInputFolder. 
+- **ModelFolder** — The path to the folder containing the Base Model run_model.R  script that will run each of the constructed scenarios plus its other elements (inputs and defs sub-folders).
+- **ScenarioBaselineInputFolder** — the location on the computer of the hard disk where the inputs used for the baseline scenarios are located. In case the folder it inside the ModelFolder it can be NULL
+
+After running the code above, a new scenario set with all the folder and sub-folders will be created and 
+all the required inputs will be copied to the relevant scenario folder. However all the inputs are from the base mode and needs to be modified for different scenario levels. You will see all the inputs has the prefix of UNEDITED- to signal to the user that this file needs to be edited. After modifying all the files with the correct inputs you need to remove the UNEDITED prefix from all the files names.
+
+
+The next step is to build all the possible scenarios based on the scenario set by running the following code:
+
+```{r build_scenarios}
+ScenarioInputFolder = "models/VEScenarios/scenario_inputs"
+ScenarioOutputFolder = "models/VEScenarios/scenarios"
+
+if(any(grepl('Unedited', list.files(ScenarioInputFolder, all.files = T, recursive = T)))){
+  stop('Please finish editing the input files before continuing. At least one is still `Unedited`.')
+}
+
+VEScenario::BuildScenariosInterior(ScenarioInputFolder,
+                                   ScenarioOutputFolder,
+                                   ModelFolder)
+```
+
+This function requires 3 inputs by user:
+
+- **ScenarioInputFolder** — described above
+- **ModelFolder** — Described above
+- **ScenarioOutputFolder** — file path identifying the location on the computer hard disk where the built scenarios will be located
+
+After running this step, you can see all the built scenarios in the output folder. This function Copies the Base Model input files to each scenario combination folder. It also copies the `run_model.R` and `defs` folder from the ModelFolder into each of the scenario folders 
+It overwrites the specific scenario `input_filename` files from the ScenarioBaselineInputFolder into the scenario directories so that each scenario folder can execute a standalone VERPAT or VERPSM model run with the combinations of scenario input files.
+
+
+The last step is to run the scenarios using VEScenario::RunScenarios module. You first need
+to copy the RunScenario sample model located in the  `models/VEScenarios`. From the defs folder,
+model_parameters.json needs to be modified to point to ScenarioOutputFolder mentioned in BuildScenariosInterior step.
+
+```{r run_scenarios}
+ve.run()
+VEScnearios_test <- openModel("VEScenarios")
+VEScnearios_test$run()
+```
