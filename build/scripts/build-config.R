@@ -215,8 +215,6 @@ evalq(
   }
 
   # Helper function to compare package path (source) to a built target (modification date)
-  # TODO: reimplement to use fileSnapshot, and pass a list of files as "srcpath" rather than the
-  # directory - then we can do .Rbuildignore processing to ignore presence of non-copied files.
   newerThan <- function( srcpath, tgtpath, pkg.files=character(0), quiet=TRUE ) {
     # Compare modification time for a set of files to a target file
     #
@@ -245,8 +243,6 @@ evalq(
       }
       tgtpath <- file.path(tgtpath,tgtfiles)
     }
-    # TODO: implement with fileSnapshot and changedFiles? A bit hard because we're only interested
-    # in a subset of the files and fs$info keeps track of them by full path name...
     if ( length(tgtpath) < 1 ) {
       if (!quiet) cat("Newer: target files do not exist\n")
       return(TRUE)
