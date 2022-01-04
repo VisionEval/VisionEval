@@ -1,27 +1,5 @@
-# Test.R
-# Comprehensively test VEModel and related interfaces
-# Also provides working examples of the API
+# Load required packages
 
-# You should run this from the VEModel package root.
-# Make sure your .libPaths includes the built ve-lib (e.g. by
-# creating a suitable .REnviron file).
-# If you're looking at this file in a built runtime, the individual test_*
-# functions are code you can try interactively to test the framework.
-# You should NOT run the "rewind" or "setup" functions...
-# The test functions are a more detailed and up-to-date version of what the
-# walkthrough does: those are the target of test-based development for the
-# framework.
-
-# starting in the root of the package, just do this
-#  source("tests/test_run.r")
-# It will create a temporary folder to use as a runtime
-# and list the available test functions.
-
-# function: pseudo_package
-# 
-if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
-  stop("Missing required package: 'pkgload'")
-}
 if ( ! requireNamespace("visioneval",quietly=TRUE) ) {
   stop("Missing required package: 'visioneval'")
 }
@@ -38,77 +16,14 @@ if ( ! requireNamespace("future.callr",quietly=TRUE) ) {
   stop("Missing required package: 'future.callr'")
 }
 
+if ( ! "package:VEModel" %in% search() ) {
+  # Will be there already if running from test_setup.R inside VEModel package
+  message("Loading built VEModel package")
+  require("VEModel",quietly=TRUE)
+}
+
 logLevel <- function(log="info") {
-  initLog(Save=FALSE,Threshold=log)
-}
-
-setup <- function(ve.runtime=NULL) {
-  # Creates or uses a fresh minimal runtime environment as a sub-directory of "tests"
-  # Set VE_RUNTIME to some other location if desired (does not need to have a runtime
-  # there yet, and in fact it's better if it doesn't).
-  if ( ! is.character(ve.runtime) ) {
-    ve.runtime <- Sys.getenv("VE_RUNTIME",unset=NA)
-    if ( ! is.na(ve.runtime ) ) {
-      if ( ! dir.exists(ve.runtime) ) {
-        ve.runtime <- NA
-      }
-    }
-    if ( is.na(ve.runtime) ) {
-      ve.runtime <- grep("^(tests/)runtime.*",list.dirs("tests"),value=TRUE)[1]
-      if ( ! dir.exists(ve.runtime) ) {
-        ve.runtime <- normalizePath(tempfile(pattern="runtime",tmpdir="tests"),winslash="/",mustWork=FALSE)
-        dir.create(ve.runtime)
-      }
-    }
-  }
-  ve.runtime <- normalizePath(ve.runtime,winslash="/",mustWork=TRUE)
-  Sys.setenv(VE_RUNTIME=ve.runtime)
-  pkgload::load_all()
-  ve.env <- VEModel::runtimeEnvironment()
-  ve.env$ve.runtime <- ve.runtime; # override default from package load (working directory)
-  setwd(ve.env$ve.runtime)
-
-  if ( ! dir.exists("models") ) dir.create("models")
-  message("Available Test Functions:")
-  print(ls(pattern="^test_",envir=parent.frame(2)))
-
-  logLevel("info") # Can override for specific test functions
-}
-
-takedown <- function() {
-  start.dir <- NA
-  ve.runtime <- NA
-  if ( isNamespaceLoaded("VEModel") ) {
-    ve.env <- VEModel::runtimeEnvironment()
-    if ( exists("ve.runtime",envir=ve.env,inherits=FALSE) ) {
-      ve.runtime <- ve.env$ve.runtime
-    }
-    if ( exists("start.dir",envir=ve.env,inherits=FALSE) ) {
-      start.dir <- ve.env$start.dir
-    }
-  }
-  if ( "package:VEModel" %in% search() ) detach("package:VEModel")
-  unloadNamespace("VEModel")
-  if ( ! is.na(start.dir) ) setwd(start.dir)
-  if ( ! is.na(ve.runtime) ) {
-    message("To remove runtime directory:")
-    message("unlink('",ve.runtime,"',recursive=TRUE)")
-  }
-  loadhistory(".Rhistory") # get rid of rep("n",a.million.times) and other debugging leftovers
-}
-
-rewind <- function() {
-  cat("Rewinding...")
-  takedown()
-  setup()
-}
-
-cleanup <- function() {
-  takedown()
-  runtimes <- grep("^(tests/)runtime.*",list.dirs("tests"),value=TRUE)
-  message("Removing:")
-  print(runtimes)
-  if ( length(runtimes)>0 && isTRUE(askYesNo("Remove runtimes?")) ) unlink(runtimes,recursive=TRUE)
+  visioneval::initLog(Save=FALSE,Threshold=log)
 }
 
 testStep <- function(msg) {
@@ -118,6 +33,10 @@ testStep <- function(msg) {
 stopTest <- function(msg) {
   stop(msg)
 }
+
+# TODO throughout: use test_install() as the standard method for creating
+# models. ALlow the user to keep earlier test runs (just create a name variant)
+# or to blow away what is already there (runs and all).
 
 # Check that we can source run_model.R to run a classic model
 test_classic <- function(modelName="VERSPM-Classic",clear=TRUE,log="info") {
@@ -137,7 +56,7 @@ test_classic <- function(modelName="VERSPM-Classic",clear=TRUE,log="info") {
 
   if ( ! dir.exists(modelPath) ) {
     testStep(paste("Installing classic VERSPM model from package as",modelName))
-    rs <- installModel("VERSPM",variant="classic",modelName,log=log,confirm=FALSE)
+    rs <- installModel("VERSPM",variant="classic",installAs=modelName,log=log,confirm=FALSE)
     modelName <- rs$modelName
     rm(rs)  # Don't keep the VEModel around
   }
@@ -160,6 +79,7 @@ test_classic <- function(modelName="VERSPM-Classic",clear=TRUE,log="info") {
 test_install <- function(modelName="VERSPM",variant="base",installAs="",log="info") {
 
   if ( ! missing(log) ) logLevel(log)
+
   if ( ! nzchar(variant) ) variant <- ""
   if ( missing(installAs) || ! nzchar(installAs) ) {
     if ( nzchar(variant) && nzchar(modelName) ) {
@@ -168,6 +88,7 @@ test_install <- function(modelName="VERSPM",variant="base",installAs="",log="inf
   }
 
   if ( nzchar(modelName) && nzchar(variant) && nzchar(installAs) ) {
+    # TODO: create modelExists function? Still want to make people work to delete a model...
     if ( dir.exists(file.path("models",installAs)) ) {
       testStep(paste0("Clearing previous installation at ",installAs))
       unlink(file.path("models",installAs), recursive=TRUE)
@@ -194,10 +115,12 @@ test_install <- function(modelName="VERSPM",variant="base",installAs="",log="inf
   return(invisible(rs))
 }
 
-test_all_install <- function() {
+test_all_install <- function(overwrite=FALSE,log="warn") {
+
+  if ( ! missing(log) ) logLevel(log)
 
   testStep("Installing all models")
-  models   <- test_install("")               # List available models
+  models   <- test_install("")               # List available models by package
   models   <- unique(models$Model)           # Vector of available model names
   variants <- list(                          # List available variants
     "VERSPM"   =test_install("VERSPM",var=""),
@@ -215,7 +138,7 @@ test_all_install <- function() {
         vars,
         function(v) {
           cat("\nInstalling model",m,"variant",v,"\n")
-          model <- installModel(m,variant=v,confirm=FALSE,overwrite=TRUE)
+          model <- installModel(m,variant=v,confirm=FALSE,overwrite=overwrite)
           return(model)
         }
       )
@@ -257,6 +180,7 @@ test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",r
     reset <- TRUE
     rs <- test_install(modelName=baseModel,variant=variant,installAs=modelName,log="info")
   }
+
   if ( ! reset ) {
     testStep(paste("Attempting to re-open existing",modelName))
     rs <- openModel(modelName)
@@ -279,8 +203,8 @@ test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",r
 # Test model runs through basic model configuration
 # oldstyle creates defs/run_parameters.json; if not oldstyle, create visioneval.cnf
 # reset forces the base model to rebuild (no special reason to do that; the base model
-#  need not have been run.
-# modelName is the particular version of VERSPM to use as a base. The base model MUST
+#  need not have been run).
+# modelName is the particular variant of VERSPM to use as a base. The base model MUST
 #  be a version of VERSPM since we use its first two modules to create the "Bare" model
 # log="warn" will confine to a streamlined list of log messages like what a regular user
 #  would see. "info" gives lots of gory details.
@@ -858,6 +782,9 @@ test_results <- function (log="info") {
   jr$dir()
 }
 
+# TODO: make separate functions (not flag) for
+#   (1) build/manipulate query object versus
+#   (2) run query
 test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TRUE,reset=FALSE) {
   # Process the standard query list for the test model
   # If multiple==TRUE, copy the test model and its results a few times, then submit the
@@ -1173,15 +1100,11 @@ test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TR
   }
 }
 
+#TODO: this function is probably obsolete (thought it is useful for describing
+#  how to programmatically build scenarios...). Look at test_multicore function
+#  and perhaps update that.
 test_multiquery <- function(reset=FALSE,log="info") {
-  # TODO: since the multiquery is the now the same as a standard query (multiple reportable stages),
-  # evolve the following into a test of multi-processing to run model stages in parallel. Add tests
-  # for category scenarios and model stage scenarios (like what is already below) Actually change
-  # input files for the program-constructed model stage scenarios, based on setting the inputpath in
-  # the model stages to a couple of test categories and scenarios. Then run queries on the
-  # multi-stage models run with a multisession/callr plan and generate the visualizer (either
-  # interactively or into a file).
-
+  # Merge this with test_scenario
   if ( ! missing(log) ) logLevel(log)
   testStep("Acquiring test model")
   jr <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",reset=reset)
@@ -1254,17 +1177,16 @@ test_multiquery <- function(reset=FALSE,log="info") {
 }
 
 # TODO: once scenario testing is complete, add a test for the visualizer (writing to file
-# and also launching with jrc.
-test_visualizer <- function() {
-  testStep("Visualizer test is not implemented yet")
-}
-
+# and also launching with jrc), check that we can do VERPAT all the way (set up the
+# queries in the new structure, set up the category scenarios variant, and make sure
+# it can run all the way through (model run, query generation on single scenario,
+# category scenario generation, visualizer on multiple scenarios)
 test_rpat <- function(run=TRUE) {
   testStep("Testing VERPAT as JRPAT")
   verpat <- openModel("JRPAT")
   if ( ! verpat$valid() ) {
     testStep("Installing VERPAT as JRPAT")
-    verpat <- installModel("VERPAT","JRPAT")
+    verpat <- installModel("VERPAT",installAs="JRPAT")
   }
   if ( run || ! verpat$results()$valid() ) {
     testStep("Clearing previous extracts")
@@ -1396,5 +1318,32 @@ test_scenarios <- function(
   )))
 }
 
-# Now set it all up
-rewind()
+test_visual <- function(categories=TRUE,popup=FALSE,reset=FALSE,log="info") {
+
+  # Models need to have been created with test_install...
+  modelName <- if ( categories ) "test-VERSPM-scenarios-cat" else "test-VERSPM-scenarios-ms"
+  testStep(paste("Opening Model:",modelName))
+  mod <- openModel(modelName,log="warn") # presume the model opening is uncomplicated
+  print(mod)
+  testStep("Running Model")
+  mod$run()
+  testStep("Opening Query")
+  logLevel(log) # Now examine at requested log level
+  qr <- mod$query( mod$query() )
+  print(qr)
+  testStep(paste0("Running Query, Force=",reset))
+  results <- qr$run(Force=reset)
+  testStep("Extracting Query (prints data.frame)")
+  extract <- qr$extract(metadata=FALSE,exportOnly=TRUE)
+  print( extract )
+  testStep("Building visual data")
+  jsonvars <- qr$visual(QueryResults=extract) # pure extraction return jsonvars
+  if ( popup ) {
+    testStep("Launching jrc visualizer")
+    qr$visual(SaveTo=NULL) # save to sub-directory of ResultsDir/OutputDir
+  } else {
+    testStep("Writing file-system visualizer")
+    qr$visual(SaveTo=TRUE) # save to sub-directory of ResultsDir/OutputDir
+  }
+  invisible( jsonvars )
+}

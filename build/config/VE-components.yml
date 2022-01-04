@@ -283,7 +283,7 @@ Components:
     Type: script
     Target: tools/tests/VEModel
     Path: sources/framework/VEModel/tests
-  test_run.r: # visioneval tests (sample code)
+  test.r: # visioneval tests (sample code)
     Type: script
     Target: tools/tests/visioneval
     Path: sources/framework/visioneval/tests
