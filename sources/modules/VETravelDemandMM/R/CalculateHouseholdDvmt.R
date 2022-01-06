@@ -403,7 +403,7 @@ CalculateHouseholdDvmt <- function(L) {
     mutate(metro=ifelse(LocType=="Urban", "metro", "non_metro"),
            LogIncome=log1p(Income),
            DrvAgePop=HhSize - Age0to14,
-           VehPerDriver=ifelse(Drivers==0 || is.na(Drivers), 0, Vehicles/Drivers),
+           VehPerDriver=ifelse(Drivers==0 | is.na(Drivers), 0, Vehicles/Drivers),
            LifeCycle = as.character(LifeCycle),
            LifeCycle = ifelse(LifeCycle=="01", "Single", LifeCycle),
            LifeCycle = ifelse(LifeCycle %in% c("02"), "Couple w/o children", LifeCycle),
