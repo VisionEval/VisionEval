@@ -283,10 +283,11 @@ Components:
     Type: script
     Target: tools/tests/VEModel
     Path: sources/framework/VEModel/tests
-  test.r: # visioneval tests (sample code)
-    Type: script
-    Target: tools/tests/visioneval
-    Path: sources/framework/visioneval/tests
+# If we want to include the visioneval tests in runtime, need to rename them (or VEModel/../test.r)
+#   test.r: # visioneval tests (sample code)
+#     Type: script
+#     Target: tools/tests/visioneval
+#     Path: sources/framework/visioneval/tests
   api:                               # "package" for 'docs' type is the last element (can be file name)
     Type: docs
     Path: "."                        # base directory below root to gather docs

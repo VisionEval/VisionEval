@@ -377,7 +377,7 @@ for ( module in seq_along(package.names) ) {
     if ( package.names[module] %in% pkgs.installed ) {
       if ( ! ve.report.built.status ) { # installed version is obsolete
         cat("Removing obsolete module package version:",pkgs.version[package.names[module]],"\n")
-        remove.packages(package.names[module],lib=ve.lib)
+        try( remove.packages(package.names[module],lib=ve.lib) ) # ignore any errors
       }
     } else cat(package.names[module],"not in pkgs.installed\n")
   }
