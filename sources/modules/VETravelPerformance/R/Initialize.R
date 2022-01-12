@@ -437,8 +437,9 @@ Initialize <- function(L) {
       Marea <- L$Data$Global$Marea$Geo[i]
       if (Marea != "None") {
         HasUzaName <- UzaNames_[i] %in% Ua
+        HasUzaName <- length(HasUzaName)>0 && HasUzaName # handle UzaNames_[i] set to NA - not valid here
         HasAllVals <- all(!(unlist(Values_df[i,]) %in% c(NA, "")))
-        Complete <- HasUzaName | HasAllVals
+        Complete <- HasUzaName || HasAllVals
         if (!Complete) {
           Msg <- paste0(
             "The 'marea_dvmt_split_by_road_class.csv' file has errors for ",
@@ -447,7 +448,8 @@ Initialize <- function(L) {
             "must be provided in the 'marea_base_year_dvmt.csv file'."
           )
           Err_ <- c(Err_, Msg)
-          rm(Msg)      }
+          rm(Msg)
+        }
         if (HasAllVals) {
           SumDiff <- abs(1 - sum(Values_df[i,]))
           if (SumDiff >= 0.01) {
