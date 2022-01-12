@@ -1,3 +1,33 @@
+For installing models
+
+  Add optional "package" argument to limit search for installable models to a particular package
+
+  Allow a module to have a "TestWith" specification, using when we "make tests" - auto-run one or
+  more models and keep track of when that run occurred relative to the most recent packages in
+  ve-lib. Create a "test" folder. TestWith specifies a model to install and run. May be a local
+  model within the package, or a general model (for standard module packages).
+
+  Create a "tests" target in the Makefile that runs build-tests.R script (new) that installs and
+  runs the test models. In build-config, need to parse the TestWith directive (and clean out the
+  prior testing). The tests target can only run after a successful module build.
+
+  Put the version number in VE-Config.yml and package version numbers in VEComponents.yml. Use
+  that version to mark the installer name. Use the package version numbers (if defined) to
+  replace the ones in the package DESCRIPTION.
+
+Implement the TestWith approach to system testing
+
+  Specify package as well as model + variant for installModel
+  Add a "private" indicator to a model configuration so it doesn't appear in the end user list
+    (but can still be found directly)
+  Ambiguous model variants (e.g. "test" in multiple modules)
+  Specify a model to use to test a module (or the framework)
+  De-duplicate if multiple modules use the same model variant
+  Load and run the model
+  Add "Stage" to model-index.cnf so we can locally just specify what is different.
+    Specify Package, Model, Variant
+    Then make everything that follows into a subdirectory stage for that model
+
 Multicore improvements for the build process itself
 
   Allow the build process to be a "multi-core"/parallel activity (with the dependency groups of the
@@ -8,16 +38,6 @@ Multicore improvements for the build process itself
     - Factor out the build steps into a function.
     - Loop over the build creating futures (okay to block)
     - With only one worker, skip the future - just run the function
-
-Implementation plan possibilities
-
-# Create new runtime-lib (comparable to dev-lib and ve-lib). Put the dependency packages there.
-  Build only the VE packages into ve-lib.
-  dev-lib continues to have development-only files
-  Runtime startup looks for two libraries: runtime-lib and ve-lib
-  If ve-lib can't be found, fail. If runtime-lib is not found, offer to create it by installing
-    the dependencies from an available internet connection (want to distribute that list, which
-    won't be very large and which is currently built when the config is constructed).
 
 Issues for ve.build / Makefile / new Github architecture
 

@@ -12,63 +12,10 @@ From there, we can export into a variety of formats:
 
 Make sure BreakNames are getting set up properly (once per query spec prior to doQuery).
 
-Make sure we can include arbitrary additional named elements in the query spec list that are used
-just to tag the query spec (e.g. for Visualizer Displayname, Instructions, XTicks, etc). They get
-elevated to attributes of the individual metrics to facilitate generating the metadata table. So
-find any code that filters down the fields to "known" values and let anything at all creep in. Those
-are inserted into the Spec at the top level.
-
-Visualizer metrics from VEScenarios are simple, but a lot of intermediates are generated. We need an
-"Export" flag to decide whether to extract it or not. The extract function will export everything by
-default. But the Visualizer will only generate "Export" metrics. We can elaborate that later...
-
-VEQuery needs a function to dump the output configuration for the visualizer (as JSON)
-Eventually need additional query metadata, like this:
-
-Add Instructions, Label, Metric, XTicks, DisplayName as below as options for the QuerySpec
-
-{
-  "DISPLAYNAME": "Walk Trips Per Capita",
-  "LABEL": "Walk Travel Per Capita",
-  "DESCRIPTION": "annual residents walk trips (not including recreation or walk to transit) divided by population",
-  "INSTRUCTIONS": "annual residents walk trips (not including recreation or walk to transit) divided by population",
-  "METRIC": "Average",
-  "UNIT": "annual trips",
-  "NAME": "WalkTravelPerCapita",
-  "XTICKS" : 3
-}
-
-Change Visualizer so it uses NAME for COLUMN, and DISPLAYNAME for NAME
-
-Create these as additional
-
-  EXPORT (Default is Not Present)
-    - indicates measure should not be output to Visualizer unless named
-    - Visualizer will only consider export metrics
-  DISPLAYNAME (Default is NAME)
-  LABEL (default = DISPLAYNAME = NAME)
-  METRIC (default = "")
-  XTICKS (default = 5)
-  INSTRUCTIONS (default = DESCRIPTION)
-
-  XTICKS is a visualizer tweak
-  METRIC is descriptive (needs a value - is actually used? - make it an empty strin for now)
-  COLUMN is the specific metric name (from existing query specification structure)
-  NAME can just be the same as LABEL and is a short version of DESCRIPTION
-  INSTRUCTIONS can just be the DESCRIPTION
-
 Additional visualizer tests:
   1. Limiting to a subset of categories
   2. Limiting to a subset of measures
   3. Limiting to a subset of scenarios/model stages
-
-visualize function (VEModel$visualize, VEQuery$visualize) will run the VEModel or the VEQuery or
-both, with control via a reset flag (or more nuanced run strategy). Perhaps interact with usuer in
-"interactive" mode. So we could just load a model and "visualize" it with a VEQuery. Default the
-VEQuery for the first one defined for the model? Can get into some time-consuming BS, so maybe
-don't want to run by default.
-
-Add diagnostic to put GeoType onto function specification.
 
 Query Punch List:
 
@@ -76,17 +23,6 @@ Query Punch List:
     process metrics compatible with that type (interior conversion). This will need clean-up
     later.
 
-  - Make the VEQuery much more particular about what it processes. It needs an attached model,
-    and it can be told only to run on certain stages (default=Reportable). Export can also specify
-    stages.
-
-  - Basic approach is to take a VEModel object, run its $query function supplying the path of
-    a query (relative to modelPath/QueryDir or a full path). The result of that is a VEQuery object
-    with the model attached. From there we can $run the VEQuery or go straight to $results (which
-    implicitly does a $run unless a flag says only to use existing results).
-  - The actual query processing (turning Datastore into Metrics) only happens at the stage level.
-    Default is to run the query on each Reportable stage in the attached model. Output from the
-    query is placed in ModelDir/ResultsDir/StageDir/Query-<QueryName>.Rda for the attached model.
   - If we explicitly ask for stages, only those stages are updated (unless the index flag is TRUE;
     it defaults to FALSE). If we do NOT ask for explicit stages, then the index flag is set to true
     and an index of Query results is created in the attached model's ModelDir/ResultsDir.
@@ -96,11 +32,6 @@ Query Punch List:
     query results are only generated for those stages (and we get the list of VEQueryResults).
     Otherwise, we run the query for all Reportable stages, the VEModel results gets a query index
     and we get a single VEQueryResults object that can be exported or visualized.
-
-  - When we have a VEQuery, we can run it (like a model run, "reset" paramter will clear what is
-    there). Otherwise it always re-creates the VEModel index of ModelStage query results, checks
-    for the existence of results in each ModelStage and re-runs the query just for those that
-    don't have results.
 
   - Return from VEQuery$results is either a VEQueryResults (from the VEModel) if we did not
     request Stages or a list of VEQueryResults for each stage. That list of VEQueryResults
@@ -146,44 +77,6 @@ Query Punch List:
         that gets created and populated with boilerplate inside ResultsDir. Also, visualizer.js
         in the export case includes the $(document).ready() method to invoke "VisualVE" javascript
         code.
-    - Building the visualizer.js happens as follows:
-        - calls a function in the VEModel to generate the scenario description JSON elements
-          - categoryconfig
-          - scenarioconfig
-          - Those two files will essentially be a JSON dump of what is maintained internally.
-          - Pseudo-files will be created if a single ModelStage/VEResults is being visualized
-        - calls a function in the VEQueryResults to generate the output configuration
-          - outputconfig
-          - Dumps the QuerySpecification:
-            "NAME": "DVMT Per Capita",
-            "LABEL": "Daily Vehicle Miles Traveled",
-            "DESCRIPTION": "daily vehicle miles of travel of residents divided by population.",
-            "INSTRUCTIONS": "daily vehicle miles of travel of residents divided by population.",
-            "METRIC": "Average",
-            "UNIT": "daily miles",
-            "COLUMN": "DVMTPerCapita"
-        - Constructs the VEData JSON object using a function in VEQueryResults that visits each
-          ModelStage and gets its (including the StartFrom stage to create the data table). Creates a
-          named list with the ModelStage name; one column for each Scenario, showing the level; and
-          one column for each metric and its value)
-
-   - The $visualize function works just like exporting to "visualize" format, except that it starts
-     a JRC webpage and pushes out the base page (with all its JS and CSS components findable
-     straight from the package version of the page), then it formates visualizer.js (in memory)
-     and uses SendCommand to push visualizer.js. In that case it doesn't do the $(document).ready
-     command, but instead just makes a direct call to VisualVE.
-     - For JRC management, we keep the web socket as a field in the VEModel. If there is something
-       already in that field, we start by closing it and then recreate everything from the ground
-       up.
-
-In the .Rdata file, The QuerySpecification list for the Query is joined by a "Value" object which
-contains either a scalar, named vector or named matrix/array (convention for which is the first
-index of the array - see existing code). When the query is run, the results are ALWAYS placed in
-ResultsDir with the file name: QueryRun-<QueryName>.RData. So we end up with:
-  - QuerySpecification
-  - Value (scalar, vector or array, with names)
-  - Dimension (what kind of thing is the vector; what is in each dimension of the the array)
-    All of which is conventional (I think it's geography first, then "Breaks/By")
 
 So here's the summary of running:
   - for a VEModelStage, write just its Values+QuerySpec+Dimension into an .RData file in the

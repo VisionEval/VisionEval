@@ -1,3 +1,23 @@
+For initializing models
+
+  Add an "initialize" mode for model running that stops after the inputs have been loaded and
+  the Initialize.R modules have been run.
+
+  Re-architect to push initialize functionality into Initialize<Module> functions, and add
+  in the package a table of initialize functions and what order to call them.
+
+  Should have loaded inputs prior to running initialize modules.
+
+  Capture and expose errors (perhaps just for this run mode, increase default log level to
+  "debug"). A lower level can be explicitly requested.
+
+  A model stage that was run with "initialize" should save its output to some place other
+  than the ResultsDir - define another sub-directory of the model for that purpose so
+  we can inspect the pieces. Then it won't conflict with a subsequent model run (which will
+  always do initialize again, without the higher level of logging unless explicitly requested).
+
+  Consider fixing some of the Initialize issues during that re-architecting.
+
 For documentation
 
   Continue documenting VEModel functionality - find some useful way to do that beyond the tests/walkthrough
@@ -9,21 +29,23 @@ For documentation
 
 For scenarios
 
-  See plan-scenario.txt
+  See plan-scenario.txt - key item are model stage scenarios working with a single
+  category listing all the scenarios.
 
 For the visualizer:
 
   see plan-scenario.txt (setting up inputs) and plan-visualizer.txt
 
-  visual() is a now function of the VEQuery. Done generating JSON; just need to test
-  and get the visualizer to open and display correctly.
+  Mostly done - can remove some of the previous samples since it all appears to work.
 
-  Make "visual" an output format (original plan, return to this approach) for query results (not on
-  the model).
+  Consider updating the bootstrap and other javascript libraries (may need to do some
+  work to make it all functional).
 
 For build/install restructuring:
 
   See plan-build.txt
+
+  Includes TestWith architecture.
 
 For local data estimation task:
 

@@ -747,8 +747,6 @@ ve.query.visual <- function(QueryResults=list(), SaveTo=NULL, overwrite=TRUE) {
   if ( missing(QueryResults) ) {
     QueryResults <- self$extract(metadata=FALSE,exportOnly=TRUE)
   }
-  # TODO: set this up as a helper within the ve.query.export function (format="visual")
-  # TOOD: pass this in: QueryResults <- self$extract(metadata=FALSE, exportOnly=TRUE)
   if ( length(QueryResults)==0 )  {
     stop(
       writeLog("No query results available; run the query first",Level="error")
@@ -757,13 +755,20 @@ ve.query.visual <- function(QueryResults=list(), SaveTo=NULL, overwrite=TRUE) {
 
   # Set up structural parameters for query results
   measureNames <- QueryResults$Measure
-  scenarioElements <- attr(QueryResults,"ScenarioElements") # list of named lists
+  scenarioElements <- attr(QueryResults,"ScenarioElements") # list of scenario elments present in each set of query results
+
+  if ( length(scenarioElements)==0 ) { # No scenario elements defined - can't run visualizer
+    stop(
+      writeLog("Query results do not have ScenarioElements - cannot visualize",Level="error")
+    )
+  }
+
   scenarioNames <- attr(QueryResults,"ScenarioColumns")
   QueryResults <- QueryResults[,scenarioNames]
   scenarioNames <- as.list(scenarioNames) # to include in VEdata below
   
   VEdata <- list()
-  for ( d in 1:length(QueryResults) ) { # index into results columns, plus ScenarioElement attributesd
+  for ( d in 1:length(QueryResults) ) { # index into results columns, plus ScenarioElement attributes
     chk <- VEdata[[length(VEdata)+1]] <- c( Scenario=scenarioNames[[d]], scenarioElements[[d]], as.list(structure(QueryResults[[d]],names=measureNames)) )
   }
 
@@ -965,6 +970,10 @@ ve.query.results <- function(Results=NULL, Reload=FALSE) {
   if ( "VEResultsList" %in% class(Results) ) {
     # downshift to list of VEResults
     Results <- Results$results()
+  }
+  if ( ! is.list(Results) && "VEResults" %in% class(Results) ) {
+    # Handle pathological case of only one stage with Results
+    Results <- list(VEResults)
   }
   if ( Reload || is.null(self$QueryResults) || length(self$QueryResults) < length(Results) ) {
     private$reload( Results ) # pulls up available query results

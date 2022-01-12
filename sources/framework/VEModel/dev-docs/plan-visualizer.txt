@@ -5,63 +5,19 @@ pinned at the ends of the horizontal axes. It's invisible in most cases with lot
 have a range of values.
 
 Subset visualization by selecting only certain categories at runtime (when the visualizer is generated).
-
-# Problems with current data formatting:
-
-Scenario Data Table is not getting all its columns (missing Scenario, Year, 
+Probably should also identify a specific year (in case the scenarios have more than one).
 
 # Implement the following with new data format architecture
-
-With VEQueryResults, we have two options: export(data.frame return, CSV file, Tableau CSV(s),
-Visualizer) or visualize (function which uses JRC to launch the Visualizer). Exports go into
-OutputDir for the Stage or Model the VEQueryResults are associated with. If we export the
-visualizer then the system will copy the HTML tree and sub-directories to an OutputDir sub-directory
-named Query-<QueryName>-Visualizer-<Timestamp>, and inject a script command into the end of the HTML
-body that will load the visualizer.js file. The .js could include "VisualVE" function call at the
-end after the required data has been defined - so it's just one line of Javascript that we could
-insert through a template substitution into the same HTML used by the JRC "live" visualizer.
-
-Could just distribute the query results (as QueryName-Timestamp) directly into the Stage's RunPath.
-And if we run for a model (with or without scenarios), we generate a QueryName-Timestamp in the
-modelPath directory. Don't bother putting queries into the OutputDir - save that just for exports.
-So the Model's QueryName-Timestamp will contain references to the stages that were queried so we can
-look in the stage sub-folders to get the actual values (found using the QueryName and Timestamp in
-each stage's results). Either use a Query- prefix or a special extension to mark these as query
-results. Then if we export the query as CSV or Tableau or Visualizer, it goes into OutputDir for
-the associated stage or model. We have a framework function to Visualize such a file (or we can
-apply the $visualize function to an unexported VEQueryResults object loaded from a time-stamped
-run).
-
-When handling scenario groups - if no scenario group is listed for a category, the category is
-promoted to a one-category scenario group.
-
-If we run a Query on a model with VEModelScenarios, then all the Reportable stages in the model are
-processed (we get one VEQueryResults for each stage) and the run returns a VEQueryScenarios object
-which contains a list of VEQueryResults and some helper functions (to load/save, export (CSV,
-Tableau), visualize). Initially, we can only visualize Category scenarios (not ModelStages or Folder
-based).
-
-Choosing visualize will generate the (scenario-cfg.js) ScenarioGroups (culled from
-Categories/Levels) as well as (category-cfg.js) Categories and Levels and (output-cfg.js) which
-reports the metrics that will be present in the VE data (vedata.js). We'll still produce the
-reference values, but those don't appear to be used.
 
 If we're NOT doing Category scenarios: We could just generate one bar chart with an on/off column
 for each individual scenario. The output metrics show one column per scenario and the Y-Axis has
 the numeric results (so the output charts are rotated 90 degrees) so we can visually compare the
 results from each scenario on each metric.
 
-To drive the visualizer, we can use JRC. The page loads everything - JS, CSS, Images - using the
-document root pointing into the package. That includes VisualVE as a function (it doesn't run when
-the page is loaded). Then after the page is up, we follow withSendCommand to send Javascript that
-will create the configuration and data objects. Then we reset the page (clear the input and output
-charts) and call the VisualVE function which operates on the global variables we just used
-Javascript commands to create. The function rebuilds all the elements and redraws the page. Ta-Da!
-That should be pretty easy!
-
 ==== TECHNICAL VIEWER NOTES
 
-The VisionEval viewer is built on three interrelated Javascript libraries:
+The VisionEval viewer is built on three interrelated Javascript libraries (all of which are probably
+pretty far out of date).
 
 Javascript => is an operator for creating a lambda function (without its own "this"):
 
@@ -69,35 +25,29 @@ Javascript => is an operator for creating a lambda function (without its own "th
 
 D3-JS (https://d3js.org)
 
-D3 allows you to bind arbitrary data to a Document Object Model (DOM),
-and then apply data-driven transformations to the document. For
-example, you can use D3 to generate an HTML table from an array of
-numbers. Or, use the same data to create an interactive SVG bar chart
-with smooth transitions and interaction.
+D3 allows you to bind arbitrary data to a Document Object Model (DOM), and then apply data-driven
+transformations to the document. For example, you can use D3 to generate an HTML table from an array
+of numbers. Or, use the same data to create an interactive SVG bar chart with smooth transitions and
+interaction.
 
-Readers familiar with other DOM frameworks such as jQuery should
-immediately recognize similarities with D3. Yet styles, attributes,
-and other properties can be specified as functions of data in D3, not
-just simple constants. Despite their apparent simplicity, these
-functions can be surprisingly powerful; the d3.geoPath function, for
-example, projects geographic coordinates into SVG path data. D3
-provides many built-in reusable functions and function factories, such
-as graphical primitives for area, line and pie charts.
+Readers familiar with other DOM frameworks such as jQuery should immediately recognize similarities
+with D3. Yet styles, attributes, and other properties can be specified as functions of data in D3,
+not just simple constants. Despite their apparent simplicity, these functions can be surprisingly
+powerful; the d3.geoPath function, for example, projects geographic coordinates into SVG path data.
+D3 provides many built-in reusable functions and function factories, such as graphical primitives
+for area, line and pie charts.
 
 Crossfilter.js (http://crossfilter.github.io/crossfilter/)
 
-Crossfilter is a JavaScript library for exploring large multivariate
-datasets in the browser. Crossfilter supports extremely fast (<30ms)
-interaction with coordinated views, even with datasets containing a
-million or more records.
+Crossfilter is a JavaScript library for exploring large multivariate datasets in the browser.
+Crossfilter supports extremely fast (<30ms) interaction with coordinated views, even with datasets
+containing a million or more records.
 
 The coordinated visualizations below (built with D3)...
 
 dc.js (https://dc-js.github.io/dc.js/)
 
-dc.js is a javascript charting library with native crossfilter
-support, allowing highly efficient exploration on large
-multi-dimensional datasets (inspired by crossfilter's demo). It
-leverages d3 to render charts in CSS-friendly SVG format. Charts
-rendered using dc.js are data driven and reactive and therefore
-provide instant feedback to user interaction.
+dc.js is a javascript charting library with native crossfilter support, allowing highly efficient
+exploration on large multi-dimensional datasets (inspired by crossfilter's demo). It leverages d3 to
+render charts in CSS-friendly SVG format. Charts rendered using dc.js are data driven and reactive
+and therefore provide instant feedback to user interaction.

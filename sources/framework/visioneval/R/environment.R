@@ -278,6 +278,7 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mu
       ParamFileExists <- file.exists(ParamPath)
     }
 
+    writeLog(paste("ParamFileExists:",ParamFileExists),Level="debug")
     if ( ! ParamFileExists ) {
       if ( mustWork ) {
         stop(
@@ -336,7 +337,11 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mu
         ) )
       ) )
     } else {
-      writeLog(paste("Successfully read parameters from", ParamPath),Level="debug")
+      if ( length(ParamFile_ls)==0 ) {
+        writeLog("No parameters read",Level="debug")
+      } else {
+        writeLog(paste("Successfully read parameters",if(!is.null(ParamPath)) paste("from", paste0("'",ParamPath,"'")) else ""),Level="debug")
+      }
     }
   } else writeLog(paste("No parameter file found in",ParamDir),Level="debug") # Just return an empty list
 

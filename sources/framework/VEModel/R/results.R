@@ -23,7 +23,7 @@ NULL
 self=private=NULL
 
 # Create VEResults object (manipulates Datastore/ModelState)
-ve.results.init <- function(OutputPath,ResultsName=NULL,Param_ls=list()) {
+ve.results.init <- function(OutputPath,ResultsName=NULL,ModelStage=NULL) {
   # OutputPath is the normalized path to a directory containing the model results
   #  typically from the last model stage. Expect to find a ModelState.Rda file
   #  and a Datastore in that folder.
@@ -31,6 +31,7 @@ ve.results.init <- function(OutputPath,ResultsName=NULL,Param_ls=list()) {
   self$Name <- if ( !is.character(ResultsName) ) basename(OutputPath) else ResultsName
   self$index()
   private$RunParam_ls <- self$ModelState()$RunParam_ls
+  self$modelStage <- ModelStage # may be NULL
   self$selection <- VESelection$new(self)
   return(self$valid())
 }
@@ -282,13 +283,13 @@ ve.results.inputs <- function( fields=FALSE, module="", filename="" ) {
   return( ret.value[order(ret.value$InputDir,ret.value$File),] )
 }
 
-# Return a named list of ScenarioElements and Levels
+# Return a named list of ScenarioElements and Levels for this set of
+# results (from the ModelStage)
 ve.results.elements <- function() {
   # Get scenario element names plus level values for associated model stage
-  # Model stage should always have scenario elements (if not, re-run)
-  elements <- private$RunParam_ls$ScenarioElements
+  # Model stage must have scenario elements to use Visualizer
+  elements <- self$modelStage$ScenarioElements
   if ( !is.character(elements) ) {
-    writeLog("No scenario elements in results!",Level="error")
     return(list())
   }
   return(as.list(elements)) # converted named vector to named list
@@ -542,10 +543,11 @@ VEResults <- R6::R6Class(
   "VEResults",
   public = list(
     # public data
-    Name = NULL,
-    resultsPath=NULL,
-    modelIndex=NULL,
-    selection=NULL,
+    Name        =NULL,
+    modelStage  =NULL,
+    resultsPath =NULL,
+    modelIndex  =NULL,
+    selection   =NULL,
 
     # methods
     initialize=ve.results.init,

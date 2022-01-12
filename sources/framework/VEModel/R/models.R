@@ -194,13 +194,27 @@ getModelRoots <- function(get.root=0,Param_ls=NULL) {
 
 ## Helper function
 # Cull the InputPath parameter (only those containing InputDir, no duplicates)
-cullInputPath <- function(InputPath) {
+cullInputPath <- function(InputPath,modelInputPath=NULL) {
   # Remove any element of InputPath that is "" or "."
   InputPath <- InputPath[ nzchar(InputPath) & InputPath != "." ]
+
+  if ( ! is.null(modelInputPath) ) {
+    # modelInputPath is the InputPath associated with the model, ahead of the stages
+    # always make sure those elements come last
+    writeLog("Reordering modelInputPath",Level="debug")
+    writeLog(paste("Model InputPath:",modelInputPath),Level="debug")
+    modelPathLocations <- which(InputPath %in% modelInputPath)
+    writeLog(paste("Model InputPath present to cull:",paste(modelPathLocations,collapse=",")),Level="debug")
+    InputPath <- InputPath[ - modelPathLocations ]
+  }
 
   # Normalize remaining InputPath elements, if any, and remove duplicates
   writeLog(paste("Culling Input Path:\n",paste(InputPath,collapse="\n")),Level="debug")
   InputPath <- unique(normalizePath(InputPath,winslash="/",mustWork=FALSE))
+
+  if ( ! is.null(modelInputPath) ) {
+    InputPath <- c(InputPath,modelInputPath)
+  }
 
   InputPath <- InputPath[dir.exists( InputPath )]
   writeLog(paste("InputPath length after culling:",length(InputPath)),Level="debug")
@@ -495,20 +509,6 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
         return(self)
       }
     } else if ( is.list(scenarioStages) && length(scenarioStages) > 0 ) {
-      sapply(self$modelStages,
-        function(s) {
-          # Locate the StartFrom stage (if any) among base model stages
-          s$Reportable <- scenarios$reportable(s$Name)
-          if ( s$Reportable ) {
-            elements <- scenarios$Elements # may be NULL
-            if ( ! is.null(elements) ) elements <- sapply(elements,function(e) e$Name)
-            s$elements(
-              Names=elements,
-              update="model$configure (scenario StartFrom)" # Source for run parameter
-            ) # push default elements into StartFrom stage
-          }
-        }
-      )
       self$modelStages <- c( self$modelStages, scenarioStages )
     }
   }
@@ -517,39 +517,40 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
   writeLog("Initializing Model Stages",Level="info")
   self$modelStages <- self$initstages( self$modelStages )
 
-  # Check for scenario element consistency (this should be taken care
-  # of automatically when ScenarioElements are loaded and built).
-  stageNames <- names(self$modelStages)
-  checkElements <- function(base,check) {
-    return(
-      length(base)>0 &&
-      ( length(base) == length(check) ) &&
-      ! is.null( names(base) ) &&
-      ! is.null( names(check) ) &&
-      all(names(base) %in% names(check))
-    )
-  }
-  scenarioElements <- character(0)
-  for ( s in seq_along(stageNames) ) {
-    stage <- self$modelStages[[s]]
-    if ( ! stage$Reportable ) next # only concerned about reportable stages
-
-    elements <- stage$ScenarioElements
-    if ( ! checkElements( elements, self$setting("ScenarioElements",stageNames[s],defaults=FALSE) ) ) {
-      writeLog(paste("Inconsistent ScenarioElements within",stageNames[s]),Level="error")
-      browser()
-    }
-    if ( length(scenarioElements)==0 ) {
-      scenarioElements = elements
-    } else if ( ! checkElements( scenarioElements, elements ) ) {
-      writeLog(paste("Different ScenarioElements in",stageNames[s]),Level="error")
-      browser()
-    }
-  }
-  if ( length(scenarioElements)==0 ) {
-    writeLog("No Stages have ScenarioElements!",Level="error")
-    browser()
-  }
+#   # Not clear this is still needed
+#   # Check for scenario element consistency (this should be taken care
+#   # of automatically when ScenarioElements are loaded and built).
+#   stageNames <- names(self$modelStages)
+#   checkElements <- function(base,check) {
+#     return(
+#       length(base)>0 &&
+#       ( length(base) == length(check) ) &&
+#       ! is.null( names(base) ) &&
+#       ! is.null( names(check) ) &&
+#       all(names(base) %in% names(check))
+#     )
+#   }
+#   scenarioElements <- character(0)
+#   for ( s in seq_along(stageNames) ) {
+#     stage <- self$modelStages[[s]]
+#     if ( ! stage$Reportable ) next # only concerned about reportable stages
+# 
+#     elements <- stage$ScenarioElements
+#     if ( ! checkElements( elements, self$setting("ScenarioElements",stageNames[s],defaults=FALSE) ) ) {
+#       writeLog(paste("Inconsistent ScenarioElements within",stageNames[s]),Level="error")
+#       browser()
+#     }
+#     if ( length(scenarioElements)==0 ) {
+#       scenarioElements = elements
+#     } else if ( ! checkElements( scenarioElements, elements ) ) {
+#       writeLog(paste("Different ScenarioElements in",stageNames[s]),Level="error")
+#       browser()
+#     }
+#   }
+#   if ( length(scenarioElements)==0 ) {
+#     writeLog("No Stages have ScenarioElements (visualizer is unavailable)!",Level="error")
+#     browser()
+#   }
 
   # Update the model status
   self$specSummary <- NULL # regenerate when ve.model.list is next called
@@ -599,15 +600,29 @@ ve.model.initstages <- function( modelStages ) {
     }
   } else {
     # Put names on Stages and identify reportable stages
+    # Also fix up scenario Elements (adding to base stage...)
     startFromNames <- unlist(sapply(modelStages,function(s) s$StartFrom))
     startFromNames <- startFromNames[ nzchar(startFromNames) ]
     stageNames <- names(modelStages)
-    reportable <- ! stageNames %in% startFromNames
+    scenarios <- self$scenarios()
+    reportable <- ! stageNames %in% startFromNames # default reportable to stages that are not ancestors (will include scenarios)
+    if ( length(scenarios$stages()) > 0 ) {
+      reportable <- reportable | sapply( stageNames, function(n) scenarios$reportable(n) ) # Add scenario StartFrom back in
+      sapply(
+        modelStages[reportable],
+        function(s) {
+          if ( ! s$IsScenario ) { # reportable stage is not associated with Scenarios
+            # Probably the StartFrom stage
+            elementNames <- names(scenarios$Elements) # may be NULL
+            s$ScenarioElements <- rep("0",length(elementNames))
+            names(s$ScenarioElements) <- elementNames
+          }
+          NULL
+        }
+      )
+    }
     for ( r in seq_along(stageNames) ) {
-      if ( is.null(modelStages[[r]]$Reportable) ) {
-        # Can override Reportable in stage configuration (e.g. for base year)
-        modelStages[[r]]$Reportable <- reportable[r]
-      }
+      modelStages[[r]]$Reportable <- reportable[r]
     }
   }
   return( modelStages )
@@ -1046,7 +1061,6 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
     modelParam_ls <- Model$RunParam_ls
     if ( is.null(modelParam_ls) ) modelParam_ls <- list()
   }
-
   # Pull stageParam_ls from ModelStages in modelParam_ls (mostly, we'll send stageParam_ls in as a parameter)
   if ( ( !is.list(stageParam_ls) || length(stageParam_ls)==0 ) && "ModelStages" %in% names(modelParam_ls) ) {
     msp <- modelParam_ls$ModelStages[[self$Name]]
@@ -1060,12 +1074,22 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
     # That condition is trapped when this stage is pushed back into the model
   } else writeLog(paste0("Initializing Model Stage:",self$Name),Level="info")
 
+  # Pull out InputPath from modelParam_ls and re-add it later
+  if ( "InputPath" %in% names(modelParam_ls) ) {
+    writeLog(paste("Model InputPath:",modelParam_ls$InputPath),Level="debug")
+    modelInputPath <- modelParam_ls$InputPath # may be NULL, but more likely set to modelPath/InputDir
+    modelParam_ls[["InputPath"]] <- NULL      # remove it from the list
+  } else modelInputPath <- NULL
+    
+  if ( is.null(modelInputPath) ) writeLog("No InputPath from Model",Level="debug")
+
   # Parse the stageParam_ls (any of these may still be NULL)
-  self$Dir         <- stageParam_ls$Dir
-  self$Path        <- stageParam_ls$Path
-  self$Config      <- stageParam_ls$Config
-  self$Reportable  <- stageParam_ls$Reportable
-  self$StartFrom   <- stageParam_ls$StartFrom
+  self$Dir               <- stageParam_ls$Dir
+  self$Path              <- stageParam_ls$Path
+  self$Config            <- stageParam_ls$Config
+  self$Reportable        <- stageParam_ls$Reportable
+  self$StartFrom         <- stageParam_ls$StartFrom
+  self$ScenarioElements  <- stageParam_ls$ScenarioElements # May be null
 
   # Merge any remaining items defined in stageParam_ls (ModelStages structure) into
   #   stageConfig_ls (which overrides the modelParam_ls and stage Config file (if any))
@@ -1144,7 +1168,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   } else {
     writeLog("No ParamDir for stage",Level="debug")
   }
-  # If ParamDir is defined (and perhaps ParamFile), laod the configuration file
+  # If ParamDir is defined (and perhaps ParamFile), load the configuration file
   if ( ! is.null(ParamDir) ) {
     writeLog(paste("Loading configuration from",ParamDir),Level="debug")
     self$loadedParam_ls <- visioneval::loadConfiguration(ParamDir=ParamDir,ParamFile=ParamFile)
@@ -1177,25 +1201,32 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   #   Otherwise, add ModelDir/StageDir if it exists
   if ( "InputPath" %in% names(self$RunParam_ls) ) {
     stageInput <- self$RunParam_ls$InputPath
-    writeLog(paste(nzchar(stageInput),"Stage InputPath is set",paste("'",stageInput,"'"),collapse="\n"),Level="debug")
+    writeLog(paste(nzchar(stageInput),"Stage InputPath is explicitly set:"),Level="debug")
+    writeLog(paste(paste0("'",stageInput,"'"),collapse="\n"),Level="debug")
   } else {
     # Construct stage input path
+    writeLog("Constructing stage InputPath",Level="debug")
     if ( is.character(self$Path) && dir.exists(self$Path) ) {
       stageInput <- file.path(self$Path,visioneval::getRunParameter("InputDir",self$RunParam_ls))
-      if ( is.null(stageInput) || ! file.exists(stageInput) ) stageInput <- self$Path
+      if ( is.null(stageInput) || ! file.exists(stageInput) ) {
+        stageInput <- self$Path
+      } else {
+        stageInput <- c(stageInput,self$Path)
+      }
       writeLog(paste0("Input path for ",self$Name,":"),Level="info")
       writeLog(paste(paste(stageInput,"(",file.exists(stageInput),")"),collapse="\n"),Level="info")
     } else stageInput <- NULL
   }
-    
-  if ( "InputPath" %in% names(modelParam_ls) ) {
-    modelInputPath <- modelParam_ls$InputPath # base InputPath from model, if defined
-  } else {
-    modelInputPath <- NULL
-  }
-  if ( !is.null(stageInput) && file.exists(stageInput) ) {
+
+  # modelInputPath was extracted from modelParam_ls earlier (so it doesn't pre-empt the stage
+  # InputPath construction if no explicit stage InputPath was provided either through LoadedParam_ls
+  # (used for explicit non-standard InputPath) or stageConfig_ls (used for category scenarios)
+  if ( !is.null(stageInput) && any(file.exists(stageInput)) ) {
+    writeLog("Adding stage InputPath to Model InputPath",Level="debug")
+    writeLog(paste("Stage InputPath:",stageInput),Level="debug")
     stageInput <- c( stageInput, modelInputPath )
   } else {
+    writeLog("No stage InputPath, using Model",Level="debug")
     stageInput <- modelInputPath
   }
   if ( ! is.null(stageInput) ) {
@@ -1215,18 +1246,8 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
   if ( "IsScenario" %in% names(stageConfig_ls) && stageConfig_ls$IsScenario ) {
     self$IsScenario = TRUE
   }
-  # Configure ScenarioElements (including defaults) so stage can be visualized
-  if ( "ScenarioElements" %in% names(stageConfig_ls) && length(stageConfig_ls$ScenarioElements)>0 ) {
-    writeLog(paste("Scenario elements detected in",self$Name),Level="debug")
-    self$elements(stageConfig_ls$ScenarioElements,update="VEModelStage$inititalize")
-  } else {
-    # Apply default scenario category
-    writeLog(paste("No ScenarioElements in",self$Name,"- using default"),Level="debug")
-    if ( length(stageConfig_ls)>0 ) writeLog(paste(names(stageConfig_ls),collapse=", "),Level="debug")
-    self$elements(update="VEModelStage$initialize")
-  }
 
-   # Identify "startFrom" stage (VEModelStage$runnable will complete setup)
+  # Identify "startFrom" stage (VEModelStage$runnable will complete setup)
   # Can find StartFrom through ModelStages or from the stage configuration file/parameters
   if ( !is.character(self$StartFrom) || length(self$StartFrom)==0 || ! nzchar(self$StartFrom) ) {
     # StartFrom was not set previously from stageParam_ls
@@ -1239,31 +1260,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
       self$StartFrom <- character(0)
     }
   }
-
- # Wait for "runnable" setup to unpack StartFrom and to build final InputPath and DatastorePath
-}
-
-# Set ScenarioElements (applyig default if needed)
-ve.stage.elements <- function(Elements=NULL,Names=NULL,update=NULL) {
-  if ( is.null(Elements) ) {
-    if ( is.null(Names) ) {
-      Elements <- self$Name
-      names(Elements) <- "Scenarios"
-    } else {
-      # Attach base levels to all elements (for StartFrom stage)
-      Elements <- rep("0",length(Names))
-      names(Elements) <- Names
-    }
-  }
-  self$ScenarioElements <- Elements
-  if ( is.character(update) ) {
-    self$RunParam_ls <- visioneval::addRunParameter(
-      self$RunParam_ls,
-      Source=update,
-      ScenarioElements=self$ScenarioElements
-    )
-  }
-  invisible( self$ScenarioElements )
+  # Wait for "runnable" setup to unpack StartFrom and to build final InputPath and DatastorePath
 }
 
 # Prepare the stage to run in the model context
@@ -1307,8 +1304,12 @@ ve.stage.runnable <- function(priorStages) {
     if ( ! is.null(InputPath) ) {
       # self$RunParam_ls$InputPath will be NULL  if not set
       # and thus we'll just get InputPath which may also be NULL
+      writeLog("Appending StartFrom InputPath:",Level="debug")
+      writeLog(InputPath,Level="debug")
       InputPath <- c( self$RunParam_ls$InputPath, InputPath )
     } else {
+      writeLog("No InputPath in StartFrom stage",Level="debug")
+      writeLog(paste("contains",paste(names(startFrom),collapse=",")),Level="debug")
       InputPath <- self$RunParam_ls$InputPath
     }
     StartFromScriptPath <- startFrom$ModelScriptPath
@@ -1326,7 +1327,7 @@ ve.stage.runnable <- function(priorStages) {
     self$RunParam_ls <- visioneval::addRunParameter(
       self$RunParam_ls,
       Source="VEModelStage$runnable",
-      InputPath=cullInputPath( InputPath=InputPath )
+      InputPath=cullInputPath( InputPath=InputPath, modelInputPath=self$Model$setting("InputPath",shorten=FALSE,defaults=FALSE) )
     )
     writeLog(paste0("InputPath for ",self$Name,":"),Level="info")
     writeLog(paste(self$RunParam_ls$InputPath,paste0("(",file.exists(self$RunParam_ls$InputPath),")"),collapse="\n"),Level="info")
@@ -1580,6 +1581,7 @@ ve.stage.run <- function(log="warn",UseFuture=TRUE) {
   if ( UseFuture ) {
     # Run in a future (other environment/process)
     # Note that log is not visible
+    # Don't log stage name since that will be reported when future is created
     run.future <- run.function # Solve scoping problem when using pkgload...
     self$FutureRun <- future::future(
       {
@@ -1592,6 +1594,7 @@ ve.stage.run <- function(log="warn",UseFuture=TRUE) {
     )
   } else {
     # Run inline
+    writeLog(paste("Running stage:",self$Name),Level="warn")
     environment(run.function) <- run.env
     self$completed( run.function() )
   }
@@ -2324,11 +2327,12 @@ ve.model.setting <- function(setting=NULL,stage=NULL,defaults=TRUE,shorten=TRUE,
     searchParams_ls <- visioneval::mergeParameters(searchParams_ls,self$RunParam_ls)
   }
   if ( source ) {
-    # Return source
-    src_df <- attr(searchParams_ls,"source")
-    if ( is.character(setting) ) src_df <- src_df[ setting, ]
-    if ( shorten) src_df$Source <- sub(paste0(self$modelPath,"/"),"",src_df$Source,fixed=TRUE)
-    return(src_df[,"Source",drop=FALSE])
+    # Return sources
+    if ( ! is.character(setting) ) setting <- names(searchParams_ls)
+    sourceLocations <- sapply( searchParams_ls, function(p) attr(p,"source") )
+    if ( shorten) sourceLocations <- sub(paste0(self$modelPath,"/"),"",sourceLocations,fixed=TRUE)
+    
+    return(data.frame(Setting=setting,Source=sourceLocations))
   } else {
     # Return values
     if ( ! is.character(setting) ) {
@@ -2387,7 +2391,7 @@ ve.model.results <- function(stage=character(0)) {
   }
   results <- lapply(
     stages,
-    function(stg) VEResults$new(stg$RunPath,ResultsName=stg$Name)
+    function(stg) VEResults$new(stg$RunPath,ResultsName=stg$Name,ModelStage=stg)
   )
   names(results) <- names(stages)
   valid <- sapply( results, function(r) r$valid() )
@@ -2916,7 +2920,6 @@ VEModelStage <- R6::R6Class(
     run=ve.stage.run,               # Run the stage (build results)
     completed=ve.stage.completed,   # Gather results of multiprocessing
     running=ve.stage.running,       # Check if stage is still running
-    elements=ve.stage.elements,     # Update ScenarioElements and install in RunParam_ls
     scenariolevel=ve.stage.levels,  # Given a scenario name, return the level that this stage used to alter it (0 if base)
     processStatus=ve.stage.pstatus, # Return string describing stage run process status
     watchLogfile=ve.stage.watchlog  # Helper to watch a logfile as this stage runs in the background
