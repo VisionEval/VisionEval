@@ -50,7 +50,7 @@ NULL
 #
 #Once the DVMT powered by electricity is calculated, the proportion of DVMT powered by electricity is calculated as follows:
 #
-#  ElecProp = ElecDvmt / (DvmtBelow + DvmtAbove)
+#  ElecDvmtProp = ElecDvmt / (DvmtBelow + DvmtAbove)
 #
 #  Where:
 #
@@ -572,7 +572,7 @@ AssignHhVehiclePowertrainSpecifications <- list(
       PROHIBIT = c("NA", "< 0", "> 1"),
       ISELEMENTOF = "",
       SIZE = 0,
-      DESCRIPTION = "Average miles of vehicle travel per gasoline equivalent gallon (fuel and electric powered)"
+      DESCRIPTION = "Proportion of DVMT powered by electricity"
     ),
     item(
       NAME = "FuelCO2ePM",

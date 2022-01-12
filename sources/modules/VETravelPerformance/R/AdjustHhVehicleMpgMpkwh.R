@@ -368,7 +368,7 @@ AdjustHhVehicleMpgMpkwhSpecifications <- list(
       PROHIBIT = c("NA", "< 0", "> 1"),
       ISELEMENTOF = "",
       SIZE = 0,
-      DESCRIPTION = "Average miles of vehicle travel per gasoline equivalent gallon (fuel and electric powered)"
+      DESCRIPTION = "Proportion of DVMT powered by electricity."
     ),
     item(
       NAME = "FuelCO2ePM",
