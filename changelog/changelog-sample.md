@@ -40,7 +40,7 @@ git diff --compact-summary development-next
 ```
 
 The following files were modified in this change:
-
+```
  .../dev-docs-JR}/plan-build.txt                    |  0
  .../dev-docs-JR}/plan-open-items.txt               |  0
  .../dev-docs-JR}/plan-query.txt                    |  0
@@ -48,4 +48,4 @@ The following files were modified in this change:
  .../dev-docs-JR}/plan-stages.txt                   |  0
  .../dev-docs-JR}/plan-visualizer.txt               |  0
  7 files changed, 37 insertions(+)
-
+```
