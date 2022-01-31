@@ -5,8 +5,17 @@ Components:
 # "Type: module" components are built and installed as R packages
 # "Type: framework" works like a module, but is built first; also it has a different implied
 #        documentation location
-# The test script relative path is copied to the "test" environment under the module name
-# The group captures the VE internal dependencies (see .travis.yml) but is unused
+# The test script(s) are copied to the "tools/tests/<PackageName> folder
+#   Though many packages include tests/scripts they have not been maintained
+#   Also, there are cross dependencies. What should be listed here are
+#   files that create functions that will run tests (they can reach back into
+#   the package for related information) - more to come on that
+# The group captures the VE internal dependencies and is used to establish the order of building
+#   Module packages are built in order by their Group number, and with Group in the order they are listed here
+#   Group 0 will typically be framework module packages (visioneval, VEModel)
+#   Group 1 are those without dependencies
+#   Group 2 depend on Group 1 packages
+#   Group 3 depend on Group 2 etc (if any)
 # Docs target is one (or a vector) of locations from which markdown files will be processed into PDFs
 #   Build target PDFs will be placed in a name derived (for the framework) from the first element in the  Docs path,
 #   and (for the modules) in a folder named after the module:
@@ -18,7 +27,11 @@ Components:
   visioneval:
     Type: framework
     Path: sources/framework
-    Test: { Script: tests/scripts/test.R, Group: 0 }
+    Test:
+      Group: 0
+      Script:
+        - test.R            # relative to visioneval/tests
+        - tests/scripts/test_spec.R  # relative to visioneval package root
     CRAN: 
       - futile.logger
       - jsonlite
@@ -30,7 +43,9 @@ Components:
   VEModel: # End-user R API
     Type: module
     Path: sources/framework
-    Test: { Script: tests/scripts/test.R, Group: 1 }
+    Test:
+      Group: 0
+      Script: test.R
     CRAN:
       - futile.logger
       - jsonlite
@@ -45,55 +60,56 @@ Components:
 #      - anders-biostat/jrc
 #    To build properly, need to do externals after creating ve.lib!
 #    which requires a change to the Makefile sequencing.
-#    The CRAN version may be sufficient
-#  VEScenario:
-#   Type: module
-#   Path: sources/modules
-#   Test: { Script: tests/scripts/test.R, Group: 1 }
-#   CRAN:
-#     - data.table
-#     - future
-#     - future.callr
-#     - jsonlite
+#    The CRAN version of packages should be used when possible.
 
 # Core Modules for building models
+# Group 1
 
   VESimHouseholds:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 1 }
+    Test:
+      Group: 1
+#     Script: tests/scripts/test.R
   VESimLandUseData:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 1 }
+    Test:
+      Group: 1
     CRAN:
       - stringr
       - tidycensus
   VESyntheticFirms:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 1 }
+    Test:
+      Group: 1
     CRAN:
       - reshape
   VETransportSupply:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 1 }
+    Test:
+      Group: 1
   VETransportSupplyUse:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 1 }
-
+    Test:
+      Group: 1
   VE2001NHTS:
     # VE2001NHTS is only used internally for estimating other models
     # Rethink how it is packaged and used for local re-estimation (future change)
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 1 }
+    Test:
+      Group: 1
+
+# Group 2 packages
   VEHouseholdTravel:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 2 }
+    Test:
+      Group: 2
     CRAN:
       - filesstrings
       - data.table
@@ -103,7 +119,8 @@ Components:
   VEHouseholdVehicles:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 2 }
+    Test:
+      Group: 2
     CRAN:
       - ordinal
       - reshape2
@@ -112,17 +129,21 @@ Components:
   VELandUse:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 2 }
+    Test:
+      Group: 2
     CRAN:
       - fields
       - geosphere
     VE:
       - VE2001NHTS
       - VESimHouseholds
+
+# Group 3 Packages
   VEPowertrainsAndFuels:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 3 }
+    Test:
+      Group: 3
     CRAN:
       - data.table
     VE:
@@ -131,16 +152,20 @@ Components:
   VESimLandUse:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 3 }
+    Test:
+      Group: 3
     CRAN:
       - plot3D
     VE:
       - VELandUse
       - VESimLandUseData
+
+# Group 4 Packages
   VETravelPerformance:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 4 }
+    Test:
+      Group: 4
     CRAN:
       - filesstrings
       - stringr
@@ -151,37 +176,30 @@ Components:
   VESimTransportSupply:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 4 }
+    Test:
+      Group: 4
     VE:
       - VESimLandUse
       - VETransportSupply
 
 # Module / Model packages (include installable sample models)
 
+# Group 5 Packages (model packages, expecting other VE packages)
+# May eventually abstract VERSPM from the VEModel package...
 # VERSPM:
 #   Type: module
 #   Path: sources/modules
-#   Test: { Script: tests/scripts/test.R, Group: 2 }
+#   Test:
+#     Group: 5
+#     Script: tests/scripts/test.R
 #   # VERSPM has no package dependencies (only an installable model)
 #   VE:
 #      - # TODO: list all the packages used in VERSPM model
-  VEState:
-    Type: module
-    Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 2 }
-    # VEState has no package dependencies (only an installable model)
-    VE:
-      - VEHouseholdTravel
-      - VEHouseholdVehicles
-      - VEPowertrainsAndFuels
-      - VESimHouseholds
-      - VESimLandUse
-      - VESimTransportSupply
-      - VETravelPerformance
   VETravelDemandMM:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 2 }
+    Test:
+      Group: 5
     CRAN:
       - dplyr
       - purrr
@@ -197,10 +215,25 @@ Components:
       - VESimHouseholds
       - VETransportSupply
       - VETravelPerformance
+  VEState:
+    Type: module
+    Path: sources/modules
+    Test:
+      Group: 5
+    # VEState has no package dependencies (only an installable model)
+    VE:
+      - VEHouseholdTravel
+      - VEHouseholdVehicles
+      - VEPowertrainsAndFuels
+      - VESimHouseholds
+      - VESimLandUse
+      - VESimTransportSupply
+      - VETravelPerformance
   VERPAT:
     Type: module
     Path: sources/modules
-    Test: { Script: tests/scripts/test.R, Group: 3 }
+    Test:
+      Group: 5
     CRAN:
       - filesstrings
       - jsonlite
@@ -213,49 +246,23 @@ Components:
       - VETransportSupply
       - VETransportSupplyUse
 
-# "Type: test" components are copied verbatim to "src" environment under its name
-# Need to rethink this...
-#   Test_Data:
-#     Type: test
-#     Path: sources/modules
-
 # VE NextGen does not install models, just an empty-ish "models" directory in runtime
   Readme-Models.md:
     # Explains how to install a model
     Type: model
     Path: sources/models
 
-# "Type: model" components may have tests, and are copied to "models" folder of runtime under their name
-# The test script relative path is copied to the "test" directory
-# Model installation architecture is different in NextGen (installs models through packages)
-#   VERPAT:
-#     Type: model
-#     Path: sources/models
-#     Test: { Script: run_model.R, Group: 5 }
-#   VERPAT_Scenarios:
-#     Type: model
-#     Path: sources/models
-#   VERSPM:
-#     Type: model
-#     Path: sources/models
-#     Test: { Script: Test1/run_model.R, Group: 5 }
-#   VERSPM_MM:
-#     Type: model
-#     Path: sources/models
-#     Test: { Script: Test1/run_model.R, Group: 5 }    
-#   VERSPM-VehAdj:
-#     Type: model
-#     Path: sources/models
-#     Test: { Script: Test1/run_model.R, Group: 5 }    
-#   VERSPM_Scenarios:
-#     Type: model
-#     Path: sources/models
-#   VE-State:
-#     Type: model
-#     Path: sources/models
-#   VE-State-Staged:
-#     Type: model
-#     Path: sources/models
+# "Type: model" components are copied to "models" folder of runtime under their name
+# This type is deprecated and will be removed from future configurations
+# Use "script" types instead and set the target to "models/folder"
+
+# "Type: test" components are copied verbatim to "src" environment under its name
+# Thos type is deprecated and will be removed from (or changed in) future configurations
+# May be used to provide pre-built data for module tests, but we will want to
+# run models to build that data, and it will probably not be of interest to
+# end-users
+# Use "script" types instead for anything to be delivered to the end user runtime
+# and set a suitable Target directory
 
 # "Type: runtime" components are copied recursively to the runtime root
 # Their name is used to find them under the Path but unlike "script" components
@@ -266,6 +273,7 @@ Components:
     Path: sources # copies sources/runtime/* to ve.runtime recursively
 
 # "Type: script" components are copied to the runtime root under their name
+# Use 
   LICENSE:
     Type: script
     Path: "."
@@ -273,21 +281,11 @@ Components:
     Type: script
     Path: sources
     CRAN:
-      - futile.logger                # Review continued need for all these
       - import
       - jsonlite
   walkthrough:
     Type: script
     Path: sources/framework/VEModel/inst
-  test.r: # VEModel tests (sample code)
-    Type: script
-    Target: tools/tests/VEModel
-    Path: sources/framework/VEModel/tests
-# If we want to include the visioneval tests in runtime, need to rename them (or VEModel/../test.r)
-#   test.r: # visioneval tests (sample code)
-#     Type: script
-#     Target: tools/tests/visioneval
-#     Path: sources/framework/visioneval/tests
   api:                               # "package" for 'docs' type is the last element (can be file name)
     Type: docs
     Path: "."                        # base directory below root to gather docs

@@ -99,7 +99,8 @@ if ( length(ve.runtests)>0 && ! "none" %in% ve.runtests ) {
   if ( "all" %in% ve.runtests ) {
     ve.test.chk <- ve.test.pkg <- ve.test.run <- TRUE
   } else {
-    ve.test.pkg <- "pkg" %in% ve.runtests
+    ve.test.pkg <- FALSE # may implement build-time tests in the future
+    # ve.test.pkg <- "pkg" %in% ve.runtests # ignored
     ve.test.chk <- "chk" %in% ve.runtests || ve.test.pkg; # if not "pkg", check does not do tests
     ve.test.run <- "run" %in% ve.runtests
   }
@@ -151,17 +152,18 @@ if ( debug>2 ) {
 if (ve.test.run) {
   # Copy any additional test folders to ve.src
   # Mostly for "Test_Data", but any set of stuff needed for all tests
-  ve.src.files <- pkgs.db[pkgs.test,]
-  if ( nrow(ve.src.files)>0 ) {
-    test.paths <- file.path(ve.src.files$Root, ve.src.files$Path, ve.src.files$Package)
-    need.copy <- newerThan(test.paths,file.path(ve.src,ve.src.files$Package))
-    if ( need.copy ) {
-      cat(paste(paste("Copying Test Item",test.paths,"to",ve.src,sep=" "),"\n"),sep="")
-      invisible(file.copy(test.paths, ve.src, recursive=TRUE))
-    } else {
-      cat("Test data is up to date\n")
-    }
-  }
+  cat("Running test scripts during build is not implemented\n")
+#   ve.src.files <- pkgs.db[pkgs.test,]
+#   if ( nrow(ve.src.files)>0 ) {
+#     test.paths <- file.path(ve.src.files$Root, ve.src.files$Path, ve.src.files$Package)
+#     need.copy <- newerThan(test.paths,file.path(ve.src,ve.src.files$Package))
+#     if ( need.copy ) {
+#       cat(paste(paste("Copying Test Item",test.paths,"to",ve.src,sep=" "),"\n"),sep="")
+#       invisible(file.copy(test.paths, ve.src, recursive=TRUE))
+#     } else {
+#       cat("Test data is up to date\n")
+#     }
+#   }
 }
 
 # Build binary packages on systems with supported .Platform$pkgType
@@ -454,13 +456,15 @@ for ( module in seq_along(package.names) ) {
       withr::with_dir(build.dir,roxygen2::roxygenise())
     }
     if ( ve.test.chk ) {
-      ve.testing <- if ( ve.test.pkg ) ", testing" else NULL
+      ve.testing <- NULL
+      # ve.testing if ( ve.test.pkg ) ", testing" else NULL # no testing during build
       cat("++++++++++ Checking",ve.testing," and pre-processing ",package.names[module],"\nin ",build.dir,"\n",sep="")
       # Run the module check (prior to building anything)
       # Set working directory outside devtools:check, or it gets very confused about where to put generated /data elements.
       # Need to set "check.dir" location explicitly to "check_dir=build.dir" (otherwise lost in space)
       # Also need to make sure that Suggested packages are also loaded (e.g. VE2001NHTS) (cran=FALSE)
-      chk.args <- if ( ! ve.test.pkg ) "--no-tests" else ""
+      chk.args <- "--no-tests" # Never do build-time tests
+#      if ( ! ve.test.pkg ) "--no-tests" else ""
       check.results <- withr::with_dir(  build.dir,
         devtools::check(
           ".",
@@ -556,18 +560,16 @@ for ( module in seq_along(package.names) ) {
 
 # Run the tests on build.dir if requested
 if ( ve.test.run && ! ve.report.built.status ) {
-  # Run test script is listed in configuration
-  test.script <- file.path(build.dir,ve.packages$Test[module])
-  if ( file.exists(test.script) ) {
-    message("Executing tests from ",test.script,"\n")
-    # Do the run tests in a fresh environment
-    callr::rscript(script=test.script,wd=build.dir,libpath=.libPaths(),fail_on_status=FALSE)
-    message("Completed test script.")
-  }
-} else if ( ! ve.report.built.status ) {
-  cat("\nRun tests not requested.\n\n")
+  cat("Tests during build are not implemented.\n")
+#   # Run test script is listed in configuration
+#   test.script <- file.path(build.dir,ve.packages$Test[module])
+#   if ( file.exists(test.script) ) {
+#     message("Executing tests from ",test.script,"\n")
+#     # Do the run tests in a fresh environment
+#     callr::rscript(script=test.script,wd=build.dir,libpath=.libPaths(),fail_on_status=FALSE)
+#     message("Completed test script.")
+#   }
 }
-
 
 # Update the repository PACKAGES files (source and binary) if we rebuilt any
 # of the packages.

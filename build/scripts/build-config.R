@@ -83,7 +83,7 @@ evalq(
     ve.build.type <- "source"
   }
 
-  # Locate the installer tree (used for boilerplate)
+  # Locate the installer tree (used for boilerplate for visual docs)
   # The following includes a hack to fix a common path problem if you are
   # developing on Windows in a subfolder of "My Documents"
   ve.installer <- ve.build.dir
@@ -558,10 +558,11 @@ evalq(
         if ( "Group" %in% tst ) {
           it.db$Group <- it$Test$Group
         } else {
-          it.db$Group <- NA
+          it.db$Group <- 1
         }
         if ( "Script" %in% tst ) {
-          it.db$Test <- it$Test$Script
+          scripts <- paste(it$Test$Script,sep=";")
+          it.db$Test <- paste(it$Test$Script,collapse=";")
         } else {
           it.db$Test <- ""
         }
@@ -599,8 +600,7 @@ evalq(
       pkgs.db[,d] <- as.character(pkgs.db[,d])
   pkgs.db <- pkgs.db[order(pkgs.db$Type,pkgs.db$Group,pkgs.db$Package),] # Sort by Group (for modules)
 
-  # New strategy:
-  # We'll save pkgs.db into dependencies.RData
+  # Save pkgs.db into dependencies.RData
   # Also save row indices of the different types
 
   pkgs.CRAN      <- which(pkgs.db$Type=="CRAN")
