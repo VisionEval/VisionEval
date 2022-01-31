@@ -2,6 +2,8 @@
 # You can override VE_CONFIG, VE_RUNTESTS, VE_EXPRESS, VE_BRANCH and VE_R_VERSION
 # on the command line or export them from your environment
 # ve.build() handles useful defaults
+# Check the SHELL setup to ensure it is set correctly
+SHELL?=/bin/bash
 VE_CONFIG?=config/VE-config.yml
 VE_VERSION?=3.0
 VE_RUNTESTS?=Default

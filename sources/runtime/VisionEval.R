@@ -61,7 +61,6 @@ if ( ! exists("ve.runtime") ) {
 } else {
   setwd(ve.runtime)
 }
-
 # Check what installation we need
 
 # Locate ve-lib
@@ -111,14 +110,10 @@ local( {
       if ( ! install.success ) {
         ve.lib.dev <- normalizePath(file.path(ve.runtime,"..",ve.lib.name),winslash="/",mustWork=FALSE)
         install.success <- env.loc$checkVE(ve.lib.dev)
-      } else {
-        ve.lib.dev <- character(0)
-      }
+        if ( install.success ) ve.lib <- ve.lib.dev # use development environment
+      } # else ve.lib is working
       
-      if ( install.success ) {
-        ve.lib <- ve.lib.dev
-      } else {
-        rm(ve.lib.dev)
+      if ( ! install.success ) {
         # Attempt to install from package sources in ve-pkg
         if ( ! exists("ve.pkg.name") ) ve.pkg.name <- "ve-pkg"
         ve.pkg <- file.path(ve.runtime,ve.pkg.name)
