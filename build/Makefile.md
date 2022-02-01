@@ -419,7 +419,7 @@ runtime: runtime-reset runtime-build
 
 runtime-build: $(VE_LOGS)/runtime.built
 
-$(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_INSTALLER)/boilerplate/* $(VE_RUNTIME_CONFIG)
+$(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_RUNTIME_CONFIG)
 	$(RSCRIPT) scripts/build-runtime.R
 	@touch $(VE_LOGS)/runtime.built
 
