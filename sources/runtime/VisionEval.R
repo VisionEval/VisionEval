@@ -7,7 +7,9 @@
 # starting the VisionEval .Rproj, load up the environment from the
 # project root.
 
-require(utils,quietly=TRUE) # For install package
+require(utils,quietly=TRUE)                 # For install package
+requireNamespace("import",quietly=TRUE)     # for tools implementation
+requireNamespace("visioneval",quietly=TRUE)
 
 # Establish visioneval R environment on the R search path
 env.loc <- if ( ! "ve.env" %in% search() ) {
@@ -83,12 +85,12 @@ local( {
       tools <- character(0)
       for ( tf in tool.files ) {
         # Add error checking for tool.contents not present
+        message("Loading tool file: ",tf)
         try(
           silent=TRUE,
           eval(parse(text=paste0("import::here(tool.contents,.from='",tf,"')")))
         )
         if ( ! exists("tool.contents") ) next
-        tools <- c(tools,tool.contents)
         eval(parse(text=paste0("import::into(.into='ve.env',",paste(tool.contents,collapse=","),",.from='",tf,"')")))
         rm(tool.contents)
       }
@@ -191,11 +193,51 @@ if ( install.success ) {
 }
 
 # Make sure there is a "Models" directory
-ModelRoot <- file.path(
+env.loc$ModelRoot <- file.path(
   getRuntimeDirectory(),
   visioneval::getRunParameter("ModelRoot") # Uses runtime configuration or default value "models"
 )
-if ( ! dir.exists(ModelRoot) ) dir.create(ModelRoot,recursive=TRUE,showWarnings=FALSE)
+if ( ! dir.exists(env.loc$ModelRoot) ) dir.create(env.loc$ModelRoot,recursive=TRUE,showWarnings=FALSE)
+
+# create the LoadTest function
+env.loc$loadTest <- function(Package=NULL,files=NULL,clear=FALSE) {
+  test.root <- file.path(getRuntimeDirectory(),"tools","tests")
+  if ( !is.character(Package) ) {
+    tests <- dir(test.root,pattern="\\.R$",recursive=TRUE)
+    if ( length(tests) == 0 ) {
+      tests <- "No package tests available"
+    }
+    return(tests)
+  }
+
+  # Environment to receive test functions/objects
+  test.env <- if ( ! "ve.tests" %in% search() ) {
+    attach(NULL,name="ve.tests")
+  } else {
+    as.environment("ve.tests")
+  }
+
+  if ( clear ) {
+    to.clear <- ls(test.env,all=TRUE)
+    if ( length(to.clear)>0 ) rm(list=to.clear,envir=test.env)
+  }
+
+  for ( pkg in Package ) {
+    test.dir <- file.path(test.root,Package)
+    if ( dir.exists(test.dir) ) {
+      if ( !is.character(files) ) {
+        tests <- dir(test.dir,pattern="\\.R$",full.names=TRUE)
+      } else tests <- files
+      for ( test in tests ) {
+        message("Loading tests from ",test," for ",Package)
+        sys.source(test,envir=test.env)
+      }
+    } else {
+      message("No tests available for Package ",Package)
+    }
+  }
+  return( objects(test.env) )
+}
 
 # clean up variables created during startup
 if ( exists("ve.lib",inherits=FALSE) ) rm(ve.lib)

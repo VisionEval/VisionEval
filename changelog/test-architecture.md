@@ -58,10 +58,9 @@ of VEPackage).
 
 ### Building tests into the runtime
 
-The configuration process for the VisionEval build has also been updated to make the `test.R` file
-appear in the runtime (in the `tools/tests/VEPackage` folder for each VEPackage that contains tests).
-By default, if the package has a `tests` folder with `test.R`, that file will get copied over to the
-runtime `tools/tests`.
+The configuration process for the VisionEval build has also been updated to make arbitrary test
+scripts located (by default) in the package `tests` directory appear in the runtime (in the
+`tools/tests/VEPackage` directory).
 
 Extensions to the VE-Components have also been added. In particular, you can add a "Test:" key in the
 new format: it is a list of test files that should be copied to the runtime `tools/tests/VEPackage`
@@ -72,8 +71,10 @@ location. Here's an example:
     Type: framework
     Path: sources/framework
     Test:
-      - test.R                       # relative to visioneval/tests directory
-      - inst/OtherTests/other_test.R # relative to visioneval package root
+      Group: 0
+      Script:
+        - test.R                      # bare file is relative to visioneval/tests directory
+        - tests/scripts/other_test.R  # path-like file is relative to visioneval package root
     CRAN: 
       - futile.logger
       - jsonlite
@@ -84,23 +85,35 @@ location. Here's an example:
       - rhdf5
 ```
 
-If the package has no runtime tests, leave out the `Test:` tag and make sure there is no `test.R`
-file in the package "tests" directory.
+If the package has no runtime tests, leave out the `Test:` tag.
 
 When you build the _runtime_ (not the package itself), the specified tests will be copied over
 into the runtime `tools/tests` package directory (`visioneval` in the example above).
 
 ### Running tests at runtime.
 
-To load or inspect tests in a built runtime, just go to the runtime directory, then `source('tools/tests/VEPackage/test.R')`.
-The test functions and other objects will be loaded into the current workspace, and can be run from there. The source
-code can also be inspected.
+To load or inspect tests in a built runtime, you can use the new auto-generated runtime tool
+function called "loadTest". With no parameters, it lists all the available module tests. With
+parameters, it will source the `test.R` files associated with certain packages into an environment
+called `ve.tests`. You can select a subset of tests to load for the package, add tests from
+another package
+
+Use it like this:
+
+```
+loadTest() # lists available test scripts (.R files in "tools\tests")
+loadTest("VEModel") # loads all available .R file tests from tools\tests\VEModel
+loadTest("VEModel","test.R") # loads just tools/tests\VEModel\test.R
+loadTest("VEModel",files="test.R") # same, using named argument (files can be a vector)
+loadTest("visioneval") # loads visioneval tests (in addition to VEModel)
+                       # Existing tests with same name are overwritten
+loadTest("visioneval",clear=TRUE) # removes contents of ve.tests and loads visioneval tests
+```
 
 ## Testing
 
-Since this pull request is all about testing, the main way to test it is to see if we can load and
-run the tests during package development and also access the test functions via the `tools` folder
-in an installed VisionEval runtime.
+Since this pull request is all about testing, the main way to test it is to see if all the things
+described above do what they are supposed to.
 
 ## Files
 
@@ -113,4 +126,15 @@ git diff --compact-summary development-next
 
 The following files were modified in this change:
 ```
+ build/Makefile                       |   2 +-
+ build/Makefile.md                    |   2 +-
+ build/VisionEval-dev.R               | 147 ++++++++++++++++++++++++----
+ build/config/VE-components.yml       | 180 +++++++++++++++++------------------
+ build/scripts/build-config.R         |  10 +-
+ build/scripts/build-modules.R        |  52 +++++-----
+ build/scripts/build-runtime.R        |  48 ++++++++--
+ changelog/test-architecture.md (new) | 129 +++++++++++++++++++++++++
+ launch.bat (new)                     |   2 +
+ sources/runtime/VisionEval.R         |  50 +++++++++-
+ 10 files changed, 468 insertions(+), 154 deletions(-)
 ```
