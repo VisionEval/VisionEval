@@ -31,7 +31,7 @@ Components:
       Group: 0
       Script:
         - test.R            # relative to visioneval/tests
-        - tests/scripts/test_spec.R  # relative to visioneval package root
+#        - tests/scripts/test_spec.R  # relative to visioneval package root
     CRAN: 
       - futile.logger
       - jsonlite
