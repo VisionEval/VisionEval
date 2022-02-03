@@ -139,13 +139,17 @@ evalq(
       if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
         stop("Missing required package: 'pkgload'")
       }
+      VEPackage <- VEPackage[1] # can only test one at a time
+
       # Make sure we start looking from the Github root
       setwd(ve.root)
+ 
       # Locate the full path to VEPackage
+      framework.package <- FALSE
       if (
         ! grepl("/|\\\\",VEPackage) && (
-          file.exists( VEPackage.path <- file.path("sources","framework",VEPackage) ) ||
-          file.exists( VEPackage.path <- file.path("sources","modules",VEPackage) )
+          ( framework.package <- file.exists( VEPackage.path <- file.path("sources","framework",VEPackage) ) ) ||
+          ( file.exists( VEPackage.path <- file.path("sources","modules",VEPackage) ) )
         )
       ) {
         VEPackage.path <- normalizePath(VEPackage.path,winslash="/",mustWork=FALSE)
@@ -167,9 +171,9 @@ evalq(
       tests[expand.tests] <- file.path(VEPackage.path,"tests",tests[expand.tests])
       tests[!expand.tests] <- normalizePath(tests[!expand.tests],winslash="/",mustWork=FALSE) # relative to VEPackage.path
       tests <- tests[ file.exists(tests) ]
-      if ( length(tests)==0 ) {
-        stop("No 'test.R' file in ",VEPackage.path)
-      }
+#       if ( length(tests)==0 ) {
+#         stop("No 'test.R' file in ",VEPackage.path)
+#       }
 
       # Locate the runtime folder where the tests will run
       # TODO: work nicely with ve.run()
@@ -188,6 +192,8 @@ evalq(
           ve.runtime <- normalizePath(tempfile(pattern="runtime",tmpdir="tests"),winslash="/",mustWork=FALSE)
           dir.create(ve.runtime)
         }
+        model.path <- file.path(ve.runtime,"models")
+        if ( ! dir.exists(model.path) ) dir.create(model.path)
         Sys.setenv(VE_RUNTIME=ve.runtime) # override VEModel notion of ve.runtime
         message("Testing in Local runtime: ",ve.runtime)
       } else {
@@ -208,6 +214,8 @@ evalq(
       nameSpaces <- names(utils::sessionInfo()$loadedOnly)
       VEpackages <- grep("^VE",nameSpaces,value=TRUE)
       if ( length(VEpackages)>0 ) {
+        # sessionInfo keeps packages in the reverse order of loading (newest first)
+        # so we can unload in the order provided and not trip over dependencies
         for ( pkg in VEpackages ) {
           message("unloading package ",pkg)
           unloadNamespace(pkg)
@@ -216,9 +224,15 @@ evalq(
       message("unloading visioneval")
       unloadNamespace("visioneval")
 
-      # Use pkgload::load_all to load up the VEPackage (setwd() to the package root first)
-      # TODO: eventually support testthat testing...
-      pkgload::load_all(VEPackage.path)
+      if ( framework.package ) {
+        # Use pkgload::load_all to load up the VEPackage (setwd() to the package root first)
+        pkgload::load_all(VEPackage.path)
+      } else {
+        # Don't want to use pkgload with module packages since it will re-estimate them
+        # Force them to be built and loaded as built; we'll still grab their tests
+        require(VEModel,quietly=TRUE)
+        require(VEPackage,quietly=TRUE) # Use the built package
+      }
 
       # (Delete and Re-)Create an environment for the package tests ("test.VEPackage) on the search
       # path sys.source each of the test files into that environment
@@ -231,7 +245,9 @@ evalq(
       setwd(ve.runtime)
       
       # A list of the objects loaded from the "tests" will be displayed after loading
-      return( objects(test.env) )
+      tests <- objects(test.env)
+      if ( length(tests)==0 ) stop(paste0("No test objects defined for ",VEPackage))
+      return( tests )
     }
     message("ve.build() to (re)build VisionEval\n\t(see build/Building.md for advanced configuration)")
     message("ve.run() to run VisionEval (once it is built)")

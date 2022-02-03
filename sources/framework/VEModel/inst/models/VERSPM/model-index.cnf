@@ -26,9 +26,6 @@ variants:
     defs: defs
     scripts: scripts-base # uses standard VERSPM script
     queries: queries
-    stages: # copied as they are
-        - stage-year-2010
-        - stage-year-2038
   pop:
     # scripts, inputs and years all differ by stage
     description: VERSPM 3.0 Staged Population Synthesis

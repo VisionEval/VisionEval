@@ -476,6 +476,9 @@ getModelIndex <- function(reset=FALSE) {
   modelIndex <- list()
   for ( confPath in modelPaths ) {
     confPackage <- basename(sub("[/\\]models[/\\].*","",confPath))
+    if ( confPackage == "inst" ) {
+      confPackage <- paste("Virtual",basename(dirname(sub("[/\\]models[/\\].*","",confPath))))
+    }
     index <- try( yaml::yaml.load_file(confPath) )
     if ( ! "variants" %in% names(index) ) {
       modelName <- names(index)
@@ -494,6 +497,7 @@ getModelIndex <- function(reset=FALSE) {
       vars <- index[[m]]$variants
       if ( length(vars)>0 ) {
         if ( any(dupes <- names(vars) %in% modelIndex[[m]]) ) {
+          writeLog(paste0("While processing ",basename(dirname(confPath)),":"),Level="warn")
           writeLog(paste("Duplicated model variant",paste0(m,":",paste(names(vars)[dupes],collapse=","))),Level="warn")
         }
         modelIndex[[m]][ names(vars) ] <- vars
@@ -513,25 +517,37 @@ getModelIndex <- function(reset=FALSE) {
 
 # DUMP MODEL INDEX, SHOWING SOURCES
 #==================================
-#' Report package source of model variants
+#' Report package source of model variants and private status
 #' @param reset if TRUE, rebuild the index (e.g. after installing new VE packages)
+#' @param private if TRUE, list private models as well as public ones
 #' @return a data.frame listing all models, variants and their package source
 #' @export
-showModelIndex <- function(reset=FALSE) {
+showModelIndex <- function(reset=FALSE, private=FALSE) {
   modelIndex <- getModelIndex(reset)
   modelSources <- list()
   for ( m in names(modelIndex) ) {
+    cat("Model",m,"Variants",paste(names(modelIndex[[m]]),collapse=", "),"\n")
     if ( length(modelIndex[[m]]) == 0 ) {
-      modelSources$Model <- c(modelSources$Model,m)
+      modelSources$Model   <- c(modelSources$Model,m)
       modelSources$Variant <- c(modelSources$Variant,"None")
       modelSources$Package <- c(modelSources$Package,attr(modelIndex[[m]],"Package"))
+      if ( private ) modelSources$Private <- "Unknown"
       writeLog("Added model with no variants",Level="info")
     } else {
       for ( v in names(modelIndex[[m]]) ) {
-        modelSources$Model <- c(modelSources$Model,m)
-        modelSources$Variant <- c(modelSources$Variant,v)
-        modelSources$Package <- c(modelSources$Package,attr(modelIndex[[m]][[v]],"Package"))
-        writeLog(paste("Added model",m,"Variant",v),Level="info")
+        is.private <- "private" %in% names(modelIndex[[m]][[v]]) && modelIndex[[m]][[v]]$private
+        if ( private || ! is.private ) {
+          modelSources$Model   <- c(modelSources$Model,m)
+          modelSources$Variant <- c(modelSources$Variant,v)
+          modelSources$Package <- c(modelSources$Package,attr(modelIndex[[m]][[v]],"Package"))
+          if ( private ) {
+            modelSources$Private <- c(
+              modelSources$Private,
+              if( is.private ) "Private" else "Public"
+            )
+          }
+          writeLog(paste("Added model",m,"Variant",v),Level="info")
+        }
       }
     }
   }
