@@ -7,8 +7,8 @@ Notes:
 - See individual ModelStages for scenario descriptions
 
 # Model Structural Parameters
-ScriptsDir  : scripts
-InputDir    : inputs
+ScriptsDir  : scripts  # default, don't need to specify
+InputDir    : inputs   # default, don't need to specify
 Seed        : 1
 
 # Model description
@@ -16,9 +16,17 @@ Model       : VERSPM 3.0 ("Vertical" stages/Years)
 Region      : RVMPO
 State       : OR
 ModelStages :
+    # implicit stage directories (will generate results/stage-year-2010 etc)
     "stage-year-2010":
-      Dir: stage-year-2010
-      Reportable: true
+      Reportable  : true
+      Scenario    : VERSPM RVMPO Base Year only
+      Description : Base Year Scenario (2010)
+      BaseYear    : 2010
+      Years       : [ 2010 ]
     "stage-year-2038":
-      Dir: stage-year-2038
-      Reportable: true
+      Reportable  : true
+      StartFrom   : stage-year-2010
+      Scenario    : VERSPM RVMPO Future Year
+      Description : Future Year Scenario (2038)
+      BaseYear    : 2010
+      Years       : [ 2038 ]

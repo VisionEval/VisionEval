@@ -32,8 +32,7 @@ standard VisionEval installation.
 
 ## Files
 
-You can generate a file summary using the following line of code. You should drop the
-changelog file from the list manually (since it will always be one commit out of date).
+You can generate a file summary using the following line of code.
 
 ```
 git diff --compact-summary development-next
