@@ -122,13 +122,14 @@ evalq(
       owd <- getwd()
       if (
         ! is.na(ve.runtime) &&
-        dir.exists(ve.runtime) &&
-        file.exists(file.path(ve.runtime,"VisionEval.R"))
+        dir.exists(ve.runtime)
       ) {
         owd <- setwd(ve.runtime)
         message("setwd('",owd,"') to return to previous directory")
-        message("setwd(ve.root) to return to Git root directory")
-        source("VisionEval.R")
+        if ( file.exists("VisionEval.R") ) {
+          message("setwd(ve.root) to return to Git root directory")
+          source("VisionEval.R")
+        }
       } else {
         message("Could not locate runtime. Run ve.build()")
       }
@@ -176,8 +177,8 @@ evalq(
 #       }
 
       # Locate the runtime folder where the tests will run
-      # TODO: work nicely with ve.run()
       if ( localRuntime ) {
+        # Use a runtime associated specifically with the tested package
         owd <- setwd(VEPackage.path)
         if ( dir.exists("tests") ) { # in VEPackage.path
           ve.runtime <- grep("^(tests/)runtime.*",list.dirs("tests"),value=TRUE)[1]
@@ -197,7 +198,8 @@ evalq(
         Sys.setenv(VE_RUNTIME=ve.runtime) # override VEModel notion of ve.runtime
         message("Testing in Local runtime: ",ve.runtime)
       } else {
-        ve.runtime <- ve.run()
+        # Use the standard runtime folder
+        ve.runtime <- get.ve.runtime()
         message("Testing in Built runtime: ",ve.runtime)
       }
 

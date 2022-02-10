@@ -109,6 +109,7 @@ ve.results.index <- function() {
       dsListing <- ms$ModelState_ls$Datastore
       if ( msFirst ) {
         combinedDatastore <- dsListing
+        msFirst <- FALSE
       } else {
         combinedDatastore <- visioneval::mergeDatastoreListings(combinedDatastore,dsListing)
       }
