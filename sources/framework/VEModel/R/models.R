@@ -2420,7 +2420,8 @@ ve.model.results <- function(stage=character(0)) {
     extract <- function(stage=character(0),...) {
       if ( length(stage)==0 ) stage<-names(results)
       for ( stg in stage ) {
-        writeLog(paste("Would extract results for stage",stg),Level="info")
+        writeLog(paste("Not implemented: Would extract results for stage",stg),Level="info")
+        # TODO: need to pass a selection of fields...
         # results[[stg]]$extract(...)
       }
       return(invisible(stage))

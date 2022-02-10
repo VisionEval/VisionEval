@@ -1906,7 +1906,7 @@ mergeDatastoreListings <- function(baseListing, addListing) {
   #   attributes       # list
   # The listing is presented as either a data.frame or a list; we can access the elements
   #   the same way just by using baseListing$group etc.
-  if ( ! is.list(baseListing) || !is.list(newListing) ) {
+  if ( ! is.list(baseListing) || !is.list(addListing) ) {
     stop(
       writeLog("Invalid listing types presented to mergeDatastoreListings",Level="error")
     )
@@ -1917,9 +1917,17 @@ mergeDatastoreListings <- function(baseListing, addListing) {
   newListing$group <- c(baseListing$group,addListing$group[newItems])
   newListing$name <- c(baseListing$name,addListing$name[newItems])
   newListing$groupname <- c(baseListing$groupname,addListing$groupname[newItems])
-  newListing$attributes <- c(baseListing$attributes,addListing$attributes[newItems])
+  # The following sad hack is required since attributes is a "list",
+  # which is not legitimately a valid column type for a data.frame.
+  for ( item in addListing$attributes[newItems] ) {
+    newListing$attributes[[length(newListing$attributes)+1]] <- item
+  }
+  if ( asDF ) {
+    df <- as.data.frame(newListing[1:3])
+    df$attributes <- newListing[[4]]
+    newListing <- df
+  }
 
-  if ( asDF ) newListing <- as.data.frame(newListing)
   return(newListing)
 }
 
