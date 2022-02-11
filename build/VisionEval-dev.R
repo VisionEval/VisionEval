@@ -92,7 +92,7 @@ evalq(
     }
 
     get.ve.runtime <- function(use.git=FALSE) {
-      # TODO: add override via VE_RUNTIME system environment variable
+      # NOTE: override via VE_RUNTIME system environment variable
       ve.runtime = Sys.getenv("VE_RUNTIME",NA)
       if ( is.na(ve.runtime) ) {
         if ( ! "ve.builder" %in% search() ) {
@@ -136,7 +136,7 @@ evalq(
       return( invisible(owd) )
     }
 
-    ve.test <- function(VEPackage,tests="test.R",localRuntime=TRUE) {
+    ve.test <- function(VEPackage,tests="test.R",localRuntime=TRUE,usePkgload=NULL) {
       if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
         stop("Missing required package: 'pkgload'")
       }
@@ -196,6 +196,8 @@ evalq(
         model.path <- file.path(ve.runtime,"models")
         if ( ! dir.exists(model.path) ) dir.create(model.path)
         Sys.setenv(VE_RUNTIME=ve.runtime) # override VEModel notion of ve.runtime
+        # Use localRuntime to debug this module in a different module's runtime directory
+        # Load the other module with localRuntime=TRUE, then the new module with localRuntime=FALSE
         message("Testing in Local runtime: ",ve.runtime)
       } else {
         # Use the standard runtime folder
@@ -226,12 +228,13 @@ evalq(
       message("unloading visioneval")
       unloadNamespace("visioneval")
 
-      if ( framework.package ) {
+      if ( ! is.logical(usePkgload) ) usePkgload <- framework.package
+      if ( usePkgload ) {
         # Use pkgload::load_all to load up the VEPackage (setwd() to the package root first)
         pkgload::load_all(VEPackage.path)
       } else {
         # Don't want to use pkgload with module packages since it will re-estimate them
-        # Force them to be built and loaded as built; we'll still grab their tests
+        # Expect them to be built and loaded; we'll still grab their tests
         require(VEModel,quietly=TRUE)
         require(VEPackage,quietly=TRUE) # Use the built package
       }

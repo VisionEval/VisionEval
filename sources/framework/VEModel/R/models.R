@@ -2369,7 +2369,9 @@ ve.model.findstages <- function(stage=character(0),Reportable=TRUE) {
       stages <- stages[ names(stages) %in% stage ]
     }
   }
-  if ( Reportable ) {
+  if ( Reportable && length(stages)>0 ) {
+    # NOTE: need length check since sapply returns list() if stages
+    # is empty yielding a bad index into stages[]
     stages <- stages[ sapply(stages,function(s) s$Reportable) ] # Only return reportable stages
   }
   return(stages)
