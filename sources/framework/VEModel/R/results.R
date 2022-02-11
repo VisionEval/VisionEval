@@ -681,7 +681,8 @@ ve.select.parse <- function(select) {
       if ( is.na(name[3]) || ! nzchar(name[3]) ) next  else field=name[3]
       if ( is.na(name[2]) || ! nzchar(name[2]) ) table <- NULL else table=name[2]
       if ( is.na(name[1]) || ! nzchar(name[1]) ) group <- NULL else group=name[1]
-      build <- union( build, self$find(Name=field,Group=group,Table=table,as.object=FALSE) )
+      fld <- self$find(Name=field,Group=group,Table=table,as.object=FALSE)
+      build <- union( build, fld )
     }
     select <- build # should be a vector of integers
   }
@@ -720,6 +721,7 @@ ve.select.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,as.objec
   searchName  <- Name
   newSelection <- self$selection
   newSelection <- with( self$results$modelIndex, {
+    browser()
     if ( !is.null(pattern ) ) {
       fld <- grepl(pattern,Name,ignore.case=TRUE)     # RegEx search for name
     } else if ( !is.null(searchName) ) {
@@ -735,7 +737,9 @@ ve.select.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,as.objec
       }
       fld <- fld & group
     }
-    if ( !is.null(searchTable) ) fld <- fld & (Table %in% searchTable)
+    if ( !is.null(searchTable) ) {
+      fld <- fld & (Table %in% searchTable)
+    }
     which(fld)
   })
   if ( length(newSelection) == 0 ) newSelection <- as.integer(NA)

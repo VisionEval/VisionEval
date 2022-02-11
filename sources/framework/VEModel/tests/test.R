@@ -153,6 +153,9 @@ test_all_install <- function(overwrite=FALSE,log="warn") {
 test_flatten <- function(log="info") {
   testStep("run staged model with database path")
   vr <- openModel("VERSPM-pop")
+  if ( ! vr$valid() ) {
+    stop("Install and run VERSPM, variant='pop'")
+  }
   vr$run(log=log) # use "continue" - won't re-run if already ucla luskin ocnference center
   print(vr)
   testStep("prepare receiving directory")
@@ -208,7 +211,7 @@ test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",r
 #  be a version of VERSPM since we use its first two modules to create the "Bare" model
 # log="warn" will confine to a streamlined list of log messages like what a regular user
 #  would see. "info" gives lots of gory details.
-test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info", brief=FALSE) {
+test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log="info", brief=FALSE) {
 
   if ( ! missing(log) ) logLevel(log)
 
@@ -218,10 +221,10 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   testStep("open (and maybe run) the full test version of VERSPM")
   due.to <- "reset request"
   if ( modelName %in% openModel() ) {
-    jr <- openModel(modelName)
-    if ( ! jr$overallStatus == codeStatus("Run Complete") ) {
+    mod <- openModel(modelName)
+    if ( ! mod$overallStatus == codeStatus("Run Complete") ) {
       reset = TRUE
-      due.to = paste("status",jr$printStatus())
+      due.to = paste("status",mod$printStatus())
     }
   } else {
     reset = TRUE
@@ -229,19 +232,19 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   }
   if ( isTRUE(reset) ) {
     cat("Re-running model due to",due.to,"\n")
-    jr <- test_run(modelName=modelName,baseModel="VERSPM",variant="base",reset=TRUE,log=log)
+    mod <- test_run(modelName=modelName,baseModel="VERSPM",variant="base",reset=TRUE,log=log)
   }
-  if (! "VEModel" %in% class(jr) ) {
-    return(jr)
-  } else print(jr,details=TRUE)
+  if (! "VEModel" %in% class(mod) ) {
+    return(mod)
+  } else print(mod,details=TRUE)
 
   testStep("Gather base model parameters")
-  base.dir <- jr$modelPath
+  base.dir <- mod$modelPath
   cat("Base Model directory:\n")
   print(base.dir)
 
   cat("Base model structural directories - including stages\n")
-  for ( stage in jr$modelStages ) {
+  for ( stage in mod$modelStages ) {
     cat("Stage:",stage$Name,"\n")
     jrParam_ls <- stage$RunParam_ls
     cat("  ParamPath    :",visioneval::getRunParameter("ParamPath",Param_ls=jrParam_ls),"\n")
@@ -312,7 +315,7 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
 
   testStep("Copy other configuration files (geo, units, deflators)")
 
-  base.defs <- jr$setting("ParamPath",shorten=FALSE)
+  base.defs <- mod$setting("ParamPath",shorten=FALSE)
   from <- file.path(base.defs,c("units.csv","deflators.csv","geo.csv"))
   file.copy(from=from,to=bare.defs)
   print(bare.defs)
@@ -327,9 +330,9 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   #   if the file does not exist on the model's InputPath (which is the case
   #   for the bare model).
 
-  base.inputs <- unique(jr$dir(inputs=TRUE)) # List short names of input paths for each stage
+  base.inputs <- unique(mod$dir(inputs=TRUE)) # List short names of input paths for each stage
   cat("Base Inputs",base.inputs,"\n")
-  base.inputs <- unique(jr$dir(inputs=TRUE,shorten=FALSE)) # Now get the full path name for inputs
+  base.inputs <- unique(mod$dir(inputs=TRUE,shorten=FALSE)) # Now get the full path name for inputs
   inputs <- bare$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
   cat("Input Directories (should be NA - files don't exist yet):\n")
   print( unique(inputs[,"INPUTDIR"]) )
@@ -350,7 +353,7 @@ test_model <- function(modelName="JRSPM", oldstyle=FALSE, reset=FALSE, log="info
   file.copy(from=from,to=bare.inputs) # or copy to bare.defs...
   print(dir(bare.inputs))
 
-  testStep(paste("Copy required input files from",jr$modelName))
+  testStep(paste("Copy required input files from",mod$modelName))
 
   print(required.files)
   from <- required.files
@@ -665,6 +668,25 @@ test_load <- function(model=NULL, log="info" ) {
   return(loadModel)
 }
 
+test_select <- function( log="info" ) {
+  testStep("Manipulate model selection to pick and retrieve fields")
+  mod <- openModel("VERSPM-pop") # use staged model to exercise DatastorePath
+  if ( ! mod$valid() ) {
+    stop("Install and run VERSPM, variant='pop'")
+  }
+  rs <- mod$results("stage-pop-future")
+  if ( "VEResultsList" %in% class(rs) ) {
+    rs <- rs$results()
+    rs <- rs[length(rs)]
+  }
+  testStep("Get result selection")
+  sl <- rs$select()
+  cat("Fields to select from:",length(sl$fields()),"\n")
+  testStep("Finding Worker table for 2038")
+  debug(sl$find)
+  print(sl$find(Group="2038",Table="Worker"))
+}
+
 test_results <- function (log="info") {
 
   if ( ! missing(log) ) logLevel(log)
@@ -672,9 +694,12 @@ test_results <- function (log="info") {
   testStep("Manipulate Model Results in Detail")
 
   testStep("Copy model and get 'results' and 'selection' from empty model...")
-  jr <- openModel("JRSPM")
+  mod <- openModel("VERSPM-pop") # use staged model to exercise DatastorePath
+  if ( ! mod$valid() ) {
+    stop("Install and run VERSPM, variant='pop'")
+  }
   if ( "COPY" %in% dir("models") ) unlink("models/COPY",recursive=TRUE)
-  cp <- jr$copy("COPY")
+  cp <- mod$copy("COPY")
   cat("Directory before clearing...\n")
   print(cp$dir())
   cp$clear(force=TRUE,outputOnly=FALSE)
@@ -688,13 +713,13 @@ test_results <- function (log="info") {
   print(sl)
   rm(cp)
 
-  testStep("Pull out results and selection from jr (head 12)...")
+  testStep("Pull out results and selection from mod (head 12)...")
   cat("Results...\n")
-  rs <- jr$results()  # Gets results for final Reportable stage (only)
+  rs <- mod$results()  # Gets results for final Reportable stage (only)
 
   # TODO: rs may be a list of VEResults (not just a single object)?
   # Use case is mostly for doing queries over a set of scenarios...
-  # Return a list if jr$results(all.stages=TRUE) or jr$results(stages=c(stage1,stage2)) with
+  # Return a list if mod$results(all.stages=TRUE) or mod$results(stages=c(stage1,stage2)) with
   # length(stages)>1 : all reportable stages in that case.
   # An individual stage can also be called out explicitly (and in that case, it does not
   #   need to be Reportable).
@@ -737,9 +762,9 @@ test_results <- function (log="info") {
   spd$DisplayUnits <- "MI/HR"
   cat("Writing display_units.csv into ")
   display_units_file <- file.path(
-      jr$modelPath,
-      visioneval::getRunParameter("ParamDir",Param_ls=jr$RunParam_ls),
-      visioneval::getRunParameter("DisplayUnitsFile",Param_ls=jr$RunParam_ls)
+      mod$modelPath,
+      visioneval::getRunParameter("ParamDir",Param_ls=mod$RunParam_ls),
+      visioneval::getRunParameter("DisplayUnitsFile",Param_ls=mod$RunParam_ls)
     )
   cat(display_units_file,"\n")
   write.csv(spd,file=display_units_file)
@@ -767,19 +792,19 @@ test_results <- function (log="info") {
   sl$export(prefix="Datastore",convertUnits=FALSE)  # Using DATASTORE units
 
   testStep("Model directory")
-  print(jr$dir())
+  print(mod$dir())
 
   testStep("Model directory of results")
-  print(jr$dir(results=TRUE))
+  print(mod$dir(results=TRUE))
   
   testStep("Model directory of outputs")
-  print(jr$dir(outputs=TRUE))
+  print(mod$dir(outputs=TRUE))
   
   testStep("Interactively clear outputs but leave results")
-  jr$clear(outputOnly=TRUE, force=FALSE)
+  mod$clear(outputOnly=TRUE, force=FALSE)
 
   testStep("Directory after clearing")
-  jr$dir()
+  mod$dir()
 }
 
 # TODO: make separate functions (not flag) for
@@ -793,21 +818,21 @@ test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TR
 
   testStep("Set up Queries and Run on Model Results")
   testStep("Opening test model and caching its results...")
-  jr <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=reset)
-  rs <- jr$results()
+  mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=reset)
+  rs <- mod$results()
 
   testStep("Show query directory (may be empty)...")
-  print(jr$query())
+  print(mod$query())
 
   if ( ! ( build.query || break.query || run.query ) ) {
     testStep("No query tests requested; returning VERSPM-query model")
-    return(jr)
+    return(mod)
   }
 
   if ( build.query ) {
     testStep("Create an empty query object and print it...")
     # create a query object
-    qry <- jr$query("Test-Query",load=FALSE) # Don't open it if file exists already
+    qry <- mod$query("Test-Query",load=FALSE) # Don't open it if file exists already
     cat("Query valid:",qry$valid(),"\n")
     cat("Print qry$checkResults:"); print(qry$checkResults)
     cat("Print query\n")
@@ -871,7 +896,7 @@ test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TR
     qry$remove(2) # remove by position (bye-bye loc45)
     print(qry)
   } else {
-    qry <- jr$query("Test-Query",load=FALSE) # Don't open it if file exists already
+    qry <- mod$query("Test-Query",load=FALSE) # Don't open it if file exists already
   }
   if ( build.query && break.query ) {
     testStep("Make a new VEQuery and add various bad specifications to it (not implemented)...")
@@ -992,11 +1017,11 @@ test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TR
     print(qry)
 
     testStep("Clear test queries, if any...")
-    qfiles <- jr$query()
+    qfiles <- mod$query()
 
-    print(qfiles <- file.path(jr$modelPath,"queries",qfiles))
+    print(qfiles <- file.path(mod$modelPath,"queries",qfiles))
     unlink(qfiles)
-    print(jr$query())
+    print(mod$query())
 
     testStep("Save the query and fix its extension...")
 
@@ -1022,22 +1047,22 @@ test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TR
       testStep("Model QueryDir contents...")
 
       cat("Expecting "); print(c("Copy-Query.VEqry","Test-Query.VEqry"))
-      print(jr$query())
+      print(mod$query())
 
       testStep("Save a query somewhere else...")
-      qfile <- file.path(jr$modelPath,"queries","Dump-Query.R")
+      qfile <- file.path(mod$modelPath,"queries","Dump-Query.R")
       qry2$save(qfile)
-      print(jr$query())
+      print(mod$query())
 
       testStep("Save a query without overwriting...")
       actualFile <- qry2$save(overwrite=FALSE)
       qfile <- c(qfile,actualFile)
-      print(jr$query())
+      print(mod$query())
       unlink(qfile); rm(qry2)
 
       testStep("Open the query by short name in a different object from the file...")
 
-      runqry <- jr$query("Test-Query")
+      runqry <- mod$query("Test-Query")
       cat("Loaded query...\n")
       cat("Directory: "); print(runqry$QueryDir)
       cat("Name; "); print(runqry$QueryName)
@@ -1046,7 +1071,7 @@ test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TR
 
       testStep("Open the query again from the file, using full file name...")
 
-      runqry <- jr$query("Test-Query.VEQry")
+      runqry <- mod$query("Test-Query.VEQry")
       cat("Re-Loaded query with name extension...\n")
       cat("Directory: "); print(runqry$QueryDir)
       cat("Name; "); print(runqry$QueryName)
@@ -1056,7 +1081,7 @@ test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TR
     }
 
     testStep("Run the query on the model...")
-    qry$run(jr) # using original query above
+    qry$run(mod) # using original query above
 
     testStep("Display query results...")
     # TODO: put a class on the query results and push the following into a print method
@@ -1086,10 +1111,10 @@ test_query <- function(log="info",build.query=TRUE,break.query=TRUE,run.query=TR
     qry$export(format="csv",SaveTo=paste0("TestQuery_%timestamp%",qry$Name))
 
     testStep("Show output files, which will include exports and queries")
-    jr$dir(outputs=TRUE,all.files=TRUE)
+    mod$dir(outputs=TRUE,all.files=TRUE)
 
     testStep("Run the query again on the bare results (should do nothing)...")
-    rs <- jr$results()
+    rs <- mod$results()
     qry$run(rs) # Won't re-run if query results are up to date with the scenario runs
 
     testStep("Force the query to run on the bare results rather than the model...")
@@ -1107,13 +1132,13 @@ test_multiquery <- function(reset=FALSE,log="info") {
   # Merge this with test_scenario
   if ( ! missing(log) ) logLevel(log)
   testStep("Acquiring test model")
-  jr <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",reset=reset)
-  print(jr)
-  qry <- jr$query("Test-Query")
+  mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",reset=reset)
+  print(mod)
+  qry <- mod$query("Test-Query")
   print(qry)
 
   testStep("Query multiple scenarios...")
-  # Generate several copies of jr future year
+  # Generate several copies of mod future year
   # Inputs will be sought up the "StartFrom" tree.
   # To customize inputs for Scenario-1 (as an actual scenario),
   #   create InputDir ("inputs") inside stagePath.1 and put in
@@ -1121,57 +1146,57 @@ test_multiquery <- function(reset=FALSE,log="info") {
   #   it just uses the inputs found in earlier stages. For the
   #   purposes of testing the query functionality, it suffices here
   #   to have all the scenarios be the same.
-  stagePath.1 <- file.path(jr$modelPath,"Scenario-1")
+  stagePath.1 <- file.path(mod$modelPath,"Scenario-1")
   if ( ! dir.exists( stagePath.1 ) ) dir.create(stagePath.1)
-  jr$addstage(
+  mod$addstage(
     Name="Scenario-1",
     Dir="Scenario-1",
-    ModelDir=jr$modelPath, # TODO: Why do we need this?
+    ModelDir=mod$modelPath, # TODO: Why do we need this?
     # TODO: InputPath = NULL, # from one of the category test scenarios
     Scenario="Scenario 1",
     Description="Same as original...",
     StartFrom="stage-pop-future",
-    BaseYear=jr$setting("BaseYear",stage="stage-pop-future"),
-    Years=jr$setting("Years",stage="stage-pop-future"),
-    ModelScript=jr$setting("ModelScript",stage="stage-pop-future")
+    BaseYear=mod$setting("BaseYear",stage="stage-pop-future"),
+    Years=mod$setting("Years",stage="stage-pop-future"),
+    ModelScript=mod$setting("ModelScript",stage="stage-pop-future")
   )
-  stagePath.2 <- file.path(jr$modelPath,"Scenario-2")
+  stagePath.2 <- file.path(mod$modelPath,"Scenario-2")
   if ( ! dir.exists( stagePath.2 ) ) dir.create(stagePath.2)
-  jr$addstage(
+  mod$addstage(
     Name="Scenario-2",
     Dir="Scenario-2",
-    ModelDir=jr$modelPath,
+    ModelDir=mod$modelPath,
     # TODO: InputPath = NULL, # from a different category test scenario
     Scenario="Scenario 2",
     Description="Same as original...",
     StartFrom="stage-pop-future",
-    BaseYear=jr$setting("BaseYear",stage="stage-pop-future"),
-    Years=jr$setting("Years",stage="stage-pop-future"),
-    ModelScript=jr$setting("ModelScript",stage="stage-pop-future")
+    BaseYear=mod$setting("BaseYear",stage="stage-pop-future"),
+    Years=mod$setting("Years",stage="stage-pop-future"),
+    ModelScript=mod$setting("ModelScript",stage="stage-pop-future")
   )
 
   # Force Reportable on stage-pop-future (auto-detect says no since
   # the other scenarios start from it).
-  jr$modelStages[["stage-pop-future"]]$Reportable=TRUE
+  mod$modelStages[["stage-pop-future"]]$Reportable=TRUE
 
   # NOTE: without an InputDir or a different InputPath or different Script, this will just re-run
   # the model using all the inputs from stage-pop-future and put the results in this stage's output
   # directory.
   testStep("Running two additional scenarios")
-  jr$run() # runs with "continue" - will just do the newly added stages
+  mod$run() # runs with "continue" - will just do the newly added stages
 
   # TODO: restructure multi-scenario model to push those scenarios into ModelStages and use
   #   the scenarios StartFrom to establish the default case.
 
   testStep("Query the model")
   # Make a list of VEResults objects from the VEModel list and run query on it
-  qry$run(jr,OutputFile="%queryname%_FromModel_%timestamp%")
+  qry$run(mod,OutputFile="%queryname%_FromModel_%timestamp%")
 
   testStep("Query the results list explicitly (should use cached query results)")
   # Make a list of ResultsDir path names (i.e. list of character strings) from the
   # VEResults and query that (Note difference between a character vector - list of
   # model names and a list of character strings, which are the result paths).
-  qry$run(jr$results(),OutputRoot=jr$modelResults,OutputFile="%queryname%_FromResultList_%timestamp%.csv")
+  qry$run(mod$results(),OutputRoot=mod$modelResults,OutputFile="%queryname%_FromResultList_%timestamp%.csv")
 
   testStep("Done with multiple queries")
 }
