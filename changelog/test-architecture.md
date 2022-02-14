@@ -144,27 +144,27 @@ git diff --compact-summary development-next
 
 The following files were modified in this change:
 ```
-build/Makefile                                     |   2 +-
-build/Makefile.md                                  |   2 +-
-build/VisionEval-dev.R                             | 175 +++++++++++++++++---
-build/config/VE-components.yml                     | 180 ++++++++++-----------
-build/scripts/build-config.R                       |  10 +-
-build/scripts/build-modules.R                      |  52 +++---
-build/scripts/build-runtime.R                      |  48 +++++-
-changelog/changelog-sample.md                      |   3 +-
-changelog/test-architecture.md (new)               | 148 +++++++++++++++++
-launch.bat (new)                                   |   2 +
-sources/framework/VEModel/R/environment.R          |  30 +++-
-sources/framework/VEModel/R/models.R               |  34 ++--
-sources/framework/VEModel/R/results.R              |  15 +-
-.../VEModel/inst/models/VERSPM/model-index.cnf     |   3 -
-.../VERSPM/stage-year-2010/visioneval.cnf (gone)   |   9 --
-.../VERSPM/stage-year-2038/visioneval.cnf (gone)   |  20 ---
-.../VEModel/inst/models/VERSPM/visioneval-year.cnf |  20 ++-
-sources/framework/VEModel/launch.bat               |   3 +-
-sources/framework/VEModel/tests/test.R             | 165 +++++++++++--------
-sources/framework/visioneval/R/datastore.R         |  14 +-
-sources/framework/visioneval/R/getModuleL.R (new)  | 103 ++++++++++++
-sources/runtime/VisionEval.R                       |  50 +++++-
-22 files changed, 800 insertions(+), 288 deletions(-)
+ build/Makefile                                     |   2 +-
+ build/Makefile.md                                  |   2 +-
+ build/VisionEval-dev.R                             | 175 +++++++++++++++++---
+ build/config/VE-components.yml                     | 180 ++++++++++-----------
+ build/scripts/build-config.R                       |  10 +-
+ build/scripts/build-modules.R                      |  52 +++---
+ build/scripts/build-runtime.R                      |  48 +++++-
+ changelog/changelog-sample.md                      |   3 +-
+ changelog/test-architecture.md (new)               | 170 +++++++++++++++++++
+ launch.bat (new)                                   |   2 +
+ sources/framework/VEModel/R/environment.R          |  30 +++-
+ sources/framework/VEModel/R/models.R               |  34 ++--
+ sources/framework/VEModel/R/results.R              |  15 +-
+ .../VEModel/inst/models/VERSPM/model-index.cnf     |   3 -
+ .../VERSPM/stage-year-2010/visioneval.cnf (gone)   |   9 --
+ .../VERSPM/stage-year-2038/visioneval.cnf (gone)   |  20 ---
+ .../VEModel/inst/models/VERSPM/visioneval-year.cnf |  20 ++-
+ sources/framework/VEModel/launch.bat               |   3 +-
+ sources/framework/VEModel/tests/test.R             | 165 +++++++++++--------
+ sources/framework/visioneval/R/datastore.R         |  14 +-
+ sources/framework/visioneval/R/visioneval.R        | 110 +++++++++++++
+ sources/runtime/VisionEval.R                       |  50 +++++-
+ 22 files changed, 829 insertions(+), 288 deletions(-)
 ```
