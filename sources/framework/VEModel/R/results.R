@@ -494,6 +494,12 @@ ve.results.select <- function(select=integer(0)) {  # integer(0) says select all
   invisible(self$selection)
 }
 
+# Find fields (as objects) within the current selection
+ve.results.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL) {
+  selection <- self$select()
+  return( selection$find(pattern=pattern,Group=Group,Table=Table,Name=Name,as.object=TRUE) )
+}
+
 ve.results.copy <- function(ToDir, Flatten=TRUE, DatastoreType=NULL) {
   if ( missing(ToDir) || ! dir.exists(ToDir) ) {
     stop(writeLog("Invalid target directory for results copy",Level="error"))
@@ -556,6 +562,7 @@ VEResults <- R6::R6Class(
     copy=ve.results.copy,            # Apply visioneval::copyDatastore
     valid=ve.results.valid,          # has the model been run, etc.
     select=ve.results.select,        # return the object's selection object
+    find=ve.results.find,            # does select() then VESelection$find
     extract=ve.results.extract,      # generate files or data.frames from model results
     export=ve.results.extract,       # alias for 'extract'
     list=ve.results.list,            # show the modelIndex
@@ -721,7 +728,6 @@ ve.select.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,as.objec
   searchName  <- Name
   newSelection <- self$selection
   newSelection <- with( self$results$modelIndex, {
-    browser()
     if ( !is.null(pattern ) ) {
       fld <- grepl(pattern,Name,ignore.case=TRUE)     # RegEx search for name
     } else if ( !is.null(searchName) ) {

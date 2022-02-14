@@ -168,6 +168,7 @@ evalq(
       # (2) check each file for existing and report those that don't exist
       # (3) normalize all the test paths
       owd <-setwd(VEPackage.path)
+      print(tests)
       expand.tests <- ! grepl("/|\\\\",tests)
       tests[expand.tests] <- file.path(VEPackage.path,"tests",tests[expand.tests])
       tests[!expand.tests] <- normalizePath(tests[!expand.tests],winslash="/",mustWork=FALSE) # relative to VEPackage.path
