@@ -110,6 +110,25 @@ loadTest("visioneval") # loads visioneval tests (in addition to VEModel)
 loadTest("visioneval",clear=TRUE) # removes contents of ve.tests and loads visioneval tests
 ```
 
+## Creating installable models just for testing
+
+To support really thorough testing and comparison, this pull request implements an update to the
+model installation subsystem to allow "hidden" test models to be created and run. It's important to
+hide them since in some cases they will deliberately implement "broken" behavior and we don't want
+end users to accidentally use those as the basis for their own work.
+
+See the nearby pull request for fixing the IPF bug in VELandUse. You can (and should) use the
+elaborate mechanism set up there (including the development of the test.R script with functions
+`test_ipf()` and `compare_ipf()`) as prototypes for building thorough tests for module changes that
+have potential end-user consequences.
+
+The architecture for installModel has been enhanced to classify models in the `inst/models`
+directory of a package to be marked as `private: true` (the default is `false`). Models can also be
+sought in a specific package (in addition to the end user default of matching model name and variant
+name across all public models in all packages). If `private` models are requested, only models and
+variants that are private will be searched, and if a package is also named then the variants will
+only be sought in that package.
+
 ## Testing
 
 Since this pull request is all about testing, the main way to test it is to see if all the things
@@ -117,8 +136,7 @@ described above do what they are supposed to.
 
 ## Files
 
-You can generate a file summary using the following line of code. You should drop the
-changelog file from the list manually (since it will always be one commit out of date).
+You can generate a file summary using the following line of code.
 
 ```
 git diff --compact-summary development-next
@@ -126,15 +144,27 @@ git diff --compact-summary development-next
 
 The following files were modified in this change:
 ```
- build/Makefile                       |   2 +-
- build/Makefile.md                    |   2 +-
- build/VisionEval-dev.R               | 147 ++++++++++++++++++++++++----
- build/config/VE-components.yml       | 180 +++++++++++++++++------------------
- build/scripts/build-config.R         |  10 +-
- build/scripts/build-modules.R        |  52 +++++-----
- build/scripts/build-runtime.R        |  48 ++++++++--
- changelog/test-architecture.md (new) | 129 +++++++++++++++++++++++++
- launch.bat (new)                     |   2 +
- sources/runtime/VisionEval.R         |  50 +++++++++-
- 10 files changed, 468 insertions(+), 154 deletions(-)
+build/Makefile                                     |   2 +-
+build/Makefile.md                                  |   2 +-
+build/VisionEval-dev.R                             | 175 +++++++++++++++++---
+build/config/VE-components.yml                     | 180 ++++++++++-----------
+build/scripts/build-config.R                       |  10 +-
+build/scripts/build-modules.R                      |  52 +++---
+build/scripts/build-runtime.R                      |  48 +++++-
+changelog/changelog-sample.md                      |   3 +-
+changelog/test-architecture.md (new)               | 148 +++++++++++++++++
+launch.bat (new)                                   |   2 +
+sources/framework/VEModel/R/environment.R          |  30 +++-
+sources/framework/VEModel/R/models.R               |  34 ++--
+sources/framework/VEModel/R/results.R              |  15 +-
+.../VEModel/inst/models/VERSPM/model-index.cnf     |   3 -
+.../VERSPM/stage-year-2010/visioneval.cnf (gone)   |   9 --
+.../VERSPM/stage-year-2038/visioneval.cnf (gone)   |  20 ---
+.../VEModel/inst/models/VERSPM/visioneval-year.cnf |  20 ++-
+sources/framework/VEModel/launch.bat               |   3 +-
+sources/framework/VEModel/tests/test.R             | 165 +++++++++++--------
+sources/framework/visioneval/R/datastore.R         |  14 +-
+sources/framework/visioneval/R/getModuleL.R (new)  | 103 ++++++++++++
+sources/runtime/VisionEval.R                       |  50 +++++-
+22 files changed, 800 insertions(+), 288 deletions(-)
 ```
