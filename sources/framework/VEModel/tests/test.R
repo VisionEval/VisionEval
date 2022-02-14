@@ -679,12 +679,22 @@ test_select <- function( log="info" ) {
     rs <- rs$results()
     rs <- rs[length(rs)]
   }
-  testStep("Get result selection")
+  testStep("Directly access results using 'find'")
+  cat("Result has",length(find <- rs$find()),"fields\n") # All the fields...
+  print(head(find$fields(),n=10)) # First 10 or so field descriptors
+  testStep("Access the selection")
   sl <- rs$select()
   cat("Fields to select from:",length(sl$fields()),"\n")
   testStep("Finding Worker table for 2038")
-  debug(sl$find)
   print(sl$find(Group="2038",Table="Worker"))
+  testStep("Finding Worker table for 2038 straight from the results")
+  wkr <- sl$find(Group="2038",Table="Worker") 
+  print(wkr)
+  testStep("Selecting Worker table and extracting to a data.frame")
+  rs$select(wkr)
+  wrk.table <- rs$extract(saveTo=FALSE)[[1]] # only one table returned in a list
+  print(wrk.table[sample(nrow(wrk.table),10),])
+  return(rs)
 }
 
 test_results <- function (log="info") {

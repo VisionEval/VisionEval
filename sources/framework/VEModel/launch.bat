@@ -1,2 +1,3 @@
 @echo off
-call ../../../launch.bat
+cd ../../..
+call launch.bat
