@@ -1,3 +1,9 @@
+### setup.R
+#   Set up the walkthrough environment
+#   It's harmless to run this again, but generally you should just
+#   let it auto-run by using "ve.test()" - no parameters on ve.test
+#   will load the walkthrough.
+
 # Establish the VisionEval environment (VEModel comes afterwards)
 
 # Locate ve-lib

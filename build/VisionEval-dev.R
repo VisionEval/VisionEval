@@ -136,7 +136,40 @@ evalq(
       return( invisible(owd) )
     }
 
-    ve.test <- function(VEPackage,tests="test.R",localRuntime=TRUE,usePkgload=NULL) {
+    ve.test <- function(VEPackage,tests="test.R",changeRuntime=TRUE,usePkgload=NULL) {
+
+      walkthroughScripts = character(0)
+      if ( missing(VEPackage) || tolower(VEPackage)=="walkthrough" ) { # load the walkthrough
+        Sys.setenv(VE_RUNTIME="") # clear any saved runtime directory
+        if ( changeRuntime ) {
+          ve.run()
+          setwd("walkthrough")
+        } else {
+          message("Running in VEModel source (for developing walkthrough)")
+          setwd(file.path(ve.root,"sources/framework/VEModel/inst/walkthrough"))
+        }
+        if ( ! file.exists("setup.R") ) {
+          stop("No walkthrough setup.R in ",getwd())
+        } else {
+          message("Loading walkthrough from ",normalizePath("setup.R",winslash="/"))
+          source("setup.R")
+        }
+        walkthroughScripts = dir("..",pattern="\\.R$",full.names=TRUE)
+        if ( is.logical(usePkgload) && usePkgload ) {
+          # Do a compatible test load of VEModel itself -- useful for using
+          # walkthrough to test (and fix) VEModel.
+          VEPackage = "VEModel"         # debug VEModel
+          changeRuntime = FALSE         # but run in location selected above
+          usePkgload = NULL             # revert to default pkgload behavior
+          tests = character(0)          # don't load the VEModel tests
+          # Fall through to do the following while running in the walkthrough runtime
+          # ve.test("VEModel",tests=character(),changeRuntime=FALSE,usePkgload=NULL)
+        } else {
+          message("\nWalkthrough scripts:")
+          print(walkthroughScripts)
+          return(invisible(walkthroughScripts))
+        }
+      }
       if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
         stop("Missing required package: 'pkgload'")
       }
@@ -168,17 +201,16 @@ evalq(
       # (2) check each file for existing and report those that don't exist
       # (3) normalize all the test paths
       owd <-setwd(VEPackage.path)
-      print(tests)
-      expand.tests <- ! grepl("/|\\\\",tests)
-      tests[expand.tests] <- file.path(VEPackage.path,"tests",tests[expand.tests])
-      tests[!expand.tests] <- normalizePath(tests[!expand.tests],winslash="/",mustWork=FALSE) # relative to VEPackage.path
-      tests <- tests[ file.exists(tests) ]
-#       if ( length(tests)==0 ) {
-#         stop("No 'test.R' file in ",VEPackage.path)
-#       }
+      if ( length(tests) > 0 ) {
+        print(tests)
+        expand.tests <- ! grepl("/|\\\\",tests)
+        tests[expand.tests] <- file.path(VEPackage.path,"tests",tests[expand.tests])
+        tests[!expand.tests] <- normalizePath(tests[!expand.tests],winslash="/",mustWork=FALSE) # relative to VEPackage.path
+        tests <- tests[ file.exists(tests) ]
+      }
 
       # Locate the runtime folder where the tests will run
-      if ( localRuntime ) {
+      if ( changeRuntime ) {
         # Use a runtime associated specifically with the tested package
         owd <- setwd(VEPackage.path)
         if ( dir.exists("tests") ) { # in VEPackage.path
@@ -197,13 +229,14 @@ evalq(
         model.path <- file.path(ve.runtime,"models")
         if ( ! dir.exists(model.path) ) dir.create(model.path)
         Sys.setenv(VE_RUNTIME=ve.runtime) # override VEModel notion of ve.runtime
-        # Use localRuntime to debug this module in a different module's runtime directory
-        # Load the other module with localRuntime=TRUE, then the new module with localRuntime=FALSE
-        message("Testing in Local runtime: ",ve.runtime)
+        # Use changeRuntime=FALSE to debug this module in a different module's runtime directory
+        # Load the other module with changeRuntime=TRUE
+        # then the new module with changeRuntime=FALSE
+        message("Testing in Package runtime: ",ve.runtime)
       } else {
         # Use the standard runtime folder
         ve.runtime <- get.ve.runtime()
-        message("Testing in Built runtime: ",ve.runtime)
+        message("Testing in Existing runtime: ",ve.runtime)
       }
 
       # Detach and unload VE-like Packages
@@ -220,7 +253,10 @@ evalq(
       VEpackages <- grep("^VE",nameSpaces,value=TRUE)
       if ( length(VEpackages)>0 ) {
         # sessionInfo keeps packages in the reverse order of loading (newest first)
-        # so we can unload in the order provided and not trip over dependencies
+        # so we can hopefully unload in the order provided and not trip over dependencies
+        message("If you get an error unloading package namespaces,")
+        message("Run unloadNamespace manually for the one that is blocking removal.")
+        message("Then reissue ve.test() with the same parameters.")
         for ( pkg in VEpackages ) {
           message("unloading package ",pkg)
           unloadNamespace(pkg)
@@ -237,26 +273,36 @@ evalq(
         # Don't want to use pkgload with module packages since it will re-estimate them
         # Expect them to be built and loaded; we'll still grab their tests
         require(VEModel,quietly=TRUE)
-        require(VEPackage,quietly=TRUE) # Use the built package
+        eval(expr=parse(text=paste0("require(",VEPackage,",quietly=TRUE)"))) # Use the built package
       }
 
       # (Delete and Re-)Create an environment for the package tests ("test.VEPackage) on the search
       # path sys.source each of the test files into that environment
-      test.env <- attach(NULL,name="test.VEPackage")
-      for ( test in tests ) {
-        sys.source(test,envir=test.env)
+      if ( length(tests) > 0 ) {
+        test.env <- attach(NULL,name="test.VEPackage")
+        for ( test in tests ) {
+          sys.source(test,envir=test.env)
+        }
       }
 
-      message("Trying to run in ",ve.runtime)
       setwd(ve.runtime)
       
       # A list of the objects loaded from the "tests" will be displayed after loading
-      tests <- objects(test.env)
-      if ( length(tests)==0 ) stop(paste0("No test objects defined for ",VEPackage))
-      return( tests )
+      if ( length(walkthroughScripts)>0 ) {
+        message("\nWalkthrough scripts:")
+        print(walkthroughScripts)
+        return(invisible(walkthroughScripts))
+      } else {
+        tests <- objects(test.env)
+        if ( length(tests)==0 ) stop(paste0("No test objects defined for ",VEPackage))
+        message("\nTest functions:")
+        print( tests )
+        return(invisible(tests))
+      }
     }
     message("ve.build() to (re)build VisionEval\n\t(see build/Building.md for advanced configuration)")
     message("ve.run() to run VisionEval (once it is built)")
     message("ve.test('VEPackage',tests='test.R') to pkgload a VisionEval package and load its tests")
+    message("ve.test() loads the VEModel walkthrough runtime - VE must be built")
   }
 )

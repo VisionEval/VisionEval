@@ -115,7 +115,6 @@ shell.exec(mini$modelPath)
 # Tour the model using VEModel exploration functions
 
 mini$dir()              # List the summary contents of the model
-# TODO 8/27/2021: $dir does not work for staged models (need to handle stage directories)
 
 mini$dir(inputs=TRUE)   # List just the model input directories
 mini$dir(inputs=TRUE,all.files=TRUE) # List all the input files...

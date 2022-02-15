@@ -2670,7 +2670,7 @@ installStandardModel <- function( modelName, modelPath, confirm=TRUE, overwrite=
   # Confirm installation if requested
   install <- TRUE
   if ( confirm && interactive() ) {
-    msg <- paste0("Install standard model '",model$Name,"' into ",installPath,"?\n")
+    msg <- paste0("Install standard model '",basename(installPath),"' into ",installPath,"?\n")
     install <- confirmDialog(msg)
   }
 

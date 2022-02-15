@@ -1,8 +1,13 @@
+### install.R
+#   Walk through model installation
+
 # Load VEModel package (in effect, the visioneval environment)
 require(VEModel)
 
 # framework functions need namespace resolution, visioneval::frameworkFunction
+message("\nLoaded packages and searchable environments:")
 print(search())            # Notice VEModel package attached, but not visioneval
+message("\nLoaded namespaces, accessible via Package::")
 print(loadedNamespaces())  # Notice "visioneval" among the loaded namespaces
 
 ##########################
@@ -15,7 +20,7 @@ if ( ! dir.exists("models") ) {
   dir.create("models")
 } else {
   # clean up the mini-model if it's still there
-  if ( dir.exists("model/BARE") ) unlink("model/BARE",recursive=TRUE)
+  if ( dir.exists("models/BARE") ) unlink("models/BARE",recursive=TRUE)
 
   # delete any other models in "models" directory
   otherModels <- grep("VERSPM-run",dir("models",full.names=TRUE),invert=TRUE,value=TRUE)
@@ -54,16 +59,26 @@ installModel("VERSPM",var="") # "var" is short for "variant" - you can spell it 
 dir("models") # Setup.R already installed and ran "VERSPM-run" (using the "pop" variant - more on that below)
 
 installModel("VERSPM") # default if running interactively is to ask for a "y" to confirm installation
-# If no variant is specified, you get "base"
+# If no variant is specified, you get "base", so this instruction creates "VERSPM-base"
 
-installModel("VERSPM",variant="pop")  # Multi-stage version of VERSPM
+dir("models") # Note that the installed name includes the variant: VERSPM-base and VERSPM-run
 
-dir("models") # Note that the installed name includes the variant: VERSPM-base
-# Can try VERPAT too
-installModel("VERPAT",modelPath="MYRPAT",confirm=FALSE) # base variant, but with name we chose
+# Install some additional models (Enter "y" plus "Enter" when prompted)
+
+pop <- installModel("VERSPM",variant="pop")  # Multi-stage version of VERSPM as "VERSPM-pop"
+rpat <- installModel("VERPAT",modelPath="MYRPAT",confirm=FALSE) # VERPAT base variant, but with name we chose
+
+# Installed these models:
+
+message("\nVERSPM-pop:")
+print(pop)
+message("\nVERPAT-base:")
+print(rpat)
+rm(pop,rpat)
 
 # See what we've got
-dir("models")
+message('\nExpect to see: "MYRPAT", "VERSPM-base", "VERSPM-pop", and "VERSPM-run"')
+print(dir("models"))
 
 # opening models
 vrb <- openModel("VERSPM-base")
