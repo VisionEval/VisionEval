@@ -689,6 +689,7 @@ ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchive
   dir.create(newModelPath,showWarnings=FALSE)
   # check that the directory produces the right results files
   model.files <- self$dir(root=TRUE,inputs=TRUE,results=copyResults,archive=copyArchives)
+  model.files <- model.files[-1] # dir returns self$modelPath as its first element
   copy.subdir <- dirname(model.files)
   unique.dirs <- unique(copy.subdir)
   for ( d in unique.dirs ) {
@@ -908,7 +909,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
   #   archives FALSE will ignore results archives
   # force says "just go ahead and delete everything", respecting outputOnly and archives,
   #   so the default is to delete the outputs and leave the results, but if
-  #   called a second time, will delete the results.
+  #   called a second time, it will delete the results (but only if outputOnly is explicitly FALSE)
   # Result archives are always untouched, unless archives==TRUE, in which case
   #   all of them are deleted too.
 
@@ -919,9 +920,11 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
   
   to.delete <- self$dir(outputs=TRUE,stage=stage)
   if ( missing( outputOnly ) ) {
-    outputOnly <- length(to.delete)>0
+    # Can't force delete of results without explicit outputOnly=FALSE
+    outputOnly <- ( length(to.delete)>0 || force )
   }
-  if ( ! isTRUE(outputOnly) ) to.delete <- c(to.delete,self$dir(results=TRUE))
+
+  if ( ! isTRUE(outputOnly) ) to.delete <- c(to.delete,self$dir(results=TRUE,stage=stage))
 
   # Only offer archives to delete if we're looking at all stages
   if ( isTRUE(archives) && is.null(stage) ) to.delete <- c(to.delete,self$dir(archive=TRUE))

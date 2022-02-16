@@ -327,7 +327,6 @@ ve.results.units <- function(selected=TRUE,display=NULL) {
 ve.results.extract <- function(
   saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
   prefix = "",            # Label to further distinguish output files, if desired
-  overwrite=FALSE,
   select=NULL,            # replaces self$selection if provided
   convertUnits=TRUE       # will convert if display units are present; FALSE not to attempt any conversion
 ) {
@@ -366,7 +365,7 @@ ve.results.extract <- function(
   } else {
     metadata$DisplayUnits <- NA
   }
-  extract <- metadata[ , c("Name","Table","Group","DisplayUnits") ]
+  extract <- metadata[ , c("Name","Table","Group","Units", "DisplayUnits") ]
 
   extractTables <- unique(extract[,c("Group","Table")])
   extractGroups <- unique(extractTables$Group)
@@ -456,12 +455,6 @@ ve.results.extract <- function(
       # group and timeWritten must have one element, dataNames may have many
       # Files will have length(dataNames)
       Files <- paste0(paste(group,dataNames,timeStamp,sep="_"),".csv")
-      if ( ! overwrite ) {
-        existing <- file.exists(file.path(outputPath,Files))
-        for ( file in which(existing) ) {
-          Files[ file ] <- basename(getUniqueName(outputPath,Files[file]))
-        }
-      }
       names(Files) <- dataNames;
 
       # Write the files (data = .csv) and a metadata file (meta = .metadata.csv)
@@ -488,16 +481,21 @@ ve.results.extract <- function(
 
 # Update this selection, or just return what is already selected
 ve.results.select <- function(select=integer(0)) {  # integer(0) says select all by default. Use NA or NULL to select none
-  if ( ! is.null(select) ) {
+  # if is.null(select) do not change the current results selection
+  # integer(0) says reset and select all
+  if ( missing(select) || ( ! is.null(select) && ! is.na(select) ) ) {
     self$selection <- VESelection$new(self,select=select)
   }
   invisible(self$selection)
 }
 
 # Find fields (as objects) within the current selection
-ve.results.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL) {
+ve.results.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,select=FALSE) {
   selection <- self$select()
-  return( selection$find(pattern=pattern,Group=Group,Table=Table,Name=Name,as.object=TRUE) )
+  found <-selection$find(pattern=pattern,Group=Group,Table=Table,Name=Name,as.object=TRUE)
+  # without "select=TRUE", found is an independent selection (not bound to results)
+  if ( select ) found <- self$select(found) # bind selection to results
+  return( found )
 }
 
 ve.results.copy <- function(ToDir, Flatten=TRUE, DatastoreType=NULL) {
@@ -611,9 +609,13 @@ ve.select.print <- function(details=FALSE) {
     if ( ! details ) {            # just the field names (see below)
       print( self$fields() )
     } else {                      # full data frame of selected model results
-      print( self$results$modelIndex[ self$selection, ] )
+      print( self$show() )
     }
   }
+}
+
+ve.select.show <- function() { # show the subset of results$modelIndex for this selection
+  return( self$results$modelIndex[ self$selection, ] )
 }
 
 ve.select.valid <- function() { return(self$results$valid()) }
@@ -716,10 +718,10 @@ ve.select.select <- function(select) {
   invisible(self)
 }
 
-# Find does NOT alter the object it is called on.
+# Find does NOT alter the object it is called on unless 'select=TRUE'
 # It either produces a new VESelection from the matching elements of self$selection (as.object==TRUE)
 # OR it products a vector of matching element indices (as.object==FALSE)
-ve.select.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,as.object=TRUE) {
+ve.select.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,as.object=TRUE,select=FALSE) {
   # if pattern (regexp) given, find names matching pattern (only within the "fields" part)
   # if group or table not specified, look in any group or table
   # return vector of indices for matching rows or (as.object==TRUE) a new VESelection object
@@ -750,10 +752,21 @@ ve.select.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,as.objec
   })
   if ( length(newSelection) == 0 ) newSelection <- as.integer(NA)
   if ( as.object ) {
-    return(VESelection$new(self$results, select=newSelection))
+    if ( select ) {
+      self$select(newSelection)
+      found <- self
+    } else {
+      found <- VESelection$new(self$results, select=newSelection)
+    }
   } else {
-    return(newSelection)
+    if ( select ) {
+      self$selection <- newSelection
+      found <- self$selection
+    } else {
+      found <- newSelection
+    }
   }
+  return( if ( select ) invisible(found) else found )
 }
 
 # Add another selection to self (add + assign)
@@ -795,11 +808,10 @@ ve.select.none <- function() {
 ve.select.extract <- function(
   saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
   prefix="",
-  overwrite=FALSE,
   convertUnits=TRUE
 ) {
   # Delegates to the result object, setting its selection in the process
-  invisible( self$results$extract(saveTo,prefix=prefix,overwrite,select=self,convertUnits=convertUnits) )
+  invisible( self$results$extract(saveTo,prefix=prefix,select=self,convertUnits=convertUnits) )
 }
 
 #' Conversion method to turn a VESelection into a vector of selection indices
@@ -824,21 +836,20 @@ VESelection <- R6::R6Class(
     # methods
     initialize=ve.select.initialize,
     copy=ve.select.copy,          # Create a new selection object with the same results and indices
-    print=ve.select.print,
-    valid=ve.select.valid,
-#    save=ve.select.save,          # This saves the selection
-#    open=ve.select.open,          # This opens a selection
-    extract=ve.select.extract,
-    export=ve.select.extract,
-    find=ve.select.find,
-    parse=ve.select.parse,
+    print=ve.select.print,        # Print list of fields or (details=TRUE) the subset of results$modelIndex
+    show=ve.select.show,          # retrieve the selected subset of results$modelIndex (data.frame)
+    valid=ve.select.valid,        # is the selection valid against results$modelIndex
+    extract=ve.select.extract,    # extract the selection from associated results
+    export=ve.select.extract,     # export the extracted selection (eventually split out "saving a table" from "getting a table")
+    find=ve.select.find,          # general search facility for selecting group/table/name
+    parse=ve.select.parse,        # interpret different ways of specifying a selection (number, field descriptor)
     select=ve.select.select,      # assign - set self to other selection value
-    add=ve.select.add,            # "union" - indices in either selection
-    remove=ve.select.remove,      # "setdiff" - indices not in other selection
-    and=ve.select.and,            # "intersection" - only indices in both selections
-    or=ve.select.add,             # alias for "add"
-    all=ve.select.all,            # select all indices
-    none=ve.select.none,          # select no indices (empty selection)
+    add=ve.select.add,            # "union" - indices are included from either selection
+    remove=ve.select.remove,      # "setdiff" - keep indices that are not in the other selection
+    and=ve.select.and,            # "intersection" - keep indices in both selections
+    or=ve.select.add,             # alias for "add" (just expressed as a logical operation)
+    all=ve.select.all,            # select all indices (resets the selection)
+    none=ve.select.none,          # select no indices (empty selection) - usually as the basis for adding in certain ones
 
     # Field lists (read-only)
     groups=ve.select.groups,
