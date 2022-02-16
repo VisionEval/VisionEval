@@ -15,19 +15,33 @@ source("setup.R")
 #########################
 
 source("../install.R")
-# Demonstrates installing built-in models, runs one of them, caches results
+# Demonstrates installing built-in models that you can
+# use as the basis for your own models
+
+#########################
+# INSTALL BUILT-IN MODELS
+#########################
+
+source("../running.R")
 
 ################################
 # FIRST VIEW OF MODEL STRUCTURES
 ################################
 
 source("../structure.R")
+# Shows some basic elements of the model structures
+# Also see "run-parameters.R" below for understanding
+# how VisionEval and its models are configured.
 
 ##########################
 # EXTRACTING MODEL RESULTS
 ##########################
 
 source("../extract.R")
+# Shows how to extract raw results from a model into
+# tabular form that you can analyze in another system
+# (or continue to analyze in R)
+#
 # Expects "VERSPM-run" model to be present and "Run Complete"
 
 ##########################
@@ -48,11 +62,17 @@ source("../scenarios.R")
 
 source("../queries.R")
 
-#######################
-# LOADING ANOTHER MODEL
-#######################
+################
+# MODEL SETTINGS
+################
 
-source("../load-model.R")
+source("../run-parameters.R")
+
+##########################
+# DEBUGGING A FAILED MODEL
+##########################
+
+source("../debugging.R")
 # Illustrating how to copy a Datastore from an earlier model into a new one
 # Applications include post-mortem debugging and pre-building a Datastore to
 #   test a module under development.

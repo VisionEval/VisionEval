@@ -4,7 +4,7 @@
 require(VEModel) # just in case it's not already out there...
 mwr <- openModel("VERSPM-run") # Run Install.R to install/run that model
 
-##########################
+##########################  
 # EXTRACTING MODEL RESULTS
 ##########################
 
@@ -22,82 +22,239 @@ mwr <- openModel("VERSPM-run") # Run Install.R to install/run that model
 # Dump all of a model's results:
 results <- mwr$results()
 if ( is.list(results) ) { # TRUE if there are multiple Reportable stages
-  results <- results[[1]]  # or select a different stage by name or index
+  message("All the reportable model stages:")
+  print(names(results))
+  message("Just using the last one")
+  results <- results[[length(results)]]  # or select a different stage by name or index
+  # See "model-stages.R" for how to work with a staged model (results list)
 }
-print(results) # Just the first "reportable" stage.
+print(results) # In a one-stage model, you get the final results
+# Otherwise, the code in this walkthrough works on the last Reportable stage
+
+# You can get a low-level report of what is in the results Datastore
+
+datastore.list <- results$list() # default is a pretty minimal set
+print(names(datastore.list))  # Names of basic fields
+print(nrow(datastore.list))   # How many fields are present in this stage results
+
+# here are all the fields available (see use below in DisplayUnits example)
+datastore.full.list <- results$list(details=TRUE)
+print(names(datastore.full.list))
+print(datastore.full.list[sample(nrow(datastore.full.list),10),])
+
+# Compare the the model list function to the results list function
+# the model list reports what is in the model SPECIFICATIONS (i.e. "in theory")
+# the results list reports what is in the Datastore after a run (i.e. "in reality")
+# if the model crashed before completion, the two lists will be different!
+specifications.full.list <- mwr$list(details=TRUE)
+print(names(specifications.full.list))
+print(specifications.full.list[sample(nrow(specifications.full.list),10),])
+
+# Remember that you can open (or extract) the model results even if something went wrong
+# during a run - the results list will show you the subset of data that got computed
+# before the model crashed. Very helpful for debugging!
+# TODO: flag model status via stderr/warnings when extracting an incomplete run
 
 # Result extraction must be done stage-by-stage (or scenario-by-scenario)
+# See "model-stages.R" walkthrough for how to manage that (including
+# dumping all the raw scenario data into a - possibly huge - database)
 
-# If you want to extract from the whole model, you can flatten the Datastore (see later)
-#   into a new directory. but be careful if you have a bunch of stages that fill up a 2050
-#   future year group with variants of the same data; you'll only get the data from the
-#   final one.
+# Queries, on the other hand, work just fine with scenarios and modelStages
+# (that is, you just run the query on the results and it will process every
+# Reportable stage).
+# See the "Queries.R" walkthrough.
 
-# Queries, on the other hand, work just fine with modelStages - see Queries.R
-
-# Here's the basic extraction of everything
+# Here's the basic extraction of everything in the first reportable model stage
 results$extract()
 mwr$dir(output=TRUE)                # Just shows the directory names
-mwr$dir(output=TRUE,all.files=TRUE) # Lists all the individual files
+print(
+  outputs <- mwr$dir(output=TRUE,all.files=TRUE) # Lists all the extracted output files
+)
+
+# Inspect one of the metadata files (metadata is very basic: just the field
+# group/table/name and units (plus display units if those are different)
+metadata.HH2038 <- read.csv( file=grep("2038_Household.*metadata\\.csv",outputs,value=TRUE))
 
 # See what is selected
 print(results)
-sl <- results$select() # Get full field list
+sl <- results$select() # Get list of all the available fields (resembles results$list())
 
-print(
-  head(
-    capture.output( print(sl) ), # odd hack to get print-formatted view of the selection
-    n=12
-  )
-)
-fnd <- results$find()   # Does almost the same thing as select, but find lets you filter the output
+# show the selected fields (in short form)
+print(sl)
 
-# Just fields in the workers table, but in all years:
+# it's simpler to print the following (because you can print just a subset):
+sl$fields()[1:10]
+
+fnd <- results$find()   # Does essentially the same thing as select, but can do more (see below)
+fnd$fields()[1:10]
+
+# Get lists of groups and tables.
+print( sl$groups() )
+print( sl$tables() )
+
+# Just fields in the workers table, but in any available years:
+# Special Group "Year" (or "Years") just shows the scenario year outputs
 wkr <- results$find(Group="Year",Table="Worker")
-wkr <- results$select( wkr ) # attaches selected fields to the results
+print(wkr)
+print(wkr$fields()) # same...
 
-# See what is selected; first by looking at the wkr (worker) list
-print(
-  head(
-    capture.output( print(wkr) ), # odd hack to get print-formatted view of the selection
-    n=12
-  )
-)
+# Provide a list of table names
+# Can also do that with Group or Field
+wkr.veh <- results$find(Table=c("Worker","Vehicle"))
+print(wkr.veh)
+rm(wkr.veh)
 
+# Explore more selection features:
 
-# Then by looking at what is selected in the results (should be the same)
-print(
-  head(
-    capture.output( print(results$select()) ), # odd hack to get print-formatted view of the selection
-    n=12
-  )
-)
+print(wkr$show()[1:10,]) # shows the detailed modelIndex for selected fields
 
+print(results) # Nothing selected yet in results
+
+wkr <- results$select( wkr ) # filters results on selected fields
+print(results)
+
+sl <- results$select(NA) # get the results that are currently selected
+print(sl)
+
+results$select() # clear selection (selects all)
+print(results)
+
+# "all-in-one" instruction to find and select fields
+wkr <- results$find(Group="Year",Table="Worker",select=TRUE)
+print(results) # Just the Worker tables selected
 
 #######################################
 # SELECTING GROUPS, TABLES AND DATASETS
 #######################################
 
+# Access a VESelection object based on the results in order to do more complex selection
+# (e.g. several tables with different fields in each one)
+
 # Do some basic field extraction - list fields
+sl <- results$select() # get the selection from within the results
+print(results)
+sl$find(Group='2010',Table='Worker',select=TRUE)
+print(results)
+# Notice that the selection in results was changed!
+
+# Even though the following looks like it is working on something separate,
+# "sl" (the selection) is attached to the results because of how we
+# created it. To create a "free" selection, use find
+
+results$select() # reset results selection
+print(results)
+sl.find <- results$find() # a COPY of the results selection, finding everything
+sl.find$find(Group='2010',Table='Worker',select=TRUE)
+print(sl.find)
+print(results) # All fields are still selected!
+
+# to use sl.find, we need to attach it to the results
+results$select(sl.find)   # reattaches sl.find to results
+print(results)
+
+sl$all() # select everything (in results)
 print(sl$groups())
 print(sl$tables())
 fld <- sl$fields()
 print(fld[sample(length(fld),20)])
 
 # Select some subsets by group, table or field name...
-# Can we easily identify group names, table names, field names and zero in on selecting them?
+# Can we easily identify group names, table names, field names and zero in on selecting
+# them?
+sl$all() # reset selection to all fields
+print(sl$groups()) # all groups
 sl$select( sl$find(Group="Years") )
-print(sl$groups())
-sl$select( sl$find(Group=sl$groups()[1]) )         # Just the first ones
-print(sl$groups())
+print(sl$groups()) # just the year groups
+sl$find(Group=sl$groups()[1], select=TRUE )   # Select just the first ones, using selection shorthand
+print(sl$groups()) # just the earliest year (probably the Base Year)
 
+# Select the Household and Vehicle tables in the first Year group
 sl$select( sl$find(Group=sl$groups()[1],Table=c("Household","Vehicle")) )
-print(sl)
-print(head(capture.output(print(sl,details=TRUE)),n=12))
+print(head(sl$show(),n=12)) # first 12 rows of selected modelIndex
 
+# Can do an extraction directly from the selection
+# (don't have to select results dpirectly)
+print(results)     # Just the Household and Vehicle tables selected
 sl$extract()
 results$extract() # WARNING: Uses "sl" selection
-sl$all() # deselect everything
+sl$all()          # deselect everything
+print(results)    # everything selected
+
+slf <- results$find() # all fields; selection not attached to results
+slf$find(Table="Worker",select=TRUE)
+print(results)    # everything still selected
+print(slf)    # Worker table in all years
+slf$and( slf$find(Group="2010") ) # Limit to Worker table just to 2010
+slf$or( slf$find(Group="2038",Table="Vehicle") ) # Also include 2038 Vehicle table (plus 2010 Worker table)
+print(slf)
+print(results)    # results still have everything selected
+
+slf$extract()     # just extract 2010 Worker and 2038 Vehicle (base selection of results is unaltered)
+
+######################################
+# EXPORTING RESULTS TO non-CSV FORMATS
+######################################
+
+# extract can produce a list of R data.frames instead of .csv files
+# you can save those in any file format that can understand a table of rows and columns
+extracted.df <- slf$extract(saveTo=FALSE)
+# returns a named list of data.frames whose names correspond to the tables
+print(names(extracted.df))
+
+# you can also get data.fraes with the metadata for each field (rather than the data)
+meta.df <- slf$extract(data=FALSE)
+print(names(meta.df))    # Columns are the metadata fields
+print(meta.df[1:10,])    # Rows are the individual data element names and their metadata values
+
+# Here's an example to load the Workers and Vehicle tables we extracted into a new Sqlite
+# database in a subdirectory of the VisionEval runtime.
+if ( ! require(DBI) || ! require(RSQLite) ) {
+  message("Please install the DBI and SqliteR packages")
+  stop("Stopping here - run package installation manually")
+  install.into <- .libPaths()[1]     # Pick a better lib location if you have one
+  install.packages("DBI",lib=install.into)
+  require(DBI)
+  install.packages("RSQLite",lib=install.into)
+  require(RSQLite)
+}
+
+# Note that the following general concept will work with ANY R DBI compliant datasource,
+# so you can use Excel (if the tables don't have too many rows) or Access, or SQLServer or
+# Oracle or PostgreSQL or ... whatever!
+# Just change the db.connection (see the R DBI documentation and the
+# package docs for your particular database). You may have to tinker with Excel
+# to get the Workbook/Worksheets to come out right...
+
+# Make a temporary SQLite database (delete any already there)
+db.connection <- "my-db.sqlite" # TODO: put it in the model outputs...
+mydb <- dbConnect(RSQLite::SQLite(), db.connection)
+
+# Put the extracted data into the new database
+for ( ve.table in names(extracted.df) ) {
+  # Write the results to the table (same name as the data.frame)
+  dbWriteTable( mydb, ve.table, extracted.df[[ve.table]] )
+}
+
+# See the tables in the databse (or visit it outside R)
+dbListTables(mydb)
+
+# It's good practice to close the database when you're done with it
+dbDisconnect(mydb)
+
+########################
+# CLEARING RESULTS
+########################
+
+mwr$dir(outputs=TRUE) # Show all the output folders we created by extracting above
+mwr$clear()           # By default, will offer to clear any outputs; can also clear current or saved model results
+# Choose "all" to delete all outputs, or you can select them by number or range
+mwr$dir(outputs=TRUE,all.files=TRUE) # in case you forgot what is in each extraction folder...
+
+slf$extract()
+mwr$dir(outputs=TRUE)
+mwr$clear(outputOnly=TRUE,force=TRUE) # Just blow them all away without asking
+# WARNING: if there are no outputs you will STILL be asked for confirmation (or if this
+# command is not executed interactively, the instruction will be ignored)
 
 ########################
 # CHANGING DISPLAY UNITS

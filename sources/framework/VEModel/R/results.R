@@ -324,11 +324,15 @@ ve.results.units <- function(selected=TRUE,display=NULL) {
   return( Units_df[,returnFields] )
 }
 
+# TODO: finish the "data" flag - data +/- metadata
 ve.results.extract <- function(
   saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
   prefix = "",            # Label to further distinguish output files, if desired
   select=NULL,            # replaces self$selection if provided
-  convertUnits=TRUE       # will convert if display units are present; FALSE not to attempt any conversion
+  convertUnits=TRUE,      # will convert if display units are present; FALSE not to attempt any conversion
+  data=NULL               # NULL means generate both data and metadata if saving, otherwise just data
+                          # TRUE means generate ONLY data (no metadata)
+                          # FALSE means generate ONLY the metadata (no data)
 ) {
   if ( ! self$valid() ) stop("Model State contains no results.")
   if ( is.null(select) ) select <- self$selection else self$selection <- select

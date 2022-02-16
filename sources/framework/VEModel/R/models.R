@@ -901,17 +901,22 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
 # Function to interactively remove prior model runs or extracts
 ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL,show=10) {
   # Remove outputs and/or results, either interactively or in batch
-  # 'show' controls maximum number of outputs to display
-  # Can limit to outputs or results in a certain 'stage'
-  # outputOnly will show results as well as outputs for deletion;
+  # 'show' controls maximum number of outputs to display for selection
+  # Can limit just to outputs or results in a certain 'stage'
+  # outputOnly=FALSE will show results as well as outputs for deletion;
   #   if outputs exist, we only show those by default
   # "archives" TRUE will offer to delete results archives
   #   archives FALSE will ignore results archives
-  # force says "just go ahead and delete everything", respecting outputOnly and archives,
-  #   so the default is to delete the outputs and leave the results, but if
-  #   called a second time, it will delete the results (but only if outputOnly is explicitly FALSE)
+  # By default, clear is interactive. If "force=TRUE", then it will
+  #   not interact. Instead it will delete all the outputs or archives.
+  #   force says "just go ahead and delete everything", respecting outputOnly and archives,
+  #   so the default is to delete the outputs and leave the results
+  # If you use "force=TRUE" and clear again, nothing will happen uness you also
+  #   explicitly set "outputOnly=FALSE" in which case the model results will get deleted
+  #   (You probably don't want that!).
   # Result archives are always untouched, unless archives==TRUE, in which case
-  #   all of them are deleted too.
+  #   all of them are considered for deletion just like outputs (that is, unlike
+  #   results, the archives are considered "disposable").
 
   if ( ! private$p.valid ) {
     writeLog(self$printStatus(),Level="error")
