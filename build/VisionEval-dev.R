@@ -165,6 +165,7 @@ evalq(
           # Fall through to do the following while running in the walkthrough runtime
           # ve.test("VEModel",tests=character(),changeRuntime=FALSE,usePkgload=NULL)
         } else {
+          require(VEModel,quietly=TRUE)      # Walkthrough requires VEModel
           message("\nWalkthrough scripts:")
           print(walkthroughScripts)
           return(invisible(walkthroughScripts))
