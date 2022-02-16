@@ -756,7 +756,7 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
     private$p.valid <- FALSE
   }
 
-  # 
+  # show everything if we didn't specify
   if ( all(missing(root),missing(results),missing(outputs),missing(inputs),missing(archive)) ) {
     root <- results <- outputs <- inputs <- archive <- TRUE
   }
@@ -874,8 +874,11 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
       paramPaths <- unique(paramPaths)
       rootFiles <- c( rootFiles, dir(stageDirs,full.names=TRUE) )
       rootFiles <- c( rootFiles, dir(paramPaths,full.names=TRUE) )
-      rootFiles <- c( rootFiles, self$setting("ModelScriptPath",shorten=FALSE) )
-      queryPath <- file.path(rootPath,self$setting("QueryDir")) # QueryDir is always "shortened"
+      scriptPaths <- file.path(self$modelPath,self$setting("ScriptsDir"))
+      for ( st in stages ) scriptPaths <- c(scriptPaths,file.path(st$Path,self$setting("ScriptsDir",stage=st$Name,shorten=FALSE)))
+      scriptPaths <- unique(scriptPaths[dir.exists(scriptPaths)])
+      rootFiles <- c( rootFiles, dir(scriptPaths,full.names=TRUE) )
+      queryPath <- file.path(rootPath,self$setting("QueryDir")) # QueryDir is always already "shortened"
       rootFiles <- c( rootFiles, dir(queryPath,full.names=TRUE) )
     }
   } else rootFiles <- character(0)
