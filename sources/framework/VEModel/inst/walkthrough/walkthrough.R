@@ -9,6 +9,7 @@
 
 source("setup.R")
 # Establishes VisionEval runtime environment for walkthrough
+# Only needs to be run when setting up a new runtime
 
 #########################
 # INSTALL BUILT-IN MODELS
@@ -22,7 +23,7 @@ source("../install.R")
 # INSTALL BUILT-IN MODELS
 #########################
 
-source("../running.R")
+source("../running.R")   # Basic elements of running models
 
 ################################
 # FIRST VIEW OF MODEL STRUCTURES
@@ -48,31 +49,32 @@ source("../extract.R")
 # ADDING STAGES TO A MODEL
 ##########################
 
-source("../model-stages.R")
+source("../mini-model.R")    # Create a minimal model to illustrate
+source("../model-stages.R")  # Explore model stages in detail
 
 #################
 # USING SCENARIOS
 #################
 
-source("../scenarios.R")
+source("../scenarios.R")     # Use model stages as scenarios
 
 ####################################
 # BUILDING AND RUNNING MODEL QUERIES
 ####################################
 
-source("../queries.R")
+source("../queries.R")       # Develop and run queries
 
 ################
 # MODEL SETTINGS
 ################
 
-source("../run-parameters.R")
+source("../run-parameters.R") # Explore visioneval.cnf and parameters programmatically
 
 ##########################
 # DEBUGGING A FAILED MODEL
 ##########################
 
-source("../debugging.R")
+source("../debugging.R")      # How to work with partial model runs
 # Illustrating how to copy a Datastore from an earlier model into a new one
 # Applications include post-mortem debugging and pre-building a Datastore to
 #   test a module under development.

@@ -1,5 +1,4 @@
 require(VEModel)
-
 mini <- openModel("BARE")
 
 # Add stages to the mini model

@@ -189,7 +189,7 @@ ve.query.save <- function(saveTo=TRUE,overwrite=TRUE) {
       number <- number + 1
     }
     if ( file.exists(actualFile) && number>=10 ) {
-      msg <- writeLog(
+      msg <- writeLogMessage(
         c(
           paste("Too many files piled up trying not to overwrite",saveTo),
           "You should save with overwrite=TRUE and/or remove some of them."
@@ -227,7 +227,7 @@ ve.query.load <- function(FileName=NULL,QuerySpec=NULL,ModelPath=NULL,QueryDir=N
     if ( !is.null(FileName) && file.exists(FileName) ) {
       # Load the query from FileName, commandeering the modelEnvironment
       ve.model <- visioneval::modelEnvironment() # Don't need to clear ve.model
-      writeLog(paste("Loading Query:",FileName),Level="info")
+      writeLogMessage(paste("Loading Query:",FileName),Level="info")
       sys.source(self$QueryFile,envir=ve.model)
       self$add(ve.model$QuerySpec) # will interpret the list of lists as a list of VEQuerySpec
     }
@@ -288,9 +288,9 @@ ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
     qry <- asQuery(obj) # Do deeper type conversions to build a query if needed
     # NOTE: if obj is already a VEQuery, it is returned as is. It is NOT copied.
     if ( ! qry$valid() ) {
-      msg <- c("Cannot add to query:",qry$CheckMessages)
-      writeLogMessage( c(msg,deparse(obj)) )
-      stop(msg)
+      stop(
+        c("Cannot add to query:\n",paste(qry$CheckMessages,collapse="\n"))
+      )
     }
     spec <- qry$getlist() # Clone the spec list from obj
   }
@@ -365,8 +365,7 @@ ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
 
   self$check() # probably all we catch here are pre-existing errors and function order problems
   if ( length(self$CheckMessages)>0 ) {
-    writeLogMessage("QuerySpec contains errors")
-    print(self$CheckMessages) # a named character string
+    writeLogMessage("QuerySpec contains errors",Level="error")
   }
   return(self)
 }
@@ -573,8 +572,8 @@ ve.query.getlist <- function(Geography=NULL) {
     }
     if ( length(CheckMessages)>0 ) {
       newSpec <- newSpec[validity] # Remove any invalid elements from newSpec
-      writeLog(paste("Specifications invalid for Geography",Geography,":"),Level="warn")
-      writeLog(paste(CheckMessages,collapse="\n"),Level="warn")
+      writeLogMessage(paste("Specifications invalid for Geography",Geography,":"),Level="warn")
+      writeLogMessage(paste(CheckMessages,collapse="\n"),Level="warn")
     }
   }
   # Make sure list names are up to date
@@ -606,7 +605,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
   Results <- self$results(Results) # generate list of valid VEQueryResults
   if ( length(Results)==0 ) {
     stop(
-      writeLog("No query results available; run the query first",Level="error")
+      writeLogMessage("No query results available; run the query first",Level="error")
     )
   }
 
@@ -633,7 +632,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
         yrs <- which( names(v) %in% Years )
         if ( length(v[yrs])==0 ) {
           stop(
-            writeLog(paste("Years are not available in all query results:",Years,collapse=", "),Level="error")
+            writeLogMessage(paste("Years are not available in all query results:",Years,collapse=", "),Level="error")
           )
         }
         v[yrs]
@@ -650,7 +649,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
   }
   if ( length(seekMeasures) == 0 ) {
     stop(
-      writeLog(paste("Measures Not Found in Query.",seekMeasures,collapse=", "),Level="error")
+      writeLogMessage(paste("Measures Not Found in Query:",paste(pasteseekMeasures,collapse=", ")),Level="error")
     )
   }
 
@@ -664,7 +663,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
     )
     if ( length(whichGeoMeasures)==0 ) {
       stop(
-        writeLog(paste("Requested GeoType is not found in requested Measures:",GeoType),Level="error")
+        writeLogMessage(paste("Requested GeoType is not found in requested Measures:",GeoType),Level="error")
       )
     }
     seekMeasures <- seekMeasures[ whichGeoMeasures ]
@@ -697,8 +696,8 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
     Elements <- attr(value,"ScenarioElements")
     for ( year in names(value) ) {
       theseResults <- makeMeasureDataframe(value[[year]],year,GeoValues,data,wantMetadata)
-      writeLog(paste("Results for",ScenarioName,"Year",year),Level="info")
-      writeLog(paste(theseResults$Measure,collapse=","),Level="info")
+      writeLogMessage(paste("Results for",ScenarioName,"Year",year),Level="info")
+      writeLogMessage(paste(theseResults$Measure,collapse=","),Level="info")
 
       # plus initial columns for first results are metadata if requested
       if ( is.null(results.df) ) {
@@ -726,7 +725,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
     ScenarioColumns <- paste(Scenarios,ScenarioYears,sep=".")
     if ( length(Scenarios) != length(results.df[,ScenarioColumns]) || length(Scenarios) != length(ScenarioYears) ) {
       stop(
-        writeLog("Scenarios don't match up with number of measure columns (VEModel/query.R circa line 718)",Level="error")
+        writeLogMessage("Scenarios don't match up with number of measure columns (VEModel/query.R circa line 718)",Level="error")
       )
     }
   } else ScenarioColumns <- character(0)
@@ -749,7 +748,7 @@ ve.query.visual <- function(QueryResults=list(), SaveTo=NULL, overwrite=TRUE) {
   }
   if ( length(QueryResults)==0 )  {
     stop(
-      writeLog("No query results available; run the query first",Level="error")
+      writeLogMessage("No query results available; run the query first",Level="error")
     )
   }
 
@@ -759,7 +758,7 @@ ve.query.visual <- function(QueryResults=list(), SaveTo=NULL, overwrite=TRUE) {
 
   if ( length(scenarioElements)==0 ) { # No scenario elements defined - can't run visualizer
     stop(
-      writeLog("Query results do not have ScenarioElements - cannot visualize",Level="error")
+      writeLogMessage("Query results do not have ScenarioElements - cannot visualize",Level="error")
     )
   }
 
@@ -832,26 +831,26 @@ ve.query.visual <- function(QueryResults=list(), SaveTo=NULL, overwrite=TRUE) {
         file.rename(SavePath,paste0(SavePath,"-",format(Sys.time(),"%Y_%m_%d-%H_%M")))
       }
       ve.runtime <- getRuntimeDirectory()
-      writeLog(paste0("Creating Visualizer in ",gsub(ve.runtime,"",SavePath)),Level="info")
+      writeLogMessage(paste0("Creating Visualizer in ",gsub(ve.runtime,"",SavePath)),Level="info")
       if ( ! dir.exists(SavePath) ) dir.create(SavePath,recursive=TRUE) else {
-        stop(writeLog("Renaming existing visualizer failed",Level="error"))
+        stop(writeLogMessage("Renaming existing visualizer failed",Level="error"))
       }
       if ( ! dir.exists(SavePath) ) {
-        stopMsg <- writeLog("Failed to create visualizer directory:",Level="error")
-        writeLog(SavePath,Level="error")
+        stopMsg <- writeLogMessage("Failed to create visualizer directory:",Level="error")
+        writeLogMessage(SavePath,Level="error")
         stop(stopMsg)
       }
       for ( f in dir(htmlRoot,recursive=TRUE) ) {
         dest <- file.path(SavePath,f)
         showPath <- gsub(ve.runtime,"",dirname(dest))
-        writeLog(paste("Copying",f,"to",showPath),Level="info")
+        writeLogMessage(paste("Copying",f,"to",showPath),Level="info")
         if ( ! dir.exists(dirname(dest)) ) {
-          writeLog(paste("Creating directory:",showPath))
+          writeLogMessage(paste("Creating directory:",showPath))
           dir.create(dirname(dest),recursive=TRUE)
         }
         from <- file.path(htmlRoot,f)
-        writeLog(paste("From:",from),Level="info")
-        writeLog(paste("  To:",gsub(ve.runtime,"",dest)),Level="info")
+        writeLogMessage(paste("From:",from),Level="info")
+        writeLogMessage(paste("  To:",gsub(ve.runtime,"",dest)),Level="info")
         file.copy( from, dest )
       }
       visualizer.js <- file.path(SavePath,"visualizer.js")
@@ -859,8 +858,8 @@ ve.query.visual <- function(QueryResults=list(), SaveTo=NULL, overwrite=TRUE) {
       for ( js in names(jsonvars) ) {
         cat( file=visualizer.js, paste(js,"=",jsonvars[[js]],";\n"), append=TRUE )
       }
-      writeLog("Saved visualizer and data to:",Level="warn")
-      writeLog(gsub(ve.runtime,"",SavePath),Level="warn")
+      writeLogMessage("Saved visualizer and data to:",Level="warn")
+      writeLogMessage(gsub(ve.runtime,"",SavePath),Level="warn")
     }
   }
   return(invisible(jsonvars))
@@ -902,17 +901,17 @@ ve.query.export <- function(format="csv",OutputDir=NULL,SaveTo=NULL,Results=NULL
     if ( needOutputDir ) OutputDir <- visioneval::getRunParameter("OutputDir",Param_ls=Param_ls)
     QueryExtractFile <- visioneval::getRunParameter("QueryExtractTemplate",Param_ls=Param_ls)
   } else {
-    stop( writeLog("No Query Results to export.",Level="error") )
+    stop( writeLogMessage("No Query Results to export.",Level="error") )
   }
   OutputPath <- file.path(OutputPath,OutputDir)
   if ( ! dir.exists(OutputPath) ) dir.create(OutputPath)
 
-  if ( format != "csv" ) stop( writeLog("Currently only supporting .csv export",Level="error") )
+  if ( format != "csv" ) stop( writeLogMessage("Currently only supporting .csv export",Level="error") )
 
   if ( missing(Results) || is.null(Results) ) {
     if ( ! is.null(self$Model) ) Results <- self$Model$results()
   } else {
-    stop( writeLog("No results to query",Level="error") )
+    stop( writeLogMessage("No results to query",Level="error") )
   }
 
   # Extract results into data.frame
@@ -942,7 +941,7 @@ exportDir <- function(model=NULL,results=NULL) {
   } else if ( class(results) == "VEResults" ) {
     dirname(dirname(normalizePath(results$resultsPath)))
   } else {
-    stop( writeLog("Cannot export: no model or results to locate output directory.",Level="error") )
+    stop( writeLogMessage("Cannot export: no model or results to locate output directory.",Level="error") )
   }
   return(exportDir)
 }
@@ -1028,10 +1027,10 @@ ve.query.run <- function(
   Force      = FALSE   # If true, re-run the query for all results even if they are up to date
   )
 {
-  writeLog(paste("Running query:",self$Name),Level="warn")
+  writeLogMessage(paste("Running query:",self$Name),Level="warn")
   if ( missing(Model) || is.null(Model) ) {
     Model <- self$Model # Use attached model if available
-    if ( is.null(Model) ) stop( writeLog("No model results available to run query",Level="error") )
+    if ( is.null(Model) ) stop( writeLogMessage("No model results available to run query",Level="error") )
   }
   queryingModel <- FALSE
   if ( "VEModel" %in% class(Model) ) {
@@ -1044,21 +1043,21 @@ ve.query.run <- function(
       Results <- list(Results)
     } else {
       stop(
-        writeLog(paste("Unknown type for Model$results():",class(Results),collapse=","),Level="error")
+        writeLogMessage(paste("Unknown type for Model$results():",class(Results),collapse=","),Level="error")
       )
     }
   } else if ( "VEResultsList" %in% class(Model) ) {
     Results <- Model$results() # Downshift to plain list of VEResults
     if ( class(Results) != "list" || class(Results[[1]])!="VEResults" ) {
-      stop( writeLog("Program error: VEResultsList won't convert to list of VEResults",Level="error") )
+      stop( writeLogMessage("Program error: VEResultsList won't convert to list of VEResults",Level="error") )
     }
   } else {
     print(class(Model))
-    stop( writeLog(paste0("No results in Model Parameter: ",class(Model)),Level="error") )
+    stop( writeLogMessage(paste0("No results in Model Parameter: ",class(Model)),Level="error") )
   }
   if ( ! is.list(Results) ) {
     stop(
-      writeLog(
+      writeLogMessage(
         paste0("Program Error: list of results is not a list: ",class(Results)),
         Level="error"
       )
@@ -1067,12 +1066,12 @@ ve.query.run <- function(
   validResults <- sapply(Results,function(r) r$valid())
   if ( !all(validResults) ) {
     for ( result in Results[!validResults] ) {
-      writeLog(paste("Model Results",result$Name,"is Invalid; not running query."),Level="warn")
+      writeLogMessage(paste("Model Results",result$Name,"is Invalid; not running query."),Level="warn")
     }
   }
   Results <- Results[validResults]
   if ( length(Results)==0 ) {
-    stop( writeLog( "No valid model results to query",Level="error" ) )
+    stop( writeLogMessage( "No valid model results to query",Level="error" ) )
   }
 
   # Check and compile the specifications; abort if not valid
@@ -1082,7 +1081,7 @@ ve.query.run <- function(
     # Reload cached results (updates self$QueryResults and check for validity)
     # private$reload returns all the Results, whether or not they
     # have query results
-    writeLog("Checking for cached query results",Level="warn")
+    writeLogMessage("Checking for cached query results",Level="warn")
     upToDate <- sapply( private$reload(Results) ,
       function(r) {
         if ( ! "VEQueryResults" %in% class(r) || ! r$valid() ) return(FALSE)
@@ -1099,20 +1098,20 @@ ve.query.run <- function(
     )
     ResultsToUpdate <- Results[ ! upToDate ]
     if ( all(upToDate) ) {
-      writeLog("Query results are all up to date.",Level="info")
+      writeLogMessage("Query results are all up to date.",Level="info")
     } else {
-      writeLog(paste("Query results for",length(ResultsToUpdate),"model results out of",length(Results),"will be updated."),Level="info")
+      writeLogMessage(paste("Query results for",length(ResultsToUpdate),"model results out of",length(Results),"will be updated."),Level="info")
     }
   } else {
     # update everything
     ResultsToUpdate <- Results
-    writeLog("Query results will all be updated.",Level="info")
+    writeLogMessage("Query results will all be updated.",Level="info")
   }
       
   # Run the query on any out-of-date results
   # ResultsToUpdate is a list of VEResults
   if ( (numResults<-length(ResultsToUpdate)) > 0 ) {
-    writeLog(paste(paste("Updating",numResults,"Results:"),paste(sapply(ResultsToUpdate,function(x)x$Name),collapse="\n"),sep="\n"),Level="warn")
+    writeLogMessage(paste(paste("Updating",numResults,"Results:"),paste(sapply(ResultsToUpdate,function(x)x$Name),collapse="\n"),sep="\n"),Level="warn")
     doQuery(
       Results=ResultsToUpdate,         # list of VEResults objects for which to generate results
       Specifications=self$getlist(),   # A list of VEQuerySpec
@@ -1122,7 +1121,7 @@ ve.query.run <- function(
     # Results of doQuery are written to the QueryFile in Results$resultsPath
     # self$results will reload them
   } else {
-    writeLog("No results to update.",Level="info")
+    writeLogMessage("No results to update.",Level="info")
   }
 
   # Update self$QueryResults to the list of VEQueryResults that were processed in this run and
@@ -1193,7 +1192,7 @@ VEQuery <- R6::R6Class(
 ve.queryresults.init <- function(Query=NULL,VEResults=NULL) {
   # expect VEResuls$resultsPath to be normalized path
   self$Source <- VEResults # "Source" is a VEResults object
-  if ( is.null(Query) || is.null(self$Source) ) return()
+  if ( is.null(Query) || is.null(self$Source) || is.null(self$Source$resultsPath) ) return()
 
   self$Path <- file.path(self$Source$resultsPath,Query$QueryResultsFile)
   self$Results <- if ( file.exists(self$Path) ) {
@@ -1443,9 +1442,9 @@ ve.spec.check <- function(Names=NULL, Clean=TRUE) {
       if ( is.character(Names) ) {
         # Function dimensions should take care of themselves, though eventually we should have more
         # proactive management of dimensions by looking up the Symbols and their dimensions in the
-        # Specifications list. Also perhaps look up the Symbol Geography and make sure they're
-        # all compatible (if small geography for one, must be the same for others - or "Region"
-        # ok). Then set a "Geography" element for this spec based on Symbols used.
+        # Specifications list. Also perhaps look up the Symbol Getracography and make sure they're all
+        # compatible (if small geography for one, must be the same for others - or "Region" ok).
+        # Then set a "Geography" element for this spec based on Symbols used.
         Symbols <- unique(getNames(str2lang(self$QuerySpec$Function)))
         Symbols <- Symbols [ ! Symbols %in% Names ]
         # Make sure the parent.frame includes names of other specs...
@@ -1453,7 +1452,7 @@ ve.spec.check <- function(Names=NULL, Clean=TRUE) {
         if ( length(Symbols)>0 ) {
           self$CheckMessages <- c(
             self$CheckMessages,
-            paste("Function refers to undefined names:",Symbols,collapse=", ")
+            paste("Function refers to undefined names:",paste(Symbols,collapse=", "))
           )
         }
       }
@@ -1749,13 +1748,13 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
   # Skip or include measures based on presence of required Dataset
   if ( "Require" %in% names(measureSpec) ) {
     if ( ! visioneval::isDatasetPresent(measureSpec$Require["Dataset"], measureSpec$Require["Table"], thisYear, QPrep_ls) ) {
-      writeLog(paste(measureName,"(SKIPPED due to Require:)"),Level="warn")
+      writeLogMessage(paste(measureName,"(SKIPPED due to Require:)"),Level="warn")
       return( list() )
     }
   } else
   if ( "RequireNot" %in% names(measureSpec) ) {
     if ( visioneval::isDatasetPresent(measureSpec$Require["Dataset"], measureSpec$Require["Table"], thisYear, QPrep_ls) ) {
-      writeLog(paste(measureName,"(SKIPPED due to RequireNot:)"),Level="warn")
+      writeLogMessage(paste(measureName,"(SKIPPED due to RequireNot:)"),Level="warn")
       return( list() )
     }
   }
@@ -1765,8 +1764,10 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     # Elevate those to individual objects
     measure <- try( eval(parse(text=measureSpec$Function), envir=measureEnv) )
     if ( ! is.numeric(measure) ) {
-      writeLog(paste(measureName,"Function measure failed to compute."),Level="error")
-      writeLog(as.character(measure),Level="error")
+      writeLogMessage(paste(measureName,"Function measure failed to compute."),Level="error")
+      writeLogMessage(as.character(measure),Level="error")
+      print(names(measureEnv))
+      stop()
       measure <- as.numeric(NA) # Fall through with measure being scalar NA
     }
     # TODO: Figure out GeoType and GeoValues from Function components
@@ -1821,7 +1822,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
       Export=measureSpec$Export # visualizer elements...
     ) # used during export to filter on Geography
   } else {
-    writeLog(paste(measureName,"Invalid Measure Specification (must be 'Summarize' or 'Function')"),Level="error")
+    writeLogMessage(paste(measureName,"Invalid Measure Specification (must be 'Summarize' or 'Function')"),Level="error")
     measure <- as.numeric(NA)
   }
 
@@ -1949,7 +1950,7 @@ makeMeasureDataframe <- function(Values,Year,GeoValues,wantData=TRUE,wantMetadat
       if ( is.array(measure) ) {
         # it's an array of Geography, Breaks
         geoNames <- dimnames(measure)[[1]]
-        geoNames <- geoNames[ which(geoNames) %in% GeoValues ]
+        geoNames <- geoNames[ which(geoNames %in% GeoValues) ]
         if ( length(geoNames)>0 ) {
           measure  <- measure[geoNames,]
           measureNames <- paste (
@@ -1974,7 +1975,7 @@ makeMeasureDataframe <- function(Values,Year,GeoValues,wantData=TRUE,wantMetadat
           measure <- as.vector(measure)
           if ( length(measureNames) != length(measure) ) {
             stop(
-              writeLog(
+              writeLogMessage(
                 paste0(measureName,": Program error: vector=",length(measure)," names=",length(measureNames)),
                 Level="error"
               )
@@ -2064,7 +2065,7 @@ doQuery <- function (
 )
 {
   if ( missing(Results) || missing(Specifications) ) {
-    writeLog("Program error: Invalid Setup for doQuery function",Level="error")
+    writeLogMessage("Program error: Invalid Setup for doQuery function",Level="error")
     return(character(0))
   }
     
@@ -2081,7 +2082,7 @@ doQuery <- function (
 
     # Scenario Name for reporting / OutputFile
     ScenarioName <- results$ModelState()$Scenario;
-    writeLog(paste("Building measures for Scenario",ScenarioName),Level="warn")
+    writeLogMessage(paste("Building measures for Scenario",ScenarioName),Level="warn")
 
     # Gather years from the results
     Years <- as.character(results$ModelState()$Years) # should already be character
@@ -2102,7 +2103,7 @@ doQuery <- function (
     for ( thisYear in Years ) {
 
       # Process measures for thisYear in VEResults
-      writeLog(paste("Working on Year",thisYear),Level="warn")
+      writeLogMessage(paste("Working on Year",thisYear),Level="warn")
       if ( ! thisYear %in% names(queryEnv$Values) ) {
         queryEnv$Values[[thisYear]] <- list()
       }
@@ -2111,7 +2112,7 @@ doQuery <- function (
       # Work in an environment so "Function" specs can easily access earlier measure results
       measureEnv <- new.env()
       for ( measureSpec in Specifications ) {
-        writeLog(paste("Processing",measureSpec$Name,"..."),Level="info")
+        writeLogMessage(paste("Processing",measureSpec$Name,"..."),Level="info")
         makeMeasure(measureSpec,thisYear,QPrep_ls,measureEnv)
         # makeMeasure attaches GeoType and available GeoValues to each measure
       }

@@ -465,23 +465,6 @@ QuerySpec <- list(
   #-------------------------------------------------
   list(
     Name = "NumUrbanMixHh",
-    Require = c(Dataset="LocType",Table="Bzone"),
-    Summarize = list(
-      Expr = "sum(IsUrbanMixNbrhd[LocType == 'Urban'])",
-      Units = c(
-        IsUrbanMixNbrhd = "",
-        LocType = "category",
-        Marea = ""
-      ),
-      By = "Marea",
-      Table = "Household"
-    ),
-    Units = "Households",
-    Description = "Number of households residing in urban-mixed neighborhoods in urbanized area"
-  ),
-
-  list(
-    Name = "NumUrbanMixHh",
     RequireNot = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
       Expr = "sum(IsUrbanMixNbrhd)",
@@ -1098,23 +1081,6 @@ QuerySpec <- list(
   #-------------------------------
   list(
     Name = "MedianBzonePopDen",
-    Require = c(Dataset="LocType",Table="Bzone"),
-    Summarize = list(
-      Expr = "median(D1B[LocType == 'Urban'])",
-      Units = c(
-        D1B = "PRSN/ACRE",
-        LocType = "Category",
-        Marea = ""
-      ),
-      By = "Marea",
-      Table = "Bzone"
-    ),
-    Units = "Persons per acre",
-    Description = "Median Bzone population density in urbanized area"
-  ),
-
-  list(
-    Name = "MedianBzonePopDen",
     RequireNot = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
       Expr = "median(UrbanPop / UrbanArea)",
@@ -1202,24 +1168,6 @@ QuerySpec <- list(
 
   #Proportion of single-family dwelling units
   #------------------------------------------
-  list(
-    Name = "PropSFDU",
-    Require = c(Dataset="LocType",Table="Bzone"),
-    Summarize = list(
-      Expr = "sum(SFDU[LocType == 'Urban']) / (sum(NumHh[LocType == 'Urban']))",
-      Units = c(
-        SFDU = "DU",
-        NumHh = "HH",
-        LocType = "category",
-        Marea = ""
-      ),
-      By = "Marea",
-      Table = "Bzone"
-    ),
-    Units = "Proportion of Households",
-    Description = "Proportion of urbanized area households that reside in single-family dwellings"
-  ),
-
   list(
     Name = "PropSFDU",
     RequireNot = c(Dataset="LocType",Table="Bzone"),

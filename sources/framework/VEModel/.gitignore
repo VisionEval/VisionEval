@@ -7,4 +7,5 @@ VEModel.Rproj
 runtime*
 DVMT_Scenarios
 shortcut.R
-
+basic-operations.R
+query-test.R
