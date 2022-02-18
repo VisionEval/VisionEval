@@ -384,22 +384,29 @@ dbDisconnect(mydb)
 # with multiple copies of the preceding stage data.
 
 test.dir <- file.path(getRuntimeDirectory(),"Test-Results-Copy")
-if ( dir.exists(test.dir) ) unlink(test.dir,recursive=TRUE)
-dir.create(test.dir)
+
+# test.dir will be created if it doesn't exist. To recreate, use "overwrite=TRUE"
 results$copy(test.dir,Flatten=c(TRUE,TRUE)) # Force use of "Flatten" even if result is already flat
 tr <- openResults(test.dir)                 # Any directory with ModelState.Rda and Datastore can be opened
 print(tr)
+
+# Can still do all the usual stuff with a "detached" Datastore
+sl <- tr$select()
+sl$find(Group="2038",Table=c("Household","Vehicle"),select=TRUE)
+print(sl)
+print(tr) # selection is attached to tr
+print(head(sl$show(),n=12)) # first 12 rows of selected modelIndex
 
 # If you try doing things with the tr object, you'll discover that it does NOT have a modelStage or
 # Model attached to it, so if you.forgot.which.model, you won't be able to get it back from tr
 # You'll need to find the model some other way. Everything else that works on VE Results should work
 # just fine on "pure" results.
+print(results$modelStage$Model)  # The model that "results" came from
+print(tr$modelStage)             # NULL: no model attached
 
 # The following copy operations should also work...
-if ( dir.exists(test.dir) ) unlink(test.dir,recursive=TRUE)
+results$copy(test.dir,Flatten=FALSE,overwrite=TRUE) # exact copy of just what was built in this stage (not previous stages)
 
-results$copy(test.dir,Flatten=FALSE) # exact copy of just what was built in this stage (not previous stages)
-
-# if ( dir.exists(test.dir) ) unlink(test.dir,recursive=TRUE)
-# results$copy(test.dir,DatastoreType="H5") # Flatten (get StartFrom stages) and convert result to H5 Datastore
-# NOTE: it is not presently clear (2/2022) that the H5 DatastoreType still works at all
+# Copy the Datastore, converting to another DatastoreType
+# Flatten is TRUE by default
+results$copy(test.dir,DatastoreType="H5",overwrite=TRUE)

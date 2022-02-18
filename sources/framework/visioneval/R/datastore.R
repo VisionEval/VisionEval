@@ -801,8 +801,8 @@ listDatastoreH5 <- function(envir=modelEnvironment()) {
   G <- getModelState(envir)
   dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
 
-  H5File <- H5Fopen(dsPath)
-  DS_df <- h5ls(H5File, all = TRUE)
+  H5File <- rhdf5::H5Fopen(dsPath)
+  DS_df <- rhdf5::h5ls(H5File, all = TRUE)
   DS_df$groupname <- paste(DS_df$group, DS_df$name, sep = "/")
   DS_df$groupname <- gsub("^/+", "", DS_df$groupname)
   DS_df <-
@@ -813,11 +813,11 @@ listDatastoreH5 <- function(envir=modelEnvironment()) {
       Attr_ls[[i]] <- NA
     } else {
       Item <- paste(DS_df$group[i], DS_df$name[i], sep = "/")
-      Attr_ls[[i]] <- h5readAttributes(H5File, Item)
+      Attr_ls[[i]] <- rhdf5::h5readAttributes(H5File, Item)
     }
   }
   DS_df$attributes <- Attr_ls
-  H5Fclose(H5File)
+  rhdf5::H5Fclose(H5File)
   AttrToWrite_ <- c("group", "name", "groupname", "attributes")
   dsListing <- DS_df[, AttrToWrite_]
   setModelState(list(Datastore = dsListing),envir=envir)
@@ -863,16 +863,16 @@ initDatastoreH5 <- function(AppendGroups = NULL, envir=modelEnvironment()) {
       file.remove(dsPath)
     }
     #Create data store file
-    H5File <- H5Fcreate(dsPath)
+    H5File <- rhdf5::H5Fcreate(dsPath)
     #Create global group which stores data that is constant for all geography and
     #all years
-    h5createGroup(H5File, "Global")
+    rhdf5::h5createGroup(H5File, "Global")
     #Create groups for years
     for ( year in as.character(getYears(envir=envir)) ) {
       YearGroup <- year
-      h5createGroup(H5File, YearGroup)
+      rhdf5::h5createGroup(H5File, YearGroup)
     }
-    H5Fclose(H5File)
+    rhdf5::H5Fclose(H5File)
     #If 'AppendGroups' is not NULL add listed groups to existing datastore
   } else {
     #If the datastore exists add the groups
@@ -887,7 +887,7 @@ initDatastoreH5 <- function(AppendGroups = NULL, envir=modelEnvironment()) {
       #Add groups listed in 'AppendGroups' if none are present in datastore
       if (!any(AppendGroups %in% DstoreGroups_)) {
         for (Grp in AppendGroups) {
-          h5createGroup(dsPath, Grp)
+          rhdf5::h5createGroup(dsPath, Grp)
         }
         #Error if groups listed in 'AppendGroups' are present in datastore
       } else {
@@ -936,16 +936,16 @@ initDatastoreH5 <- function(AppendGroups = NULL, envir=modelEnvironment()) {
 #'   missing Group as it creates the Table.
 #' @export
 #' @import rhdf5
-initTableH5 <- function(Table, Group, Length, envir=envir) {
+initTableH5 <- function(Table, Group, Length, envir=modelEnvironment()) {
   G <- getModelState(envir=envir)
   dsPath <- file.path(G$ModelStatePath,G$DatastoreName)
   NewTable <- paste(Group, Table, sep = "/")
-  H5File <- H5Fopen(dsPath)
-  h5createGroup(H5File, NewTable)
-  H5Group <- H5Gopen(H5File, NewTable)
-  h5writeAttribute(Length, H5Group, "LENGTH")
-  H5Gclose(H5Group)
-  H5Fclose(H5File)
+  H5File <- rhdf5::H5Fopen(dsPath)
+  rhdf5::h5createGroup(H5File, NewTable)
+  H5Group <- rhdf5::H5Gopen(H5File, NewTable)
+  rhdf5::h5writeAttribute(Length, H5Group, "LENGTH")
+  rhdf5::H5Gclose(H5Group)
+  rhdf5::H5Fclose(H5File)
   listDatastoreH5(envir=envir)
   TRUE
 }
@@ -984,37 +984,38 @@ initDatasetH5 <- function(Spec_ls, Group, envir=modelEnvironment()) {
     Size <- Spec_ls$SIZE
   } else {
     Message <- paste0("SIZE specification for dataset (", Name,
-                      ") is not present.")
-    writeLog(Message,Level="Error")
-    stop(Message)
+                      ") is not present. Trying SIZE=0.")
+    writeLog(Message,Level="warn")
+    # stop(Message)
+    Size <- 0
   }
   #Create the dataset
-  Length <- unlist(h5readAttributes(dsPath, Table))["LENGTH"]
+  Length <- unlist(rhdf5::h5readAttributes(dsPath, Table))["LENGTH"]
   Chunk <- ifelse(Length > 1000, 100, 1)
   StorageMode <- Types()[[Spec_ls$TYPE]]$mode
-  H5File <- H5Fopen(dsPath)
-  h5createDataset(
+  H5File <- rhdf5::H5Fopen(dsPath)
+  rhdf5::h5createDataset(
     H5File, DatasetName, dims = Length,
     storage.mode = StorageMode, size = Size + 1,
     chunk = Chunk, level = 7
   )
-  H5Data <- H5Dopen(H5File, DatasetName)
-  h5writeAttribute(Spec_ls$MODULE, H5Data, "MODULE")
-  h5writeAttribute(Spec_ls$NAVALUE, H5Data, "NAVALUE")
-  h5writeAttribute(Spec_ls$UNITS, H5Data, "UNITS")
-  h5writeAttribute(Size, H5Data, "SIZE")
-  h5writeAttribute(Spec_ls$TYPE, H5Data, "TYPE")
+  H5Data <- rhdf5::H5Dopen(H5File, DatasetName)
+  rhdf5::h5writeAttribute(Spec_ls$MODULE, H5Data, "MODULE")
+  rhdf5::h5writeAttribute(Spec_ls$NAVALUE, H5Data, "NAVALUE")
+  rhdf5::h5writeAttribute(Spec_ls$UNITS, H5Data, "UNITS")
+  rhdf5::h5writeAttribute(Size, H5Data, "SIZE")
+  rhdf5::h5writeAttribute(Spec_ls$TYPE, H5Data, "TYPE")
   if (!is.null(Spec_ls$PROHIBIT)) {
-    h5writeAttribute(Spec_ls$PROHIBIT, H5Data, "PROHIBIT")
+    rhdf5::h5writeAttribute(Spec_ls$PROHIBIT, H5Data, "PROHIBIT")
   }
   if (!is.null(Spec_ls$ISELEMENTOF)) {
-    h5writeAttribute(Spec_ls$ISELEMENTOF, H5Data, "ISELEMENTOF")
+    rhdf5::h5writeAttribute(Spec_ls$ISELEMENTOF, H5Data, "ISELEMENTOF")
   }
   if (!is.null(Spec_ls$DESCRIPTION)) {
-    h5writeAttribute(Spec_ls$DESCRIPTION, H5Data, "DESCRIPTION")
+    rhdf5::h5writeAttribute(Spec_ls$DESCRIPTION, H5Data, "DESCRIPTION")
   }
-  H5Dclose(H5Data)
-  H5Fclose(H5File)
+  rhdf5::H5Dclose(H5Data)
+  rhdf5::H5Fclose(H5File)
   #Update datastore inventory
   listDatastoreH5(envir=envir)
   TRUE
@@ -1045,7 +1046,7 @@ initDatasetH5 <- function(Spec_ls, Group, envir=modelEnvironment()) {
 #'   the TYPE attribute.
 #' @export
 #' @import rhdf5
-readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, envir=envir) {
+readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, envir=modelEnvironment()) {
   #Expects to find the Datastore in the working directory
   #Load the model state file
   G <- getModelState(envir)
@@ -1081,10 +1082,10 @@ readFromTableH5 <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, e
   }
   #Read data
   if (is.null(Index)) {
-    Data_ <- h5read(dsPath, DatasetName, read.attributes = ReadAttr)
+    Data_ <- rhdf5::h5read(dsPath, DatasetName, read.attributes = ReadAttr)
   } else {
     Data_ <-
-      h5read(dsPath, DatasetName, index = list(Index), read.attributes = ReadAttr)
+      rhdf5::h5read(dsPath, DatasetName, index = list(Index), read.attributes = ReadAttr)
   }
   #Convert NA values
   NAValue <- as.vector(attributes(Data_)$NAVALUE)
@@ -1134,7 +1135,7 @@ writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvir
   #Do NOT pass envir to checkDataset - we're just looking in this Datastore
   DatasetExists <- checkDataset(Name, Table, Group, G$Datastore)
   if (!DatasetExists) {
-    initDatasetH5(Spec_ls, Group)
+    initDatasetH5(Spec_ls, Group,envir=envir)
   }
   #Write the dataset
   if (is.null(Data_)) {
@@ -1148,9 +1149,9 @@ writeToTableH5 <- function(Data_, Spec_ls, Group, Index = NULL, envir=modelEnvir
   Data_[is.na(Data_)] <- Spec_ls$NAVALUE
   DatasetName <- file.path(Group, Table, Name)
   if (is.null(Index)) {
-    h5write(Data_, file = dsPath, name = DatasetName)
+    rhdf5::h5write(Data_, file = dsPath, name = DatasetName)
   } else {
-    h5write(Data_, file = dsPath, name = DatasetName, index = list(Index))
+    rhdf5::h5write(Data_, file = dsPath, name = DatasetName, index = list(Index))
   }
   #Update datastore inventory
   listDatastoreH5(envir=envir)
@@ -1998,7 +1999,7 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
   if ( ! Flatten ) {
     if ( ! convertDatastoreType ) {
       success <- file.copy(file.path(ModelState_ls$ModelStatePath,ModelState_ls$DatastoreName),ToDir,recursive=TRUE,copy.date=TRUE)
-      writeLog(paste0("Copying Flat Datastore ",ifelse(success,"Succeeded","Failed"),"."),Level="warn")
+      writeLog(paste0("Copy Datastore without Flattening ",ifelse(success,"Succeeded","Failed"),"."),Level="warn")
     }
     if ( ! success ) {
       paths <- ModelState_ls$DatastorePath[1] # Only copy proximate Datastore (why this would work but not file.copy is mysteriaus...)
@@ -2022,7 +2023,8 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
     assignDatastoreFunctions(envir=writeDS)
     
     # Create the required basic elements: Datastore structure and geography from the source
-    # Do this rather than copying to ensure that the DatastoreListing is correct
+    # Do this rather than copying to ensure that the DatastoreListing
+    # is correct
     initDatastore(envir=writeDS)          # Create core datastore structure
     initDatastoreGeography(envir=writeDS) # Create basic geography tables
 
@@ -2076,6 +2078,7 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
     }
     success <- TRUE
     setModelState(Save=TRUE,envir=writeDS) # Push out the corresponding model state
+    writeLog("copyDatastore completed.",Level="warn")
   }
   return(success)
 }

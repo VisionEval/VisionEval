@@ -666,7 +666,7 @@ ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchive
   # Copy the current model to NewName (in ModelDir, unless newPath is also provided)
   if ( ! private$p.valid ) {
     writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
-    return( NULL )
+    return()
   }
   
   if ( is.null(newPath) ) {

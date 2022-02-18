@@ -515,20 +515,29 @@ ve.results.find <- function(pattern=NULL,Group=NULL,Table=NULL,Name=NULL,select=
   return( found )
 }
 
-ve.results.copy <- function(ToDir, Flatten=TRUE, DatastoreType=NULL) {
-  if ( missing(ToDir) || ! dir.exists(ToDir) ) {
-    stop(writeLog("Invalid target directory for results copy",Level="error"))
+# Wrapper for visioneval::copyDatastore
+ve.results.copy <- function(ToDir, Flatten=TRUE, DatastoreType=NULL, overwrite=FALSE) {
+  if ( missing(ToDir) ) {
+    stop(writeLog("Must provide target directory path.",Level="error"))
   }
+  if ( ( existing <- dir.exists(ToDir) ) && ! overwrite ) {
+    stop(writeLog("ToDir exists: provide another ToDir or set overwrite=TRUE",Level="error"))
+  } else if ( existing && overwrite ) {
+    unlink(ToDir,recursive=TRUE)
+    existing <- FALSE
+  }
+  if ( ! existing ) dir.create(ToDir)
+
   owd <- setwd(self$resultsPath) # copyDatastore must work in that directory
   on.exit(setwd(owd))
-  return(
-    visioneval::copyDatastore(
-      ToDir=ToDir,
-      Flatten=Flatten,
-      DatastoreType=DatastoreType,
-      envir=self$ModelStateEnv
-    )
+  success <- visioneval::copyDatastore(
+    ToDir=ToDir,
+    Flatten=Flatten,
+    DatastoreType=DatastoreType,
+    envir=self$ModelStateEnv
   )
+  if ( ! success ) writeLog("Attempt to copyDatastore Failed!",Level="error")
+  invisible(success)
 }
 
 ve.results.queryprep <- function() {
