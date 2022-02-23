@@ -255,12 +255,18 @@ evalq(
       if ( length(VEpackages)>0 ) {
         # sessionInfo keeps packages in the reverse order of loading (newest first)
         # so we can hopefully unload in the order provided and not trip over dependencies
-        message("If you get an error unloading package namespaces,")
-        message("Run unloadNamespace manually for the one that is blocking removal.")
-        message("Then reissue ve.test() with the same parameters.")
         for ( pkg in VEpackages ) {
-          message("unloading package ",pkg)
-          unloadNamespace(pkg)
+          backstop = 0
+          repeat {
+            message("trying to unload package ",pkg)
+            try.unload <- try( unloadNamespace(pkg), silent=TRUE )
+            if ( "try-error" %in% class(try.unload) && backstop < 2 ) {
+              try.first <- sub("^.*imported by .([^']+). so cannot be unloaded","\\1",trimws(try.unload))
+              message("Trying first to unload package ",try.first)
+              try( unloadNamespace(try.first), silent=TRUE )
+              backstop <- backstop + 1
+            } else break
+          }
         }
       }
       message("unloading visioneval")
