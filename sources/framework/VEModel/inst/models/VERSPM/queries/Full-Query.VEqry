@@ -1083,7 +1083,8 @@ QuerySpec <- list(
     Name = "MedianBzonePopDen",
     RequireNot = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
-      Expr = "median(UrbanPop / UrbanArea)",
+      # Not clear why some UrbanArea==0...
+      Expr = "median(UrbanPop[UrbanArea!=0] / UrbanArea[UrbanArea!=0])",
       Units = c(
         UrbanPop = "PRSN",
         UrbanArea = "ACRE",

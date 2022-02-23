@@ -1780,6 +1780,10 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
 
 # Print a summary of the VEModel, including its run status
 ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
+  if ( ! private$p.valid ) {
+    cat("Model object is not valid\n")
+    return()
+  }
   cat("Model:",self$modelName,"\n")
   if ( details ) {
     cat("Path:","\n")
