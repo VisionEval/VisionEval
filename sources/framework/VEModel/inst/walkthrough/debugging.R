@@ -2,7 +2,7 @@
 
 loadModelSetup <- function(log="warn")
 {
-  logLevel(log)
+  visioneval::initLog(Save=FALSE,Threshold=log)
 
   baseModel <- openModel("VERSPM-base")
   mini <- openModel("MINI") # run mini-model.R to create the mini model

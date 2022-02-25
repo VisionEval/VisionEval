@@ -386,7 +386,7 @@ dbDisconnect(mydb)
 test.dir <- file.path(getRuntimeDirectory(),"Test-Results-Copy")
 
 # test.dir will be created if it doesn't exist. To recreate, use "overwrite=TRUE"
-results$copy(test.dir,Flatten=c(TRUE,TRUE)) # Force use of "Flatten" even if result is already flat
+results$copy(test.dir,Flatten=c(TRUE,TRUE),overwrite=TRUE) # Force use of "Flatten" even if result is already flat
 tr <- openResults(test.dir)                 # Any directory with ModelState.Rda and Datastore can be opened
 print(tr)
 
@@ -409,4 +409,5 @@ results$copy(test.dir,Flatten=FALSE,overwrite=TRUE) # exact copy of just what wa
 
 # Copy the Datastore, converting to another DatastoreType
 # Flatten is TRUE by default
+visioneval::initLog(Save=FALSE,Threshold="info")
 results$copy(test.dir,DatastoreType="H5",overwrite=TRUE)

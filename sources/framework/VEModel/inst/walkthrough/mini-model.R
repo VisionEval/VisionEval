@@ -21,7 +21,7 @@ visioneval::initLog(Save=FALSE,Threshold="warn")
 if ( ! ( baseModel <- openModel("VERSPM-base") )$valid() ) {
   baseModel <- installModel("VERSPM",var="base")
 }
-baseModel$run()
+# baseModel$run() -- we're just going to pilfer files; no need to run...
 
 # Clear out any models left over from walking through previously
 
@@ -118,7 +118,11 @@ print(mini) # Still has no input files
 # In that case, you probably want to use "insider information" to copy the files using
 #   File Explorer or an equivalent tool
 
+stop()
+
 # Set the base model inputs directory
+# TODO: dir is not working right: inputs=TRUE should just list the
+# "inputs" directory/directories.
 base.inputs <- unique(baseModel$dir(inputs=TRUE,shorten=FALSE))
 
 # Get the list of inputs required in the mini script we set up earlier

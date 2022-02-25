@@ -2009,7 +2009,7 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
   }
 
   if ( length(paths) > 0 ) { # if we did file.copy above, length(paths) will be zero - already done
-    writeLog("Flattening and/or Converting Datastore takes time...",Level="warn")
+    writeLog("Flattening and/or Converting Datastore takes a long time...",Level="warn")
 
     # Construct target ModelState_ls:
     #   Same as ModelState being copied, but ModelStatePath is updated and Datastore listing removed

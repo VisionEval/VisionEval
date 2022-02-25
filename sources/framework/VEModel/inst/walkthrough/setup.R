@@ -52,7 +52,3 @@ local( {
   Sys.setenv(VE_RUNTIME=ve.runtime)
   setwd(ve.runtime)
 } )
-
-# create helper function to switch logLevel
-# ("info" gives a lot more details, "trace" is overwhelming)
-logLevel <- function(log="warn") visioneval::initLog(Save=FALSE,Threshold=log)
