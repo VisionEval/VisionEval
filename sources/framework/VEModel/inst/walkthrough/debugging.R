@@ -5,15 +5,15 @@ loadModelSetup <- function(log="warn")
   logLevel(log)
 
   baseModel <- openModel("VERSPM-base")
-  bare <- openModel("BARE") # run mini-model.R to create the bare model
+  mini <- openModel("MINI") # run mini-model.R to create the mini model
 
   # Workflow here could assist with post-mortem debugging
   # Start by copying the original model, but don't grab the results
   #  The point is to have the subsequent model run copy the results
-  message("Making demo for LoadModel as 'BARE-load'")
-  loadPath <- file.path("models","BARE-load")
+  message("Making demo for LoadModel as 'MINI-load'")
+  loadPath <- file.path("models","MINI-load")
   if ( dir.exists(loadPath) ) unlink(loadPath,recursive=TRUE)
-  loadModel <- bare$copy("BARE-load",copyResults=FALSE)
+  loadModel <- mini$copy("MINI-load",copyResults=FALSE)
   print(loadModel)
 
   message("Set up load script...")
@@ -41,11 +41,11 @@ loadModelSetup <- function(log="warn")
     Model       = "LOAD Model Test",
     Scenario    = "Test LoadModel / LoadDatastore",
     Description = "Add a step onto a different previous model",
-    Region      = bare$setting("Region"),
-    BaseYear    = bare$setting("BaseYear"),
+    Region      = mini$setting("Region"),
+    BaseYear    = mini$setting("BaseYear"),
     Years       = "2038", # new model only does 2038 - but we'll see BaseYear/2010 in results
-    LoadModel   = bare$modelPath,
-    LoadStage   = names(bare$modelStages)[1] # would default there anyway
+    LoadModel   = mini$modelPath,
+    LoadStage   = names(mini$modelStages)[1] # would default there anyway
   )
   configFile <- file.path(loadModelPath,"visioneval.cnf")
   yaml::write_yaml(runConfig_ls,configFile)
@@ -74,10 +74,10 @@ loadModelSetup <- function(log="warn")
 
   message("Copy model parameters to 'inputs' - could also be in 'defs')")
   from <- file.path(base.inputs,"model_parameters.json")
-  file.copy(from=from,to=load.inputs) # or copy to bare.defs...
+  file.copy(from=from,to=load.inputs) # or copy to mini.defs...
   print(dir(load.inputs))
 
-  return( openModel("BARE-load") )
+  return( openModel("MINI-load") )
 }
 
 #################################

@@ -11,14 +11,24 @@ vrb$clear(force=TRUE,outputOnly=TRUE) # blow away previous extractions or querie
 message("Show query directory (has Full-Query.VEqry)...")
 print(vrb$query())
 
+# Show the "Reportable" stages (the ones that will be queried)
+print(vrb)
+
 #######################
 # BASIC QUERY OPERATION
 #######################
 
 qry <- vrb$query("Full-Query")
-qry$run(vrb,Geography="Marea",GeoValue="RVMPO")
+qry$run() # vrb model is attached
 vrb$dir(output=TRUE,all.files=TRUE)
 shell.exec(file.path(vrb$modelPath,vrb$dir(output=TRUE,all.files=TRUE)[1]))
+
+# Extracting query outputs (use GeoType, GeoValue)
+q.results <- qry$extract(GeoType="Marea",GeoValues="RVMPO")
+
+# Can also extract just a few of the measures
+
+# And can extract measures for just one of the years.
 
 ##################################
 # CREATING QUERIES PROGRAMATICALLY
@@ -249,8 +259,10 @@ rm(runqry)
 # RUN QUERIES
 #############
 
+# Check the following still works...
+
 message("Run the query on the model...")
-qry$run(vrb,OutputRoot=vrb$modelResults)
+qry$run(vrb)
 
 message("Run the query on the results...")
 rs <- vrb$results()
@@ -260,14 +272,14 @@ message("Run the full query on the model...")
 qry <- vrb$query("Full-Query")
 # Automatically attaches model to query
 
-# Runn
+# Run
 qry$run()     # uses attached model - will give error if no model attached
 # Query results are added to each stage results
 print(vrb$dir(results=TRUE,all.files=TRUE))
 
 # Running again does as little work as possible
 qry$run(vrb)  # re-attach the model; does nothing if query is up to date
-  # Will re-run for new model stages are present, or if the stage
+  # Will re-run for if model stages are present, or if the stage
   # results had been re-generated
 
 # Can always force a complete re-do
@@ -286,6 +298,8 @@ qry$model(vrb)
 df <- qry$extract()
 print(df) # rows are meaasures; columns are model stages/scenarios
 
+# Go over all the "filters" for extract...
+
 # Export query results to a CSV file
 qry$export(format="csv") # Default CSV file name in output directory
 vrb$dir(outputs=TRUE)
@@ -295,3 +309,6 @@ vrb$dir(outputs=TRUE)
 
 qry$export(format="csv",SaveTo=paste0("TestQuery_%timestamp%",qry$Name)) # use our own file name template
 vrb$dir(outputs=TRUE)
+
+# Or you can extract and write to a different file format (e.g.,
+# here, MS Access which needs to be installed).

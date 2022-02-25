@@ -1,133 +1,180 @@
 require(VEModel)
 
-# Define a function to make a mini-model (adapted from VEModel/tests/test.R)
+# This code shows how to assemble a model stage programmatically
 
-# In the "live walkthrough", we'll be looking at the files after they are
-#  created. This code provides a concrete example of what is required to make
-#  a runnable model stage.
+# Remember: a model stage is the "mimimum runnable unit" of a VE Model.
+# It assembles definitions, inputs and a script to generate some or
+# all of a Datastore. A VEModel consists of at least one model stage.
 
-makeMiniModel <- function(baseModel,log="warn" ) {
+# In this walkthrough we'll look first at how stages are built and
+# manipulated. Then we'll look at how to use them make your models
+# simpler, better organized, easier to maintain, and faster to run.
 
-  logLevel(log)
+visioneval::initLog(Save=FALSE,Threshold="warn")
+# level 'info' shows more steps
+# Save=FALSE does not create a copy of the log to a file: just show
+# on console.
 
-  if ( missing(baseModel) || ! "VEModel" %in% class(baseModel) ) {
-    stop("Must provide baseModel (opened VEModel; need not have been run)")
-  }
+# Set up a base model (so we can copy its parts rather than build
+# them from scratch).
 
-  message("Cleaning up previous mini models.")
-  models.dir <- file.path(getwd(),"models")
-  obsolete <- dir(models.dir,pattern="^bare",ignore.case=TRUE,full.names=TRUE)
-  for ( oo in obsolete ) {
-    if ( dir.exists(oo) ) unlink(oo,recursive=TRUE)
-  }
+if ( ! ( baseModel <- openModel("VERSPM-base") )$valid() ) {
+  baseModel <- installModel("VERSPM",var="base")
+}
+baseModel$run()
 
-  bare.dir <- file.path(models.dir,"BARE")
-  message("Making mini model in ",bare.dir)
+# Clear out any models left over from walking through previously
 
-  bare.script <- file.path(bare.dir,visioneval::getRunParameter("ScriptsDir"))
-  bare.inputs <- file.path(bare.dir,visioneval::getRunParameter("InputDir"))
-  bare.defs   <- file.path(bare.dir,visioneval::getRunParameter("ParamDir"))
-  dir.create(bare.dir)
-  dir.create(bare.script)
-  dir.create(bare.inputs)
-  dir.create(bare.defs)
-  print( dir(bare.dir,full.names=TRUE) )
-
-  message("Create the model configuration / run parameters")
-  runConfig_ls <-  list(
-      Model       = "Mini Model Test",
-      Scenario    = "MiniModel",
-      Description = "Minimal model constructed programmatically",
-      Region      = "RVMPO",
-      State       = "OR",
-      BaseYear    = "2010",
-      Years       = c("2010")
-    )
-  viewSetup(Param_ls=runConfig_ls)
-
-  message("Save the model configuration")
-  configFile <- file.path(bare.dir,"visioneval.cnf")
-  cat(configFile,"\n")
-  yaml::write_yaml(runConfig_ls,configFile)
-
-  message("Make the ModelScript")
-  runModelFile <- file.path(bare.script,"run_model.R")
-  runModel_vc <- c(
-    '', # Don't ask why, but without this line the script gets written wrong...
-    'for(Year in getYears()) {',
-    'runModule("CreateHouseholds","VESimHouseholds",RunFor = "AllYears",RunYear = Year)',
-    'runModule("PredictWorkers","VESimHouseholds",RunFor = "AllYears",RunYear = Year)',
-    '}'
-  )
-  cat(runModelFile,paste(runModel_vc,collapse="\n"),sep="\n")
-  writeLines(runModel_vc,con=runModelFile)
-
-  message("Create model geography (copying from base VERSPM)")
-  base.defs <- baseModel$setting("ParamPath",shorten=FALSE)
-  from <- file.path(
-    base.defs,c(
-      "units.csv",
-      "deflators.csv",
-      "geo.csv"
-    )
-  )
-  file.copy(from=from,to=bare.defs)
-  print(bare.defs)
-  print(dir(bare.defs,full.names=TRUE))
-
-  message("Open the bootstrapped mini model")
-  bare <- openModel(basename(bare.dir))
-  print(bare) # Still has no input files
-  # But we'll use VEModel functions to tell us what the necessary inputs are.
-
-  message("Copy over input files from baseModel (including model_parameters.json)")
-  # Note this strategy won't work if the baseModel has a complex InputPath
-  #   (files in stage folders or otherwise distributed)
-  # In that case, you probably want to use "insider information" to copy the files using
-  #   File Explorer or an equivalent tool
-  base.inputs <- unique(baseModel$dir(inputs=TRUE,shorten=FALSE))
-  inputs <- bare$list(inputs=TRUE,details=c("FILE"))
-  required.files <- unique(file.path(base.inputs,c(inputs[,"FILE"],"model_parameters.json")))
-  required.files <- required.files[which(file.exists(required.files))]
-  file.copy(from=required.files,to=bare.inputs) # or copy to bare.defs...
-
-  message("Re-open BARE model and review input files")
-  bare$configure() # re-open the model after the model configuration, definitions or inputs have changed
-  inputs <- bare$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
-  required.files <- file.path(ifelse(is.na(inputs$INPUTDIR),"",inputs$INPUTDIR),inputs$FILE)
-  required.exists <- file.exists(required.files)
-  required.files <- sub( runtimeEnvironment()$ve.runtime, "", required.files )
-  required.files <- data.frame(EXIST=ifelse(is.na(inputs$INPUTDIR),FALSE,required.exists),FILE=required.files)
-  message("Required Files (all should EXIST):\n")
-  print(unique(required.files))
-
-  return(bare)
+message("Cleaning up previous mini models.")
+models.dir <- file.path(getwd(),"models")
+obsolete <- dir(models.dir,pattern="^mini",ignore.case=TRUE,full.names=TRUE)
+for ( oo in obsolete ) {
+  if ( dir.exists(oo) ) unlink(oo,recursive=TRUE)
 }
 
-# ILLUSTRATE RUN-TIME OPERATIONS
+# Set up the basic model structure
 
-print(vrb)
-mini <- makeMiniModel(vrb)
+mini.dir <- file.path(models.dir,"MINI")
+message("Making MINI model in ",mini.dir)
+
+mini.script <- file.path(mini.dir,visioneval::getRunParameter("ScriptsDir"))
+mini.inputs <- file.path(mini.dir,visioneval::getRunParameter("InputDir"))
+mini.defs   <- file.path(mini.dir,visioneval::getRunParameter("ParamDir"))
+dir.create(mini.dir)            # Model directory
+dir.create(mini.script)         # Scripts directory
+dir.create(mini.inputs)         # Inputs directory
+dir.create(mini.defs)           # Defs directory
+print( dir(mini.dir,full.names=TRUE) ) # Show everything using model $dir function
+
+# Set up the model configuration (visioneval.cnf)
+# Can also put it in "defs/run_parameters.json", like the old days
+
+message("Create the model configuration / run parameters")
+runConfig_ls <-  list(
+    Model       = "Mini Model Test",
+    Scenario    = "MiniModel",
+    Description = "Minimal model constructed programmatically",
+    Region      = "RVMPO",
+    State       = "OR",
+    BaseYear    = "2010",
+    Years       = c("2010")
+  )
+viewSetup(Param_ls=runConfig_ls)  # Helper function to display a configuration
+
+# Create the model's visioneval.cnf (in the model directory)
+# We'll write it as YAML, but it can also be JSON
+
+configFile <- file.path(mini.dir,"visioneval.cnf")
+cat(configFile,"\n")
+yaml::write_yaml(runConfig_ls,configFile)
+
+# Set up a script file; we'll write this one from scratch
+# Each model stage can have its own script (some or all of a "total
+# model"), which lets you do things like use different modules in
+# different scenarios (e.g. with different estimation of powertrain
+# and fuel proportions).
+
+# The walkthrough does this in R, but you could just use a text editor
+
+runModelFile <- file.path(mini.script,"run_model.R")
+runModel_vc <- c(
+  '', # Don't ask why (it's an R thing): without this blank line the script gets written wrong...
+  'for(Year in getYears()) {',
+  'runModule("CreateHouseholds","VESimHouseholds",RunFor = "AllYears",RunYear = Year)',
+  'runModule("PredictWorkers","VESimHouseholds",RunFor = "AllYears",RunYear = Year)',
+  '}'
+)
+cat(runModelFile,paste(runModel_vc,collapse="\n"),sep="\n")
+writeLines(runModel_vc,con=runModelFile)
+
+# Likewise with the defs - we're just borrowing the base VERSPM model
+# defs and inputs for the relevant modules
+
+# Locate the defs in the base model using its settings
+base.defs <- baseModel$setting("ParamPath",shorten=FALSE)
+from <- file.path(
+  base.defs,c(
+    "units.csv",
+    "deflators.csv",
+    "geo.csv"
+  )
+)
+
+# Copy it to the mini model
+file.copy(from=from,to=mini.defs)
+print(mini.defs)
+print(dir(mini.defs,full.names=TRUE))
+
+# Now (even without inputs) the mini model can be opened
+# At a minimum, it needs scripts and defs
+
+mini <- openModel(basename(mini.dir))
+print(mini) # Still has no input files
+
+# Now lets use VEModel functions to tell us what the necessary inputs are.
+
+# Note that this strategy won't work if the baseModel has a complex InputPath
+#   (files in stage and scenario folders or otherwise distributed)
+# In that case, you probably want to use "insider information" to copy the files using
+#   File Explorer or an equivalent tool
+
+# Set the base model inputs directory
+base.inputs <- unique(baseModel$dir(inputs=TRUE,shorten=FALSE))
+
+# Get the list of inputs required in the mini script we set up earlier
+inputs <- mini$list(inputs=TRUE,details=c("FILE"))
+
+# Always need model_parameters.json
+required.files <- unique(file.path(base.inputs,c(inputs[,"FILE"],"model_parameters.json")))
+required.files <- required.files[which(file.exists(required.files))]
+
+file.copy(from=required.files,to=mini.inputs)
+
+# Re-open the mini model, applying the configuration changes
+# You need to do this explicitly (or implicitly by using openModel again) every time
+# you change a model configuration, inputs or defs (either in memory or in the file system)
+
+mini$configure()
+
+# list the inputs again showing that INPUTDIR is now the mini model inputs (previously NA)
+inputs <- mini$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
+
+# The following steps just make for a nicer display...
+
+required.files <- file.path(ifelse(is.na(inputs$INPUTDIR),"",inputs$INPUTDIR),inputs$FILE)
+required.exists <- file.exists(required.files)
+required.files <- sub( runtimeEnvironment()$ve.runtime, "", required.files )
+required.files <- data.frame(EXIST=ifelse(is.na(inputs$INPUTDIR),FALSE,required.exists),FILE=required.files)
+
+# The rRequired Files (all should EXIST)
+print(unique(required.files))
+
+# Now let's see what we can do with the mini model
+# We'll re-do some of the things from the walkthrough's "structure.R"
 
 # Tour the mini model structure in File Explorer
 shell.exec(mini$modelPath)
 
 # Tour the model using VEModel exploration functions
-
 mini$dir()              # List the summary contents of the model
 
 mini$dir(inputs=TRUE)   # List just the model input directories
 mini$dir(inputs=TRUE,all.files=TRUE) # List all the input files...
 
+# Run the model
 mini$run("reset")    # throw away existing results and re-run
 
+# Show what is there after the run
 mini$dir()           # notice presence of results directory
 
+# Re-run the model but save its results to an archive directory
 mini$run("save")     # move existing results into an archive and re-run
 mini$dir()           # notice presence of archive directory
 mini$dir(archive=TRUE) # call out just the archive directories
 mini$dir(archive=TRUE,all.files=TRUE) # List all the files in the archive directories
 
+# Re-run the model but only do stages that have not run.
+# We'll use this again in "model-stages.R" and "scenarios.R"
 mini$run("continue") # re-run any stage that is not "Run Complete" - does nothing here
 mini$run()           # same as vr$run("continue")
 

@@ -52,17 +52,17 @@ source("../extract.R")
 source("../mini-model.R")    # Create a minimal model to illustrate
 source("../model-stages.R")  # Explore model stages in detail
 
-#################
-# USING SCENARIOS
-#################
-
-source("../scenarios.R")     # Use model stages as scenarios
-
 ####################################
 # BUILDING AND RUNNING MODEL QUERIES
 ####################################
 
 source("../queries.R")       # Develop and run queries
+
+#################
+# USING SCENARIOS
+#################
+
+source("../scenarios.R")     # Use model stages as scenarios
 
 ################
 # MODEL SETTINGS

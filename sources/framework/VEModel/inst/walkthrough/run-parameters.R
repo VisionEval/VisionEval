@@ -1,6 +1,6 @@
 require(VEModel)
 
-mini <- openModel("BARE")
+mini <- openModel("MINI")
 
 ###########################################
 # RUNTIME PARAMETERS (GLOBAL, MODEL, STAGE)

@@ -38,7 +38,7 @@ details <- vrb$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
 
 # There will be one row of input for each column in an input file
 # so there will be hundreds. Here's how to look at just a few.
-print(details[1:10,])                      # only show 10
+print(details[1:10,])                     # only show 10
 print(details[sample(nrow(details),10),]) # show a random selection of 10
 
 # If you just want to see the unique required input files (without knowing
