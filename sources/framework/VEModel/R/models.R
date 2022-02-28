@@ -1240,7 +1240,7 @@ ve.stage.init <- function(Name=NULL,Model=NULL,ScenarioDir=NULL,modelParam_ls=NU
     } else stageInput <- NULL
   }
 
-  # modelInputPath was extracted from modelParam_ls earlier (so it doesn't pre-empt the stage
+  # modelInputPath was extracted from modelParam_ls earlier (so it doesn't pre-empt the stage)
   # InputPath construction if no explicit stage InputPath was provided either through LoadedParam_ls
   # (used for explicit non-standard InputPath) or stageConfig_ls (used for category scenarios)
   if ( !is.null(stageInput) && any(file.exists(stageInput)) ) {
@@ -1486,9 +1486,6 @@ run.function <- function() {
   #   message("GlobalEnv contents")
   #   message(paste("  ",ls(".GlobalEnv"),collapse="\n"))
 
-  # Create run path
-  if ( ! dir.exists(runPath) ) dir.create(runPath)
-
   owd <- setwd(runPath) # may not need inside a future
   on.exit(setwd(owd))
 
@@ -1541,19 +1538,14 @@ ve.stage.running <- function() {
   )
 }
 
-# TODO: return a string indicating run status of model
-#   Name
-#   When the run started
-#   Duration from start of run to (done) completion time or (not done) Sys.time()
-#   Whether it is done
 tformat <- function(tm) format(tm,"%Y-%m-%d %H:%M:%S")
 tdiff <- function(tm0,tm1,digits=3,units="mins") {
-  if ( missing(units) || units == "mins" ) {
+  if ( missing(units) && units != "secs" ) {
     # used for display
     sub("mins","minutes",format( difftime(tm1,tm0,units="mins"), digits=digits ))
   } else {
     # used internally for delay interval
-    difftime(tm1,tm0,units="secs")
+    as.double(difftime(tm1,tm0,units="secs"),units="secs")
   }
 }
 
@@ -2010,7 +2002,7 @@ ve.model.plan <- function(plan="callr",workers=parallelly::availableCores(omit=1
 }
 
 # Run the modelStages
-ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FALSE,log="warn") {
+ve.model.run <- function(run="continue",stage=NULL,watch=TRUE,dryrun=FALSE,log="warn") {
   # run parameter can be
   #      "continue" (run all steps, starting from first incomplete; "reset" is done on the first
   #      incomplete stage and all subsequent ones, then execution continues)q
@@ -2026,7 +2018,6 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
   # "stage" could perhaps be a vector of stages - just those stages will be reset or re-run.
   #   "stage" can be specified either as an index position in self$modelStages or as a named position
 
-  # "delay" says how long to wait for running stages to finish
   # "watch", if TRUE, applies if only one stage is running in a group (no multiprocessing for whatever reason)
   #   then it will open a non-blocking connection to the stage log and echo out whatever is written there
   #   before polling again for completion
@@ -2036,7 +2027,7 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
     writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
     return( invisible(self$overallStatus) )
   }
-  
+
   # If save, like reset, but forces SaveDatastore to be TRUE
   # If reset, then go back to the first stage and run from there
 
@@ -2051,11 +2042,12 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
   workingResultsDir <- self$modelResults
 
   # Determine which stages need to be-rerun
+  completeStatus <- codeStatus("Run Complete")
   if ( run=="continue" ) {
     self$load(onlyExisting=TRUE,reset=TRUE) # Open any existing ModelState_ls to see which may be complete
-    alreadyRun <- ( sapply( self$modelStages, function(s) s$RunStatus ) == codeStatus("Run Complete") )
+    alreadyRun <- ( sapply( self$modelStages, function(s) s$RunStatus ) == completeStatus )
     if ( all(alreadyRun) ) {
-      self$overallStatus <- codeStatus("Run Complete")
+      self$overallStatus <- completeStatus
       writeLog("Model Run Complete",Level="warn")
       return(invisible(self$printStatus()))
     } else {
@@ -2065,6 +2057,7 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
     toRun <- 1 # Start at first stage
   }
   if ( toRun == 1 && run != "save" ) run <- "reset" # If starting over, process SaveDatastore as needed
+  writeLog(paste("Starting stage to run:",toRun),Level="info")
 
   # Save existing results if we're restarting or resetting
   SaveDatastore = NULL # ignore any pre-configured value for SaveDatastore
@@ -2150,14 +2143,31 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
   }
 
   # Process the run groups (stages in the same RunGroup can run in parallel)
+  if ( UseFuture ) {
+    delay <- self$setting("RunPollDelay")           # how long between polls (order of magnitude 2 seconds)
+    statusDelay <- self$setting("RunStatusDelay")   # how long between status reports (order of magnitude 1 minute)
+  }
+
   for ( rgn in names(RunGroups) ) {
     runMsg <- if (dryrun) "Would Run" else "Running"
     writeLog(paste(runMsg,"Stages where StartFrom =",rgn),Level="warn")
 
-    rg <- RunGroups[[rgn]]
+    rg <- RunGroups[[rgn]] # Names of stages in this RunGroup
     runningList <- list()
 
-    if ( dryrun ) {
+    if ( run=="continue" ) {
+      # reduce run group to stages not already run (in case there is one in the middle)
+      alreadyRun <- sapply( rg, function(ms) self$modelStages[[ms]]$RunStatus == completeStatus )
+      if ( any(alreadyRun) ) rg <- rg[ ! alreadyRun ]
+    }
+
+    # Check if there is anything to do in this RunGroup
+    if ( length(rg) == 0 ) {
+      # Should never happen:
+      # Won't get to running the group if there is not at least one that is incomplete
+      writeLog(paste("All stages complete where StartFrom =",rgn),Level="warn")
+      next
+    } else if ( dryrun ) {
       for ( ms in rg ) writeLog(paste("Would run stage",ms),Level="warn")
       next
     }
@@ -2165,13 +2175,11 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
     if ( ! UseFuture ) {
       for ( ms in rg ) { # iterate over names of stages to run
         stg <- self$modelStages[[ms]]
-        stg$run(log=LogLevel,UseFuture=UseFuture)
+        stg$run(log=LogLevel,UseFuture=FALSE)
         # inline execution will mark stage complete and reload the stage
         writeLog( stg$processStatus(), Level="warn")
       }
     } else {
-      delay <- self$setting("RunPollDelay")           # how long between polls (order of magnitude 2 seconds)
-      statusDelay <- self$setting("RunStatusDelay")   # how long between status reports (order of magnitude 1 minute)
       lastStatusReport <- NULL
       for ( ms in rg ) { # iterate over names of stages to run
         # Wait for avaialble processors before attempting to schedule the next stage
@@ -2180,6 +2188,7 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
           writeLog("Waiting for free processor...",Level="warn")
           while ( all(sapply(runningList,function(stg) stg$running())) ) {
             if ( is.null(lastStatusReport) || tdiff(lastStatusReport,Sys.time(),units="secs") > statusDelay ) {
+              writeLog(paste(length(runningList),"processes are running"),Level="info")
               sapply(runningList,function(stg) {
                 writeLog( stg$processStatus(), Level="warn" )
               })
@@ -2355,7 +2364,7 @@ ve.model.setting <- function(setting=NULL,stage=NULL,defaults=TRUE,shorten=TRUE,
     # Return sources
     if ( ! is.character(setting) ) setting <- names(searchParams_ls)
     sourceLocations <- sapply( searchParams_ls, function(p) attr(p,"source") )
-    if ( shorten) sourceLocations <- sub(paste0(self$modelPath,"/"),"",sourceLocations,fixed=TRUE)
+    if (shorten) sourceLocations <- sub(paste0(self$modelPath,"/"),"",sourceLocations,fixed=TRUE)
     
     return(data.frame(Setting=setting,Source=sourceLocations))
   } else {
@@ -2369,10 +2378,15 @@ ve.model.setting <- function(setting=NULL,stage=NULL,defaults=TRUE,shorten=TRUE,
         if ( length(setting)>1 && all(nzchar(setting)) ) {
           settings <- searchParams_ls[setting]   # list of matching settings
         } else {
-          settings <- searchParams_ls # Warning: potentially huge!
+          settings <- searchParams_ls # Warning: list is potentially huge!
         }
       }
-      if ( shorten) settings <- sub(paste0(self$modelPath,"/"),"",settings,fixed=TRUE)
+      if ( shorten ) {
+        shorten <- sapply(settings,is.character)
+        if ( any(shorten) ) {
+          settings[shorten] <- sub(paste0(self$modelPath,"/"),"",settings[shorten],fixed=TRUE)
+        }
+      }
       return(settings)
     }
   }
