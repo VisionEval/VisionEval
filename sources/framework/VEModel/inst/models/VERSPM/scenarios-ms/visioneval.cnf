@@ -24,7 +24,7 @@ ModelStages:
   "Design-3":
      Scenario: Design Level 3
      Description: All the Design Level 3 input adjustments
-     Dir: Design-Level-2
+     Dir: Design-Level-3
   "Pricing-1":
      Scenario: Pricing Level 1
      Description: All the Pricing Level 1 input adjustments

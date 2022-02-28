@@ -1438,7 +1438,7 @@ ve.spec.check <- function(Names=character(0), Clean=TRUE) {
       }
       self$CompiledSpec <- checkedSpec$CompiledSpec
     } else if ( "Function" %in% names(self$QuerySpec) ) {
-      checkSymbols <- evaluateFunctionSpec(self$Name, self$QuerySpec, envir=Names)
+      checkSymbols <- evaluateFunctionSpec(self$Name, self$QuerySpec, measureEnv=Names)
       if ( ! is.character(checkSymbols) || length(checkSymbols)>0 ) {
         checkSymbols <- as.character(checkSymbols) # could be some other kind of error
         self$CheckMessages <- c(
@@ -1822,7 +1822,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     # Elevate those to individual objects
     # TODO: need to add GeoType and GeoValues attributes based on analysis
     # of function.
-    measure <- evaluateFunctionSpec(measureName, measureSpec, envir=measureEnv)
+    measure <- evaluateFunctionSpec(measureName, measureSpec, measureEnv=measureEnv)
     saveMeasures <- list(measure)
     names(saveMeasures) <- measureName
   } else if ( "Summarize" %in% names(measureSpec) ) {

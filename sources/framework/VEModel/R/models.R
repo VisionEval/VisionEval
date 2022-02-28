@@ -781,7 +781,10 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
     inputPath <- c(inputPath,self$setting("InputPath",stage=stg$Name,shorten=FALSE))
   }
   inputPath <- unique(inputPath) # use this to avoid copying it with root files
+  inputPath <- setdiff(inputPath,self$modelPath)
   if ( inputs ) {
+    # TODO: if bare ModelDir is on the InputPath we should remove it if there is an InputDir
+    # Alternatively, could find root files earlier and ignore any of those...
     inputFiles <- dir(normalizePath(inputPath),full.names=TRUE)
     if ( all.files ) {
       inputFiles <- inputFiles[ ! dir.exists(inputFiles) ] # keep only the files, not subdirectories
@@ -894,7 +897,11 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
         resultFiles,rootFiles,archiveFiles) [c(inputs,scenarios,outputs,results,root,archive)]
     )
   )))
-  if ( nzchar(shorten) ) files <- sub(paste0(shorten,"/"),"",files,fixed=TRUE)
+  if ( nzchar(shorten) ) {
+    shorten <- paste0(shorten,"/")
+    files <- sub(shorten,"",files,fixed=TRUE)
+    files <- c( shorten, files) # if shortening, modelPath is first element
+  }
   return(files)
 }
 
@@ -2011,7 +2018,8 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
   #   or "reset" (or "restart") in which case we restart from stage 1, but first clear out ResultsDir (no save)
   #
   # "reset" implies deleting any ModelState or Datastore
-  # "continue" will unlink/recreate starting from the first stage that is not "Run Complete"
+  # "continue" will unlink/recreate starting from the first stage that is not "Run Complete", and
+  #   skip any later stages in the same Run Group that are complete.
 
   # if "stage" is provided, "run" is ignored: the run will reset that stage and subsequent ones
   #   and then do "continue". No saving will occur.
@@ -2038,8 +2046,6 @@ ve.model.run <- function(run="continue",stage=NULL,delay=15,watch=TRUE,dryrun=FA
   # "continue" will step through the stages looking for the first that is not "Run Complete"
   # SaveDatastore is ignored in that case.
   # That stage will be re-initialized.
-
-  # TODO: Clear and take ownership of ve.model
 
   # Set up workingResultsDir for file manipulations (including stage sub-directories)
   workingResultsDir <- self$modelResults
