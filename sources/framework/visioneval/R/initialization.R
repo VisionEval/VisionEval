@@ -166,13 +166,13 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
 #' absolute path to some Results directory), we can just rename the directory.
 #'
 #' @param RunParam_ls Run parameters describing which Results to archive and where to put them
-#' @param RunDir Directory containing results to archive (could be ModelDir/ResultsDir or just
+#' @param ResultsDir Directory containing results to archive (could be ModelDir/ResultsDir or just
 #' ModelDir)
 #' @param SaveDatastore If provided, replaces SaveDatastore in RunParam_ls
 #' @return a vector of artifacts that were found and copy attempted but failed (or character(0)
 #' if everything succeeded)
 #' @export
-archiveResults <- function(RunParam_ls,RunDir=getwd(),SaveDatastore=NULL) {
+archiveResults <- function(RunParam_ls,ResultsDir=getwd(),SaveDatastore=NULL) {
 
   if ( missing(SaveDatastore) || is.null(SaveDatastore) ) {
     SaveDatastore <- getRunParameter("SaveDatastore",Param_ls=RunParam_ls)
@@ -188,23 +188,40 @@ archiveResults <- function(RunParam_ls,RunDir=getwd(),SaveDatastore=NULL) {
   ModelDir <- getRunParameter("ModelDir",Param_ls=RunParam_ls)
   ResultsName <- getRunParameter("ArchiveResultsName",Param_ls=RunParam_ls)
 
+  # TODO: rework this for staged models: ResultsDir will have a series of
+  # sub-directories, so we want to do a recursive dir looking for
+  # ModelStateFile name...
+  # TODO: different behavior for missing ResultsDir
   ModelStateName <- getRunParameter("ModelStateFile",Param_ls=RunParam_ls)
-  ModelStatePath <- file.path(RunDir,ModelStateName)
 
-  if ( ! file.exists(ModelStatePath) ) {
-    writeLog("No previous model state or information to save.",Level="warn")
-    return(invisible(character(0)))
-  }
+  # Get the timestamp from the newest ModelState, if available
+  if ( missing(ResultsDir) || ResultsDir == ModelDir ) { # classic model
+    ModelStatePath <- file.path(ResultsDir,ModelStateName)
+    if ( ! file.exists(ModelStatePath) ) {
+      writeLog("No previous model state or information to save.",Level="warn")
+      return(invisible(character(0)))
+    }
+  } else { # Model with separate results directory ("ResultsDir")
+    ModelStatePath <- file.path(ResultsDir,dir( ResultsDir, pattern=ModelStateName, recursive=TRUE))
+    if ( length(ModelStatePath) == 0 ) {
+      writeLog("No previous model state or information to save.",Level="warn")
+      return(invisible(character(0)))
+    }
+    # Get the newest ModelState
+    ModelStatePath <- ModelStatePath[ order(file.info(ModelStatePath)[,"mtime"]) ][length(ModelStatePath)]
+    if ( ! file.exists(ModelStatePath) ) {
+      writeLog("No previous model state or information to save.",Level="warn")
+      return(invisible(character(0)))
+    }
+  }    
 
+  # Use the "newest" ModelState for the timestamp
   ModelState_ls <- readModelState(FileName=ModelStatePath,envir=new.env())
 
-  # Get the timestamp from the old ModelStatePath, if available
-  # Alternative - could extract it from the log file (but the log may or may not
-  # exist - the model state is more likely to be there).
-  if ( "FirstCreated" %in% names(ModelState_ls) ) {
+  if ( "LastChanged" %in% names(ModelState_ls) ) {
     TimeStamp <- ModelState_ls$FirstCreated
     writeLog(paste("Archive TimeStamp FirstCreated:",TimeStamp),Level="trace")
-  } else if ( "LastChanged" %in% names(ModelState_ls) ) {
+  } else if ( "FirstCreated" %in% names(ModelState_ls) ) {
     TimeStamp <- ModelState_ls$LastChanged
     writeLog(paste("Archive TimeStamp LastChanged:",TimeStamp),Level="trace")
   } else {
@@ -212,7 +229,7 @@ archiveResults <- function(RunParam_ls,RunDir=getwd(),SaveDatastore=NULL) {
     writeLog(paste("Archive TimeStamp Sys.time():",TimeStamp),Level="trace")
   }
 
-  # Archive directory is relative to the NEW model state, not the one we're archiving
+  # Archive directory is relative to the model directory
   ArchiveDirectory <- normalizePath(
     file.path(
       ModelDir,
@@ -220,22 +237,20 @@ archiveResults <- function(RunParam_ls,RunDir=getwd(),SaveDatastore=NULL) {
     ), winslash="/",mustWork=FALSE
   )
 
-  if ( RunDir != ModelDir ) { # Requires them to be equivalently normalized paths
+  if ( ResultsDir != ModelDir ) { # Requires them to be equivalently normalized paths
 
     # Do nothing if there is no directory to archive
-    if ( ! file.exists(RunDir) ) return(character(0))
+    if ( ! dir.exists(ResultsDir) ) return(character(0))
 
-    # RunDir is a sub-directory
+    # ResultsDir is a sub-directory of ModelDir
     owd <- setwd(ModelDir)
     on.exit(setwd(owd))
 
-    file.rename(RunDir,ArchiveDirectory)
+    file.rename(ResultsDir,ArchiveDirectory)
     return(character(0))
   }
 
   # Remainder is for a single-stage classic model storing its results in the ModelDir
-
-  OutputDir <- getRunParameter("OutputDir",Param_ls=ModelState_ls$RunParam_ls)
 
   if ( dir.exists(ArchiveDirectory) ) {
     writeLog(c("Results have already been saved:",ArchiveDirectory),Level="warn")
@@ -245,13 +260,16 @@ archiveResults <- function(RunParam_ls,RunDir=getwd(),SaveDatastore=NULL) {
   }
   writeLog(paste("Archive Directory:",ArchiveDirectory),Level="trace")
 
-  # Change out to the "RunDir"
-  owd <- setwd(RunDir)
+  # Change out to the "ResultsDir"
+  owd <- setwd(ResultsDir)
   on.exit(setwd(owd))
 
   # Now working in existing ResultsDir
 
   DatastoreName <- ModelState_ls$DatastoreName;
+
+  # Will clobber OutputDir (need to check if this is an absolute path...)
+  OutputDir <- getRunParameter("OutputDir",Param_ls=ModelState_ls$RunParam_ls)
 
   # remove vector if TRUE if attempting to remove
   # set to FALSE if removal is not attempted
