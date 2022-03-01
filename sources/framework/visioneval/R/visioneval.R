@@ -577,10 +577,29 @@ loadModel <- function(
         ))
       }
 
-      #Check that geography, units, deflators and base year are consistent
-      BadGeography <- !isTRUE(all.equal(envir$ModelState_ls$Geo_df, LoadDstore$ModelState_ls$Geo_df))
-      BadUnits <- !isTRUE(all.equal(envir$ModelState_ls$Units, LoadDstore$ModelState_ls$Units))
-      BadDeflators <- !isTRUE(all.equal(envir$ModelState_ls$Deflators, LoadDstore$ModelState_ls$Deflators))
+      #Check that geography, units, deflators and base year are
+      #consistent
+      BadGeography <- !isTRUE(
+        all.equal(
+          envir$ModelState_ls$Geo_df,
+          LoadDstore$ModelState_ls$Geo_df,
+          check.attributes=FALSE
+        )
+      )
+      BadUnits <- !isTRUE(
+        all.equal(
+          envir$ModelState_ls$Units,
+          LoadDstore$ModelState_ls$Units,
+          check.attrbutes=FALSE
+        )
+      )
+      BadDeflators <- !isTRUE(
+        all.equal(
+          envir$ModelState_ls$Deflators,
+          LoadDstore$ModelState_ls$Deflators,
+          check.attrbutes=FALSE
+        )
+      )
       BadBaseYear <- ! (envir$ModelState_ls$BaseYear == LoadDstore$ModelState_ls$BaseYear)
 
       if ( BadGeography || BadUnits || BadDeflators || BadBaseYear) {
@@ -939,11 +958,11 @@ getModuleL <- function(ModuleName, PackageName, RunYear, envir=modelEnvironment(
     #Identify the units of geography to iterate over
     GeoCategory <- M$Specs$RunBy
     #Create the geographic index list
-    GeoIndex_ls <- createGeoIndexList(c(M$Specs$Get, M$Specs$Set), GeoCategory, Year)
+    GeoIndex_ls <- createGeoIndexList(c(M$Specs$Get, M$Specs$Set), GeoCategory, RunYear)
     if (exists("Call")) {
       for (Alias in names(Call$Specs)) {
         GeoIndex_ls[[Alias]] <-
-          createGeoIndexList(Call$Specs[[Alias]]$Get, GeoCategory, Year)
+          createGeoIndexList(Call$Specs[[Alias]]$Get, GeoCategory, RunYear)
       }
     }
     #Run module for each geographic area
@@ -956,7 +975,7 @@ getModuleL <- function(ModuleName, PackageName, RunYear, envir=modelEnvironment(
       if (exists("Call")) {
         for (Alias in names(Call$Specs)) {
           L[[Alias]] <-
-            getFromDatastore(Call$Specs[[Alias]], RunYear = Year, Geo, GeoIndex_ls = GeoIndex_ls[[Alias]])
+            getFromDatastore(Call$Specs[[Alias]], RunYear = RunYear, Geo, GeoIndex_ls = GeoIndex_ls[[Alias]])
         }
       }
     }
@@ -1004,7 +1023,7 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
   #------------------------------
   ModuleFunction <- paste0(PackageName, "::", ModuleName)
   ModuleSpecs <- paste0(ModuleFunction, "Specifications")
-  Msg <- paste0("Start  module '", ModuleFunction, "' for year '", RunYear, "'.")
+  Msg <- paste0("Start  module '", ModuleFunction, "' for year '", RunYear, "'. ",memory.size(),"Mb")
   writeLog(Msg,Level="warn")
   #Load the package and module
   #---------------------------
@@ -1146,8 +1165,9 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
   }
   #Log and print ending message
   #----------------------------
-  Msg <- paste0("Finish module '", ModuleFunction, "' for year '", RunYear, "'.")
+  Msg <- paste0("Finish module '", ModuleFunction, "' for year '", RunYear, "'. ",memory.size(),"Mb")
   writeLog(Msg,Level="warn")
+  gc()
 
   if ( length(Warnings_) > 0 ) {
     writeLog(Warnings_,Level="warn")

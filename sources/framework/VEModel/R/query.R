@@ -641,7 +641,6 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
   }
 
   # Filter list of measure names by Measures parameter (list of names)
-  browser()
   measureNames <- Results[[1]]$measures() # All results should have the same measures...
   seekMeasures <- if ( ! is.character(Measures) ) {
     measureNames
@@ -1136,7 +1135,7 @@ ve.query.run <- function(
 
   # Update self$QueryResults to the list of VEQueryResults that were processed in this run and
   # return those
-  QueryResults <- if ( queryingModel ) self$results() else self$results(Results)
+  QueryResults <- if ( queryingModel ) self$results(Reload=Force) else self$results(Results)
   return( invisible(QueryResults) )
 }
 

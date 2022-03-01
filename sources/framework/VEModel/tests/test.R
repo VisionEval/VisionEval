@@ -39,7 +39,7 @@ stopTest <- function(msg) {
 # or to blow away what is already there (runs and all).
 
 # Check that we can source run_model.R to run a classic model
-test_classic <- function(modelName="VERSPM-Classic",clear=TRUE,log="info") {
+test_classic <- function(modelName="VERSPM-classic",clear=TRUE,log="info") {
 
   if ( ! missing(log) ) logLevel(log)
 
@@ -56,7 +56,7 @@ test_classic <- function(modelName="VERSPM-Classic",clear=TRUE,log="info") {
 
   if ( ! dir.exists(modelPath) ) {
     testStep(paste("Installing classic VERSPM model from package as",modelName))
-    rs <- installModel("VERSPM",variant="classic",installAs=modelName,log=log,confirm=FALSE)
+    rs <- installModel("VERSPM",variant="classic",modelPath=modelName,log=log,confirm=FALSE)
     modelName <- rs$modelName
     rm(rs)  # Don't keep the VEModel around
   }
@@ -181,7 +181,7 @@ test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",r
   }
   if ( ! modelName %in% model.dir ) {
     reset <- TRUE
-    rs <- test_install(modelName=baseModel,variant=variant,installAs=modelName,log="info")
+    rs <- test_install(modelName=baseModel,variant=variant,modelPath=modelName,log="info")
   }
 
   if ( ! reset ) {
@@ -594,7 +594,8 @@ test_load <- function(model=NULL, log="info" ) {
   testStep("Copy model...")
   modelPath <- file.path("models","LOAD-test")
   if ( dir.exists(modelPath) ) unlink(modelPath,recursive=TRUE)
-  loadModel <- model$copy("LOAD-test",copyResults=FALSE)
+  loadModelName <- "LOAD-test"
+  loadModel <- model$copy(loadModelName,copyResults=FALSE)
   print(loadModel)
   testStep("Set up load script...")
   baseModelPath <- loadModel$setting("ModelDir",shorten=FALSE)
@@ -631,15 +632,13 @@ test_load <- function(model=NULL, log="info" ) {
   configFile <- file.path(baseModelPath,"visioneval.cnf")
   yaml::write_yaml(runConfig_ls,configFile)
 
-  testStep("Reload model with LoadDatastore")
-  loadModel <- openModel(basename(loadModel$modelPath),log=log)
+  testStep(paste("Reload model",loadModelName," with LoadDatastore"))
+  loadModel <- openModel(loadModelName,log=log)
 
   testStep("Copy additional inputs")
   base.model <- openModel("JRSPM")
-  base.inputs <- file.path(
-    base.model$setting("InputPath",shorten=FALSE),
-    base.model$setting("InputDir")
-  )
+  base.inputs <- base.model$setting("InputPath",shorten=FALSE)
+  
   cat("Base Inputs",base.inputs,"\n")
   inputs <- loadModel$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
   required.files <- unique(file.path(base.inputs,inputs[,"FILE"]))
@@ -648,10 +647,7 @@ test_load <- function(model=NULL, log="info" ) {
   print(basename(required.files))
 
   testStep("Copying additional input files")
-  bare.inputs <- file.path(
-    loadModel$setting("InputPath",shorten=FALSE),
-    loadModel$setting("InputDir")
-  )
+  bare.inputs <- file.path(loadModel$setting("InputPath",shorten=FALSE))
   testStep("Remove base model inputs - will just have new ones")
   unlink(bare.inputs,recursive=TRUE)
   dir.create(bare.inputs)
@@ -663,7 +659,7 @@ test_load <- function(model=NULL, log="info" ) {
   file.copy(from=from,to=bare.inputs) # or copy to bare.defs...
   print(dir(bare.inputs))
 
-  testStep("Run model, loading datasore")
+  testStep("Run model, loading datastore")
   loadModel$run("reset",log=log)
   return(loadModel)
 }
@@ -1218,15 +1214,24 @@ test_multiquery <- function(reset=FALSE,log="info") {
 
   testStep("Query the model")
   # Make a list of VEResults objects from the VEModel list and run query on it
-  qry$run(mod,OutputFile="%queryname%_FromModel_%timestamp%")
+  qry$run(mod,Force=TRUE) # might be leftovers from another query test
+  extract <- qry$extract()
+  qry$export()
+
+  print(mod$dir(outputs=TRUE))
 
   testStep("Query the results list explicitly (should use cached query results)")
   # Make a list of ResultsDir path names (i.e. list of character strings) from the
   # VEResults and query that (Note difference between a character vector - list of
   # model names and a list of character strings, which are the result paths).
-  qry$run(mod$results(),OutputRoot=mod$modelResults,OutputFile="%queryname%_FromResultList_%timestamp%.csv")
+  qry$run(mod$results())
+  qry$extract()
+  qry$export()
+
+  print(mod$dir(outputs=TRUE))
 
   testStep("Done with multiple queries")
+  return(qry)
 }
 
 # TODO: once scenario testing is complete, add a test for the visualizer (writing to file
@@ -1239,7 +1244,7 @@ test_rpat <- function(run=TRUE) {
   verpat <- openModel("JRPAT")
   if ( ! verpat$valid() ) {
     testStep("Installing VERPAT as JRPAT")
-    verpat <- installModel("VERPAT",installAs="JRPAT")
+    verpat <- installModel("VERPAT",modelPath="JRPAT")
   }
   if ( run || ! verpat$results()$valid() ) {
     testStep("Clearing previous extracts")
@@ -1252,7 +1257,7 @@ test_rpat <- function(run=TRUE) {
 }
 
 # Test the setup management functions
-test_setup <- function(model=NULL) {
+test_setup <- funqction(model=NULL) {
   testStep("Parameter defaults...")
   visioneval::defaultVERunParameters()
 
@@ -1393,7 +1398,7 @@ test_visual <- function(categories=TRUE,popup=FALSE,reset=FALSE,log="info") {
   jsonvars <- qr$visual(QueryResults=extract) # pure extraction return jsonvars
   if ( popup ) {
     testStep("Launching jrc visualizer")
-    qr$visual(SaveTo=NULL) # save to sub-directory of ResultsDir/OutputDir
+    qr$visual(SaveTo=NULL) # Popup visualizer
   } else {
     testStep("Writing file-system visualizer")
     qr$visual(SaveTo=TRUE) # save to sub-directory of ResultsDir/OutputDir

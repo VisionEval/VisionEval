@@ -21,10 +21,6 @@ if ( ! dir.exists("models") ) {
 } else {
   # clean up the mini-model if it's still there
   if ( dir.exists("models/BARE") ) unlink("models/BARE",recursive=TRUE)
-
-  # delete any other models in "models" directory
-  otherModels <- grep("VERSPM-run",dir("models",full.names=TRUE),invert=TRUE,value=TRUE)
-  if ( length(otherModels) > 0 ) unlink(otherModels,recursive=TRUE)
 }
 
 message("Pre-running model (Base VERSPM)")

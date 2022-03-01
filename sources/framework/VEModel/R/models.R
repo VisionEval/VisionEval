@@ -314,14 +314,22 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
         loadStage <- names(baseModel$modelStages)[length(baseModel$modelStages)]
       } else loadStage <- modelParam_ls$LoadStage
       runPath <- baseModel$modelStages[[loadStage]]$RunPath
-      modelParam_ls[["LoadDatastoreName"]] <- file.path (
-        runPath,
-        baseModel$setting("DatastoreName",stage=loadStage)
+      modelParam_ls <- visioneval::addRunParameter(
+        Param_ls=modelParam_ls,
+        Source=attr("Source",modelParam_ls$LoadModel),
+        LoadDatastoreName=file.path (
+          runPath,
+          baseModel$setting("DatastoreName",stage=loadStage)
+        ),
+        LoadDatastore=TRUE
       )
-      modelParam_ls$LoadDatastore <- TRUE
     } else {
       writeLog(paste("LoadModel present but invalid:",modelParam_ls$LoadModel),Level="warn")
-      modelParam_ls$LoadDatastore <- FALSE
+      modelParam_ls <- visioneval::addRunParameter(
+        Param_ls=modelParam_ls,
+        Source=attr("Source",modelParam_ls$LoadModel),
+        LoadDatastore=FALSE
+      )
     }
   }
 
