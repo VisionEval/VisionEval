@@ -55,8 +55,10 @@ mini.1$configure()
 # Let's see what we've got
 print(mini.1)
 
-mini.1$run("reset")
+mini.1$dir(results=TRUE, all.files=TRUE) # No results yet
+mini.1$run("reset")                      # "reset" is optional here (never been run)
 mini.1$dir()
+mini.1$dir(results=TRUE, all.files=TRUE) # Now results for two stages
 
 # Finally, let's add a stage to mini.1 with a different scenario
 # Note that this stage is added IN MEMORY ONLY, but we can still run the model
@@ -67,19 +69,9 @@ mini.1$dir()
 # This mechanism is used internally to build "combination" scenarios
 # (see "scenarios.R" in the walkthrough)
 
-mini.1$addstage(
-  Name="AltFuture",
-  stageParam_ls=list(
-    Dir="AltFuture"
-  ),
-  Scenario="Mini-Model Alternative Future",
-  Description="Scramble an input file",
-  StartFrom="BaseYear",
-  BaseYear = mini.1$setting("BaseYear"),
-  Years=mini.1$setting("Years",stage="FutureYear")
-)
-# add stage automatically "configures" the model
-# nothing is written to the file system
+# First we'll set up the inputs.
+# Need to do that first, since the InputPath won't be added if
+# the directory does not already exist
 
 # Even though the stage definition is in memory, the specific inputs for
 #  the alternative scenario are maintained in a directory. 
@@ -100,13 +92,30 @@ scenario.input <- grep(
 )
 adj.input <- read.csv(scenario.input)
 adj.names <- grep("^Age",names(adj.input),value=TRUE)
-adj.input[adj.input$Year=="2038", adj.names] <- adj.input[adj.input$Year=="2038", adj.names] * 1.03
-write.csv(adj.input,row.names=FALSE,file=file.path(stage3.input,basename(scenario.input)))
+adj.input[adj.input$Year=="2038", adj.names] <- round( adj.input[adj.input$Year=="2038", adj.names] * 1.03 )
+altfuture.input <- file.path(stage3.input,basename(scenario.input))
+write.csv(adj.input,row.names=FALSE,file=altfuture.input)
+
+mini.1$addstage(
+  Name="AltFuture",
+  stageParam_ls=list(
+    Dir="AltFuture"
+  ),
+  Scenario="Mini-Model Alternative Future",
+  Description="Scramble an input file",
+  StartFrom="BaseYear",
+  BaseYear = mini.1$setting("BaseYear"),
+  Years=mini.1$setting("Years",stage="FutureYear")
+)
+# add stage automatically "configures" the model
+# nothing is written to the file system
 
 # Run the new stage
 
 mini.1$run() # Watch closely: will only run the new stage!
-mini.1$run() # just reports each stage status
+
+mini.1$run() # just reports that model is "Run Complete"
+mini.1$run("save")
 
 mini.1$plan("multisession") # Run stages in parallel
 mini.1$run("save") # Move existing results aside to timestamped results folder and re-run
@@ -115,7 +124,7 @@ mini.1$run("reset") # Blow away existing results and re-run the entire model
 # Looking at all the results
 rs <- mini.1$results()
 rs$extract() # runs "extract" on each model stage results
-mini.1$dir(outputs=TRUE,all.files=TRUE)
+print(mini.1$dir(outputs=TRUE,all.files=TRUE))
 
 # Check out "queries.R" in the walkthrough for how to summarize
 # differences between stages / scenarios.

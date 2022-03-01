@@ -330,7 +330,7 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
   #   if the file does not exist on the model's InputPath (which is the case
   #   for the bare model).
 
-  base.inputs <- unique(mod$dir(inputs=TRUE)) # List short names of input paths for each stage
+  base.inputs <- unique(mod$dir(inputs=TRUE,showRootDir=FALSE)) # List short names of input paths for each stage
   cat("Base Inputs",base.inputs,"\n")
   base.inputs <- unique(mod$dir(inputs=TRUE,shorten=FALSE)) # Now get the full path name for inputs
   inputs <- bare$list(inputs=TRUE,details=c("FILE","INPUTDIR"))

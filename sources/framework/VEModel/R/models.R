@@ -688,8 +688,7 @@ ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchive
 
   dir.create(newModelPath,showWarnings=FALSE)
   # check that the directory produces the right results files
-  model.files <- self$dir(root=TRUE,inputs=TRUE,results=copyResults,archive=copyArchives)
-  model.files <- model.files[-1] # dir returns self$modelPath as its first element
+  model.files <- self$dir(root=TRUE,inputs=TRUE,results=copyResults,archive=copyArchives,showRootDir=FALSE)
   copy.subdir <- dirname(model.files)
   unique.dirs <- unique(copy.subdir)
   for ( d in unique.dirs ) {
@@ -708,9 +707,10 @@ ve.model.copy <- function(newName=NULL,newPath=NULL,copyResults=TRUE,copyArchive
 
 # Archive results directory
 ve.model.archive <- function(SaveDatastore=TRUE) {
+  writeLog("Archiving model results",Level="info")
   failToArchive <- visioneval::archiveResults(
     RunParam_ls=self$RunParam_ls,
-    RunDir=self$modelResults,
+    ResultsDir=self$modelResults,
     SaveDatastore=SaveDatastore
   )
   if ( length(failToArchive)>0 ) {
@@ -733,7 +733,7 @@ ve.model.archive <- function(SaveDatastore=TRUE) {
 #   results=TRUE : show result sets
 #   outputs=TRUE : show "outputs" (extracts and query results)
 # if all.files, list inputs and outputs as files, otherwise just directories
-ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
+ve.model.dir <- function( stage=NULL,shorten=TRUE, showRootDir=TRUE, all.files=FALSE,
   root=FALSE,results=FALSE,outputs=FALSE,inputs=FALSE,scenarios=FALSE,archive=FALSE) {
   # We're going to report contents of these directories
   #   self$modelPath (root)
@@ -762,7 +762,9 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
     root <- results <- outputs <- inputs <- archive <- TRUE
   }
 
-  if ( missing(shorten) || shorten ) shorten <- self$modelPath
+  if ( missing(shorten) || shorten ) {
+    shorten <- self$modelPath
+  } else shorten <- ""
   if ( is.null(stage) ) {
     stages <- self$modelStages
   } else {
@@ -783,16 +785,15 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
   inputPath <- unique(inputPath) # use this to avoid copying it with root files
   inputPath <- setdiff(inputPath,self$modelPath)
   if ( inputs ) {
-    # TODO: if bare ModelDir is on the InputPath we should remove it if there is an InputDir
-    # Alternatively, could find root files earlier and ignore any of those...
-    inputFiles <- dir(normalizePath(inputPath),full.names=TRUE)
+    inputDirs <- normalizePath(inputPath)
     if ( all.files ) {
-      inputFiles <- inputFiles[ ! dir.exists(inputFiles) ] # keep only the files, not subdirectories
+      inputFiles <- dir(inputDirs,full.names=TRUE)
+      inputFiles <- inputFiles[ ! dir.exists(inputFiles) ]
     } else {
       # no details: keep directories, not files
       # Show the input directory names only if they exist
-      inputFiles <- normalizePath(c(inputPath,inputFiles),winslash="/",mustWork=FALSE)
-      inputFiles <- inputFiles[ dir.exists(inputFiles) ]
+      # inputFiles <- normalizePath(c(inputPath,inputFiles),winslash="/",mustWork=FALSE)
+      inputFiles <- inputDirs
     }
   } else inputFiles <- character(0)
 
@@ -804,10 +805,11 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
       self$setting("ScenarioDir")
     )
     scenarioFiles <- dir(scenarioPath,all.files=all.files,recursive=all.files)
+    scenarioDirs <- dir.exists(scenarioFiles)
     if ( all.files ) {
-      scenarioFiles <- scenarioFiles[ ! dir.exists(scenarioFiles) ] # all the files (only)
+      scenarioFiles <- scenarioFiles[ ! scenarioDirs ] # all the files (only)
     } else {
-      scenarioFiles <- scenarioFiles[ dir.exists(scenarioFiles) ] # just the subdirectories
+      scenarioFiles <- scenarioFiles[ scenarioDirs ] # just the subdirectories
     }
   } else {
     scenarioFiles <- character(0)
@@ -816,6 +818,10 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
   # Locate results
   baseResults <- self$modelResults
 
+  # Find RunPath for each stage
+  stagePaths <- sapply(stages,function(s) s$RunPath)
+  stagePaths <- stagePaths[ !is.na(stagePaths) ]
+
   # Do the outputs before the results (makes it easier to handle
   #  results in root)
   # TODO: verify where the "outputs" are. OutputDir needs to be relative to ModelDir/ResultsDir...
@@ -823,18 +829,18 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
   # "OutputDir" is used in VEModel$extract and VEModel$query...
   # Query OutputDir is relative to ModelDir/ResultsDir...
   if ( outputs ) {
-    outputPath <- file.path( baseResults,self$setting("OutputDir") )
-    outputFiles <- dir(normalizePath(outputPath),full.names=TRUE,recursive=all.files)
+    outputPath <- dir(stagePaths,pattern=self$setting("OutputDir"),full.names=TRUE)
+    outputFiles <- dir(outputPath,full.names=TRUE,recursive=all.files)
+    outputDirs <- dir.exists(outputFiles)
     if ( all.files ) {
-      outputFiles <- outputFiles[ ! dir.exists(outputFiles) ]
+      outputFiles <- outputFiles[ ! outputDirs ]
+    } else {
+      outputFiles <- outputFiles[ outputDirs ]
     }
   } else outputFiles <- character(0)
 
-  # Find RunPath for each stage
-  stagePaths <- sapply(stages,function(s) s$RunPath)
-  stagePaths <- stagePaths[ !is.na(stagePaths) ]
-
   # Find archiveDirs (and if asked for, archiveFiles)
+  # Do this a bit differently from outputs and inputs since there will be a ton of files
   archiveNamePattern <- paste0("^",self$setting("ArchiveResultsName"),"_")
   archiveDirs <- dir(self$modelPath,pattern=archiveNamePattern,full.names=TRUE)
   archiveDirs <- archiveDirs[dir.exists(archiveDirs)] # remove non-directories
@@ -900,7 +906,7 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, all.files=FALSE,
   if ( nzchar(shorten) ) {
     shorten <- paste0(shorten,"/")
     files <- sub(shorten,"",files,fixed=TRUE)
-    files <- c( shorten, files) # if shortening, modelPath is first element
+    if (showRootDir && length(files)>0 ) files <- c( shorten, files) # if shortening, modelPath is first element
   }
   return(files)
 }
@@ -930,16 +936,16 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
     return( invisible(FALSE) )
   }
   
-  to.delete <- self$dir(outputs=TRUE,stage=stage)
+  to.delete <- self$dir(outputs=TRUE,stage=stage,showRootDir=FALSE)
   if ( missing( outputOnly ) ) {
     # Can't force delete of results without explicit outputOnly=FALSE
     outputOnly <- ( length(to.delete)>0 || force )
   }
 
-  if ( ! isTRUE(outputOnly) ) to.delete <- c(to.delete,self$dir(results=TRUE,stage=stage))
+  if ( ! isTRUE(outputOnly) ) to.delete <- c(to.delete,self$dir(results=TRUE,stage=stage,showRootDir=FALSE))
 
   # Only offer archives to delete if we're looking at all stages
-  if ( isTRUE(archives) && is.null(stage) ) to.delete <- c(to.delete,self$dir(archive=TRUE))
+  if ( isTRUE(archives) && is.null(stage) ) to.delete <- c(to.delete,self$dir(archive=TRUE,showRootDir=FALSE))
 
   # note, by default $dir shortens by removing self$modelPath
   # so deletion will only work if getwd()==self$modelPath
@@ -997,8 +1003,8 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
             unlink(candidates[response],recursive=TRUE)
             cat("Deleted:\n",paste(candidates[response],collapse="\n"),"\n")
           }
-          to.delete <- self$dir(outputs=TRUE)
-          if ( ! isTRUE(outputOnly) ) to.delete <- c(to.delete,self$dir(results=TRUE))
+          to.delete <- self$dir(outputs=TRUE,showRootDir=FALSE)
+          if ( ! isTRUE(outputOnly) ) to.delete <- c(to.delete,self$dir(results=TRUE,showRootDir=FALSE))
           if ( length(to.delete) > 0 ) {
             start = 1
             stop <- min(start+show-1,length(to.delete))
@@ -1486,6 +1492,9 @@ run.function <- function() {
   #   message("GlobalEnv contents")
   #   message(paste("  ",ls(".GlobalEnv"),collapse="\n"))
 
+  # TODO: clear out runPath if there is a residue there...
+  if ( ! dir.exists(runPath) ) dir.create(runPath)
+
   owd <- setwd(runPath) # may not need inside a future
   on.exit(setwd(owd))
 
@@ -1628,7 +1637,6 @@ ve.stage.completed <- function( runStatus=NULL ) {
   self$RunStatus <- runStatus
   self$load(onlyExisting=TRUE)
 }
-
 
 # Print a model stage summary
 ve.stage.print <- function(details=FALSE,configs=FALSE) {
@@ -2284,6 +2292,7 @@ ve.stage.watchlog <- function(stop=FALSE,delay=2) {
       if ( delay > 0 ) Sys.sleep(delay)
       return() # probably called too soon after launching model
     }
+    browser(expr=length(Logfile)>1)
     if ( file.exists(Logfile) ) {
       writeLogMessage(paste0(self$Name,": Watching Log file"),Level="warn")
       writeLogMessage(Logfile,Level="info")
@@ -2453,13 +2462,12 @@ ve.model.results <- function(stage=character(0)) {
     results.env$results <- results # named list of VEResults objects
     rm(results)
 
-    # Extract from the list
+    # Extract from the list - works for everything
+    # selections are problematic since they are tied to specific result sets
     extract <- function(stage=character(0),...) {
       if ( length(stage)==0 ) stage<-names(results)
       for ( stg in stage ) {
-        writeLog(paste("Not implemented: Would extract results for stage",stg),Level="info")
-        # TODO: need to pass a selection of fields...
-        # results[[stg]]$extract(...)
+        results[[stg]]$extract(...)
       }
       return(invisible(stage))
     }

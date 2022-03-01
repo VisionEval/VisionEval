@@ -44,7 +44,7 @@ dir.create(mini.dir)            # Model directory
 dir.create(mini.script)         # Scripts directory
 dir.create(mini.inputs)         # Inputs directory
 dir.create(mini.defs)           # Defs directory
-print( dir(mini.dir,full.names=TRUE) ) # Show everything using model $dir function
+print( dir(mini.dir,full.names=TRUE) ) # Show everything using R dir function
 
 # Set up the model configuration (visioneval.cnf)
 # Can also put it in "defs/run_parameters.json", like the old days
@@ -107,7 +107,6 @@ print(dir(mini.defs,full.names=TRUE))
 
 # Now (even without inputs) the mini model can be opened
 # At a minimum, it needs scripts and defs
-
 mini <- openModel(basename(mini.dir))
 print(mini) # Still has no input files
 
@@ -117,8 +116,6 @@ print(mini) # Still has no input files
 #   (files in stage and scenario folders or otherwise distributed)
 # In that case, you probably want to use "insider information" to copy the files using
 #   File Explorer or an equivalent tool
-
-stop()
 
 # Set the base model inputs directory
 # TODO: dir is not working right: inputs=TRUE should just list the
@@ -133,6 +130,7 @@ required.files <- unique(file.path(base.inputs,c(inputs[,"FILE"],"model_paramete
 required.files <- required.files[which(file.exists(required.files))]
 
 file.copy(from=required.files,to=mini.inputs)
+message("Copying model_parameters.json")
 
 # Re-open the mini model, applying the configuration changes
 # You need to do this explicitly (or implicitly by using openModel again) every time
@@ -142,6 +140,15 @@ mini$configure()
 
 # list the inputs again showing that INPUTDIR is now the mini model inputs (previously NA)
 inputs <- mini$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
+
+# List what is actually in the model's inputs directory using its own
+# "dir" function. Notice that the model directory is shown first;
+# other files are relative to that directory.
+print(mini$dir(inputs=TRUE,all.files=TRUE))
+
+# And again. Without shortening the file names are in a form ready to
+# copy, open, etc.
+print(mini$dir(inputs=TRUE,all.files=TRUE,shorten=FALSE))
 
 # The following steps just make for a nicer display...
 
@@ -161,7 +168,9 @@ shell.exec(mini$modelPath)
 
 # Tour the model using VEModel exploration functions
 mini$dir()              # List the summary contents of the model
+mini$dir(all.files=TRUE) # List all the files
 
+# We did this above, but now we can see it all
 mini$dir(inputs=TRUE)   # List just the model input directories
 mini$dir(inputs=TRUE,all.files=TRUE) # List all the input files...
 
@@ -170,15 +179,21 @@ mini$run("reset")    # throw away existing results and re-run
 
 # Show what is there after the run
 mini$dir()           # notice presence of results directory
+mini$dir(results=TRUE,all.files=TRUE) # Notice it doesn't show the "inside" of the Datastore
+mini$dir(results=TRUE,all.files=TRUE,shorten=FALSE)
 
 # Re-run the model but save its results to an archive directory
 mini$run("save")     # move existing results into an archive and re-run
+
 mini$dir()           # notice presence of archive directory
 mini$dir(archive=TRUE) # call out just the archive directories
 mini$dir(archive=TRUE,all.files=TRUE) # List all the files in the archive directories
+mini$dir(archive=TRUE,all.files=TRUE,shorten=FALSE)
+# Notice that the archive DOES show the contents of the archived Datastore 
 
 # Re-run the model but only do stages that have not run.
 # We'll use this again in "model-stages.R" and "scenarios.R"
 mini$run("continue") # re-run any stage that is not "Run Complete" - does nothing here
-mini$run()           # same as vr$run("continue")
-
+mini$run()           # same as vr$run("continue"); does nothing here
+mini$run("reset")
+mini$dir()           # archive is still present after reset
