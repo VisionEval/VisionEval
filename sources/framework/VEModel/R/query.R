@@ -1336,7 +1336,6 @@ ve.spec.check <- function(Names=character(0), Clean=TRUE) {
   # Add a Geography field based on what's in "By" - "Region" by default, otherwise
   # whichever small geography is in the "By" field.
 
-  # TODO: Add a Filter spec element to list specific Breaks or GeoValues to keep in the results
   # Function specs should require scalar elements.
 
   self$CheckMessages <- character(0)
@@ -1388,11 +1387,22 @@ ve.spec.check <- function(Names=character(0), Clean=TRUE) {
       if ( length(checkedSpec$Errors)>1 || any(nzchar(checkedSpec$Errors)) ) {
         self$CheckMessages <- c(
           self$CheckMessages,
-          msg<-paste("Error(s) in Query Specification:",self$Name,"\n"),
+          paste("Error(s) in Query Specification:",self$Name,"\n"),
           checkedSpec$Errors
         )
       }
-      self$CompiledSpec <- checkedSpec$CompiledSpec
+      if ( "Filter" %in% names(self$QuerySpec$Summarize) ) {
+        # Confirm that "Filter" names are in "By"
+        # Can't easily process values before query runs...
+        Filter <- self$QuerySpec$Summarize$Filter
+        goodFilter <- names(Filter) %in% self$QuerySpec$Summarize$By
+        if ( any( ! goodFilter ) {
+          self$CheckMessages <- c(
+            self$CheckMessages,
+            paste("Fields in Filter not listed in By:",paste( names(Filter)[!goodFilter], collapse=", "),"\n")
+          )
+        }
+      }
     } else if ( "Function" %in% names(self$QuerySpec) ) {
       checkSymbols <- evaluateFunctionSpec(self$Name, self$QuerySpec, measureEnv=Names)
       if ( ! is.character(checkSymbols) || length(checkSymbols)>0 ) {
@@ -1451,7 +1461,6 @@ cleanSpecNames <- function(self)
   return(self)
 }
 
-# TODO: the following is still rather a mess.
 # Need a function to build a "Summarize" or "Function" sub-spec
 # Then go in and update specific elements
 # TODO: This should be lower priority - just send people back to edit the .VEqry text file.
@@ -1565,7 +1574,6 @@ VEQuerySpec <- R6::R6Class(
     CheckMessages = "Empty",        # message explaining why VEQuerySpec$valid() returned FALSE, or "" if OK
     QuerySpec = list(),             # The actual specification
     Name = "Unnamed",               # Name of the spec, from its QuerySpec
-    CompiledSpec = NULL,            # The compiled specification (checked and with derived elements added) see ve.spec.check
     Export = NULL                   # Export specifications for visualizer
   )
 )
@@ -1653,9 +1661,6 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
 # currentMeasures creates environment in which to evaluate Function specs
 makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
 
-  # TODO: Add Filter element (to pick out specific GeoType/GeoValue or Break level)
-  # Can we sub-filter (e.g. do a computation by Marea, but only within certain Bzones)
-
   measureName <- measureSpec$Name
   measureSpec <- measureSpec$QuerySpec
 
@@ -1701,9 +1706,10 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     if ( length(measure) == 1 || ( usingBreaks && ! is.array(measure) ) ) {
       GeoValues <- "Region"
       GeoType <- "Region"
+      geoDim <- integer(0)
     } else {
       # length(measure)>1 && ( ! usingBreaks || is.array(measure) )
-      if ( is.array(measure) ) { # Get names from dimnames
+      if ( is.array(measure) ) { # Get names from dimnames; is.array implies usingBreaks
         if ( length(dim(measure)) != length(sumSpec$By) ) {
           stop(
             writeLogMessage(
@@ -1715,45 +1721,122 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
             )
           )
         }
-        GeoType <- sumSpec$By[length(sumSpec$By)] # Last By dimension is the GeographyType
-        GeoValues <- dimnames(measure)[[2]] # yields a character vector of all the Geography names
-      } else { # Get names from names
+        geoDim <- which( sumSpec$By %in% validGeoTypes ) # first (and should be only) geoType
+        if ( length(geoDim) > 1 ) {
+          stop(
+            writeLogMessage(paste0(measureName,": Invalid By specification: one element must be geography"),Level="error")
+          )
+        } else if ( length(geoDim) == 1 ) {
+          # Found geography breaks
+          GeoType <- sumSpec$By[geoDim]
+          GeoValues <- dimnames(measure)[[geoDim]]
+        } else {
+          # Have no geoBreaks; but breaks on other categories
+          GeoType <- "Region"
+          GeoValues <- "Region"
+        }
+      } else { # Get GeoValues from names (first dimension)
         if ( ! is.vector(measure) ) {
           stop(
             writeLogMessage(paste("Got non-vector result from summarizeDatasets:",measureName),Level="error")
           )
         }
-        GeoType <- sumSpec$By[1]
-        GeoValues <- names(measure)
+        geoDim <- which( sumSpec$By %in% validGeoTypes ) # first (and should be only) geoType
+        if ( length(geoDim) != length(sumSpec$By) ) {
+          # breaks on other categories, and we'll pick that up below
+          GeoType <- "Region"
+          GeoValues <- "Region"
+        } else {
+          GeoType <- sumSpec$By[geoDim]
+          GeoValues <- names(measure)
+        }
       }
     }
 
     if ( usingBreaks ) {
-      breakDims <- dimnames(measure)[[1]]
+      breakDim <- which( ! sumSpec$By %in% validGeoTypes )
       if ( "BreakNames" %in% names(sumSpec) ) {
-        breakNames <- sumSpec$BreakNames[[sumSpec$By[1]]]
+        breakNames <- sumSpec$BreakNames[[sumSpec$By[breakDim]]]
         breakNames <- c("min",breakNames)
-        if ( length(dim(measure))>1 ) {
-          dimnames(measure) <- list(breakNames,dimnames(measure)[[2]])
+      } else {
+        breakNames <- NULL
+      }
+      if ( geoType == "Region" ) {
+        # measure should be a standard vector of values for the break groups
+        if ( ! is.vector(measure) ) {
+          stop(
+            writeLogMessage(paste0(measureName,": ",paste("Using breaks but got unexpected measure class:",class(measure),collapse=",")),Level="error")
+          )
+        }
+        if ( is.null(breakNames) ) {
+          breakNames <- names(measure)
         } else {
-          dimnames(measure) <- list(breakNames)
+          names(measure) <- breakNames
         }
       } else {
-        breakNames <- breakDims # auto-generated by visioneval::summarizeDatasets
+        # measure should be an array, with one geo dimension and one break group dimension
+        if ( is.array(measure) ) {
+          if ( is.null(breakNames) ) {
+            breakNames <- dimnames(measure)[[breakDim]]
+          } else {
+            dimnames(measure)[[breakDim]] <- breakNames
+          }
+        } else {
+          stop(
+            writeLogMessage(paste0(measureName,": By geography and breaks, but only one dimension in results!"),Level="error")
+          )
+        }
       }
-    } else breakNames <- NULL
+    } else {
+      breakNames <- NULL
+      breakDim <- integer(0)
+    }
 
-    # TODO: Process the Filter specification (if any) to reduce dimensionality
-    # measure is reduced to a subset (drop=FALSE) of whatever array is provided.
+    # Filter measure to breaks and geography of interest
+    # Requiring length greater than one for measure (won't filter a scalar)
+    if ( "Filter" %in% names(sumSpec) && length(measure)>1 ) {
+      hasBreaks <- length(breakDim)>0
+      if ( hasBreaks  ) {
+        breakNames <- breakNames[ breakNames %in% sumSpec$Filter[[sumSpec$By[breakDim]]] ]
+      }
+      hasGeo <- length(geoDim)>0
+      if ( hasGeo ) {
+        GeoValues  <- GeoValues[ breakNames %in% sumSpec$Filter[[sumSpec$By[geoDim]]] ]
+      }
+      if ( hasBreaks && hasGeo ) {
+        # Check that measure is an array
+        # Hard part is the we're not requiring Geo to be first or second
+        if ( ! is.array(measure) ) {
+          stop(
+            writeLogMessage(paste0(measureName" is not an array but has both breaks and geography!"),Level="error")
+          )
+        }
+        if ( geoDim == 1 ) {
+          measure <- measure[ GeoValues, breakNames ]
+        } else {
+          measure <- measure[ breakNames, GeoValues ]
+        }
+      } else {
+        if ( hasGeo ) {
+          measure <- measure[ GeoValues ]
+        } else if ( hasBreaks ) {
+          measure <- measure[ breakNames ]
+        }
+        # else fall through leaving measure untouched
+      }
+    }
 
+    # Report measure with attributes
     measure <- structure(
       measure,
       Units=measureSpec$Units,
       Description=measureSpec$Description,
       By=sumSpec$By, # may be NULL
       Filter=sumSpec$Filter, # may be NULL
+      BreakDim=breakDim, # integer, possibly length zero if no breaks
       BreakNames=breakNames, # may be NULL
-      GeoType=GeoType,
+      GeoDim=geoDim, # integer, possibly length zero if breaks and region geography
+      GeoType=GeoType, # will always have something ("Region" if nothing else)
       GeoValues=GeoValues,
       Export=measureSpec$Export # visualizer elements...
     ) # used during export to filter on Geography
