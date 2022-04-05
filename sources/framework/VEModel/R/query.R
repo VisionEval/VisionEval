@@ -632,7 +632,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
   }
   if ( length(seekMeasures) == 0 ) {
     stop(
-      writeLogMessage(paste("Measures Not Found in Query:",paste(seekMeasures,collapse=", ")),Level="error")
+      writeLogMessage("No Measures in Query.",Level="error")
     )
   }
 
@@ -1618,6 +1618,7 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
   Symbols <- Symbols[ foundSymbols ]
   GeoTypes <- sapply(Symbols,function(s) attr(get(s,envir=measureEnv),"GeoType"))
   GeoType <- validGeoTypes[ validGeoTypes %in% GeoTypes ][1]
+  browser()
   GeoValues <- attr( get(Symbols[ GeoTypes==GeoType ][1],envir=measureEnv),"GeoValues" )
 
   if ( is.null(GeoType) || is.null(GeoValues) ) {

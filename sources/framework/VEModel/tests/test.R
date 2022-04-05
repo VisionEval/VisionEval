@@ -1257,7 +1257,7 @@ test_rpat <- function(run=TRUE) {
 }
 
 # Test the setup management functions
-test_setup <- funqction(model=NULL) {
+test_setup <- function(model=NULL) {
   testStep("Parameter defaults...")
   visioneval::defaultVERunParameters()
 
