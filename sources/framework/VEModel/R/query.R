@@ -547,7 +547,7 @@ ve.query.print <- function(details=FALSE) {
   }
 }
 
-ve.query.getlist <- function(get) {
+ve.query.getlist <- function(Geography=NULL) {
   ################################
   # Low-level function to get a copy of the specification list to run
   # We'll use this to get the actual list used internally to perform $run
@@ -558,6 +558,24 @@ ve.query.getlist <- function(get) {
   self$check()
   # Deep copy the current QuerySpec
   newSpec <- lapply(private$QuerySpec,function(s) VEQuerySpec$new(s))
+  if ( ! is.null(Geography) ) {
+    validity <- list()
+    specResults <- character(0)
+    for ( test.spec in newSpec ) {
+      test.spec <- test.spec$setgeo(Geography)
+      validity <- if ( ! test.spec$valid() ) {
+        CheckMessages <- c(CheckMessages,
+          paste0(test.spec$name(),": ",test.spec$CheckResults," (removed)")
+        )
+        append(validity,FALSE)
+      } else append(validity,TRUE)
+    }
+    if ( length(CheckMessages)>0 ) {
+      newSpec <- newSpec[validity] # Remove any invalid elements from newSpec
+      writeLogMessage(paste("Specifications invalid for Geography",Geography,":"),Level="warn")
+      writeLogMessage(paste(CheckMessages,collapse="\n"),Level="warn")
+    }
+  }
   # Make sure list names are up to date
   names(newSpec) <- sapply(newSpec,function(s) if ( is.null(name <- s$Name) ) "" else name)
   return( newSpec )
@@ -572,7 +590,7 @@ defaultMetadata <- c("Units","Description")
 # Names requested but not present are given a NULL value
 
 # make a data.frame of all (and only) the valid query results
-ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=TRUE, data=TRUE, exportOnly=FALSE) {
+ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NULL,GeoValues=NULL, metadata=TRUE, data=TRUE, exportOnly=FALSE) {
   # "Results" is a list of VEResults (or a VEResultsList) from a VEModel
   # Visit each of the valid results in the Model (or Results list) and add its years as columns
   #  to the resulting data.frame, then return the accumulated result
@@ -627,15 +645,43 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
   seekMeasures <- if ( ! is.character(Measures) ) {
     measureNames
   } else {
-    # TODO: may not need this: break suffixes are added in makeMeasureDataFrame
     Measures[ grep(paste0("^",Measures,"(\\.[^.]+)?$)"),measureNames) ] # drop break suffix to locate
   }
   if ( length(seekMeasures) == 0 ) {
     stop(
-      writeLogMessage("No Measures in Query.",Level="error")
+      writeLogMessage(paste("Measures Not Found in Query:",paste(seekMeasures,collapse=", ")),Level="error")
     )
   }
 
+  # Filter list of measures to only those with GeoType attribute
+  # TODO: need to distinguish generated "seek measure" from original spec measure
+  # Probably want to attach an attribute for the original spec name to use in filtering
+#   if ( is.character(GeoType) && GeoType %in% c("Marea","Azone","Bzone") ) {
+#     whichGeoMeasures <- which(
+#       sapply(
+#         private$QuerySpec[seekMeasures],
+#         function(m) return( GeoType=="Region" || GeoType %in% m$By )
+#       )
+#     )
+#     if ( length(whichGeoMeasures)==0 ) {
+#       stop(
+#         writeLogMessage(paste("Requested GeoType is not found in requested Measures:",GeoType),Level="error")
+#       )
+#     }
+#     seekMeasures <- seekMeasures[ whichGeoMeasures ]
+#   }
+
+
+  # TODO: work differently on how to seek measures (see geomeasures above)
+#   if ( exportOnly ) {
+#     whichExport <- sapply( private$QuerySpec[seekMeasures],
+#       function(m) {
+#         return( "Export" %in% names(m$QuerySpec) )
+#       }
+#     )
+#     seekMeasures <- seekMeasures[ whichExport ]
+#   }
+    
   # Keep only measures that are being sought
   # Filter the measures using for loops rather than lapply to ensure names stay up to date
   for ( scenario in seq(valueList) ) {
@@ -644,7 +690,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
     }
   } # TODO: verify that it works if we've accidentally filtered seekMeasures down to nothing
 
-  # Build data.frame with requested measure results, and metadata
+  # Build data.frame with requested measure results (filtered to specific GeoValues), and metadata
   results.df <- NULL
   Scenarios <- character(0)
   ScenarioYears <- character(0)
@@ -653,7 +699,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
     ScenarioName <- attr(value,"ScenarioName")
     Elements <- attr(value,"ScenarioElements")
     for ( year in names(value) ) {
-      theseResults <- makeMeasureDataframe(value[[year]],year,data,wantMetadata)
+      theseResults <- makeMeasureDataframe(value[[year]],year,GeoValues,data,wantMetadata)
       writeLogMessage(paste("Results for",ScenarioName,"Year",year),Level="info")
       writeLogMessage(paste(theseResults$Measure,collapse=","),Level="info")
 
@@ -843,7 +889,7 @@ ve.query.outputconfig <- function() {
 # one year), and specific ModelStage name (for Results).
 # TODO: "query" function on VEModel should be able to limit to certain ModelStages (in which case
 # don't consider "Reportable").
-ve.query.export <- function(format="csv",OutputDir=NULL,SaveTo=NULL,Results=NULL,Years=NULL) {
+ve.query.export <- function(format="csv",OutputDir=NULL,SaveTo=NULL,Results=NULL,Years=NULL,GeoType=NULL,GeoValues=NULL) {
   needOutputDir <- missing(OutputDir) || ! is.null(OutputDir)
   # TODO: Query extract template should be called QueryExportTemplate
   # TODO: The template should probably belong to the ViEIO export format
@@ -873,7 +919,7 @@ ve.query.export <- function(format="csv",OutputDir=NULL,SaveTo=NULL,Results=NULL
   }
 
   # Extract results into data.frame
-  Results_df <- self$extract(Results=Results,Years)
+  Results_df <- self$extract(Results=Results,Years,GeoType=GeoType,GeoValues=GeoValues)
 
   # Then write the data.frame
   if ( ! is.character(SaveTo) ) {
@@ -1133,7 +1179,7 @@ VEQuery <- R6::R6Class(
     `[`=ve.query.index,                 # Alternate notation for subset
     spec=ve.query.spec,                 # Return a single VEQuerySpec from the list
     print=ve.query.print,               # List names of Specs in order, or optionally with details
-    getlist=ve.query.getlist,           # Extract the QuerySpec list
+    getlist=ve.query.getlist,           # Extract he QuerySpec list (possibly filtering geography) for $run)
     results=ve.query.results,           # report results of last run (available stage files)
     extract=ve.query.extract,           # get requested (or all) results into a data.frame
     export=ve.query.export,             # Export query results to .csv or something else (uses $extract)
@@ -1293,7 +1339,7 @@ specOptionalElements <- c( # Contains "known" elements that generate no warning 
 )
 
 specSummarizeElements <- c(
-  "Expr", "Units", "By", "Breaks", "BreakNames", "Filter", "Table", "Key", "Group"
+  "Expr", "Units", "By", "Breaks", "BreakNames", "Table", "Key", "Group"
 )
 
 ve.spec.print <- function() {
@@ -1335,8 +1381,6 @@ ve.spec.check <- function(Names=character(0), Clean=TRUE) {
 
   # Add a Geography field based on what's in "By" - "Region" by default, otherwise
   # whichever small geography is in the "By" field.
-
-  # Function specs should require scalar elements.
 
   self$CheckMessages <- character(0)
   if ( length(self$QuerySpec)==0 ) {
@@ -1387,22 +1431,26 @@ ve.spec.check <- function(Names=character(0), Clean=TRUE) {
       if ( length(checkedSpec$Errors)>1 || any(nzchar(checkedSpec$Errors)) ) {
         self$CheckMessages <- c(
           self$CheckMessages,
-          paste("Error(s) in Query Specification:",self$Name,"\n"),
+          msg<-paste("Error(s) in Query Specification:",self$Name,"\n"),
           checkedSpec$Errors
         )
       }
+<<<<<<< Updated upstream
+      self$CompiledSpec <- checkedSpec$CompiledSpec
+=======
       if ( "Filter" %in% names(self$QuerySpec$Summarize) ) {
         # Confirm that "Filter" names are in "By"
         # Can't easily process values before query runs...
         Filter <- self$QuerySpec$Summarize$Filter
         goodFilter <- names(Filter) %in% self$QuerySpec$Summarize$By
-        if ( any( ! goodFilter ) {
+        if ( any( ! goodFilter ) ) {
           self$CheckMessages <- c(
             self$CheckMessages,
             paste("Fields in Filter not listed in By:",paste( names(Filter)[!goodFilter], collapse=", "),"\n")
           )
         }
       }
+>>>>>>> Stashed changes
     } else if ( "Function" %in% names(self$QuerySpec) ) {
       checkSymbols <- evaluateFunctionSpec(self$Name, self$QuerySpec, measureEnv=Names)
       if ( ! is.character(checkSymbols) || length(checkSymbols)>0 ) {
@@ -1461,9 +1509,10 @@ cleanSpecNames <- function(self)
   return(self)
 }
 
+# TODO: the following is still rather a mess.
 # Need a function to build a "Summarize" or "Function" sub-spec
 # Then go in and update specific elements
-# TODO: This should be lower priority - just send people back to edit the .VEqry text file.
+# Perhaps this should be lower priority - just send people back to edit the .VEqry text file.
 ve.spec.update <- function(
   # Replaces this QuerySpec from another one
   # See ve.spec.check: can pass a QuerySpec through this with no
@@ -1482,9 +1531,7 @@ ve.spec.update <- function(
   #   Expr = NULL, # Relevant to Summarize or Function
   #   Units = NULL, # Rest are Ignored if not Summarize
   #   By = NULL,
-  #   Breaks = NULL,
-  #   BreakNames = NULL,
-  #   Filter = NULL,
+  #   Breaks_ls = NULL,
   #   Table = NULL,
   #   Key = NULL,
   #   Group = NULL
@@ -1512,15 +1559,13 @@ ve.spec.update <- function(
 
     # Capture override of summarize elements
     override <- list(
-      Expr       = Summarize$Expr,
-      Units      = Summarize$Units,
-      By         = Summarize$By,
-      Breaks     = Summarize$Breaks,
-      BreakNames = Summarize$BreakNames,
-      Filter     = Summarize$Filter,
-      Table      = Summarize$Table,
-      Key        = Summarize$Key,
-      Group      = Summarize$Group
+      Expr      = Summarize$Expr,
+      Units     = Summarize$Units,
+      By        = Summarize$By,
+      Breaks_ls = Summarize$Breaks_ls,
+      Table     = Summarize$Table,
+      Key       = Summarize$Key,
+      Group     = Summarize$Group
     )
     override <- override[ ! sapply(override,is.null) ]
     if ( length(override)>0 ) {
@@ -1536,6 +1581,112 @@ ve.spec.update <- function(
   return( self$check() ) # does the check, then returns "self"
 }
     
+# data helper
+ve.small.geo <- c("Marea","Azone","Bzone")
+
+# TODO: In addition to the robustness elements, this function should just adjust the "By" dimension
+# associated with Geography. Region has no geographic "By", otherwise we generate summaries for
+# Marea, Azone or Bzone. We need to make sure the geographic breakdown happens appropriately with
+# "Breaks" - Geography is first level of breakdown, Breaks are always second level so the
+# dimensions can be subsetted and processed appropriately during export.
+# TODO: Geography adjust doesn't do Bzone but should - there's no reason not to break things
+# out by Bzone (except there may be many of them!).
+ve.spec.setgeo <- function(Geography=NULL) {
+  # Return a new geography-adjusted VEQuerySpec
+  # TODO: this is not especially robust yet...
+  # In particular, we're not checking that fields are avalilable at that level
+  #   and joining may or may not work right...
+
+  test.spec <- self$copy()
+  if ( ! is.null(Geography) && test.spec$type() == "Summarize" ) {
+    test.sum <- test.spec$QuerySpec[["Summarize"]] # pull out the sub-list
+    if ( Geography["Type"] == "Region" ) {
+      # Region: remove Marea or Azone from "By" and "Units", if present
+      if ( "By" %in% names(test.sum) ) {
+        test.by <- test.sum[["By"]]
+        any.geo <- ( test.by %in% ve.small.geo )
+        if ( any ( ! any.geo ) ) { # By includes tables other than geography
+          # remove geography but leave the rest
+          # cat( "In ",test.spec[["Name"]],"By from:",test.by,"to",test.by[!any.geo],"\n" )
+          test.sum[["By"]] <- test.by[!any.geo]
+        } else if ( all(any.geo) ) {
+          # cat( "In ",test.spec[["Name"]],"Removing all from",test.by,"\n" )
+          test.sum["By"] <- NULL # Single brackets - remove element entire
+        } # else leave "By" untouched.
+      }
+      if ( "Units" %in% names(test.sum) ) {
+        test.units <- test.sum[["Units"]]
+        any.geo <- ( names(test.units) %in% ve.small.geo )
+        if ( any ( ! any.geo ) ) {
+          # remove geography
+          test.sum[["Units"]] <- test.units[!any.geo]
+        } else if ( all(any.geo) ) { # Only has the geo table in Units
+          test.sum["Units"] <- NULL # Single brackets - remove element entire
+        } # else leave "Units" untouched
+      }
+    } else { # Summarizing by geography ("Azone", "Bzone" or "Marea")
+      # TODO: Geography "Value" should eventually be screened against model's 'defs/geo.csv'
+      # TODO: If "Table" is the same as "By" and not GeographyType, skip that specification
+      # with a message (or we could use Require). So any dip into the Marea table or the
+      # Azone table only gets processed if we are running for that GeographyType.
+      if ( ! Geography["Type"] %in% ve.small.geo ) {
+        self$CheckMessages <- paste0("Invalid Geography Type for query specification: ",Geography["Type"])
+      }
+      geotest <- ( test.sum[["Table"]] %in% ve.small.geo ) # Which Table elements are the small geography
+      # Write the following in case more than one Table element is a small geography
+      # Mostly, that would probably be a logic error in the query specification
+      if ( any( geotest) && any(test.sum[["Table"]][geotest] != Geography["Type"]) ) {
+        writeLogMessage(
+          paste0(
+            "Skipping specification ",test.spec[["Name"]]," due to Table mismatch: ",
+            Geography["Type"]," vs. Table ",paste(test.sum[["Table"]][geotest],collapse=", ")
+          )
+        )
+      } else {
+        # If Table is not a conflicting ve.small.geo,
+        # swap small geography in spec with Geography["Type"]
+        if ( Geography["Type"] == "Marea" ) {
+          geo.from <- "Azone"
+          geo.to <- "Marea"
+        } else if ( Geography["Type"] == "Azone" ) {
+          geo.from <- "Marea"
+          geo.to <- "Azone"
+        }
+        # Check that "By" and "Units" include geo.from
+        # If geo.from BUT NOT geo.to in "By" and "Units", change geo.from to geo.to
+        #   if we have both in the spec, don't touch geo.from or geo.to
+        # If geo.to not in "By" and "Units", add geo.to to By and geo.to = '' to "Units"
+        test.sum.by <- test.sum[["By"]]
+        azb <- ( test.sum.by %in% geo.from )
+        if ( ! ( geo.to %in% test.sum.by ) ) {
+          if ( any(azb) ) {
+            test.sum.by[azb] <- geo.to
+          } else {
+            test.sum.by <- c(test.sum.by,geo.to)
+          }
+          test.sum[["By"]] <- test.sum.by
+        }
+        test.sum.units <- test.sum[["Units"]]
+        # cat("Spec name:",test.spec[["Name"]],"\n")
+        # cat("Units before:",paste(names(test.sum.units),collapse=","),"\n")
+        azb <- test.sum.units %in% geo.from
+        if ( ! (geo.to %in% names(test.sum.units)) ) {
+          if ( any(azb) ) {
+            names(test.sum.units)[azb] <- geo.to
+          } else {
+            test.sum.units[geo.to] <- ""
+          }
+          test.sum[["Units"]] <- test.sum.units
+        }
+        # cat("Units after:",paste(names(test.sum.units),collapse=","),"\n")
+      }
+      test.spec$QuerySpec[["Summarize"]] <- test.sum
+    }
+  }
+  test.spec$valid()
+  return(test.spec)
+}
+
 ve.spec.outputconfig <- function() {
   # Generate components for the visualizer (using the Export spec)
   Export <- self$QuerySpec$Export
@@ -1564,6 +1715,7 @@ VEQuerySpec <- R6::R6Class(
     initialize = ve.spec.init,      # Create a VEQuerySpec from a list or parmaeters
     print = ve.spec.print,          # Display contents of this spec
     check = ve.spec.check,          # Validate the individual query
+    setgeo = ve.spec.setgeo,        # Filter query to indicated geography
     update = ve.spec.update,        # Alter elements of the query spec (from a list or parameters)
     valid = ve.spec.valid,          # See if the spec is valid (sets self$CheckResults)
     type = ve.spec.type,            # return "Summarize" or "Function" or "Invalid"
@@ -1574,6 +1726,7 @@ VEQuerySpec <- R6::R6Class(
     CheckMessages = "Empty",        # message explaining why VEQuerySpec$valid() returned FALSE, or "" if OK
     QuerySpec = list(),             # The actual specification
     Name = "Unnamed",               # Name of the spec, from its QuerySpec
+    CompiledSpec = NULL,            # The compiled specification (checked and with derived elements added) see ve.spec.check
     Export = NULL                   # Export specifications for visualizer
   )
 )
@@ -1599,8 +1752,11 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
   Names <- if ( is.character(measureEnv) ) measureEnv else names(measureEnv)
   # Don't diagnose (or process) a Function with no antecedent specs
   if ( length(Names)==0 ) return( character(0) )
-  # TODO: require measures referenced by Function to be scalars (i.e. summarize
-  # needs to filter down to a sinle value if it's not already Region).
+  # Function dimensions should take care of themselves, though eventually we should have more
+  # proactive management of dimensions by looking up the Symbols and their dimensions in the
+  # Specifications list. Also perhaps look up the Symbol Getracography and make sure they're all
+  # compatible (if small geography for one, must be the same for others - or "Region" ok).
+  # Then set a "Geography" element for this spec based on Symbols used.
   Symbols <- unique(getNames(str2lang(measureSpec$Function)))
   # looking at parent.frame will find "R language symbols" like operators,
   # base language functions like "sum", etc. We're interested in those that
@@ -1611,7 +1767,6 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
 
   if ( ! is.environment(measureEnv) ) {
     # TODO: actually look at whether the "dotted" names have suitable breakpoints...
-    #
     # Here, we're just hiding the error if the variable is missing
     # At execution time, the breakpoint variables should exist.
     if ( length(notFound) > 0 ) {
@@ -1622,11 +1777,9 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
     return( as.character(notFound) ) # empty character vector if all is well
   } # otherwise we'll fail below with a better "missing operand" message
 
-  # TODO: consider use of geotype and geovalues... Don't mess with that: Function must work on scalars
   Symbols <- Symbols[ foundSymbols ]
   GeoTypes <- sapply(Symbols,function(s) attr(get(s,envir=measureEnv),"GeoType"))
   GeoType <- validGeoTypes[ validGeoTypes %in% GeoTypes ][1]
-  browser()
   GeoValues <- attr( get(Symbols[ GeoTypes==GeoType ][1],envir=measureEnv),"GeoValues" )
 
   if ( is.null(GeoType) || is.null(GeoValues) ) {
@@ -1634,6 +1787,8 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
   }
 
   # Now we can evaluate the expression
+  message(paste("Evaluating expression:",Expression))
+  browser(expr=any(grepl("LowInc",Expression)))
   measure <- try( eval(Expression, envir=measureEnv) )
 
   if ( ! is.numeric(measure) ) {
@@ -1680,7 +1835,9 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
 
   # Compute the measure based on the measureSpec
   if ( "Function" %in% names(measureSpec) ) {
-    # Evaluate a Function (works only on scalar values - either Region or filtered down in Summarize)
+    # Elevate those to individual objects
+    # TODO: need to add GeoType and GeoValues attributes based on analysis
+    # of function.
     measure <- evaluateFunctionSpec(measureName, measureSpec, measureEnv=measureEnv)
     saveMeasures <- list(measure)
     names(saveMeasures) <- measureName
@@ -1706,22 +1863,22 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     if ( length(measure) == 1 || ( usingBreaks && ! is.array(measure) ) ) {
       GeoValues <- "Region"
       GeoType <- "Region"
-      geoDim <- integer(0)
     } else {
       # length(measure)>1 && ( ! usingBreaks || is.array(measure) )
-      if ( is.array(measure) ) { # Get names from dimnames; is.array implies usingBreaks
-        if ( length(dim(measure)) != length(sumSpec$By) ) {
+      if ( is.array(measure) ) { # Get names from dimnames
+        if ( length(dim(measure)) > 2 ) {
           stop(
-            writeLogMessage(
-              c(
-                paste("Dimension mismatch measure ",length(dim(measure)),"vs By",length(sumSpec$By),":",measureName),
-                paste("By dimensions:",sumSpec$By,collapse=","),
-                paste("Dimension names:",dimnames(measure),collapse=",")
-              ),Level="error"
-            )
+            writeLogMessage(paste("Cannot have more than 2 dimensions for measure:",measureName),Level="error")
           )
         }
-        geoDim <- which( sumSpec$By %in% validGeoTypes ) # first (and should be only) geoType
+<<<<<<< Updated upstream
+        GeoType <- sumSpec$By[2] # Last By dimension is the GeographyType
+        GeoValues <- dimnames(measure)[[2]] # yields a character vector of all the Geography names
+      } else { # Get names from names
+        GeoType <- sumSpec$By[1]
+        GeoValues <- names(measure)
+=======
+        geoDim <- which( sumSpec$By %in% validGeoTypes ) # first (and should be only) GeoType
         if ( length(geoDim) > 1 ) {
           stop(
             writeLogMessage(paste0(measureName,": Invalid By specification: one element must be geography"),Level="error")
@@ -1741,7 +1898,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
             writeLogMessage(paste("Got non-vector result from summarizeDatasets:",measureName),Level="error")
           )
         }
-        geoDim <- which( sumSpec$By %in% validGeoTypes ) # first (and should be only) geoType
+        geoDim <- which( sumSpec$By %in% validGeoTypes ) # first (and should be only) GeoType
         if ( length(geoDim) != length(sumSpec$By) ) {
           # breaks on other categories, and we'll pick that up below
           GeoType <- "Region"
@@ -1750,18 +1907,54 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
           GeoType <- sumSpec$By[geoDim]
           GeoValues <- names(measure)
         }
+>>>>>>> Stashed changes
       }
     }
 
-    if ( usingBreaks ) {
-      breakDim <- which( ! sumSpec$By %in% validGeoTypes )
+    # If it's just a single measure (no breaks) just use the measure
+    if ( ! usingBreaks ) {
+      measure <- structure(
+        measure,
+        Units=measureSpec$Units,
+        Description=measureSpec$Description,
+        GeoType=GeoType,
+        GeoValues=GeoValues,
+        Export=measureSpec$Export # visualizer elements...
+      ) # used during export to filter on Geography
+      saveMeasures <- list(measure)
+      names(saveMeasures) <- measureName
+    } else {
+      # with breaks, turn the "measure" into several named after their BreakNames
+      breakDims <- dimnames(measure)[[1]]
       if ( "BreakNames" %in% names(sumSpec) ) {
-        breakNames <- sumSpec$BreakNames[[sumSpec$By[breakDim]]]
+        breakNames <- sumSpec$BreakNames[[sumSpec$By[1]]]
         breakNames <- c("min",breakNames)
       } else {
+<<<<<<< Updated upstream
+        breakNames <- breakDims
+      }
+  
+      writeLogMessage(paste("processing break measure",measureName),Level="info")
+      # Turn the array/matrix measure into a list of measures
+      # with breakNames applied.
+      saveMeasures <- lapply(
+        breakDims,
+        function(bk){
+          m <- measure[bk,]
+          names(m) <- GeoValues
+          return(
+            structure(
+              m,
+              Units=measureSpec$Units,
+              Description=measureSpec$Description,
+              GeoType=GeoType,
+              GeoValues=GeoValues,
+              Export=measureSpec$Export # visualizer elements...
+            )
+=======
         breakNames <- NULL
       }
-      if ( geoType == "Region" ) {
+      if ( GeoType == "Region" ) {
         # measure should be a standard vector of values for the break groups
         if ( ! is.vector(measure) ) {
           stop(
@@ -1808,51 +2001,102 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
         # Hard part is the we're not requiring Geo to be first or second
         if ( ! is.array(measure) ) {
           stop(
-            writeLogMessage(paste0(measureName" is not an array but has both breaks and geography!"),Level="error")
+            writeLogMessage(paste0(measureName," is not an array but has both breaks and geography!"),Level="error")
+>>>>>>> Stashed changes
           )
         }
-        if ( geoDim == 1 ) {
-          measure <- measure[ GeoValues, breakNames ]
-        } else {
-          measure <- measure[ breakNames, GeoValues ]
-        }
-      } else {
-        if ( hasGeo ) {
-          measure <- measure[ GeoValues ]
-        } else if ( hasBreaks ) {
-          measure <- measure[ breakNames ]
-        }
-        # else fall through leaving measure untouched
-      }
+      )
+      names(saveMeasures) <- paste(measureName,breakNames,sep=".")
     }
-
-    # Report measure with attributes
-    measure <- structure(
-      measure,
-      Units=measureSpec$Units,
-      Description=measureSpec$Description,
-      By=sumSpec$By, # may be NULL
-      Filter=sumSpec$Filter, # may be NULL
-      BreakDim=breakDim, # integer, possibly length zero if no breaks
-      BreakNames=breakNames, # may be NULL
-      GeoDim=geoDim, # integer, possibly length zero if breaks and region geography
-      GeoType=GeoType, # will always have something ("Region" if nothing else)
-      GeoValues=GeoValues,
-      Export=measureSpec$Export # visualizer elements...
-    ) # used during export to filter on Geography
-    saveMeasures <- list(measure) # Needed a list previously when breaks were expanded...
-    names(saveMeasures) <- measureName
   } else {
     writeLogMessage(paste(measureName,"Invalid Measure Specification (must be 'Summarize' or 'Function')"),Level="error")
     saveMeasures <- as.numeric(NA)
     names(saveMeasures) <- paste0(measureName,".InvalidSpecification")
   }
+
   for ( nm in names(saveMeasures) ) {
     writeLogMessage(paste("Saving measure:",nm),Level="info")
     assign(nm,saveMeasures[[nm]],envir=measureEnv)
   }
   return( names(saveMeasures) )
 }
+
+#   # Linearize measure elements and names when doing export
+#   # TODO: all the names and vector conversion go in the export function
+#   if ( ! byRegion && ! usingBreaks ) {
+#     # Vector with measure values named for each value of GeoType
+#     GeoNames <- names(measure)
+#   } else {
+#     # We're either doing the region or using breaks or both
+#     if ( usingBreaks ) {
+#       # TODO: create BreakNames once for the specification at the top
+#       # Set up break name vector ("MeasureName.BreakName")
+#       # Don't bother with the MeasureName. part - we're just going to save measure
+#       # and metadata about how to unpack it.
+#       # TODO: all this unpacking (array->vector->series of scalars with names)
+#       # should only happen when we export. BreakNames need to be built into the Specification
+# 
+#       # Apply breakNames to requested results
+#       if ( ! byRegion ) {
+#         # using breaks and small geography (2-dimensional result array)
+#         if ( is.null(dim(measure)) || ! dim(measure)==2 ) {
+#           stop(
+#             writeLog(
+#               Level="error",
+#               paste(
+#                 "Unsupported: Measure does not have 2 dimensions (Breaks, Geography):",
+#                 ifelse(is.null(dim(measure)),"1-D Vector",paste("dim",dim(measure)))
+#               )
+#             )
+#           )
+#         }
+#         GeoNames <- dimnames(measure)[[2]]
+#         measure <- as.vector(measure) # Need to drop to vector if length(GeoValues)>1
+#         # Measure is then a set of Break values repeated length(GeoValues) times
+#         buildNames <- character(0)
+#         for ( nm in GeoNames ) {
+#           buildNames <- c(buildNames,paste(breakNames,nm,sep="_"))
+#         }
+#         if ( length(buildNames) != length(measure) ) {
+#           stop(
+#             writeLog(
+#               Level="error",
+#               paste(
+#                 "2-Dimensional names not same length as measure:",
+#                 length(buildNames),"(expecting",length(measure),")"
+#               )
+#             )
+#           )
+#         }
+#         names(measure) <- buildNames
+#       } else {
+#         # Using breaks on Region measure - measure should be a vector of break values
+#         if ( length(measure) != length(breakNames) ) {
+#           stop(
+#             writeLog(
+#               Level="error",
+#               paste(
+#                 "Break names have incorrect length:",
+#                 length(breakNames),"(expecting",length(measure),")"
+#               )
+#             )
+#           )
+#         }
+#         names(measure) <- breakNames
+#       }
+#     } else {
+#       # Region measure, not using breaks (single value)
+#       if ( length(measure) != 1 ) {
+#         writeLogMessage("Processing measure for Region: ",measureName)
+#         stop(writeLogMessage("Program error: expected scalar measure, got vector:",measure))
+#       }
+#       names(measure) <- measureName
+#     }
+
+# Code for writing a data.frame to exported output
+#     # Save measure results into a file
+#     writeLog(paste("Saving measures to",OutputFileToWrite,"..."),Level="warn")
+#     utils::write.csv(Measures_df, row.names = FALSE, file = OutputFileToWrite)
 
 ###########################################################################
 # FUNCTION: makeMeasureDataframe
@@ -1861,11 +2105,22 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
 # writing to the output file. This function is an export helper and should draw from the
 # result.env$Values list created for each scenario/ModelStage to build the resulting data.frame.
 #
-# Part of the ve.query.extract function, and it works on a series of values generated by doQuery
+# TODO: this is part of the ve.query.extract function, and it works on a series
+# of values generated by doQuery
+# VEModel ResultsDir if querying a model), and then create one measure .Rdata for
+# each VEResults object (fill the environment, then save to .Rdata in the results path)
 #
-makeMeasureDataframe <- function(Values,Year,wantData=TRUE,wantMetadata=TRUE) {
+<<<<<<< Updated upstream
+makeMeasureDataframe <- function(Values,Year,GeoValues,wantData=TRUE,wantMetadata=TRUE) {
   # Values is a named list of measures for a single scenario year (scenarios may have more than one year)
+=======
+makeMeasureDataframe <- function(Values,Year=NULL,wantData=TRUE,wantMetadata=TRUE) {
+  # Values is a named list of measures for a single scenario year (scenarios may have more than one
+  # year)
+  # Provide Year and wantData=TRUE to get a row for the scenario year
+>>>>>>> Stashed changes
   # Specifications provides metadata for each measure
+  # If GeoValues provided, only expand Geography measures that are present in GeoValues
   # if data, include actual measure values, otherwise just do Metadata for
   #  each of the seek Measures, based on what is attached to the first value
   #  results.
@@ -1877,17 +2132,30 @@ makeMeasureDataframe <- function(Values,Year,wantData=TRUE,wantMetadata=TRUE) {
 
   wantData <- wantData || ! wantMetadata # return data unless we explicitly only want metaData
 
-  # Values is a named numeric vector or array of measures
+  # Values is a named numeric vector of measures
   for ( measureName in names(Values) ) {
+    writeLog(paste("Adding",measureName,"to measure data frame"),Level="info")
     measure      <- Values[[measureName]]
     measureUnits <- attr(measure,"Units")
     measureDesc  <- attr(measure,"Description")
     GeoType      <- attr(measure,"GeoType")
     # measure is a scalar, vector or array of numeric measure values
+<<<<<<< Updated upstream
+    if ( ! is.null(GeoType) && GeoType != "Region"  ) {
+      # it's a vector of geographies
+      # generate it into the table as one row per GeoValue...
+      geoNames <- names(measure)
+      if ( ! is.null(GeoValues) ) geoNames <- geoNames[ which(geoNames %in% GeoValues) ]
+      if ( length(geoNames)>0 ) {
+        measure  <- measure[geoNames]
+        names(measure) <- paste(measureName,names(measure),sep=".")
+=======
     # Length == 1 is a scalar (may or may not have GeoType/GeoValue or break value)
     # Length > 1, with no dimension or length(dim)==1, is a vector that may either be
     #    GeoType/GeoValue or break value
     # Length > 1 and length(dim)==2, is an array that has both GeoType and break value
+
+    # TODO: redo unpacking measures by name...
     if ( is.array(measure) && length(dim(measure))>1 ) {
       # 2 dimensions: breaks and geography
       measureNames <- paste(measureName,rep(dimnames(measure)[[1]],dim(measure)[2]),rep(dimnames(measure)[[2]],each=dim(measure)[1]),sep=".")
@@ -1898,26 +2166,35 @@ makeMeasureDataframe <- function(Values,Year,wantData=TRUE,wantMetadata=TRUE) {
       if ( is.array(measure) ) {
         # array with only one dimension
         measureNames <- paste(measureName,dimnames(measure)[[1]],sep=".")
+>>>>>>> Stashed changes
       } else {
-        # vector, which should have names attribute
-        measureNames <- paste(measureName,names(measure),sep=".")
+        measure <- as.numeric(NA)
+        names(measure) <- measureName
       }
+<<<<<<< Updated upstream
+    } else {
+=======
       measure <- as.vector(measure)
       names(measure) <- measureNames
-    } else {
+    } else if ( length(measure) == 1 ) {
       # measure is already a scalar value
+>>>>>>> Stashed changes
+      names(measure) <- measureName
+    } else { # measure is zero length (everything filtered out?)
+      writeLog(paste("No value for",measureName),Level="error")
+      measure <- as.numeric(NA)
       names(measure) <- measureName
     }
 
     # Assemble vectors to add to resulting data.frame
     outputNames    <- c( outputNames, names(measure))
-    outputMeasures <- c( outputMeasures, measure)
+    outputMeasures <- c( outputMeasures, measure )
     outputUnits    <- c( outputUnits, rep(measureUnits,length(measure)) )
     outputDesc     <- c( outputDesc, rep(measureDesc,length(measure)) )
   }
 
   # Add the year as a row
-  if ( wantData ) {
+  if ( wantData && ! is.null(Year)) {
     outputNames    <- c( "Year", outputNames )
     outputMeasures <- c( as.numeric(Year), outputMeasures )
     outputUnits    <- c( "YR", outputUnits )
@@ -1940,8 +2217,8 @@ makeMeasureDataframe <- function(Values,Year,wantData=TRUE,wantMetadata=TRUE) {
     )
   } else if ( wantData ) { # but not metadata
     Data_df <- data.frame(
-      Measure     = outputNames,
-      Value       = outputMeasures
+      Measure=outputNames,
+      Value=outputMeasures
     )
   }
 
