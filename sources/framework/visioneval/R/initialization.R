@@ -598,7 +598,7 @@ getUnits <- function(Type_,envir=modelEnvironment()) {
 #' @param Save if FALSE, just update ModelState in memory, otherwise write changes to disk
 #' @return A list of all processed module specifications
 #' @export
-parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized="", RequiredPackages="", Save=TRUE ) {
+parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized=character(0), RequiredPackages=character(0), Save=TRUE ) {
 
   ModuleCalls_df <- unique(ModuleCalls_df)
 
@@ -702,7 +702,11 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized="", RequiredPac
       next()
     }
     #Load and check the module specifications
+    ## DEBUG
+    ## writeLog(paste(PackageName,ModuleName,sep="::"),Level="warn")
     Specs_ls <- processModuleSpecs(getModuleSpecs(ModuleName, PackageName))
+    ## DEBUG
+    ## print(paste("Get Spec length:",length(Specs_ls$Get)))
     Err <- checkModuleSpecs(Specs_ls, ModuleName)
     if (length(Err) > 0) {
       Errors_ <- c(Errors_, Err)
@@ -714,6 +718,7 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized="", RequiredPac
     if (!is.null(Specs_ls$Call) && is.list(Specs_ls$Call)) {
       #Iterate through module calls
       for (j in 1:length(Specs_ls$Call)) {
+        writeLog(paste("Processing Call spec:",Specs_ls$Call[[j]]),Level="info")
         Call_ <- unlist(strsplit(Specs_ls$Call[[j]], "::"))
         #Check module availability
         if (length(Call_) == 2) { # package explicitly specified
@@ -768,16 +773,16 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized="", RequiredPac
         }
         # Load and check the module specifications and add Get specs if
         # there are no specification errors
-        for (i in 1:(length(Call_)-1)) { # Code above forces length(Call_) always to be 2 or fail
-          CallSpecs_ls <-
-          processModuleSpecs(getModuleSpecs(Call_[length(Call_)], Call_[i]))
+        for (k in 1:(length(Call_)-1)) { # Code above forces length(Call_) always to be 2 or fail
+          CallSpecs_ls <- processModuleSpecs(getModuleSpecs(Call_[length(Call_)], Call_[k]))
           Err <- checkModuleSpecs(CallSpecs_ls, Call_[length(Call_)])
           if (length(Err) > 0) {
             Errors_ <- c(Errors_, Err)
             next()
           } else {
-            AllSpecs_ls[[i]]$Specs$Get <-
-            c(AllSpecs_ls[[i]]$Specs$Get <- Specs_ls$Get)
+            # Add the Get specs for the called modules
+            # Any module that calls another should already have its Set specs listed...
+            AllSpecs_ls[[i]]$Specs$Get <- c(AllSpecs_ls[[i]]$Specs$Get, CallSpecs_ls$Get)
           }            
         }
       }
@@ -793,6 +798,13 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized="", RequiredPac
       stop(Msg," Check log for details")
     }
   }
+  ## DEBUG
+  # for ( mod in names(AllSpecs_ls) ) {
+  #   print(paste(mod,length(AllSpecs_ls[[mod]]$Spec$Get)))
+  #   if ( grepl('CreateHouseholds',mod) ) {
+  #     print(sapply(AllSpecs_ls[[mod]]$Spec$Get,function(s)s$NAME))
+  #   }
+  # }
   setModelState(list(AllSpecs_ls=AllSpecs_ls),Save=Save)
   return(invisible(AllSpecs_ls))
 }
