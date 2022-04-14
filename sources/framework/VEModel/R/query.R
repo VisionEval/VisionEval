@@ -1435,9 +1435,6 @@ ve.spec.check <- function(Names=character(0), Clean=TRUE) {
           checkedSpec$Errors
         )
       }
-<<<<<<< Updated upstream
-      self$CompiledSpec <- checkedSpec$CompiledSpec
-=======
       if ( "Filter" %in% names(self$QuerySpec$Summarize) ) {
         # Confirm that "Filter" names are in "By"
         # Can't easily process values before query runs...
@@ -1450,7 +1447,6 @@ ve.spec.check <- function(Names=character(0), Clean=TRUE) {
           )
         }
       }
->>>>>>> Stashed changes
     } else if ( "Function" %in% names(self$QuerySpec) ) {
       checkSymbols <- evaluateFunctionSpec(self$Name, self$QuerySpec, measureEnv=Names)
       if ( ! is.character(checkSymbols) || length(checkSymbols)>0 ) {
@@ -1871,13 +1867,6 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
             writeLogMessage(paste("Cannot have more than 2 dimensions for measure:",measureName),Level="error")
           )
         }
-<<<<<<< Updated upstream
-        GeoType <- sumSpec$By[2] # Last By dimension is the GeographyType
-        GeoValues <- dimnames(measure)[[2]] # yields a character vector of all the Geography names
-      } else { # Get names from names
-        GeoType <- sumSpec$By[1]
-        GeoValues <- names(measure)
-=======
         geoDim <- which( sumSpec$By %in% validGeoTypes ) # first (and should be only) GeoType
         if ( length(geoDim) > 1 ) {
           stop(
@@ -1907,7 +1896,6 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
           GeoType <- sumSpec$By[geoDim]
           GeoValues <- names(measure)
         }
->>>>>>> Stashed changes
       }
     }
 
@@ -1923,6 +1911,8 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
       ) # used during export to filter on Geography
       saveMeasures <- list(measure)
       names(saveMeasures) <- measureName
+      breakNames <- NULL
+      breakDim <- integer(0)
     } else {
       # with breaks, turn the "measure" into several named after their BreakNames
       breakDims <- dimnames(measure)[[1]]
@@ -1930,28 +1920,6 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
         breakNames <- sumSpec$BreakNames[[sumSpec$By[1]]]
         breakNames <- c("min",breakNames)
       } else {
-<<<<<<< Updated upstream
-        breakNames <- breakDims
-      }
-  
-      writeLogMessage(paste("processing break measure",measureName),Level="info")
-      # Turn the array/matrix measure into a list of measures
-      # with breakNames applied.
-      saveMeasures <- lapply(
-        breakDims,
-        function(bk){
-          m <- measure[bk,]
-          names(m) <- GeoValues
-          return(
-            structure(
-              m,
-              Units=measureSpec$Units,
-              Description=measureSpec$Description,
-              GeoType=GeoType,
-              GeoValues=GeoValues,
-              Export=measureSpec$Export # visualizer elements...
-            )
-=======
         breakNames <- NULL
       }
       if ( GeoType == "Region" ) {
@@ -1980,9 +1948,6 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
           )
         }
       }
-    } else {
-      breakNames <- NULL
-      breakDim <- integer(0)
     }
 
     # Filter measure to breaks and geography of interest
@@ -2002,10 +1967,9 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
         if ( ! is.array(measure) ) {
           stop(
             writeLogMessage(paste0(measureName," is not an array but has both breaks and geography!"),Level="error")
->>>>>>> Stashed changes
           )
         }
-      )
+      }
       names(saveMeasures) <- paste(measureName,breakNames,sep=".")
     }
   } else {
@@ -2110,15 +2074,10 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
 # VEModel ResultsDir if querying a model), and then create one measure .Rdata for
 # each VEResults object (fill the environment, then save to .Rdata in the results path)
 #
-<<<<<<< Updated upstream
-makeMeasureDataframe <- function(Values,Year,GeoValues,wantData=TRUE,wantMetadata=TRUE) {
-  # Values is a named list of measures for a single scenario year (scenarios may have more than one year)
-=======
 makeMeasureDataframe <- function(Values,Year=NULL,wantData=TRUE,wantMetadata=TRUE) {
   # Values is a named list of measures for a single scenario year (scenarios may have more than one
   # year)
   # Provide Year and wantData=TRUE to get a row for the scenario year
->>>>>>> Stashed changes
   # Specifications provides metadata for each measure
   # If GeoValues provided, only expand Geography measures that are present in GeoValues
   # if data, include actual measure values, otherwise just do Metadata for
@@ -2140,16 +2099,6 @@ makeMeasureDataframe <- function(Values,Year=NULL,wantData=TRUE,wantMetadata=TRU
     measureDesc  <- attr(measure,"Description")
     GeoType      <- attr(measure,"GeoType")
     # measure is a scalar, vector or array of numeric measure values
-<<<<<<< Updated upstream
-    if ( ! is.null(GeoType) && GeoType != "Region"  ) {
-      # it's a vector of geographies
-      # generate it into the table as one row per GeoValue...
-      geoNames <- names(measure)
-      if ( ! is.null(GeoValues) ) geoNames <- geoNames[ which(geoNames %in% GeoValues) ]
-      if ( length(geoNames)>0 ) {
-        measure  <- measure[geoNames]
-        names(measure) <- paste(measureName,names(measure),sep=".")
-=======
     # Length == 1 is a scalar (may or may not have GeoType/GeoValue or break value)
     # Length > 1, with no dimension or length(dim)==1, is a vector that may either be
     #    GeoType/GeoValue or break value
@@ -2166,19 +2115,14 @@ makeMeasureDataframe <- function(Values,Year=NULL,wantData=TRUE,wantMetadata=TRU
       if ( is.array(measure) ) {
         # array with only one dimension
         measureNames <- paste(measureName,dimnames(measure)[[1]],sep=".")
->>>>>>> Stashed changes
+        measure <- as.vector(measure)
+        names(measure) <- measureNames
       } else {
         measure <- as.numeric(NA)
         names(measure) <- measureName
       }
-<<<<<<< Updated upstream
-    } else {
-=======
-      measure <- as.vector(measure)
-      names(measure) <- measureNames
     } else if ( length(measure) == 1 ) {
       # measure is already a scalar value
->>>>>>> Stashed changes
       names(measure) <- measureName
     } else { # measure is zero length (everything filtered out?)
       writeLog(paste("No value for",measureName),Level="error")
