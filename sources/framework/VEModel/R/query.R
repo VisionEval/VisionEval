@@ -50,7 +50,7 @@ self=private=NULL
 # TODO: change the ModelPath stuff - there are two stages to the
 # query: (1) find the query specification by name within QueryDir and load it
 
-# Default query directory will be relative to the working directory
+# Default query directory will be relative to tnhe working directory
 ve.query.init <- function(
   QueryName=NULL,    # If a consistent set of parameters, carry on to attach
   Model=NULL,        # A VEModel (or something accessible via openModel) to attach the query
@@ -68,7 +68,7 @@ ve.query.init <- function(
   if ( !is.null(FileName) && is.null(QueryName) ) {
     QueryName <- sub("\\.[^.]*$","",basename(FileName))
   }
-  if ( ! is.list(QuerySpec) && ! "VEQuery" %in% class(QuerySpec) ) {
+  if ( ! is.null(QuerySpec) && ! is.list(QuerySpec) && ! "VEQuery" %in% class(QuerySpec) ) {
     if ( "VEQuerySpec" %in% class(QuerySpec) ) {
       QuerySpec <- list(QuerySpec) # a single query spec becomes a list of one
     } else if ( !is.null(QuerySpec) ) {
@@ -112,11 +112,14 @@ ve.query.init <- function(
   }
 
   # Add remaining defaults for saving the query out again
+  # If FileName was provided outside the ModelPath, the resulting destination will amount to
+  # identification of a copy of that source query.
   self$attach(OtherQuery=OtherQuery,ModelPath=ModelPath,QueryDir=QueryDir,QueryName=QueryName)
 
   # if "load==TRUE" and null QuerySpec/FileName, build the output name and
   #   see if it already exists
   if ( !is.null(QuerySpec) || !is.null(FileName) || load ) {
+    writeLogMessage("Loading Query...",Level="info")
     self$load(FileName=FileName,QuerySpec=QuerySpec,ModelPath=ModelPath,QueryDir=QueryDir)
   }
 
@@ -213,23 +216,31 @@ ve.query.load <- function(FileName=NULL,QuerySpec=NULL,ModelPath=NULL,QueryDir=N
   if ( ! is.null(QuerySpec) ) {
     self$add(QuerySpec)
   } else {
-    if ( is.null(FileName) && !is.null(self$QueryFile) ) {
-      FileName <- self$QueryFile
+    if ( is.null(FileName) ) {
+      if ( !is.null(self$QueryFile) ) {
+        FileName <- self$QueryFile
+      }
+      else if ( !is.null(ModelPath) && !is.null(self$QueryName) ) {
+        # build a FileName as ModelPath/QueryDir/QueryName.VEqry
+        if ( is.null(QueryDir) ) QueryDir <- ""
+        FileName <- self$QueryFile <- normalizePath(
+          file.path(ModelPath,QueryDir,paste(self$QueryName,".VEqry")),
+          winslash="/",mustWork=FALSE
+        )
+      }
     }
-    else if ( is.null(FileName) && !is.null(ModelPath) && !is.null(self$QueryName) ) {
-      # build a FileName as ModelPath/QueryDir/QueryName.VEqry
-      if ( is.null(QueryDir) ) QueryDir <- ""
-      FileName <- self$queryFile <- normalizePath(
-        file.path(ModelPath,QueryDir,paste(self$QueryName,".VEqry")),
-        winslash="/",mustWork=FALSE
-      )
-    }
-    if ( !is.null(FileName) && file.exists(FileName) ) {
-      # Load the query from FileName, commandeering the modelEnvironment
-      ve.model <- visioneval::modelEnvironment() # Don't need to clear ve.model
-      writeLogMessage(paste("Loading Query:",FileName),Level="info")
-      sys.source(self$QueryFile,envir=ve.model)
-      self$add(ve.model$QuerySpec) # will interpret the list of lists as a list of VEQuerySpec
+    if ( !is.null(FileName) ) {
+      writeLogMessage(Level="warn",paste("Loading",FileName))
+      if ( file.exists(FileName) ) {
+        # Load the query from FileName, commandeering the modelEnvironment
+        ve.model <- visioneval::modelEnvironment() # Don't need to clear ve.model
+        writeLogMessage(paste("Loading Query:",FileName),Level="info")
+        writeLogMessage(paste("QueryFile:",self$QueryFile),Level="info")
+        sys.source(FileName,envir=ve.model)
+        self$add(ve.model$QuerySpec) # will interpret the list of lists as a list of VEQuerySpec
+      } else {
+        writeLogMessage(Level="warn",paste("File does not exist:",FileName))
+      }
     }
   }
   return( self$check() )
@@ -257,6 +268,7 @@ ve.query.check <- function(verbose=FALSE) {
       )
       next
     }
+    message("Spec name:",spec$Name)
     spec$check( Names=query.names ) # names list for validating functions
     query.names <- c( query.names,spec$Name )
     if ( ! spec$valid() ) {
@@ -280,19 +292,17 @@ ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
   # If you use "update", specs not already present will be ignored with a warning.
 
   # Start by getting the specification list to add
-  if ( is.list(obj) && all(sapply(obj,function(o)"VEQuerySpec"%in%class(o))) ) {
-    # obj is already a list of VEQuerySpec objects (what we want)
-    # But we want to clone it to avoid messing with its contents
+  if ( is.list(obj) ) {
     spec <- asSpecList(obj)
+    # Don't try to recover if the spec has invalid elements
+  } else if ( "VEQuery" %in% class(obj) ) {
+    spec <- obj$getlist() # Clone the spec list from obj (which is another query)
+  } else if ( "VEQuerySpec" %in% class(obj) ) {
+    # Make a bare query spec into a one-element list
+    spec <- list(obj)
+    names(spec) <- obj$Name
   } else {
-    qry <- asQuery(obj) # Do deeper type conversions to build a query if needed
-    # NOTE: if obj is already a VEQuery, it is returned as is. It is NOT copied.
-    if ( ! qry$valid() ) {
-      stop(
-        c("Cannot add to query:\n",paste(qry$CheckMessages,collapse="\n"))
-      )
-    }
-    spec <- qry$getlist() # Clone the spec list from obj
+    stop("Cannot interpret object as query or specification:\n",deparse(obj))
   }
 
   # Validate and interpret "location", "before" and "after"
@@ -590,7 +600,7 @@ defaultMetadata <- c("Units","Description")
 # Names requested but not present are given a NULL value
 
 # make a data.frame of all (and only) the valid query results
-ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NULL,GeoValues=NULL, metadata=TRUE, data=TRUE, exportOnly=FALSE) {
+ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=TRUE, data=TRUE, exportOnly=FALSE) {
   # "Results" is a list of VEResults (or a VEResultsList) from a VEModel
   # Visit each of the valid results in the Model (or Results list) and add its years as columns
   #  to the resulting data.frame, then return the accumulated result
@@ -699,7 +709,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL,GeoType=NUL
     ScenarioName <- attr(value,"ScenarioName")
     Elements <- attr(value,"ScenarioElements")
     for ( year in names(value) ) {
-      theseResults <- makeMeasureDataframe(value[[year]],year,GeoValues,data,wantMetadata)
+      theseResults <- makeMeasureDataframe(value[[year]],year,data,wantMetadata)
       writeLogMessage(paste("Results for",ScenarioName,"Year",year),Level="info")
       writeLogMessage(paste(theseResults$Measure,collapse=","),Level="info")
 
@@ -919,7 +929,7 @@ ve.query.export <- function(format="csv",OutputDir=NULL,SaveTo=NULL,Results=NULL
   }
 
   # Extract results into data.frame
-  Results_df <- self$extract(Results=Results,Years,GeoType=GeoType,GeoValues=GeoValues)
+  Results_df <- self$extract(Results=Results,Years)
 
   # Then write the data.frame
   if ( ! is.character(SaveTo) ) {
@@ -1031,6 +1041,11 @@ ve.query.run <- function(
   Force      = FALSE   # If true, re-run the query for all results even if they are up to date
   )
 {
+  if ( ! self$valid() || length(private$QuerySpec)==0 ) {
+    stop(
+      writeLogMessage("Query specifications are not valid",Level="error")
+    )
+  }
   writeLogMessage(paste("Running query:",self$Name),Level="warn")
   if ( missing(Model) || is.null(Model) ) {
     Model <- self$Model # Use attached model if available
@@ -1339,7 +1354,7 @@ specOptionalElements <- c( # Contains "known" elements that generate no warning 
 )
 
 specSummarizeElements <- c(
-  "Expr", "Units", "By", "Breaks", "BreakNames", "Table", "Key", "Group"
+  "Expr", "Units", "By", "Breaks", "BreakNames", "Filter", "Table", "Key", "Group"
 )
 
 ve.spec.print <- function() {
@@ -1778,13 +1793,15 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
   GeoType <- validGeoTypes[ validGeoTypes %in% GeoTypes ][1]
   GeoValues <- attr( get(Symbols[ GeoTypes==GeoType ][1],envir=measureEnv),"GeoValues" )
 
+  # TODO: verify that GeoType and GeoValues are the same for all "Symbols"
+
   if ( is.null(GeoType) || is.null(GeoValues) ) {
     writeLogMessage(paste("Cannot diagnose GeoType for Function",measureName),Level="error")
   }
 
   # Now we can evaluate the expression
   message(paste("Evaluating expression:",Expression))
-  browser(expr=any(grepl("LowInc",Expression)))
+  # browser(expr=any(grepl("LowInc",Expression)))
   measure <- try( eval(Expression, envir=measureEnv) )
 
   if ( ! is.numeric(measure) ) {
@@ -1859,6 +1876,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     if ( length(measure) == 1 || ( usingBreaks && ! is.array(measure) ) ) {
       GeoValues <- "Region"
       GeoType <- "Region"
+      geoDim <- 0 # no geography breaks
     } else {
       # length(measure)>1 && ( ! usingBreaks || is.array(measure) )
       if ( is.array(measure) ) { # Get names from dimnames
@@ -1867,10 +1885,14 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
             writeLogMessage(paste("Cannot have more than 2 dimensions for measure:",measureName),Level="error")
           )
         }
-        geoDim <- which( sumSpec$By %in% validGeoTypes ) # first (and should be only) GeoType
+        geoDim <- which( sumSpec$By %in% validGeoTypes ) # Geo dimension has a geography name
         if ( length(geoDim) > 1 ) {
           stop(
-            writeLogMessage(paste0(measureName,": Invalid By specification: one element must be geography"),Level="error")
+            writeLogMessage(
+              paste0(
+                measureName,": Invalid By specification: only one element must be geography"
+              ),Level="error"
+            )
           )
         } else if ( length(geoDim) == 1 ) {
           # Found geography breaks
@@ -1901,32 +1923,28 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
 
     # If it's just a single measure (no breaks) just use the measure
     if ( ! usingBreaks ) {
-      measure <- structure(
-        measure,
-        Units=measureSpec$Units,
-        Description=measureSpec$Description,
-        GeoType=GeoType,
-        GeoValues=GeoValues,
-        Export=measureSpec$Export # visualizer elements...
-      ) # used during export to filter on Geography
-      saveMeasures <- list(measure)
-      names(saveMeasures) <- measureName
+      # BreakNames will be NULL
+      breakDim <- 0 # No break dimension
       breakNames <- NULL
-      breakDim <- integer(0)
+      breakField <- NULL
     } else {
-      # with breaks, turn the "measure" into several named after their BreakNames
-      breakDims <- dimnames(measure)[[1]]
+      breakDim <- which( ! sumSpec$By %in% validGeoTypes ) # The break dimension is a non-geography "By"
+      breakField <- sumSpec$By[breakDim]
       if ( "BreakNames" %in% names(sumSpec) ) {
-        breakNames <- sumSpec$BreakNames[[sumSpec$By[1]]]
+        breakNames <- sumSpec$BreakNames[[breakDim]]
         breakNames <- c("min",breakNames)
       } else {
-        breakNames <- NULL
+        breakNames <- dimnames(measure)[[breakDim]]
       }
       if ( GeoType == "Region" ) {
         # measure should be a standard vector of values for the break groups
-        if ( ! is.vector(measure) ) {
+        if ( ! is.vector(measure) || length(measure) == 1 ) {
           stop(
-            writeLogMessage(paste0(measureName,": ",paste("Using breaks but got unexpected measure class:",class(measure),collapse=",")),Level="error")
+            writeLogMessage(
+              paste0(measureName,": ",
+                paste("Using breaks but got unexpected measure class:",
+                  class(measure),"with length",length(measure),collapse=",")
+              ),Level="error")
           )
         }
         if ( is.null(breakNames) ) {
@@ -1944,7 +1962,11 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
           }
         } else {
           stop(
-            writeLogMessage(paste0(measureName,": By geography and breaks, but only one dimension in results!"),Level="error")
+            writeLogMessage(
+              paste0(
+                measureName,": By geography and breaks, but only one dimension in results!"
+              ),Level="error"
+            )
           )
         }
       }
@@ -1953,28 +1975,53 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     # Filter measure to breaks and geography of interest
     # Requiring length greater than one for measure (won't filter a scalar)
     if ( "Filter" %in% names(sumSpec) && length(measure)>1 ) {
-      hasBreaks <- length(breakDim)>0
-      if ( hasBreaks  ) {
+      filterBreaks <- length(breakDim)>0
+      if ( filterBreaks && breakField %in% names(sumSpec$Filter) ) { # don't filter if no filter values
         breakNames <- breakNames[ breakNames %in% sumSpec$Filter[[sumSpec$By[breakDim]]] ]
       }
-      hasGeo <- length(geoDim)>0
-      if ( hasGeo ) {
-        GeoValues  <- GeoValues[ breakNames %in% sumSpec$Filter[[sumSpec$By[geoDim]]] ]
+      # Only filterGeo if geography is listed in Filter
+      filterGeo <- length(geoDim)>0
+      if ( filterGeo && GeoType %in% names(sumSpec$Filter) ) { # don't filter if no filter values
+        GeoValues  <- GeoValues[ GeoValues %in% sumSpec$Filter[[sumSpec$By[geoDim]]] ]
       }
-      if ( hasBreaks && hasGeo ) {
+      if ( filterBreaks && filterGeo && ! is.array(measure) ) {
         # Check that measure is an array
-        # Hard part is the we're not requiring Geo to be first or second
-        if ( ! is.array(measure) ) {
-          stop(
-            writeLogMessage(paste0(measureName," is not an array but has both breaks and geography!"),Level="error")
-          )
+        stop(
+          writeLogMessage(paste0(measureName," is not an array but has both breaks and geography!"),Level="error")
+        )
+      }
+      # Reduce the measure to just the filtered elements
+      if ( is.array(measure) ) {
+        # Filter measure based on geography and break values
+        # "Filtering" has technically already happened by sub-setting GeoValues and breakNames
+        filter <- list()
+        filter[[geoDim]] <- GeoValues
+        filter[[breakDim]] <- breakNames
+        measure <- measure[filter[[1]],filter[[2]]]
+      } else {
+        if ( filterGeo ) {
+          measure <- measure[GeoValues] # robust in that if GeoValues weren't filtered, we get the full set of measures
+        } else if ( filterBreaks ) {
+          measure <- measure[breakNames]
+        } else {
+          writeLog(Level="warn",paste(measureName,"is trying to filter on an unknown dimension"))
         }
       }
-      names(saveMeasures) <- paste(measureName,breakNames,sep=".")
     }
+    measure <- structure(
+      measure,
+      Units=measureSpec$Units,
+      Description=measureSpec$Description,
+      GeoType=GeoType,
+      GeoValues=GeoValues,
+      breakNames=breakNames,
+      Export=measureSpec$Export # visualizer elements...
+    ) # used during export to filter on Geography
+    saveMeasures <- list(measure)
+    names(saveMeasures) <- measureName
   } else {
     writeLogMessage(paste(measureName,"Invalid Measure Specification (must be 'Summarize' or 'Function')"),Level="error")
-    saveMeasures <- as.numeric(NA)
+    saveMeasures <- liat(as.numeric(NA))
     names(saveMeasures) <- paste0(measureName,".InvalidSpecification")
   }
 
@@ -2104,7 +2151,6 @@ makeMeasureDataframe <- function(Values,Year=NULL,wantData=TRUE,wantMetadata=TRU
     #    GeoType/GeoValue or break value
     # Length > 1 and length(dim)==2, is an array that has both GeoType and break value
 
-    # TODO: redo unpacking measures by name...
     if ( is.array(measure) && length(dim(measure))>1 ) {
       # 2 dimensions: breaks and geography
       measureNames <- paste(measureName,rep(dimnames(measure)[[1]],dim(measure)[2]),rep(dimnames(measure)[[2]],each=dim(measure)[1]),sep=".")
@@ -2116,11 +2162,10 @@ makeMeasureDataframe <- function(Values,Year=NULL,wantData=TRUE,wantMetadata=TRU
         # array with only one dimension
         measureNames <- paste(measureName,dimnames(measure)[[1]],sep=".")
         measure <- as.vector(measure)
-        names(measure) <- measureNames
       } else {
-        measure <- as.numeric(NA)
-        names(measure) <- measureName
+        measureNames <- paste(measureName,names(measure),sep=".")
       }
+      names(measure) <- measureNames
     } else if ( length(measure) == 1 ) {
       # measure is already a scalar value
       names(measure) <- measureName
@@ -2140,7 +2185,7 @@ makeMeasureDataframe <- function(Values,Year=NULL,wantData=TRUE,wantMetadata=TRU
   # Add the year as a row
   if ( wantData && ! is.null(Year)) {
     outputNames    <- c( "Year", outputNames )
-    outputMeasures <- c( as.numeric(Year), outputMeasures )
+    outputMeasures <- c( as.integer(Year), outputMeasures )
     outputUnits    <- c( "YR", outputUnits )
     outputDesc     <- c( "Scenario Year", outputDesc )
   }
