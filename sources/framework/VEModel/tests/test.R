@@ -181,11 +181,11 @@ test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",r
   }
   if ( ! modelName %in% model.dir ) {
     reset <- TRUE
-    rs <- test_install(modelName=baseModel,variant=variant,modelPath=modelName,log="info")
+    rs <- test_install(modelName=baseModel,variant=variant,installAs=modelName,log="info")
   }
 
   if ( ! reset ) {
-    testStep(paste("Attempting to re-open existing",modelName))
+    testStep(paste("Attempting to re-open existing model:",modelName))
     rs <- openModel(modelName)
     if ( rs$overallStatus != codeStatus("Run Complete") ) {
       print(rs)
@@ -902,10 +902,7 @@ test_build_query <- function(log="info",break.query=TRUE,reset=FALSE) {
 }
 
 test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
-  # Process the standard query list for the test model
-  # If multiple==TRUE, copy the test model and its results a few times, then submit the
-  # list of all the copies to VEQuery. Each column of results will be the same (see
-  # test_scenarios for a run that will generate different results in each column).
+  # Test the basic query mechanism (yields only scalar results)
 
   testStep("Set up Queries and Run on Model Results")
   testStep("Opening test model and caching its results...")
@@ -917,8 +914,6 @@ test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
 
   qry <- mod$query("Test-Query",load=FALSE) # Don't open it if file exists already
 
-  # TODO: split into further testing of query construction
-  # plus second element to efficiently create a correct query and run it.
   testStep("Build a query from scratch and run it.")
   testStep("Construct bare query specification...")
   spec <- VEQuerySpec$new()
@@ -939,7 +934,6 @@ test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
         IsUrbanMixNbrhd = "",
         Marea = ""
       ),
-      By = "Marea",
       Table = "Household"
     )
   )
@@ -966,7 +960,6 @@ test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
           VanDvmt = "MI/DAY",
           Marea = ""
         ),
-        By = "Marea",
         Table = "Marea"
       ),
       Units = "Miles per day",
@@ -980,7 +973,6 @@ test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
           ComSvcUrbanDvmt = "MI/DAY",
           Marea = ""
         ),
-        By = "Marea",
         Table = "Marea"
       ),
       Units = "Miles per day",
@@ -994,7 +986,6 @@ test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
           UrbanHhDvmt = "MI/DAY",
           Marea = ""
         ),
-        By = "Marea",
         Table = "Marea"
       ),
       Units = "Miles per day",
@@ -1131,13 +1122,43 @@ test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
   return(df)
 }
 
+# Test query dimensions and filtering
+qrydir <- Sys.getenv("VE_test_source",unset=getwd())
+qryfile <- normalizePath(file.path(qrydir,"Filter-Query.VEqry"),winslash="/")
+
+# Test query filter mechanism (and basic query processing)
+test_queryfilter <- function(runModel=FALSE,log="info") {
+  testStep("Load base model")
+  mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="base",log=log,reset=runModel)
+#   testStep("Install test query")
+#   mod.qry.path <- file.path(mod$modelPath,mod$setting("QueryDir"),basename(qryfile))
+#   qry.name <- basename(qryfile)
+#   message("Copying test query (",qryfile,")")
+#   message("To ",mod.qry.path)
+#   file.copy(qryfile,mod.qry.path,overwrite=TRUE)
+
+  testStep(paste("Loading test query:",basename(qryfile)))
+  logLevel(log)
+  qr <- mod$query(FileName=qryfile)
+  print(qr)
+
+  testStep("Run filter query (Force=TRUE)...")
+  qr$run(Force=TRUE)
+
+  testStep("Extract results")
+  df <- qr$extract()
+  qr$export()  # Write to output directory
+  invisible(df)
+}
+
 # Torture test the query mechanism
 test_fullquery <- function(Force=TRUE,runModel=FALSE,log="info") {
   testStep("Test Full-Query.VEqry")
   testStep("Opening test model and caching its results...")
   mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=runModel)
-  qry <- mod$query("Full-Query",load=TRUE) # Don't open it if file exists already
-  testStep("Print Query")
+  testStep("Loading Query")
+  logLevel(log)
+  qry <- mod$query("Full-Query",load=TRUE)
   print(qry)
   testStep("Run Query")
   logLevel(log)
@@ -1149,10 +1170,8 @@ test_fullquery <- function(Force=TRUE,runModel=FALSE,log="info") {
   invisible(df)
 }
 
-#TODO: this function is probably obsolete (though it is useful for describing
-#  how to programmatically build scenarios...). Look at test_multicore function
-#  and perhaps update that.
-test_multiquery <- function(reset=FALSE,log="info") {
+# Construct programmatic stages, run the model, and query it
+test_addstages <- function(reset=FALSE,log="info") {
   # Merge this with test_scenario
   if ( ! missing(log) ) logLevel(log)
   testStep("Acquiring test model")
@@ -1161,7 +1180,7 @@ test_multiquery <- function(reset=FALSE,log="info") {
   qry <- mod$query("Test-Query")
   print(qry)
 
-  testStep("Query multiple scenarios...")
+  testStep("Build multiple scenarios...")
   # Generate several copies of mod future year
   # Inputs will be sought up the "StartFrom" tree.
   # To customize inputs for Scenario-1 (as an actual scenario),
@@ -1209,9 +1228,6 @@ test_multiquery <- function(reset=FALSE,log="info") {
   testStep("Running two additional scenarios")
   mod$run() # runs with "continue" - will just do the newly added stages
 
-  # TODO: restructure multi-scenario model to push those scenarios into ModelStages and use
-  #   the scenarios StartFrom to establish the default case.
-
   testStep("Query the model")
   # Make a list of VEResults objects from the VEModel list and run query on it
   qry$run(mod,Force=TRUE) # might be leftovers from another query test
@@ -1230,7 +1246,7 @@ test_multiquery <- function(reset=FALSE,log="info") {
 
   print(mod$dir(outputs=TRUE))
 
-  testStep("Done with multiple queries")
+  testStep("Done with programmatic stage tests")
   return(qry)
 }
 
