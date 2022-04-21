@@ -201,7 +201,7 @@ evalq(
       # (1) prepend file.path(VEPackage.path,"tests") to all files without separators
       # (2) check each file for existing and report those that don't exist
       # (3) normalize all the test paths
-      owd <-setwd(VEPackage.path)
+      setwd(VEPackage.path)
       if ( length(tests) > 0 ) {
         print(tests)
         expand.tests <- ! grepl("/|\\\\",tests)
@@ -213,7 +213,7 @@ evalq(
       # Locate the runtime folder where the tests will run
       if ( changeRuntime ) {
         # Use a runtime associated specifically with the tested package
-        owd <- setwd(VEPackage.path)
+        setwd(VEPackage.path)
         if ( dir.exists("tests") ) { # in VEPackage.path
           ve.runtime <- grep("^(tests/)runtime.*",list.dirs("tests"),value=TRUE)[1]
           if ( dir.exists(ve.runtime) ) {
@@ -288,8 +288,13 @@ evalq(
       if ( length(tests) > 0 ) {
         test.env <- attach(NULL,name="test.VEPackage")
         for ( test in tests ) {
+          # Set environment variable with path to test file.
+          # Inside the test file that can be used to load auxiliary files
+          # (e.g. testquery.VEqry in VEModel/tests/test.R)
+          Sys.setenv(VE_test_source=dirname(test))
           sys.source(test,envir=test.env)
         }
+        Sys.unsetenv("VE_test_source")
       }
 
       setwd(ve.runtime)
