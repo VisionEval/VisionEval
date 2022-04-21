@@ -882,9 +882,6 @@ QuerySpec <- list(
       BreakNames = list(
         Income = c("20000", "40000", "60000", "80000", "100000")
       ),
-      Filter = list(
-        Income = c("min") # implicit first break category
-      ),
       Table = "Household"
     ),
     Units = "USD per year",
@@ -911,11 +908,7 @@ QuerySpec <- list(
         Income = c(20000, 40000, 60000, 80000, 100000)
       ),    
       BreakNames = list(
-        # breaks and breaknames start with "min" implicitly
         Income = c("20000", "40000", "60000", "80000", "100000")
-      ),
-      Filter = list(
-        Income = c("min") # implicit bottom break category
       ),
       Table = "Household"
     ),
@@ -1026,7 +1019,7 @@ QuerySpec <- list(
   #Low income household vehicle Own & out-of-pocket costs share of HH low Income total (all low income HHs)
   list(
     Name = "HhVehTravCostShareLowInc",
-    Function = "(UrbanVehOperatingCostLowInc.min  + UrbanVehOwnershipCostLowInc.min * UrbanHhNumLowInc.min)/ UrbanTotalHhIncomeLowInc.min",
+    Function = "(UrbanVehOperatingCostLowInc  + UrbanVehOwnershipCostLowInc * UrbanHhNumLowInc)/ UrbanTotalHhIncomeLowInc",
     Units = "Proportion",
     Description = "Low income (0to20K 2010$) household vehicle Own & out-of-pocket costs share of HH low income total (all low income HHs)in urban area"
   ),
@@ -1042,7 +1035,7 @@ QuerySpec <- list(
   #urban DVMT per Capita in LowInc HHs
   list(
     Name = "UrbanLdvDmvtPerCapLowInc",
-    Function = "UrbanHhDvmtLowInc.min / UrbanHhPopLowInc.min",
+    Function = "UrbanHhDvmtLowInc / UrbanHhPopLowInc",
     Units = "Dvmt per person",
     Description = "daily vehicle miles traveled per person in low income (0to20K 2010$) households residing in the urban area."
   ),
@@ -1090,7 +1083,6 @@ QuerySpec <- list(
     Name = "MedianBzonePopDen",
     RequireNot = c(Dataset="LocType",Table="Bzone"),
     Summarize = list(
-      # Not clear why some UrbanArea==0...
       Expr = "median(UrbanPop[UrbanArea!=0] / UrbanArea[UrbanArea!=0])",
       Units = c(
         UrbanPop = "PRSN",
