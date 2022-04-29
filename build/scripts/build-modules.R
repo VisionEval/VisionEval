@@ -282,7 +282,7 @@ for ( module in seq_along(package.names) ) {
     if ( ".VEbuildignore" %in% dot.files ) {
       ignore.files <- ".VEbuildignore"
       # These are patterns to ignore when copying to src/ folder for build
-      # Generally a subset of .Rbuilditnore (keeping things like the VEModel walkthrough
+      # Generally a subset of .Rbuildignore (keeping things like the VEModel walkthrough)
     } else {
       ignore.files <- ".Rbuildignore"
       # Do not copy anything that will be ignored during the R build

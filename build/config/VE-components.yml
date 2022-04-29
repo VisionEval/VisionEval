@@ -273,7 +273,6 @@ Components:
     Path: sources # copies sources/runtime/* to ve.runtime recursively
 
 # "Type: script" components are copied to the runtime root under their name
-# Use 
   LICENSE:
     Type: script
     Path: "."
@@ -283,7 +282,7 @@ Components:
     CRAN:
       - import
       - jsonlite
-  walkthrough:
+  walkthrough/*.R:
     Type: script
     Path: sources/framework/VEModel/inst
   api:                               # "package" for 'docs' type is the last element (can be file name)

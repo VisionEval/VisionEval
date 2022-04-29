@@ -82,24 +82,37 @@ if ( length(copy.paths) > 0 ) {
     } else {
       out.dir <- ve.runtime
     }
-    test.path <- target.path <- file.path(out.dir,copy.scripts$Package[f])
+    dirspec <- sub("/.*$","",copy.scripts$Package[f])
+    individual.files <- dirspec != copy.scripts$Package[f]
+    test.path <- target.path <- file.path(out.dir,dirspec)
     do.copy <- FALSE
     if ( dir.exists(copy.paths[f]) && ! dir.exists(target.path) ) {
+      # Copying an entire directory into a new runtime subdirectory
       dir.create(target.path)
       target.path <- dirname(target.path) # otherwise it duplicates the script name redundantly as a sub-directory
       test.path <- target.path
       do.copy <- TRUE
-    } else if ( dir.exists(target.path) ) {
+    } else if ( dir.exists(target.path) && ! individual.files ) {
+      # Copying an entire directory's files into an existing runtime directory
       target.path <- dirname(target.path)
+    } else if ( ! dir.exists(target.path) && individual.files ) {
+      # Copying individual files (from a glob spec) into a non-existing runtime directory
+      # (e.g. walkthrough)
+      dir.create(target.path)
     }
     pkg.files <- dir(copy.paths[f],recursive=TRUE,all.files=TRUE) # force deeper check for actual files
     if ( do.copy || (test.newer <- newerThan(copy.paths[f], test.path, pkg.files=pkg.files)) ) {
-      if ( file.exists(copy.paths[f]) ) {
-        cat("Copying Script", copy.paths[f],"\n")
-        cat("            TO",target.path,"\n")
-        invisible(file.copy(copy.paths[f], target.path, recursive=dir.exists(copy.paths[f])))
-      } else {
+      expanded.paths <- Sys.glob(copy.paths[f])
+      if ( length(expanded.paths) == 0 ) {
         cat("Configured source file does not exist:",copy.paths[f],"\n")
+      } else {
+        cat("Copying Script",copy.paths[f],"\n")
+        cat("            TO",target.path,"\n")
+        for ( source.path in expanded.paths ) {
+          if ( file.exists(source.path) ) {
+            invisible(file.copy(source.path, target.path, recursive=dir.exists(copy.paths[f])))
+          }
+        }
       }
     }
   }
