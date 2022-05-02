@@ -1,19 +1,19 @@
 Title: VisionEval
 Date: 2019-04-26
 Description: Include a parallel draw-down of the wiki (and use VE-wiki-components.yml)
-Roots:                          # Require ve.root and ve.output at a minimum
-    ve.root: ..                 # relative to "build" folder (should be git root for VisionEval-dev)
-    ve.output: ../built         # default ("built" adjacent to "build")
-    ve.wiki: ../../VE-wiki      # path to clone of wiki repository
-Components:                     # Where to find wiki components (right here)
+Roots:                              # Require ve.root and ve.output at a minimum
+    ve.root: ..                     # relative to "build" folder (should be git root for VisionEval-dev)
+    ve.output: ../built             # default ("built" adjacent to "build")
+    ve.docs: ../../VisionEval-docs  # path to clone of VisionEval-docs repository
+Components:                         # Where to find wiki components (right here)
     ve.root:
-        Root: ve.installer      # refers to ve.root/build
+        Root: ve.installer          # refers to ve.root/build
         Config: config/VE-components.yml
         Exclude:
           - VEGUI
-    ve.wiki:
+    ve.docs:
         Root: ve.installer
-        Config: config/VE-wiki-components.yml
+        Config: config/VE-doc-components.yml
 
 # Intended to add .md documents as PDFs in the end-user installer.
 

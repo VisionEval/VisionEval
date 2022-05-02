@@ -239,6 +239,57 @@ env.loc$loadTest <- function(Package=NULL,files=NULL,clear=FALSE) {
   return( objects(test.env) )
 }
 
+# create the walkthrough function
+env.loc$walkthrough <- function(reset=FALSE) {
+  if ( ! dir.exists("walkthrough") ) {
+    setwd(getRuntimeDirectory())
+    if ( ! dir.exists("walkthrough") ) {
+      stop("Walkthrough is not available in ",getwd())
+    }
+  }
+  
+  message("The walkthrough uses its own runtime folder:")
+  message(walkthroughRuntime)
+  message("Open these scripts and try out the commands")
+  print(walkthroughScripts)
+  walkthroughScripts = character(0)
+  if ( missing(VEPackage) || tolower(VEPackage)=="walkthrough" ) { # load the walkthrough
+    Sys.setenv(VE_RUNTIME="") # clear any saved runtime directory
+    if ( changeRuntime ) {
+      ve.run()
+      setwd("walkthrough")
+    } else {
+      message("Running in VEModel source (for developing walkthrough)")
+      setwd(file.path(ve.root,"sources/framework/VEModel/inst/walkthrough"))
+    }
+    if ( ! file.exists("setup.R") ) {
+      stop("No walkthrough setup.R in ",getwd())
+    } else {
+      message("Loading walkthrough from ",normalizePath("setup.R",winslash="/"))
+      source("setup.R")
+    }
+    walkthroughScripts = dir("..",pattern="\\.R$",full.names=TRUE)
+    if ( is.logical(usePkgload) && usePkgload ) {
+      # Do a compatible test load of VEModel itself -- useful for using
+      # walkthrough to test (and fix) VEModel.
+      VEPackage = "VEModel"         # debug VEModel
+      changeRuntime = FALSE         # but run in location selected above
+      usePkgload = NULL             # revert to default pkgload behavior
+      tests = character(0)          # don't load the VEModel tests
+      # Fall through to do the following while running in the walkthrough runtime
+      # ve.test("VEModel",tests=character(0),changeRuntime=FALSE,usePkgload=NULL)
+    } else {
+      require(VEModel,quietly=TRUE)      # Walkthrough requires VEModel
+      message("\nWalkthrough scripts:")
+      print(walkthroughScripts)
+      return(invisible(walkthroughScripts))
+    }
+  }
+  if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
+    stop("Missing required package: 'pkgload'")
+  }
+}
+
 # clean up variables created during startup
 if ( exists("ve.lib",inherits=FALSE) ) rm(ve.lib)
 rm(env.loc,install.success)
