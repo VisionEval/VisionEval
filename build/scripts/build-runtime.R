@@ -22,7 +22,7 @@ copy.paths <- dir(paths,all.files=TRUE,full.names=TRUE,no..=TRUE)
 if ( length(copy.paths) > 0 ) {
   any.newer <- FALSE
   for ( f in seq_along(copy.paths) ) {
-    newer <- newerThan(copy.paths[f], file.path(ve.runtime,basename(copy.paths[f])))
+    newer <- newerThan(copy.paths[f], cp <- file.path(ve.runtime,basename(copy.paths[f])))
     any.newer <- any( any.newer, newer )
   }
   if ( any.newer ) {
@@ -82,33 +82,47 @@ if ( length(copy.paths) > 0 ) {
     } else {
       out.dir <- ve.runtime
     }
-    dirspec <- sub("/.*$","",copy.scripts$Package[f])
+    dirspec <- sub("/.*$","",copy.scripts$Package[f]) # unchanged if no glob spec
     individual.files <- dirspec != copy.scripts$Package[f]
-    test.path <- target.path <- file.path(out.dir,dirspec)
-    do.copy <- FALSE
-    if ( dir.exists(copy.paths[f]) && ! dir.exists(target.path) ) {
-      # Copying an entire directory into a new runtime subdirectory
-      dir.create(target.path)
-      target.path <- dirname(target.path) # otherwise it duplicates the script name redundantly as a sub-directory
-      test.path <- target.path
-      do.copy <- TRUE
-    } else if ( dir.exists(target.path) && ! individual.files ) {
-      # Copying an entire directory's files into an existing runtime directory
-      target.path <- dirname(target.path)
-    } else if ( ! dir.exists(target.path) && individual.files ) {
-      # Copying individual files (from a glob spec) into a non-existing runtime directory
-      # (e.g. walkthrough)
-      dir.create(target.path)
-    }
-    pkg.files <- dir(copy.paths[f],recursive=TRUE,all.files=TRUE) # force deeper check for actual files
-    if ( do.copy || (test.newer <- newerThan(copy.paths[f], test.path, pkg.files=pkg.files)) ) {
+    target.path <- file.path(out.dir,dirspec)
+    do.copy.dir <- FALSE
+    if ( dir.exists(copy.paths[f]) ) {
+      # Script spec yields an entire directory (e.g. "tools")
+      if ( ! dir.exists(target.path) ) {
+        # Copying an entire directory into a new runtime subdirectory
+        dir.create(target.path)
+        target.path <- dirname(target.path) # otherwise it duplicates the script name redundantly as a sub-directory
+        do.copy.dir <- TRUE
+      } else if ( ! individual.files ) {
+        # Copying an entire directory's files into an existing runtime directory
+        # target directory does not exist
+        target.path <- dirname(target.path)
+      }
+    } else {
+      # copy.paths[f] is not a directory
+      # Copy individual files (from a glob spec) into a non-existing runtime directory
+      #   (e.g. walkthrough)
+      # Make sure the directory is present
+      if ( individual.files && ! dir.exists(target.path) ) dir.create(target.path)
+    } # else copy.paths[f] is not a directory + does not include a glob spec - probably an individual file
+
+    if ( individual.files ) {
       expanded.paths <- Sys.glob(copy.paths[f])
+    } else {
+      expanded.paths <- copy.paths[f]
+    }
+    if ( dir.exists(target.path) && length(expanded.paths) > length(target.path) ) {
+      expanded.newer <- sapply(expanded.paths,function(ep) newerThan(ep,file.path(target.path,basename(ep))) )
+    } else {
+      expanded.newer <- newerThan(expanded.paths,target.path)
+    }
+    if ( do.copy.dir || any(expanded.newer) ) {
       if ( length(expanded.paths) == 0 ) {
         cat("Configured source file does not exist:",copy.paths[f],"\n")
       } else {
-        cat("Copying Script",copy.paths[f],"\n")
-        cat("            TO",target.path,"\n")
         for ( source.path in expanded.paths ) {
+          cat("Copying Script",source.path,"\n")
+          cat("            TO",target.path,"\n")
           if ( file.exists(source.path) ) {
             invisible(file.copy(source.path, target.path, recursive=dir.exists(copy.paths[f])))
           }

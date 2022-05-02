@@ -140,7 +140,6 @@ evalq(
 
       walkthroughScripts = character(0)
       if ( missing(VEPackage) || tolower(VEPackage)=="walkthrough" ) { # load the walkthrough
-        Sys.setenv(VE_RUNTIME="") # clear any saved runtime directory
         if ( changeRuntime ) {
           ve.run()
           setwd("walkthrough")
@@ -152,7 +151,7 @@ evalq(
           stop("No walkthrough setup.R in ",getwd())
         } else {
           message("Loading walkthrough from ",normalizePath("setup.R",winslash="/"))
-          source("setup.R")
+          source("setup.R") # will create shadow runtime directory in "walkthrough"
         }
         walkthroughScripts = dir("..",pattern="\\.R$",full.names=TRUE)
         if ( is.logical(usePkgload) && usePkgload ) {
@@ -163,7 +162,7 @@ evalq(
           usePkgload = NULL             # revert to default pkgload behavior
           tests = character(0)          # don't load the VEModel tests
           # Fall through to do the following while running in the walkthrough runtime
-          # ve.test("VEModel",tests=character(),changeRuntime=FALSE,usePkgload=NULL)
+          # ve.test("VEModel",tests=character(0),changeRuntime=FALSE,usePkgload=NULL)
         } else {
           require(VEModel,quietly=TRUE)      # Walkthrough requires VEModel
           message("\nWalkthrough scripts:")

@@ -221,7 +221,7 @@ evalq(
     # Args:
     #   srcpath - a single folder containing a bunch of files that might be newer, or a vector of files
     #   tgtpath - one (or a vector) of files that may be older, or may not exist
-    #   pkg.files - if provided, make sure the same files are preent in both places
+    #   pkg.files - if provided, make sure the same files are present in both places
     #   quiet - if TRUE, then print a message about what is being tested
     #
     # Value: TRUE if the most recently modified source file is newer
