@@ -40,10 +40,12 @@ evalq(
   expr={
     # Get the local git branch (if use.git, else just "visioneval")
     getLocalBranch <- function(repopath,use.git) {
-      if ( use.git && requireNamespace("git2r",quietly=TRUE) ) {
+      if ( use.git && suppressWarnings(requireNamespace("git2r",quietly=TRUE)) ) {
         localbr <- git2r::branches(repopath,flags="local")
         hd <- which(sapply(localbr,FUN=git2r::is_head,simplify=TRUE))
-        return( localbr[[hd]]$name )
+        branch <- localbr[[hd]]$name
+        message("Using git branch: ",branch)
+        return( branch )
       } else {
         return( "visioneval" )
       }
@@ -91,11 +93,10 @@ evalq(
       )
     }
 
-    get.ve.runtime <- function(use.git=FALSE,use.env=TRUE,use.built=FALSE) {
+    get.ve.runtime <- function(use.git=FALSE,use.env=TRUE) {
       # use.git will use git branch name if TRUE, otherwise "visioneval" for branch
       #   (must be consistent with ve.build(use.git=...)
-      # use.env if true will use system environment VE_RUNTIME (otherwise VE_RUNTIME is ignored)
-      # use.built will keep runtime as what it was set to in most recent call to ve.build()
+      # use.env if TRUE will use system environment VE_RUNTIME (otherwise VE_RUNTIME is ignored)
       env.builder <- grep("^ve.bld$",search(),value=TRUE)
       if ( length(env.builder)==0 ) {
         env.builder <- attach(NULL,name="ve.bld")
@@ -112,23 +113,33 @@ evalq(
         message("Could not locate built runtime for R-",this.r," in ",build.file,"\n",sep="")
         return(NA)
       }
-      ve.runtime <- if ( exists("ve.runtime",envir=env.builder) ) get("ve.runtime",pos=env.builder) else NA
+      ve.runtime <- if ( exists("ve.runtime",envir=env.builder) ) {
+        if ( ! dir.exists(env.builder$ve.runtime) ) {
+          message("Runtime directory for ",ve.branch," is missing.")
+          NA
+        } else get("ve.runtime",pos=env.builder)
+      }
 
       # Now replace the built runtime with VE_RUNTIME if requested to do so and if it is present
       if ( ! is.na(ve.runtime) && use.env ) {
         ve.runtime <- Sys.getenv("VE_RUNTIME",env.builder$ve.runtime)
       }
-      return(ve.runtime)
+      return(structure(ve.runtime,raw.runtime=env.builder$ve.runtime))
     }
 
-    ve.run <- function(use.git=FALSE,use.env=TRUE,use.built=FALSE) {
-      ve.runtime <- get.ve.runtime(use.git=use.git,use.env=use.env,use.built=use.built)
+    ve.run <- function(use.git=FALSE,use.env=TRUE) {
+      ve.runtime <- get.ve.runtime(use.git=use.git,use.env=use.env)
       if ( ! is.na(ve.runtime) && dir.exists(ve.runtime) ) {
         owd <- setwd(ve.runtime)
         message("setwd('",owd,"') to return to previous directory")
-        if ( file.exists("VisionEval.R") ) {
+        # Read the VisionEval.R startup from the built runtime location even if not running there
+        raw.runtime <- attr(ve.runtime,"raw.runtime")
+        if ( is.null(raw.runtime) ) raw.runtime <- ve.runtime
+        startup.file <- file.path(raw.runtime,"VisionEval.R")
+        if ( file.exists(startup.file) ) {
           message("setwd(ve.root) to return to Git root directory")
-          source("VisionEval.R") # Will report directory in which we are running
+          message("startup file: ",startup.file)
+          source(startup.file) # Will report directory in which we are running
         }
       } else {
         message("Have you run ve.build()?")
@@ -137,29 +148,30 @@ evalq(
       return( invisible(owd) )
     }
 
-    ve.test <- function(VEPackage,tests="test.R",changeRuntime=TRUE,usePkgload=NULL) {
-      
+    ve.test <- function(VEPackage,tests="test.R",changeRuntime=TRUE,usePkgload=NULL,...) {
+      # ... parameters are passed to ve.run when changeRuntime is TRUE (use.git or use.env)
       walkthroughScripts = character(0)
       if ( missing(VEPackage) || tolower(VEPackage)=="walkthrough" ) { # load the walkthrough
         if ( changeRuntime ) {
-          ve.run()
+          ve.run(...)
           setwd("walkthrough")
         } else {
           message("Running in VEModel source (for developing walkthrough)")
           setwd(file.path(ve.root,"sources/framework/VEModel/inst/walkthrough"))
         }
-        if ( ! file.exists("setup.R") ) {
-          stop("No walkthrough setup.R in ",getwd())
+        if ( ! file.exists("00-setup.R") ) {
+          stop("No walkthrough 00-setup.R in ",getwd())
         } else {
-          message("Loading walkthrough from ",normalizePath("setup.R",winslash="/"))
-          source("setup.R") # will create shadow runtime directory in "walkthrough"
+          message("Loading walkthrough from ",normalizePath("00-setup.R",winslash="/"))
+          source("00-setup.R") # will create shadow runtime directory in "walkthrough"
         }
         walkthroughScripts = dir("..",pattern="\\.R$",full.names=TRUE)
         if ( is.logical(usePkgload) && usePkgload ) {
           # Do a compatible test load of VEModel itself -- useful for using
           # walkthrough to test (and fix) VEModel.
           VEPackage = "VEModel"         # debug VEModel
-          changeRuntime = FALSE         # but run in location selected above
+          changeRuntime = FALSE         # run in location selected above
+          ve.runtime <- getwd()         # override global ve.runtime
           usePkgload = NULL             # revert to default pkgload behavior
           tests = character(0)          # don't load the VEModel tests
           # Fall through to do the following while running in the walkthrough runtime
@@ -170,7 +182,10 @@ evalq(
           print(walkthroughScripts)
           return(invisible(walkthroughScripts))
         }
+      } else {
+        ve.runtime <- get.ve.runtime(...) # use standard runtime due to changeRuntime=FALSE
       }
+
       if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
         stop("Missing required package: 'pkgload'")
       }
@@ -236,7 +251,6 @@ evalq(
         message("Testing in Package runtime: ",ve.runtime)
       } else {
         # Use the standard runtime folder
-        ve.runtime <- get.ve.runtime()
         message("Testing in Existing runtime: ",ve.runtime)
       }
 

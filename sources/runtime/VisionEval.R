@@ -59,9 +59,7 @@ local({
 # Will use the ve.run() directory if running from development environment
 if ( ! exists("ve.runtime") ) {
   assign("ve.runtime",getwd(),envir=env.loc)
-} else {
-  setwd(ve.runtime)
-}
+} # otherwise it has probably been set by the development environment
 
 # Check what installation we need
 
@@ -184,8 +182,8 @@ if ( .Platform$OS.type == 'windows' || install.success ) {
 # Load visioneval
 if ( install.success ) {
   require("VEModel") # load explicitly onto the search path
-  message(paste0("Running in ",getwd()))
   env.loc$load.helpers()
+  message(paste0("Running in ",getwd()))
 } else {
   # We need the following for the Mac or Linux to do the installation in "user space"
   # and not hang up RStudio for a long time while everything compiles.
@@ -254,8 +252,8 @@ env.loc$walkthrough <- function(reset=FALSE) {
 
   # Load the setup to create the walkthrough runtime if one is not already present
   # Will stop in normalizePath if setup.R is not present in getwd()
-  message("Loading walkthrough from ",normalizePath("setup.R",winslash="/",mustWork=TRUE))
-  source("setup.R") # will stop if cannot create or change to walkthrough runtime directory
+  message("Loading walkthrough from ",normalizePath("00-setup.R",winslash="/",mustWork=TRUE))
+  source("00-setup.R") # will stop if cannot create or change to walkthrough runtime directory
   message("The walkthrough uses its own runtime folder:")
   message(getwd())
   walkthroughScripts <- grep("00-setup.R",invert=TRUE,dir("..",pattern="^[01].*%.R$",full.names=TRUE))
