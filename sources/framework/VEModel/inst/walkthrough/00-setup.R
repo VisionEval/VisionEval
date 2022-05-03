@@ -1,50 +1,50 @@
 ### setup.R
 #   Set up the walkthrough environment
 #   It's harmless to run this again, but generally you should just
-#   let it auto-run by using "ve.test()" or (end-user runtime)
-#   "walkthrough"
-#   In dev environment, no parameters on ve.test will load the walkthrough.
+#   let it auto-run by using "ve.test()" or (end-user runtime) "walkthrough"
+#   In dev environment, no parameters on ve.test() will load the walkthrough
+#   In runtime enviroment, "walkthrough" will do the same (in walkthrough's own runtime)
 
-# Establish the VisionEval environment (VEModel comes afterwards)
+local( {  # Wrapping in "local" will leave no new names in the user's environment
+  # First part is redundant with standard developer or runtime setup
+  # It will support starting the walkthrough from an arbitrary directory if VE is nearby
+  # This script presumes we're working in the directory that contains the walkthrough scripts
 
-# Locate ve-lib
-checkVE <- function(lib.loc=NULL) {
-  return(all( c("visioneval","VEModel") %in% installed.packages(lib.loc=lib.loc)[,"Package"]))
-}
-
-vePresent <- function() {
-  if ( checkVE() ) return(TRUE)
-  for ( wd in c(getwd(),dirname(getwd()),dirname(dirname(getwd()))) ) {
-    message("Checking ",wd)
-    lib.loc <- file.path(wd,"ve-lib")
-    if ( checkVE(lib.loc) ) {
-      .libPaths( c( lib.loc, .libPaths() ) )
-      return(TRUE)
-    }
+  checkVE <- function(lib.loc=NULL) {
+    # VE is already located?
+    return(all( c("visioneval","VEModel") %in% installed.packages(lib.loc=lib.loc)[,"Package"]))
   }
-  return(FALSE)
-}
 
-# Set up a runtime directory for a walkthrough
-# Specifically, don't look at VE_RUNTIME (that's just for the end user)
-setupWalkthroughRuntime <- function() {
-  if ( ! vePresent() ) stop("Cannot locate ve.lib - are you starting from your VE runtime?")
+  # Set up .libPaths with locally-discovered (or pre-existing) ve-lib
+  vePresent <- function() {
+    if ( checkVE() ) return(TRUE)
+    # No obvious VE installation - look around nearby for "ve-lib"
+    for ( wd in c(getwd(),dirname(getwd()),dirname(dirname(getwd()))) ) {
+      message("Checking ",wd)
+      lib.loc <- file.path(wd,"ve-lib")
+      if ( checkVE(lib.loc) ) {
+        .libPaths( c( lib.loc, .libPaths() ) )
+        return(TRUE)
+      }
+    }
+    # Failed to find ve-lib
+    return(FALSE)
+  }
+  if ( ! vePresent() ) stop("Cannot locate ve.lib - are you working in your VE runtime?")
 
-  walkthrough.action <- "Using"
-  # Create a walkthrough directory within the current working directory
+  # Create (or find) a walkthrough runtime directory within the working directory
+  # which is presumed to be "walkthrough"
   message("Setting up walkthrough in ",getwd())
+  walkthrough.action <- "Using"
   walkthroughRuntime <- grep("runtime.*",list.dirs(),value=TRUE)[1]
   if ( ! dir.exists(walkthroughRuntime) ) {
     walkthroughRuntime <- normalizePath(tempfile(pattern="runtime",tmpdir="."),winslash="/",mustWork=FALSE)
     dir.create(walkthroughRuntime)
-    walkthrough.action <- "Creating"
+    walkthrough.action <- "Created"
   } else {
     walkthroughRuntime <- normalizePath(walkthroughRuntime,winslash="/",mustWork=TRUE)
   }
   message(walkthrough.action," walkthrough runtime directory:")
-  message(walkthroughRuntime)
   setwd(walkthroughRuntime)
-}
-
-setupWalkthroughRuntime()
-
+  message(getwd())
+} )

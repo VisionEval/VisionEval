@@ -9,12 +9,12 @@ local({
   options(repos=r)
 
   # Establish visioneval R developer environment on the R search path
-  env.loc <- grep("^ve.bld$",search(),value=TRUE)
-  if ( length(env.loc)==0 ) {
-    env.loc <- attach(NULL,name="ve.bld")
+  env.builder <- grep("^ve.bld$",search(),value=TRUE)
+  if ( length(env.builder)==0 ) {
+    env.builder <- attach(NULL,name="ve.bld")
   } else {
-    env.loc <- as.environment(env.loc)
-    rm(list=ls(env.loc,all=T),pos=env.loc)
+    env.builder <- as.environment(env.builder)
+    rm(list=ls(env.builder,all=T),pos=env.builder)
   }
 
   # Check that Rtools or a development environment is available.
@@ -32,7 +32,7 @@ local({
   }
 
   # Establish the VisionEval development tree root
-  assign("ve.root",getwd(),pos=env.loc) # VE-config.yml could override, but not tested for R builder
+  assign("ve.root",getwd(),pos=env.builder) # VE-config.yml could override, but not tested for R builder
 })
 
 evalq(
@@ -91,53 +91,54 @@ evalq(
       )
     }
 
-    get.ve.runtime <- function(use.git=FALSE) {
-      # NOTE: override via VE_RUNTIME system environment variable
-      ve.runtime = Sys.getenv("VE_RUNTIME",NA)
-      if ( is.na(ve.runtime) ) {
-        if ( ! "ve.builder" %in% search() ) {
-          env.builder <- attach(NULL,name="ve.builder")
-        } else {
-          env.builder <- as.environment("ve.builder")
-        }
-        if ( ! exists("ve.runtime",envir=env.builder) ) {
-          ve.branch <- getLocalBranch(ve.root,use.git)
-          this.r <- paste(R.version[c("major","minor")],collapse=".")
-          build.file <- file.path(ve.root,"dev","logs",ve.branch,this.r,"dependencies.RData")
-          if ( file.exists(build.file) ) {
-            load(build.file,envir=env.builder)
-          } else {
-            cat("Could not locate build for R-",this.r," in ",build.file,"\n",sep="")
-          }
-        }
-        if ( exists("ve.runtime",envir=env.builder) ) {
-          ve.runtime <- get("ve.runtime",pos=env.builder)
-        }
+    get.ve.runtime <- function(use.git=FALSE,use.env=TRUE,use.built=FALSE) {
+      # use.git will use git branch name if TRUE, otherwise "visioneval" for branch
+      #   (must be consistent with ve.build(use.git=...)
+      # use.env if true will use system environment VE_RUNTIME (otherwise VE_RUNTIME is ignored)
+      # use.built will keep runtime as what it was set to in most recent call to ve.build()
+      env.builder <- grep("^ve.bld$",search(),value=TRUE)
+      if ( length(env.builder)==0 ) {
+        env.builder <- attach(NULL,name="ve.bld")
+      } else {
+        env.builder <- as.environment(env.builder)
+      }
+      # Load the build file created by last ve.build() (to find ve-lib)
+      ve.branch <- getLocalBranch(ve.root,use.git)
+      this.r <- paste(R.version[c("major","minor")],collapse=".")
+      build.file <- file.path(ve.root,"dev","logs",ve.branch,this.r,"dependencies.RData")
+      if ( file.exists(build.file) ) {
+        load(build.file,envir=env.builder)
+      } else {
+        message("Could not locate built runtime for R-",this.r," in ",build.file,"\n",sep="")
+        return(NA)
+      }
+      ve.runtime <- if ( exists("ve.runtime",envir=env.builder) ) get("ve.runtime",pos=env.builder) else NA
+
+      # Now replace the built runtime with VE_RUNTIME if requested to do so and if it is present
+      if ( ! is.na(ve.runtime) && use.env ) {
+        ve.runtime <- Sys.getenv("VE_RUNTIME",env.builder$ve.runtime)
       }
       return(ve.runtime)
     }
 
-    ve.run <- function() {
-      ve.runtime <- get.ve.runtime()
-      owd <- getwd()
-      if (
-        ! is.na(ve.runtime) &&
-        dir.exists(ve.runtime)
-      ) {
+    ve.run <- function(use.git=FALSE,use.env=TRUE,use.built=FALSE) {
+      ve.runtime <- get.ve.runtime(use.git=use.git,use.env=use.env,use.built=use.built)
+      if ( ! is.na(ve.runtime) && dir.exists(ve.runtime) ) {
         owd <- setwd(ve.runtime)
         message("setwd('",owd,"') to return to previous directory")
         if ( file.exists("VisionEval.R") ) {
           message("setwd(ve.root) to return to Git root directory")
-          source("VisionEval.R")
+          source("VisionEval.R") # Will report directory in which we are running
         }
       } else {
-        message("Could not locate runtime. Run ve.build()")
+        message("Have you run ve.build()?")
+        owd <- getwd()
       }
       return( invisible(owd) )
     }
 
     ve.test <- function(VEPackage,tests="test.R",changeRuntime=TRUE,usePkgload=NULL) {
-
+      
       walkthroughScripts = character(0)
       if ( missing(VEPackage) || tolower(VEPackage)=="walkthrough" ) { # load the walkthrough
         if ( changeRuntime ) {

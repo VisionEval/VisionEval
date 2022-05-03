@@ -44,7 +44,6 @@ setup <- function(ve.runtime=NULL) {
     }
   }
   ve.runtime <- normalizePath(ve.runtime,winslash="/",mustWork=TRUE)
-  Sys.setenv(VE_RUNTIME=ve.runtime)
   pkgload::load_all()
   ve.env <- VEModel::runtimeEnvironment()
   ve.env$ve.runtime <- ve.runtime; # override default from package load (working directory)
