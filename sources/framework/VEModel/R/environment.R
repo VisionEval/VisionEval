@@ -340,12 +340,12 @@ writeSetup <- function(object=NULL,filename=NULL,overwrite=FALSE) {
 #' The working directory at the time this function was called is also saved as ve.env$start.dir.
 #' It is consequently feasible to move back and forth between alternative runtime directories.
 #'
-#' Once can return to the original working directory using a line like this:
+#' One can return to the original working directory using a line like this:
 #' \code{setRuntimeDirectory(getRuntimeEnvironment()$start.dir)}
 #'
 #' When that line runs, start.dir will again be reset, so running that line repeatedly will toggle
 #' between two directories (e.g. the one from which \code{R} was started and the one defined in the
-#' VE_RUNTIME environment variable..)
+#' VE_RUNTIME environment variable...)
 #'
 #' @param Directory a specific directory (absolute or relative to getwd()) to use as the runtime. If
 #' Directory is not provided, looks for a system environment variable VE_RUNTIME, and if that is not

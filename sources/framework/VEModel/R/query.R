@@ -2021,7 +2021,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     names(saveMeasures) <- measureName
   } else {
     writeLogMessage(paste(measureName,"Invalid Measure Specification (must be 'Summarize' or 'Function')"),Level="error")
-    saveMeasures <- liat(as.numeric(NA))
+    saveMeasures <- list(as.numeric(NA))
     names(saveMeasures) <- paste0(measureName,".InvalidSpecification")
   }
 
