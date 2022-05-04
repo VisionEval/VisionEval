@@ -183,7 +183,6 @@ if ( .Platform$OS.type == 'windows' || install.success ) {
 if ( install.success ) {
   require("VEModel") # load explicitly onto the search path
   env.loc$load.helpers()
-  message(paste0("Running in ",getwd()))
 } else {
   # We need the following for the Mac or Linux to do the installation in "user space"
   # and not hang up RStudio for a long time while everything compiles.
@@ -192,8 +191,10 @@ if ( install.success ) {
   message("Please run ve.install() to complete installation.")
 }
 
+message("Running in ",ve.runtime)
+
 # Make sure there is a "Models" directory
-env.loc$ModelRoot <- file.path(a
+env.loc$ModelRoot <- file.path(
   env.loc$ve.runtime,
   visioneval::getRunParameter("ModelRoot") # Uses runtime configuration or default value "models"
 )
