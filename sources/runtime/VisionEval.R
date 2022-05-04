@@ -193,15 +193,15 @@ if ( install.success ) {
 }
 
 # Make sure there is a "Models" directory
-env.loc$ModelRoot <- file.path(
-  getRuntimeDirectory(),
+env.loc$ModelRoot <- file.path(a
+  env.loc$ve.runtime,
   visioneval::getRunParameter("ModelRoot") # Uses runtime configuration or default value "models"
 )
 if ( ! dir.exists(env.loc$ModelRoot) ) dir.create(env.loc$ModelRoot,recursive=TRUE,showWarnings=FALSE)
 
 # create the LoadTest function (makes package test functions available)
 env.loc$loadTest <- function(Package=NULL,files=NULL,clear=FALSE) {
-  test.root <- file.path(getRuntimeDirectory(),"tools","tests")
+  test.root <- file.path(env.loc$ve.runtime,"tools","tests")
   if ( !is.character(Package) ) {
     tests <- dir(test.root,pattern="\\.R$",recursive=TRUE)
     if ( length(tests) == 0 ) {
@@ -242,8 +242,8 @@ env.loc$loadTest <- function(Package=NULL,files=NULL,clear=FALSE) {
 # function to set up the walkthrough and its runtime
 env.loc$walkthrough <- function(reset=FALSE) {
   # Locate walkthrough directory (sub-directory of ve.runtime)
-  if ( ! dir.exists("walkthrough") ) {
-    setwd(getRuntimeDirectory())
+  if ( ! dir.exists("walkthrough") ) { # in case we're not in ve.runtime
+    setwd(ve.runtime)
     if ( ! dir.exists("walkthrough") ) {
       stop("Walkthrough is not available in ",getwd())
     }
@@ -253,10 +253,8 @@ env.loc$walkthrough <- function(reset=FALSE) {
   # Load the setup to create the walkthrough runtime if one is not already present
   # Will stop in normalizePath if setup.R is not present in getwd()
   message("Loading walkthrough from ",normalizePath("00-setup.R",winslash="/",mustWork=TRUE))
-  source("00-setup.R") # will stop if cannot create or change to walkthrough runtime directory
-  message("The walkthrough uses its own runtime folder:")
-  message(getwd())
-  walkthroughScripts <- grep("00-setup.R",invert=TRUE,dir("..",pattern="^[01].*%.R$",full.names=TRUE))
+  source("00-setup.R") # will stop if we cannot create or change to walkthrough runtime directory
+  walkthroughScripts <- grep("00-setup.R",invert=TRUE,value=TRUE,dir("..",pattern="^[01].*\\.R$",full.names=TRUE))
   message("Open these script files in order and try out the commands:")
   print(walkthroughScripts)
 }
