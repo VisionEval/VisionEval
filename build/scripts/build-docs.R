@@ -75,6 +75,7 @@ ve.getdocs <- rbind(ve.getdocs,pkgs.db[pkgs.framework,])
 ve.getdocs <- rbind(ve.getdocs,pkgs.db[pkgs.module,])
 ve.getdocs <- rbind(ve.getdocs,pkgs.db[pkgs.model,])
 ve.getdocs <- rbind(ve.getdocs,pkgs.db[pkgs.script,])
+print(ve.getdocs)
 
 # those are suffixes.
 #   Append to the indicated folder (ve.src/modulename, ve.root

@@ -1,4 +1,4 @@
 Components:
-  01-Getting-Started.md:
+  01-getting-started.md:
     Type: docs
-    Path: "."
+    Path: "docs"

@@ -54,7 +54,7 @@ cat("Adding",basename(ve.docs),"to runtime base...")
 #   zip(installer.base,file.path(basename(dirname(f)),basename(f)),flags=c("-9Xq")) # originally -r9Xq: end user only gets root.
 # }
 setwd(ve.docs)
-docs <- dir(pattern="*\\.pdf")
+docs <- dir(pattern="\\.pdf$") # Pick up PDFs in the root of the "docs" directory
 for ( f in docs ) {
   zip(installer.base,f,flags=c("-9Xq"))
 }
