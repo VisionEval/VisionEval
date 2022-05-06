@@ -541,6 +541,7 @@ for ( module in seq_along(package.names) ) {
           # On Windows, install from the binary package
           cat("++++++++++ Installing built package:",built.package,"\n")
           install.packages(built.package, repos=NULL, lib=ve.lib, type=ve.build.type) # so they will be available for later modules
+          cat("++++++++++ DONE",package.names[module],"\n\n")
         }
       } else { # source build
         # Just do installation directly from source package (no binary package created)

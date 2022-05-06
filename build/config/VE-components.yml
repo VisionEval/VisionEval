@@ -38,6 +38,7 @@ Components:
       - yaml
       - stringr
       - knitr
+      - bookdown            # for rendering documentation
     BioC:
       - rhdf5
   VEModel: # End-user R API

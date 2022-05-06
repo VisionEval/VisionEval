@@ -168,7 +168,9 @@ for ( i in 1:nrow(ve.getdocs) ) {
 }
 
 # As of VisionEval 2.0, only render to PDFs and HTML the top level .md files in the docs folder
-# Only pdf's from that folder will be copied into the installer.
+# Only pdf's from that folder will be copied into the installer runtime root.
+# Typically, that will just be the "getting started" chapter from the VisionEval-docs user_guide
+# diretory, but it could be configured as something else.
 pandoc_formats <- list(
   "html"=rmarkdown::html_document(pandoc_args="--metadata=title:VisionEval Getting Started"),
   "pdf"=rmarkdown::pdf_document()

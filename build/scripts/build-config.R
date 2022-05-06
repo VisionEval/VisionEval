@@ -536,10 +536,10 @@ evalq(
   #   "Type: test"
   #   "Type: script"
 
-  catn("Parsing dependencies...\n")
+  cat("Parsing dependencies...\n")
 
   pkgs.db <- data.frame(Type="Type",Package="Package",Target="Target",Root="Root",Path="Path",Group=0,Test="Test")
-  save.types <- c("framework","module","model","runtime","script","test","docs")
+  save.types <- c("framework","module","model","runtime","script","test","docs","book")
   # iterate over build.comps, creating dependencies
   for ( pkg in names(build.comps) ) {
     it <- build.comps[[pkg]]
@@ -547,8 +547,9 @@ evalq(
       # These are the required elements: Type, Package, Root, and Path
       it.db <- data.frame(Type=it$Type,Package=pkg,Root=it$Root,Path=it$Path)
       if ( "Target" %in% names(it) ) {
-        # used for now only in the 'docs' type, indicating sub-folder of output 'docs'
-        # in which to place elements found at it$Path
+        # used for now only in the 'docs' and 'book' types, indicating sub-folder of output 'docs'
+        # in which to place elements found at it$Path. Default is 'docs' folder itself for 'docs'
+        # type, and it$Package for 'book' type.
         it.db$Target <- it$Target
       } else {
         it.db$Target <- ""
@@ -590,6 +591,12 @@ evalq(
           pkgs.db <- rbind(pkgs.db,dep.db)
         }
       }
+      if ( "DevPkg" %in% names(it) ) { # These always come from the current CRAN location for R version
+        for ( dep in it$DevPackages ) {
+          dep.db <- data.frame(Type="DevPackages",Package=basename(dep),Root=NA,Path=dep,Target=NA,Group=NA,Test=NA)
+          pkgs.db <- rbind(pkgs.db,dep.db)
+        }
+      }
     }
   }
   # print(pkgs.db)
@@ -606,6 +613,7 @@ evalq(
   pkgs.CRAN      <- which(pkgs.db$Type=="CRAN")
   pkgs.BioC      <- which(pkgs.db$Type=="BioC")
   pkgs.Github    <- which(pkgs.db$Type=="Github")
+  pkgs.DevPkg    <- which(pkgs.db$Type=="DevPkg")
   pkgs.framework <- which(pkgs.db$Type=="framework")
   pkgs.module    <- which(pkgs.db$Type=="module")
   pkgs.model     <- which(pkgs.db$Type=="model")
@@ -613,6 +621,7 @@ evalq(
   pkgs.script    <- which(pkgs.db$Type=="script")
   pkgs.test      <- which(pkgs.db$Type=="test")
   pkgs.docs      <- which(pkgs.db$Type=="docs")
+  pkgs.book      <- which(pkgs.db$Type=="book")
 
   # catn("Sorted by Group:")
   # print(pkgs.db[,c("Type","Package","Group")])
@@ -650,6 +659,7 @@ evalq(
     , "pkgs.CRAN"
     , "pkgs.BioC"
     , "pkgs.Github"
+    , "pkgs.DevPkg"
     , "pkgs.framework"
     , "pkgs.module"
     , "pkgs.model"
@@ -657,6 +667,7 @@ evalq(
     , "pkgs.script"
     , "pkgs.test"
     , "pkgs.docs"
+    , "pkgs.book"
     , "localBranch"
     , "checkBranchOnRoots"
     , "checkVEEnvironment"

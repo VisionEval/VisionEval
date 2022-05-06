@@ -423,7 +423,9 @@ $(VE_LOGS)/runtime.built: scripts/build-runtime.R $(VE_RUNTIME_CONFIG)
 	$(RSCRIPT) scripts/build-runtime.R
 	@touch $(VE_LOGS)/runtime.built
 
-# This rule and the following one will assemble the documentation
+# This rule and the following one will assemble the internal
+# documentation, including the getting started pdf for the installer
+
 docs: docs-reset docs-build
 
 docs-build: $(VE_LOGS)/docs.built
@@ -435,6 +437,19 @@ $(VE_LOGS)/docs.built: $(VE_LOGS)/modules.built $(VE_LOGS)/runtime.built\
 	$(RSCRIPT) scripts/build-inventory.R
 	$(RSCRIPT) scripts/build-docs.R
 	@touch $(VE_LOGS)/docs.built
+
+# The book target will look for any configuration elements with "book" type
+# defined, set the current directory to the indicated path, and run the
+# bookdown::render_book() function. See VisionEval-docs repository for more
+# information on setting up a book for building.
+
+book: book-build
+
+book-build: $(VE_LOGS)/book.built
+
+# Will always rebuild
+$(VE_LOGS)/book.built:
+       $(RSCRIPT) scripts/build-book.R
 
 # The next rules build the installer .zip files
 # 'bin' is the binary installer for the local architecture (e.g. Windows or MacOSX)

@@ -2,3 +2,7 @@ Components:
   01-getting-started.md:
     Type: docs
     Path: "docs"
+  user_guide:
+    Type: book
+    Path: "." # path within the ve.docbook repository root
+    # Target: user_guide # relative to ve.docs for output
