@@ -9,7 +9,7 @@ if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 if ( ! suppressWarnings(require("rmarkdown",quietly=TRUE)) ) {
-  install.packages("rmarkdown", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+  install.packages("rmarkdown", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
 }
 
 message("========== BUILD DOCS ==========")

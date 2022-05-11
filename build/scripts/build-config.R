@@ -49,7 +49,7 @@ evalq(
   .libPaths(dev.lib)
 
   # Bootstrap development packages by loading current CRAN version of yaml from cloud.r-project.org
-  # r-versions.yml will override based on R version for visioneval packages themselves
+  # r-versions.yml will override R version to set CRAN.mirror
   if ( ! suppressWarnings(require("yaml",quietly=TRUE)) ) {
     install.packages("yaml", lib=dev.lib, repos="https://cloud.r-project.org", dependencies=NA, type=.Platform$pkgType )
   } else {
@@ -97,7 +97,7 @@ evalq(
   # ========== CREATE HELPER FUNCTIONS ==========
 
   if ( ! suppressWarnings(require("git2r",quietly=TRUE)) ) {
-    install.packages("git2r", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+    install.packages("git2r", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
   }
 
   # Helper function to get name of current branch on repopath

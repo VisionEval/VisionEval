@@ -12,22 +12,25 @@ if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 if ( ! suppressWarnings(require("bookdown",quietly=TRUE)) ) {
-  install.packages("bookdown", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+  install.packages("bookdown", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
 }
 # Following is required to use bs4_book() function in bookdown
 if ( ! suppressWarnings(require("downlit",quietly=TRUE)) ) {
-  install.packages("downlit", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+  install.packages("downlit", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
 }
 
 # Following are required for the user_guide files (as of 5/6/2022)
-# TODO: for packages used internally by the render_book function, we should
-# be able to specify the packages in VE-Components.yml and load them into dev/lib
-# Only hard-code things that are used directly.
+
+# TODO: for packages used internally by the render_book function, we should specify the packages in
+# VE-Components.yml using the DevPkg list to load them into dev/lib
+# Only hard-code things here that are required generically to run render_book versus
+# the packages required to process the book's .Rmd files
+
 if ( ! suppressWarnings(require("kableExtra",quietly=TRUE)) ) {
-  install.packages("kableExtra", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+  install.packages("kableExtra", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
 }
 if ( ! suppressWarnings(require("openxlsx",quietly=TRUE)) ) {
-  install.packages("openxlsx", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+  install.packages("openxlsx", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
 }
 
 message("========== BUILD VISIONEVAL BOOK ==========")

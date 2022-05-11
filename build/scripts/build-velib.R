@@ -2,16 +2,17 @@
 
 # Author: Jeremy Raw
 
-# Script to install all required packages into ve.lib from within the local
-# pkg-repository. This will install the packages necessary for the local runtime
-# environment (source on Linux or MacOS; binaries on Windows, with an option to
-# compile if Rtools is installed)
+# Script to install all required packages into ve.lib from within the local pkg-repository. This
+# will install the packages necessary for the local runtime environment (source on Linux or MacOS;
+# binaries on Windows, with an option to compile if Rtools is installed)
 
-# We install these locally prior to the VE package build process (as a backstop
-# to ensure that all required packages really are in the repository).
+# If there are any DevPkg packages specified in the configuration , those will be installed into
+# dev.lib. That exists mostly to support using .Rmd files with live R examples that may depend on
+# packages not usually installed - Introduced to support the "book" where some of the rendering
+# depends on such packages.
 
-# NOTE: it is a bad idea to put the VE dependencies in your development
-# environment since you will not easily be able to tell if you missed one
+# We install these locally prior to the VE package build process (as a backstop to ensure that all
+# required packages really are in the repository).
 
 # Load runtime configuration
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
@@ -24,11 +25,38 @@ source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 # installation
 options(install.packages.compile.from.source="never")
 
+message("========== ADD DEVELOPMENT PACKAGES ========")
+
+dev.pkgs <- pkgs.db$Package[pkgs.DevPkg]
+new.pkgs <- dev.pkgs[ ! (dev.pkgs %in% installed.packages(lib.loc=dev.lib)[,"Package"]) ]
+unload.pkgs <- new.pkgs[which(new.pkgs %in% .packages())]
+if ( length(new.pkgs)>0 ) {
+  cat("---Installing missing development packages---\n")
+  envs <- search()
+  for ( p in new.pkgs)  {
+    p <- paste0("package:",p)
+    if ( p %in% envs ) detach(p,character.only=TRUE)
+  }
+  # Development packages are always installed from the current CRAN
+  install.packages(
+      new.pkgs,
+      lib=dev.lib,
+      repos=CRAN.mirror,
+      dependencies=c("Depends", "Imports", "LinkingTo"),
+      type=ve.build.type
+  )
+  cat("---Finished installing development packages---\n")
+} else {
+  cat("---Development packages are up to date---\n")
+  if ( length(dev.pkgs) > 0 ) print(dev.pkgs)
+  cat("\n")
+}
+
 message("========== BUILD RUNTIME LIBRARY ==========")
 
 # you will need miniCRAN and dependencies installed in your local R environment
 if ( ! suppressWarnings(requireNamespace("miniCRAN",quietly=TRUE)) ) {
-  install.packages("miniCRAN", lib=dev.lib, type=.Platform$pkgType )
+  install.packages("miniCRAN", lib=dev.lib, repos=CRAN.mirror, type=.Platform$pkgType )
 }
 requireNamespace("tools",quietly=TRUE)
 

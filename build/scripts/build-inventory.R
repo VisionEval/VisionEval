@@ -20,7 +20,7 @@ message("========== BUILD PACKAGE SPEC INVENTORY ==========")
 # Libraries from ve.lib:
 require(visioneval,quietly=TRUE)
 if ( ! suppressWarnings(require("jsonlite",quietly=TRUE)) ) {
-  install.packages("jsonlite", lib=dev.lib, type=.Platform$pkgType)
+  install.packages("jsonlite", lib=dev.lib, repos=CRAN.mirror, type=.Platform$pkgType)
 }
 
 # Need to work in ve.src to support visioneval structure

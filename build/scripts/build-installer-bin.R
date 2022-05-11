@@ -55,18 +55,22 @@ if ( ve.build.type != "source" ) {
   cat("Done\n")
 
   # Create package sources from src folder
-  cat("Building Package Source installer...")
-  unlink(installer.source)
-  setwd(file.path(ve.src,".."))
-  zip(installer.source,basename(ve.src),
-    flags="-r9Xq",
-    extras=c("-x",
-      "*/*.Rproj",
-      "src/*.Rproj",
-      "*/*.Rcheck/*",
-      "*.md"          # Already built these into 'docs'
+  if ( Sys.getenv("VE_SKIP_SRC_INSTALLER","yes") != "yes" ) {
+    cat("Building Package Source installer...")
+    unlink(installer.source)
+    setwd(file.path(ve.src,".."))
+    zip(installer.source,basename(ve.src),
+      flags="-r9Xq",
+      extras=c("-x",
+        "*/*.Rproj",
+        "src/*.Rproj",
+        "*/*.Rcheck/*",
+        "*.md"          # Already built these into 'docs'
+      )
     )
-  )
+  } else {
+    cat("Skipping Package Source Installer due to VE_SKIP_SRC_INSTALLER\b")
+  }
   cat("Done\n")
 
   setwd(owd)

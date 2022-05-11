@@ -19,7 +19,7 @@ options(install.packages.compile.from.source="never")
 
 # Load required libraries
 if ( ! suppressWarnings(require("miniCRAN",quietly=TRUE)) ) {
-  install.packages("miniCRAN", lib=dev.lib, dependencies=NA, type=.Platform$pkgType)
+  install.packages("miniCRAN", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType)
 }
 
 require(tools)
