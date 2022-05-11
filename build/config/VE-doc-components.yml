@@ -1,7 +1,7 @@
 Components:
-  01-getting-started.md:
+  01-getting-started.Rmd:
     Type: docs
-    Path: "docs"
+    Path: "user_guide"
   user_guide:
     Type: book
     Path: "." # path within the ve.docbook repository root
