@@ -69,7 +69,7 @@ if ( ve.build.type != "source" ) {
       )
     )
   } else {
-    cat("Skipping Package Source Installer due to VE_SKIP_SRC_INSTALLER\b")
+    cat("Skipping Package Source Installer due to VE_SKIP_SRC_INSTALLER\n")
   }
   cat("Done\n")
 
