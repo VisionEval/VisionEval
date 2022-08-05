@@ -1237,7 +1237,7 @@ findDataset <- function(DatasetName, DstoreListing_df=NULL, envir=modelEnvironme
   for ( ds in dsPaths ) {
     if (
         class(DatasetName)!= "character" ||
-        class(ds$groupname)!="character" ||
+        class(ds$groupname[1])!="character" ||
         length(ds$groupname) == 0 || length(DatasetName)==0
       ) {
       writeLog("Failed to find path element; entering debug browser (Q to quit)",Level="error")
@@ -1313,10 +1313,10 @@ getDatasetAttr <- function(Name=NULL, Table=NULL, Group=NULL, DstoreListing_df=N
   # Warning: should call checkDataset first if the missing Dataset error needs to
   #   be accepted.
 
-  if ( missing(Table) || is.null(Table) || missing(Group) || is.null(Group) ) {
+  if ( missing(Table) || is.null(Table[1]) || missing(Group) || is.null(Group[1]) ) {
     stop(writeLog("getDatasetAttr: must provide Group and Table",Level="error"))
   }
-  if ( missing(Name) || is.null(Name) ) {
+  if ( missing(Name) || is.null(Name[1]) ) {
     DatasetName <- file.path(Group, Table)
   } else {
     DatasetName <- file.path(Group, Table, Name)

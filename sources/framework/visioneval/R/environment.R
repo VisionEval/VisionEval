@@ -416,7 +416,7 @@ addParameterSource <- function(Param_ls,Source="Manually added",onlyMissing=FALS
 addRunParameter <- function(Param_ls=list(),Source=NULL,...) {
   newParams_ls <- list(...)
   # if source not supplied, check if first item in newParams_ls has a source and use that
-  if ( missing(Source) || is.null(Source) ) {
+  if ( missing(Source) || is.null(Source[1]) ) {
     item.source <- attr(newParams_ls[[1]],"source")
     if ( ! is.null(item.source) ) Source <- item.source
   }
@@ -661,7 +661,7 @@ findRuntimeInputFile <- function(File,Dir="InputPath",Param_ls=NULL,StopOnError=
   inputPath <- getRunParameter(Dir,Param_ls=Param_ls)
   writeLog(paste("Input path raw:",inputPath,collapse=":"),Level="trace")
   candidates <- findFileOnPath( File=File, Dir=inputPath )
-  if ( StopOnError && ( length(candidates)==0 || is.na(candidates) ) ) {
+  if ( StopOnError && ( length(candidates)==0 || is.na(candidates[1]) ) ) {
     stop( writeLog(paste("Could not locate",File,"on",inputPath,collapse="; "),Level="error") )
   }
   return(candidates[1]) # if StopOnError==FALSE, return NA if no matching File was found
@@ -804,7 +804,7 @@ saveLog <- function(LogFile=NULL,envir=modelEnvironment()) {
 # futile.logger layout for visioneval (adjusted from futile.logger::layout.simple)
 
 prepare_arg <- function(x) {
-  if (is.null(x) || length(x) == 0) return(deparse(x))
+  if (is.null(x[1]) || length(x) == 0) return(deparse(x))
   return(x)
 }
 
@@ -872,7 +872,7 @@ log.function <- list(
 #' @return TRUE if the message is written to the log successfully ("as-is")
 #' @export
 writeLogMessage <- function(Msg = "", Logger="ve.logger", Level="") {
-  if ( missing(Msg) || length(Msg)==0 || ! nzchar(Msg) ) {
+  if ( missing(Msg) || length(Msg)==0 || ! nzchar(Msg[1]) ) {
     message(
       "writeLogMessage(Msg): No message supplied\n",
     )
@@ -917,7 +917,7 @@ writeLogMessage <- function(Msg = "", Logger="ve.logger", Level="") {
 writeLog <- function(Msg = "", Level="NONE", Logger="") {
   noLevel <- ( missing(Level) || ! (Level <- toupper(Level) ) %in% log.threshold )
   if ( noLevel ) Level <- "FATAL"
-  if ( missing(Msg) || length(Msg)==0 || ! nzchar(Msg) ) {
+  if ( missing(Msg) || length(Msg)==0 || ! nzchar(Msg[1]) ) {
     message(
       "writeLog(Msg,Level,Logger): No message supplied\n",
       "Available Log Levels:\n",
@@ -925,7 +925,7 @@ writeLog <- function(Msg = "", Level="NONE", Logger="") {
     )
   } else {
     # Pick the logger
-    if ( ! is.character(Logger) || ! nzchar(Logger) ) {
+    if ( ! is.character(Logger[1]) || ! nzchar(Logger[1]) ) {
       Logger <- if ( which(log.threshold==Level) >= which(log.threshold=="WARN") ) "stderr" else "ve.logger"
     }
     # Pick the log format 

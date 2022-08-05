@@ -118,7 +118,7 @@ ve.query.init <- function(
 
   # if "load==TRUE" and null QuerySpec/FileName, build the output name and
   #   see if it already exists
-  if ( !is.null(QuerySpec) || !is.null(FileName) || load ) {
+  if ( !is.null(QuerySpec[1]) || !is.null(FileName[1]) || load ) {
     writeLogMessage("Loading Query...",Level="info")
     self$load(FileName=FileName,QuerySpec=QuerySpec,ModelPath=ModelPath,QueryDir=QueryDir)
   }
@@ -136,7 +136,7 @@ ve.query.attach <- function(OtherQuery=NULL, ModelPath=NULL, QueryDir=NULL, Quer
   if ( !is.null(OtherQuery) ) {
     self$QueryDir <- OtherQuery$QueryDir
   } else {
-    if ( is.null(ModelPath) || ! dir.exists(ModelPath) ) {
+    if ( is.null(ModelPath[1]) || ! dir.exists(ModelPath[1]) ) {
       ModelPath <- getRuntimeDirectory()
     }
     if ( is.null(QueryDir) ) {
@@ -179,7 +179,7 @@ ve.query.save <- function(saveTo=TRUE,overwrite=TRUE) {
       saveTo <- "" # empty string dumps to console
     }
   }
-  if ( ! is.character(saveTo) || ! nzchar(saveTo) ) { # saveTo console if not valid filename
+  if ( ! is.character(saveTo[1]) || ! nzchar(saveTo[1]) ) { # saveTo console if not valid filename
     saveTo = ""
   }
   if ( nzchar(saveTo) && file.exists(saveTo) && ! overwrite ) {
@@ -283,7 +283,7 @@ ve.query.check <- function(verbose=FALSE) {
 
 ve.query.valid <- function() {
   # summarize outcome of last check (as a logical)
-  return( length(self$CheckMessages)==0 || all(!nzchar(self$CheckMessages)) )
+  return( length(self$CheckMessages[1])==0 || all(!nzchar(self$CheckMessages[1])) )
 }
 
 ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
@@ -900,7 +900,7 @@ ve.query.outputconfig <- function() {
 # TODO: "query" function on VEModel should be able to limit to certain ModelStages (in which case
 # don't consider "Reportable").
 ve.query.export <- function(format="csv",OutputDir=NULL,SaveTo=NULL,Results=NULL,Years=NULL,GeoType=NULL,GeoValues=NULL) {
-  needOutputDir <- missing(OutputDir) || ! is.null(OutputDir)
+  needOutputDir <- missing(OutputDir) || ! is.null(OutputDir[1])
   # TODO: Query extract template should be called QueryExportTemplate
   # TODO: The template should probably belong to the ViEIO export format
   # 
@@ -922,7 +922,7 @@ ve.query.export <- function(format="csv",OutputDir=NULL,SaveTo=NULL,Results=NULL
 
   if ( format != "csv" ) stop( writeLogMessage("Currently only supporting .csv export",Level="error") )
 
-  if ( missing(Results) || is.null(Results) ) {
+  if ( missing(Results) || is.null(Results[1]) ) {
     if ( ! is.null(self$Model) ) Results <- self$Model$results()
   } else {
     stop( writeLogMessage("No results to query",Level="error") )
@@ -969,7 +969,7 @@ exportDir <- function(model=NULL,results=NULL) {
 # If results are not available for one of the VEResults, Results element is NULL
 ve.query.results <- function(Results=NULL, Reload=FALSE) {
   # Figure out where to look for results
-  if ( missing(Results) || is.null(Results) ) {
+  if ( missing(Results) || is.null(Results[1]) ) {
     if ( "VEModel" %in% class(self$Model) ) {
       Results <- self$Model$results()
       # Output file was set when Model was attached
@@ -988,7 +988,7 @@ ve.query.results <- function(Results=NULL, Reload=FALSE) {
     # Handle pathological case of only one stage with Results
     Results <- list(Results)
   }
-  if ( Reload || is.null(self$QueryResults) || length(self$QueryResults) < length(Results) ) {
+  if ( Reload || is.null(self$QueryResults[1]) || length(self$QueryResults) < length(Results) ) {
     private$reload( Results ) # pulls up available query results
     if ( length(self$QueryResults) == 0 ) self$QueryResults <- NULL # No valid results
   }
@@ -1113,9 +1113,9 @@ ve.query.run <- function(
         load(r$Path,envir=tempEnv)
         Timestamp <- tempEnv$Timestamp # Timestamp when query results were generated
         outOfDate <- ( 
-          is.null(Timestamp) ||
-          is.null(r$Source$ModelState()$LastChanged) ||
-          Timestamp < r$Source$ModelState()$LastChanged
+          is.null(Timestamp[1]) ||
+          is.null(r$Source$ModelState()$LastChanged[1]) ||
+          Timestamp < r$Source$ModelState()$LastChanged[1]
         )
         return( ! outOfDate )
       }
@@ -1216,7 +1216,7 @@ VEQuery <- R6::R6Class(
 ve.queryresults.init <- function(Query=NULL,VEResults=NULL) {
   # expect VEResuls$resultsPath to be normalized path
   self$Source <- VEResults # "Source" is a VEResults object
-  if ( is.null(Query) || is.null(self$Source) || is.null(self$Source$resultsPath) ) return()
+  if ( is.null(Query) || is.null(self$Source) || is.null(self$Source$resultsPath[1]) ) return()
 
   self$Path <- file.path(self$Source$resultsPath,Query$QueryResultsFile)
   self$Results <- if ( file.exists(self$Path) ) {
@@ -1314,7 +1314,7 @@ ve.spec.init <- function(other=NULL) {
 }
 
 deepPrint <- function(ell,join=" = ",suffix="",newline=TRUE) { # x may be a list
-  result <- if ( is.list(ell) || ( ! is.null(names(ell)) && length(ell)>1 ) ) {
+  result <- if ( is.list(ell) || ( ! is.null(names(ell[1])) && length(ell)>1 ) ) {
     index <- if ( !is.null(names(ell)) ) names(ell) else 1:length(ell)
     if ( newline ) {
       inner <- "\n"
@@ -1464,7 +1464,7 @@ ve.spec.check <- function(Names=character(0), Clean=TRUE) {
       }
     } else if ( "Function" %in% names(self$QuerySpec) ) {
       checkSymbols <- evaluateFunctionSpec(self$Name, self$QuerySpec, measureEnv=Names)
-      if ( ! is.character(checkSymbols) || length(checkSymbols)>0 ) {
+      if ( ! is.character(checkSymbols[1]) || length(checkSymbols)>0 ) {
         checkSymbols <- as.character(checkSymbols) # could be some other kind of error
         self$CheckMessages <- c(
           self$CheckMessages,
@@ -1795,7 +1795,7 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
 
   # TODO: verify that GeoType and GeoValues are the same for all "Symbols"
 
-  if ( is.null(GeoType) || is.null(GeoValues) ) {
+  if ( is.null(GeoType[1]) || is.null(GeoValues[1]) ) {
     writeLogMessage(paste("Cannot diagnose GeoType for Function",measureName),Level="error")
   }
 
@@ -1873,7 +1873,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
         QueryPrep_ls = QPrep_ls
       )
     # Create attribute for geographies present in this measure
-    if ( length(measure) == 1 || ( usingBreaks && ! is.array(measure) ) ) {
+    if ( length(measure) == 1 || ( usingBreaks && ! is.array(measure[1]) ) ) {
       GeoValues <- "Region"
       GeoType <- "Region"
       geoDim <- 0 # no geography breaks
@@ -1938,7 +1938,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
       }
       if ( GeoType == "Region" ) {
         # measure should be a standard vector of values for the break groups
-        if ( ! is.vector(measure) || length(measure) == 1 ) {
+        if ( ! is.vector(measure[1]) || length(measure) == 1 ) {
           stop(
             writeLogMessage(
               paste0(measureName,": ",
@@ -2244,7 +2244,7 @@ doQuery <- function (
     # Results is a list of VEResults objects (with ModelState plus Datastore)
 
     # Move to results directory
-    browser(expr=(!is.environment(results) || !is.character(results$resultsPath)))
+    browser(expr=(!is.environment(results[1]) || !is.character(results$resultsPath[1])))
     setwd(results$resultsPath)
 
     # Scenario Name for reporting / OutputFile

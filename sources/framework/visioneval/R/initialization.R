@@ -75,7 +75,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   DeflatorsFile <- getRunParameter("DeflatorsFile",Param_ls=Param_ls)
   DeflatorsFilePath <- file.path(ParamPath,DeflatorsFile)
   DeflatorsFilePath <- DeflatorsFilePath[file.exists(DeflatorsFilePath)][1] # Allow ParamPath to be a vector of Paths
-  if ( is.na(DeflatorsFilePath) || length(DeflatorsFilePath)!=1 ) {
+  if ( is.na(DeflatorsFilePath[1]) || length(DeflatorsFilePath)!=1 ) {
     stop(
       writeLog(
         paste("Deflators File",DeflatorsFile,"does not exist in",ParamPath),
@@ -88,7 +88,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   UnitsFile <- getRunParameter("UnitsFile",Param_ls=Param_ls)
   UnitsFilePath <- file.path(ParamPath,UnitsFile)
   UnitsFilePath <- UnitsFilePath[file.exists(UnitsFilePath)][1] # Allow ParamPath to be a vector of Paths
-  if ( is.na(UnitsFilePath) || length(UnitsFilePath)!=1 ) {
+  if ( is.na(UnitsFilePath[1]) || length(UnitsFilePath)!=1 ) {
     stop(
       writeLog(
         paste("Units File",UnitsFile,"does not exist in",ParamPath),
@@ -102,7 +102,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   GeoFile <- getRunParameter("GeoFile",Param_ls=Param_ls)
   GeoFilePath <- file.path(ParamPath,GeoFile)
   GeoFilePath <- GeoFilePath[file.exists(GeoFilePath)][1] # Allow ParamPath to be a vector of Paths
-  if ( is.na(GeoFilePath) || length(GeoFilePath)!=1 ) {
+  if ( is.na(GeoFilePath[1]) || length(GeoFilePath)!=1 ) {
     stop(
       writeLog(
         paste("Geography File",GeoFile,"does not exist in",ParamPath),
@@ -174,7 +174,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
 #' @export
 archiveResults <- function(RunParam_ls,ResultsDir=getwd(),SaveDatastore=NULL) {
 
-  if ( missing(SaveDatastore) || is.null(SaveDatastore) ) {
+  if ( missing(SaveDatastore) || is.null(SaveDatastore[1]) ) {
     SaveDatastore <- getRunParameter("SaveDatastore",Param_ls=RunParam_ls)
   } # if FALSE, do not archive
 
@@ -195,7 +195,7 @@ archiveResults <- function(RunParam_ls,ResultsDir=getwd(),SaveDatastore=NULL) {
   ModelStateName <- getRunParameter("ModelStateFile",Param_ls=RunParam_ls)
 
   # Get the timestamp from the newest ModelState, if available
-  if ( missing(ResultsDir) || ResultsDir == ModelDir ) { # classic model
+  if ( missing(ResultsDir) || ResultsDir[1] == ModelDir[1] ) { # classic model
     ModelStatePath <- file.path(ResultsDir,ModelStateName)
     if ( ! file.exists(ModelStatePath) ) {
       writeLog("No previous model state or information to save.",Level="warn")
@@ -1403,7 +1403,7 @@ readGeography <- function(Save=TRUE,Param_ls=NULL) {
   ParamPath <- getRunParameter("ParamPath",Param_ls=Param_ls)
   GeoFilePath <- file.path(ParamPath,GeoFile)
   GeoFilePath <- GeoFilePath[file.exists(GeoFilePath)][1] # Allow ParamPath to be a vector of Paths
-  if ( is.na(GeoFilePath) || length(GeoFilePath)!=1 ) {
+  if ( is.na(GeoFilePath[1]) || length(GeoFilePath)!=1 ) {
     stop(
       writeLog(
         paste("Geography File",GeoFile,"does not exist in",ParamPath),

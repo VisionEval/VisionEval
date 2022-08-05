@@ -602,7 +602,7 @@ loadModel <- function(
       )
       BadBaseYear <- ! (envir$ModelState_ls$BaseYear == LoadDstore$ModelState_ls$BaseYear)
 
-      if ( BadGeography || BadUnits || BadDeflators || BadBaseYear) {
+      if ( BadGeography[1] || BadUnits[1] || BadDeflators[1] || BadBaseYear[1]) {
         elements <- paste(
           "Geography"[BadGeography],
           "Units"[BadUnits],
@@ -1023,7 +1023,7 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
   #------------------------------
   ModuleFunction <- paste0(PackageName, "::", ModuleName)
   ModuleSpecs <- paste0(ModuleFunction, "Specifications")
-  Msg <- paste0("Start  module '", ModuleFunction, "' for year '", RunYear, "'. ",memory.size(),"Mb")
+  Msg <- paste0("Start  module '", ModuleFunction, "' for year '", RunYear, "'. ")
   writeLog(Msg,Level="warn")
   #Load the package and module
   #---------------------------
@@ -1165,7 +1165,7 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
   }
   #Log and print ending message
   #----------------------------
-  Msg <- paste0("Finish module '", ModuleFunction, "' for year '", RunYear, "'. ",memory.size(),"Mb")
+  Msg <- paste0("Finish module '", ModuleFunction, "' for year '", RunYear, "'. ")
   writeLog(Msg,Level="warn")
   gc()
 

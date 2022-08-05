@@ -187,7 +187,7 @@ ve.results.list <- function(pattern="", details=FALSE, selected=TRUE, ...) {
     filter <- filter & grepl(pattern,self$modelIndex$Name,ignore.case=TRUE )
   }
 
-  if ( missing(details) || ! details ) {
+  if ( missing(details) || ! details[1] ) {
     ret.value <- with( self$modelIndex[ filter, ], paste(Group,Table,Name,sep="/") ) # generates a character vector
   } else {
     ret.value <- self$modelIndex[ filter, ] # Generates a data.frame with all columns
@@ -314,7 +314,7 @@ ve.results.units <- function(selected=TRUE,display=NULL) {
   Units_df <- self$modelIndex[ selected, c("Group","Table","Name","Units") ]
   Units_df$Source <- "Datastore"
   returnFields <- c("Group","Table","Name","Units","Source")
-  if ( ! is.logical(display) || display ) {
+  if ( ! is.logical(display[1]) || display ) {
     # Add Display Units if requested
     Units_df <- addDisplayUnits(Units_df,Param_ls=private$RunParam_ls)
     displayUnits <- !is.na(Units_df$DisplayUnits)
@@ -341,7 +341,7 @@ ve.results.extract <- function(
 ) {
   if ( ! self$valid() ) stop("Model State contains no results.")
   if ( is.null(select) ) select <- self$selection else self$selection <- select
-  if ( is.na(select$selection) || length(select$selection)<1 ) {
+  if ( is.na(select$selection[1]) || length(select$selection)<1 ) {
     stop("Nothing selected to extract.")
   }
 
@@ -611,10 +611,10 @@ ve.select.initialize <- function( results, select=integer(0) ) {
   self$results <- results
   if ( self$results$valid() ) {
     rows <- self$parse(select)
-    if ( is.null(rows) || any(is.na(rows)) ) {
+    if ( is.null(rows[1]) || any(is.na(rows)) ) {
       self$selection <- as.integer(NA) # no rows selected
     } else if (
-      ! is.numeric(rows) ||
+      ! is.numeric(rows[1]) ||
       length(rows)==0 ||
       ! min(rows)>0 ||
       max(rows)>nrow(self$results$modelIndex) ) {
