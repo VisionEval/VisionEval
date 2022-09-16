@@ -59,7 +59,9 @@ local({
 # Will use the ve.run() directory if running from development environment
 if ( ! exists("ve.runtime") ) {
   assign("ve.runtime",getwd(),envir=env.loc)
-} # otherwise it has probably been set by the development environment
+} else { # otherwise it has probably been set by the development environment
+  assign("ve.runtime",ve.runtime,envir=env.loc)
+}
 
 # Check what installation we need
 

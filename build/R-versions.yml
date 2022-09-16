@@ -9,20 +9,15 @@
 # Update the previous version to cran.microsoft.com, with the
 # snapshot date set to the date listed as the release of the new
 # version (see cran.r-project.org for the release date and new
-# version; see 
+# version).
 
-3.6.0:
-    BioC:      https://www.bioconductor.org/packages/3.9/bioc
-    CRAN:      https://cran.microsoft.com/snapshot/2019-07-05
-3.6.1:
-    BioC:      https://www.bioconductor.org/packages/3.9/bioc
-    CRAN:      https://cran.microsoft.com/snapshot/2019-12-12
-3.6.2:
-    BioC:      https://www.bioconductor.org/packages/3.10/bioc
-    CRAN:      https://cran.microsoft.com/snapshot/2020-02-29
-3.6.3:
-    BioC:      https://www.bioconductor.org/packages/3.10/bioc
-    CRAN:      https://cran.microsoft.com/snapshot/2020-04-24
+# Slight change in strategy: CRAN itself keeps an up-to-date
+# repository for each major R version (4.0, 4.1, 4.2). So we
+# can keep pointing at cloud.r-project.org in perpetuity for
+# the ultimate minor R version of each major R version. We only
+# have to dip into the microsoft snapshots for the previous
+# minor versions. Updated here for that strategy, 2022-10-31
+
 4.0.0:
     BioC:      https://www.bioconductor.org/packages/3.11/bioc
     CRAN:      https://cran.microsoft.com/snapshot/2020-06-06
@@ -40,7 +35,7 @@
     CRAN:      https://cran.microsoft.com/snapshot/2021-03-31
 4.0.5:
     BioC:      https://www.bioconductor.org/packages/3.12/bioc
-    CRAN:      https://cran.microsoft.com/snapshot/2021-05-18
+    CRAN:      https://cloud.r-project.org
 4.1.0:
     BioC:      https://www.bioconductor.org/packages/3.13/bioc
     CRAN:      https://cran.microsoft.com/snapshot/2021-08-10
@@ -52,7 +47,13 @@
     CRAN:      https://cran.microsoft.com/snapshot/2022-03-10
 4.1.3:
     BioC:      https://www.bioconductor.org/packages/3.14/bioc
-    CRAN:      https://cran.microsoft.com/snapshot/2022-04-22
+    CRAN:      https://cloud.r-project.org
 4.2.0:
     BioC:      https://www.bioconductor.org/packages/3.15/bioc
+    CRAN:      https://cran.microsoft.com/snapshot/2022-05-10/
+4.2.1:
+    BioC:      https://www.bioconductor.org/packages/3.15/bioc
+    CRAN:      https://cran.microsoft.com/snapshot/2022-10-31/
+4.2.2:
+    BioC:      https://www.bioconductor.org/packages/3.16/bioc
     CRAN:      https://cloud.r-project.org
