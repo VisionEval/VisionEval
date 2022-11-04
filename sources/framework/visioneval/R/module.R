@@ -315,7 +315,10 @@ loadPackageDataset <- function(DatasetName, DefaultPackage = NULL) {
       list=DatasetName,
       package=PkgName,
       envir=df.env
-    ),condition=function(e) return(conditionMessage(e))
+    ),condition=function(e) {
+      warning("Load data failed in visioneval::loadPackageDataset")
+      return(conditionMessage(e))
+    }
   )
   if ( dfErr!=DatasetName ) {
     stop(

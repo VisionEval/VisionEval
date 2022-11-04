@@ -224,7 +224,7 @@ ve.scenario.load <- function(fromFile=FALSE) {
     usedElements <- character(0) # Accumulate ScenarioElements that are in use
     for ( stage in 1:nrow(stagesToBuild ) ) {
       # Pull out each non-zero level category
-      catLevels <- stagesToBuild[stage,]
+      catLevels <- stagesToBuild[stage,,drop=FALSE]
       catLevels <- unlist(catLevels[ , catLevels != 0, drop=FALSE ])
       if ( length(catLevels)==0 ) next # StartFrom stage covers these...
 
