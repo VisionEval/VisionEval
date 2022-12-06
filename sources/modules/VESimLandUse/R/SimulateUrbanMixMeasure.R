@@ -51,14 +51,12 @@
 #=============================================
 #SECTION 1: ESTIMATE AND SAVE MODEL PARAMETERS
 #=============================================
-#' @import visioneval
-#' @import VELandUse
 
 # TODO: it's bad practice to make a second dataset with the same name
 # as in another package. Is VELandUse ever not loaded when we do
-# VESimLandUse - the implication here is that it is, but there's no
-# way to enforce that. There's not evidence that is ever used except
-# locally.
+# VESimLandUse? - the implication here is that it is, but there's no
+# way to enforce that. There's not evidence the data set is ever used
+# except locally.
 
 #Load the urban mixed-use model estimated by the CalculateUrbanMixMeasure
 #module in the VELandUse package
@@ -80,6 +78,9 @@ UrbanMixModelSim_ls <- loadPackageDataset("UrbanMixModel_ls","VELandUse")
 #'   \item{Summary}{the summary of the binomial logit model estimation results}
 #'   \item{SearchRange}{a two-element vector specifying the range of search values}
 #' }
+#' @import visioneval
+#' @import VELandUse
+#' @name UrbanMixModelSim_ls
 #' @source CalculateUrbanMixMeasure.R script.
 "UrbanMixModelSim_ls"
 visioneval::savePackageDataset(UrbanMixModelSim_ls, overwrite = TRUE)

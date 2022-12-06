@@ -85,7 +85,7 @@ Hh_df$NumWalkTrp <- round(Hh_df$Nwalktrp * 52)
 Hh_df$NumBikeTrp <- round(Hh_df$Nbiketrp * 52)
 Hh_df$NumTransitTrp <- round(Hh_df$TransitTrips * 365)
 #Set up other variables
-Hh_df$LogDvmt <- log(Hh_df$Dvmt)
+Hh_df$LogDvmt <- ifelse(!is.na(Hh_df$Dvmt) & Hh_df$Dvmt!=0, log(Hh_df$Dvmt), -Inf)
 Hh_df$LogDensity <- log(Hh_df$Hbppopdn)
 Hh_df$VehPerDrvAgePop <- with(Hh_df, Hhvehcnt / DrvAgePop)
 Hh_df$NonDrivers <- Hh_df$Hhsize - Hh_df$Drivers
@@ -454,7 +454,7 @@ CalculateAltModeTrips <- function(L) {
   Hh_df$LogDensity <-
     log1p(L$Year$Bzone$D1B[match(L$Year$Household$Bzone, L$Year$Bzone$Bzone)])
   Hh_df$LogIncome <- log(Hh_df$Income)
-  Hh_df$LogDvmt <- log(Hh_df$Dvmt)
+  Hh_df$LogDvmt <- ifelse(!is.na(Hh_df$Dvmt) & Hh_df$Dvmt!=0, log(Hh_df$Dvmt), -Inf)
   Hh_df$Urban <- Hh_df$IsUrbanMixNbrhd
 
   #Function to apply a Hurdle model

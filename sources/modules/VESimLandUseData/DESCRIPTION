@@ -13,6 +13,7 @@ Description: This package processes data from several sources to produce a
     Transit Database (NTD) are combined to produce this dataset.
 License: file LICENSE
 LazyData: TRUE
+LazyDataCompression: bzip2
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,

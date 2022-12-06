@@ -103,7 +103,7 @@ HtProb_HtAp <- calcHhAgeTypes(Hh_df)
 #' @source CreateHouseholds.R script.
 "HtProb_HtAp"
 visioneval::savePackageDataset(HtProb_HtAp, overwrite = TRUE)
-
+# rm(HtProb_HtAp,Hh_df) # Keep out of package R space
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -391,7 +391,6 @@ CreateHouseholdsSpecifications <- list(
 #' @source CreateHouseholds.R script.
 "CreateHouseholdsSpecifications"
 visioneval::savePackageDataset(CreateHouseholdsSpecifications, overwrite = TRUE)
-
 
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL

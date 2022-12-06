@@ -19,8 +19,6 @@ Imports:
     splines,
     tidyr,
     pscl,
-    rmarkdown,
-    data.table,
     visioneval
 Suggests:
     knitr,
@@ -28,8 +26,17 @@ Suggests:
     NHTS2009,
     SLD
 VignetteBuilder: knitr
-Roxygen: list(load="pkgload")
+Roxygen: list(load="source")
 RoxygenNote: 7.1.0
 Remotes:
     cities-lab/NHTS2009,
     cities-lab/SLD
+Collate:
+    VETravelDemandMM.R
+    CalculateHouseholdDvmt.R
+    CalculateAltModeTrips.R
+    data.R
+    DoPredictions.R
+    HouseholdDvmtQuantileEstimation.R
+    PredictDrivers.R
+    PredictVehicles.R

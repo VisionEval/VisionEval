@@ -13,6 +13,7 @@ Description: This package contains several modules which create synthetic
     VELandUse package.
 License: file LICENSE
 LazyData: TRUE
+LazyDataCompression: bzip2
 Depends: R (>= 3.6.0)
 Imports:
     visioneval
@@ -20,6 +21,7 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
+Encoding: UTF-8
 Roxygen: list(load='source')
 RoxygenNote: 7.1.1
 Collate: 

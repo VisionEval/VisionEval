@@ -448,7 +448,8 @@ Calculate4DMeasures <- function(L) {
     Act_ <- D_df[[ActName]]
     ActRatio_ <- Act_ / D_df$TotAct
     LogActRatio_ <- ActRatio_ * 0
-    LogActRatio_[Act_ != 0] <- log(Act_[Act_ != 0] / D_df$TotAct[Act_ != 0])
+    ValidRatio <- !is.na(Act_) & Act_ != 0
+    LogActRatio_[ValidRatio] <- log(Act_[ValidRatio] / D_df$TotAct[ValidRatio])
     ActRatio_ * LogActRatio_
   }
   E_df <- data.frame(
@@ -459,7 +460,7 @@ Calculate4DMeasures <- function(L) {
   )
   A_ <- rowSums(E_df)
   N_ = apply(E_df, 1, function(x) sum(x != 0))
-  D2A_EPHHM_ <- -A_ / log(N_)
+  D2A_EPHHM_ <- ifelse( is.na(N_)|N_==0, 0, -A_ / log(N_) )
   rm(E_df, A_, N_)
 
   #Calculate destination accessibilty term

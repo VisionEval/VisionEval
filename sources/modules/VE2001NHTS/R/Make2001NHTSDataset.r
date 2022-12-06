@@ -15,6 +15,7 @@
 #bus equivalent transit revenue miles are added. A household dataframe (Hh_df)
 #containing travel and other relevant data for each survey household.
 # library(visioneval)
+#' @import visioneval
 
 globalVariables("Per_df")
 

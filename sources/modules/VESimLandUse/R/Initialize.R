@@ -748,7 +748,7 @@ Initialize <- function(L) {
       if (Diff >= 0.01) {
         Msg <- paste0(
           "Error in input values for 'PropMetroJobs' for Marea ",
-          ma, " and Year ", Year,
+          ma, " and Year ", yr,
           ". The sum of values for Azones in the Marea is off by more than 1%. ",
           "They should add up to 1."
         )
@@ -757,7 +757,7 @@ Initialize <- function(L) {
         if (Diff != 0) {
           Msg <- paste0(
             "Warning regarding input values for 'PropMetroJobs' for Marea ",
-            ma, " and Year ", Year,
+            ma, " and Year ", yr,
             ". The sum of values for Azones in the Marea do not add up to 1 ",
             "but are off by less than 1%. ",
             "They have been adjusted to add up to 1."

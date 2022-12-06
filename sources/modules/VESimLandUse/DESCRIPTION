@@ -12,6 +12,7 @@ Description: This package contains several modules which create simulated
     inputs related to SimBzones.
 License: file LICENSE
 LazyData: TRUE
+LazyDataCompression: xz
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,

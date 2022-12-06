@@ -314,7 +314,7 @@ rm(estimateVehTrpLenModel)
 #----------------------
 #Define function to cap maximum
 capMaxVals <- function(Vals_) {
-  MaxVal <- quantile(Vals_, probs = 0.99)
+  MaxVal <- quantile(Vals_, probs = 0.99, na.rm=TRUE)
   Vals_[Vals_ > MaxVal] <- MaxVal
   Vals_
 }
@@ -641,13 +641,13 @@ CalculateVehicleTrips <- function(L) {
     applyLinearModel(VehTrpLenModel_ls$NonMetro, Hh_df[!IsMetro,])
   }
   #Cap the maximum value at the 99th percentile value
-  MaxAveTrpLen <- quantile(AveTrpLen_Hh, probs = 0.99)
+  MaxAveTrpLen <- quantile(AveTrpLen_Hh, probs = 0.99, na.rm=TRUE)
   AveTrpLen_Hh[AveTrpLen_Hh > MaxAveTrpLen] <- MaxAveTrpLen
 
   #Calculate the average number of vehicle trips
   #---------------------------------------------
   VehicleTrips_Hh <- Hh_df$Dvmt / AveTrpLen_Hh
-  MaxVehicleTrips <- quantile(VehicleTrips_Hh, probs = 0.999)
+  MaxVehicleTrips <- quantile(VehicleTrips_Hh, probs = 0.999, na.rm=TRUE)
   VehicleTrips_Hh[VehicleTrips_Hh > MaxVehicleTrips] <- MaxVehicleTrips
 
   #Return results

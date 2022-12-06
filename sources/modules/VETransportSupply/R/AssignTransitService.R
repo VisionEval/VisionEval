@@ -256,8 +256,6 @@ TransitParam_ls <- estimateTransitModel()
 BusEquivalents_df <- TransitParam_ls$BusEquivalents_df
 UZABusEqRevMile_df <- TransitParam_ls$UZABusEqRevMile_df
 VehMiFactors_df <- TransitParam_ls$VehMiFactors_df
-rm(AgencyInp_ls)
-rm(ServiceInp_ls)
 
 #Save the bus equivalency factors
 #--------------------------------

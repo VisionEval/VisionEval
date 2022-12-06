@@ -14,9 +14,7 @@ LazyData: TRUE
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,
-    VEHouseholdTravel,
-    filesstrings,
-    jsonlite
+    VEHouseholdTravel
 Suggests:
     rmarkdown, knitr
 VignetteBuilder: knitr

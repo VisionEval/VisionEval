@@ -780,6 +780,7 @@ AssignHhVehiclePowertrain <- function(L, M) {
           Dvmt95th_Ve[IsSelection_Ve] <= Char_df[my, paste0(ty, "BevRange")]
         #First assign BEV and reclass BEV that can't be assigned to PHEV
         CanBeBev_ <- CanCharge_ & InBatRng_
+        CanBeBev_[is.na(CanBeBev_)] <- FALSE
         NumBev <- NumVeh_Pt["BEV"]
         if (NumBev > 0) {
           if (sum(CanBeBev_) <= NumBev) {

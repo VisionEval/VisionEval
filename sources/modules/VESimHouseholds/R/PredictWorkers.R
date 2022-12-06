@@ -41,7 +41,10 @@ NULL
 calcWorkerProportions <- function(HhData_df) {
   GQ_df <- HhData_df[HhData_df$HhType == "Grp",]
   Hh_df <- HhData_df[HhData_df$HhType == "Reg",]
-  load("data/HtProb_HtAp.rda")
+  load.env <- new.env() # roundabout way to solve unresolved global variable
+  load("data/HtProb_HtAp.rda",envir=load.env)
+  HtProb_HtAp <- load.env$HtProb_HtAp
+  rm(load.env)
   Ag <-
     c("Age0to14",
       "Age15to19",
@@ -97,6 +100,7 @@ PropHhWkr_HtAg <- calcWorkerProportions(Hh_df)
 "PropHhWkr_HtAg"
 visioneval::savePackageDataset(PropHhWkr_HtAg, overwrite = TRUE)
 
+# rm(Hh_df) # Keep out of R space
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS

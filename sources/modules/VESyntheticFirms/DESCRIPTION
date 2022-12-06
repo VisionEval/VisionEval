@@ -9,6 +9,7 @@ Copyright: AASHTO
 Description: VisionEval Synthetic Firms module.
 License: file LICENSE
 LazyData: TRUE
+LazyDataCompression: bzip2
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,

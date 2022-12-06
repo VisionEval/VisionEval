@@ -376,6 +376,7 @@ visioneval::savePackageDataset(CalculateHouseholdDvmtSpecifications, overwrite =
 #' identifies the size of the longest HhId.
 #' @import visioneval dplyr purrr tidyr pscl
 #' @importFrom splines ns
+#' @importFrom stats setNames
 #' @export
 CalculateHouseholdDvmt <- function(L) {
   #TODO: get id_name from L or specification?
@@ -419,16 +420,16 @@ CalculateHouseholdDvmt <- function(L) {
   #D_df <- D_df %>%
   #  crossing(Marea_df, by="Marea")
   
-  #load("data/AADVMTModel_df.rda")
-  Model_df <- loadPackageDataset("AADVMTModel_df")
+  # load("data/AADVMTModel_df.rda")
+  AADVMTModel_df <- loadPackageDataset("AADVMTModel_df")
   
   # find cols used for segmenting households ("metro" by default)
-  SegmentCol_vc <- setdiff(names(Model_df), c("model", "step", "post_func", "bias_adj"))
+  SegmentCol_vc <- setdiff(names(AADVMTModel_df), c("model", "step", "post_func", "bias_adj"))
   
   # segmenting columns must appear in D_df
   stopifnot(all(SegmentCol_vc %in% names(D_df)))
   
-  Preds <- DoPredictions(Model_df, D_df,
+  Preds <- DoPredictions(AADVMTModel_df, D_df,
                          dataset_name, id_name, y_name, SegmentCol_vc)
   Preds <- Preds %>%
     mutate(y=ifelse(is.na(y) | y < 0, 0.01, y))
@@ -451,7 +452,7 @@ CalculateHouseholdDvmt <- function(L) {
   #--------------------
   tabulateMareaDvmt <- function(LocType) {
     IsType <- D_df$LocType == LocType
-    Dvmt_Ma <- setNames(numeric(length(Ma)), Ma)
+    Dvmt_Ma <- stats::setNames(numeric(length(Ma)), Ma)
     if (any(IsType)) {
       Dvmt_Mx <- tapply(D_df$Dvmt[IsType], D_df$Marea[IsType], sum)
       Dvmt_Ma[names(Dvmt_Mx)] <- Dvmt_Mx

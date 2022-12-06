@@ -390,6 +390,7 @@ processTransitData <- function() {
 #' area
 #' LocType - Location type (Urban, Town, Rural)
 #' @export
+#' @importFrom utils globalVariables
 createSimLandUseDataset <- function() {
   D_df <- readRDS("data-raw/SLD_df.rds")
   #Add state abbreviation
@@ -403,7 +404,10 @@ createSimLandUseDataset <- function() {
   D_df$UZA_NAME <- paste(UzaName_, D_df$STATE, sep = ", ")
   rm(UzaName_)
   #Add the latitude and longitude of the block group centroids
-  load("data-raw/BlkGrpCtr_df.Rda")
+  load.env <- new.env()
+  load("data-raw/BlkGrpCtr_df.Rda",envir=load.env)
+  BlkGrpCtr_df <- load.env$BlkGrpCtr_df
+  rm(load.env)
   D_df$LAT <- BlkGrpCtr_df$lat[match(D_df$GEOID10, BlkGrpCtr_df$GeoId)]
   D_df$LNG <- BlkGrpCtr_df$lng[match(D_df$GEOID10, BlkGrpCtr_df$GeoId)]
   #Remove records for New York UZA that have no activity and no land
@@ -580,9 +584,11 @@ if ( dir.exists("data-raw") ) {
 #'   \item{LocType}{Location type (Urban, Town, Rural)}
 #' }
 #' @source MakeSimBzoneEstDataset.R script.
+#' @import visioneval
 "SimLandUseData_df"
 visioneval::savePackageDataset(SimLandUseData_df, overwrite = TRUE)
 
+# rm(SimLandUseData_df) # Don't leave this in the package R built space
 
 #====================
 #Module documentation

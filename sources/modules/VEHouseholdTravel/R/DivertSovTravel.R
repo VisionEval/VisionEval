@@ -355,7 +355,7 @@ estimateSovPropModel <- function(Data_df, StartTerms_) {
     Out_df <- In_df
     Out_df$LogDensity <- log(In_df$Density)
     Out_df$LogIncome <- log(In_df$Income)
-    Out_df$LogDvmt <- log(In_df$Dvmt)
+    Out_df$LogDvmt <- ifelse(is.na(In_df$Dvmt)|In_df$Dvmt==0, -Inf, log(In_df$Dvmt))
     Out_df$NumChild <- In_df$Age0to14 + In_df$Age15to19
     Out_df$NumVehLtNumDvr <- as.numeric(In_df$Vehicles < In_df$Drivers)
     Out_df$IsSF <- as.numeric(In_df$HouseType == "SF")
@@ -890,6 +890,7 @@ visioneval::savePackageDataset(DivertSovTravelSpecifications, overwrite = TRUE)
 #' specifications for the module.
 #' @name DivertSovTravel
 #' @import visioneval
+#' @import stats
 #' @export
 DivertSovTravel <- function(L) {
   #Set up
@@ -908,11 +909,11 @@ DivertSovTravel <- function(L) {
   #------------------------------------
   Az <- L$Year$Azone$Azone
   AllPropDvmtDiverted_Hh <-
-    setNames(numeric(length(L$Year$Household$HhId)), L$Year$Household$HhId)
+    stats::setNames(numeric(length(L$Year$Household$HhId)), L$Year$Household$HhId)
   AllSovTrpLen_Hh <-
-    setNames(numeric(length(L$Year$Household$HhId)), L$Year$Household$HhId)
+    stats::setNames(numeric(length(L$Year$Household$HhId)), L$Year$Household$HhId)
   AllSovDvmtProp_Hh <-
-    setNames(numeric(length(L$Year$Household$HhId)), L$Year$Household$HhId)
+    stats::setNames(numeric(length(L$Year$Household$HhId)), L$Year$Household$HhId)
   for (az in Az) {
     IsAzHh <- L$Year$Household$Azone == az
     Hh_df <- data.frame(lapply(L$Year$Household, function(x) x[IsAzHh]), stringsAsFactors = FALSE)
@@ -930,7 +931,7 @@ DivertSovTravel <- function(L) {
     #Calculate proportion for non-rural households. Diversion to bike and
     #similar modes only considered reasonable for non-rural households
     SovProp_ <- SovDvmtProp_Hh[!IsRural]
-    AllSovDvmtProp_ <- setNames(numeric(nrow(Hh_df)), Hh_df$HhId)
+    AllSovDvmtProp_ <- stats::setNames(numeric(nrow(Hh_df)), Hh_df$HhId)
     AllSovDvmtProp_[!IsRural] <- SovProp_
 
     #Calculate total DVMT to be diverted from households that are not rural
@@ -945,7 +946,7 @@ DivertSovTravel <- function(L) {
       #Calculate household DVMT in SOV tours of non-rural households
       SovDvmt_ <- Hh_df$Dvmt[!IsRural] * SovProp_
       #Calculate average length of diverted trips
-      SovTrpLen_ <- setNames(rep(NA, nrow(Hh_df)), Hh_df$HhId)
+      SovTrpLen_ <- stats::setNames(rep(NA, nrow(Hh_df)), Hh_df$HhId)
       if (any(IsMetro)) {
         SovTrpLen_[IsMetro] <-
           applyLinearModel(SovModel_ls$SovTrpLenModel$Metro, Hh_df[IsMetro,])
@@ -964,7 +965,7 @@ DivertSovTravel <- function(L) {
           log(SovDvmt_ / mean(SovDvmt_)) + B * log(mean(SovTrpLen_) / SovTrpLen_)
         SovDvmtDiverted_ <- TotSovDvmtDiverted * exp(U_) / sum(exp(U_))
         SovDiversionProp_ <- SovDvmtDiverted_ / SovDvmt_
-        MaxDiversionProp - max(SovDiversionProp_)
+        MaxDiversionProp - max(SovDiversionProp_,na.rm=TRUE)
       }
       #Set maximum bounds halfway between average and 1 and calculate AltTrip scaling
       MaxDiversionProp <- (SovDiversionProp + 1) / 2
@@ -975,12 +976,12 @@ DivertSovTravel <- function(L) {
       #Calculate the proportion of household DVMT that is diverted
       PropDvmtDiverted_ <- SovDvmtDiverted_ / Hh_df$Dvmt[!IsRural]
       #Assign to output vector
-      AllPropDvmtDiverted_ <- setNames(numeric(nrow(Hh_df)), Hh_df$HhId)
+      AllPropDvmtDiverted_ <- stats::setNames(numeric(nrow(Hh_df)), Hh_df$HhId)
       AllPropDvmtDiverted_[!IsRural] <- PropDvmtDiverted_
     } else {
       #Otherwise set diversion to 0
-      AllPropDvmtDiverted_ <- setNames(numeric(nrow(Hh_df)), Hh_df$HhId)
-      AllSovTrpLen_ <- setNames(numeric(nrow(Hh_df)), Hh_df$HhId)
+      AllPropDvmtDiverted_ <- stats::setNames(numeric(nrow(Hh_df)), Hh_df$HhId)
+      AllSovTrpLen_ <- stats::setNames(numeric(nrow(Hh_df)), Hh_df$HhId)
     }
     AllPropDvmtDiverted_Hh[names(AllPropDvmtDiverted_)] <- AllPropDvmtDiverted_
     AllSovTrpLen_Hh[names(AllSovTrpLen_)] <- AllSovTrpLen_

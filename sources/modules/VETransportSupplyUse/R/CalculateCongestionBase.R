@@ -480,7 +480,10 @@ visioneval::savePackageDataset(CalculateCongestionBaseSpecifications, overwrite 
 #' @return A list containing mpg adjustments, travel time, and travel delay hours
 #' by vehicle types.
 #' @name calcCongestion
+#' @importFrom utils tail globalVariables
 #' @export
+utils::globalVariables(c("ArtDemandLvl","Dvmt_Fc","Dvmt_TyFc","FwyDemandLvl"))
+
 calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi,
                            Population, BasePopulation, CongPrice_ClFc,
                            IncdReduc=0, FwyArtProp, BusVmtSplit_Fc, TruckVmtSplit_Fc,
@@ -676,7 +679,7 @@ calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi
     if( length( FwyDvmt_ ) < 5 ) {
       TRUE
     } else {
-      abs( diff( tail( FwyDvmt_, 2 ) ) ) / tail( FwyDvmt_, 1 ) > 0.0001
+      abs( diff( utils::tail( FwyDvmt_, 2 ) ) ) / utils::tail( FwyDvmt_, 1 ) > 0.0001
     }
   }
   MaxItr <- 500

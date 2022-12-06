@@ -341,6 +341,7 @@ dev.off()
 "GQIncModel_ls"
 visioneval::savePackageDataset(GQIncModel_ls, overwrite = TRUE)
 
+# rm(Hh_df) # Remove from R package space
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -632,4 +633,3 @@ documentModule("PredictIncome")
 #   SaveDatastore = TRUE,
 #   DoRun = TRUE
 # )
-

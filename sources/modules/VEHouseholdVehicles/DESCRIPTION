@@ -17,6 +17,7 @@ Description: This package contains modules which predict household vehicle
     miles traveled.
 License: file LICENSE
 LazyData: TRUE
+LazyDataCompression: bzip2
 Depends: R (>= 3.6.0)
 Imports:
     visioneval,

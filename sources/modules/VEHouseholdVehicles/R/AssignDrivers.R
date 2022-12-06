@@ -552,14 +552,18 @@ AssignDrivers <- function(L) {
       NumDriverChg <- TargetNumDriver - NumDriver
       if (NumDriverChg > 0) {
         IsChgCandidate_ <- which(Driver_ == 0)
+        prob <- DriverProb_[IsChgCandidate_]
+        prob[which((prob/sum(prob))==0)] <- 1e-11
         AddDriverIdx_ <-
-          sample(IsChgCandidate_, NumDriverChg, prob = DriverProb_[IsChgCandidate_])
+          sample(IsChgCandidate_, NumDriverChg, prob = prob)
         Driver_[AddDriverIdx_] <- 1
       }
       if (NumDriverChg < 0) {
         IsChgCandidate_ <- which(Driver_ == 1)
+        prob <- 1 - DriverProb_[IsChgCandidate_]
+        prob[which((prob/sum(prob))==0)] <- 1e-11
         RmDriverIdx_ <-
-          sample(IsChgCandidate_, abs(NumDriverChg), prob = 1 - DriverProb_[IsChgCandidate_])
+          sample(IsChgCandidate_, abs(NumDriverChg), prob = prob)
         Driver_[RmDriverIdx_] <- 0
       }
       Driver_

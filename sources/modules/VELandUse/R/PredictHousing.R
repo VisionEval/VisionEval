@@ -68,7 +68,7 @@
 #' PrepFun: a function that prepares inputs to be applied in the binomial model,
 #' OutFun: a function that transforms the result of applying the binomial model.
 #' Summary: the summary of the binomial model estimation results.
-#' @import visioneval stats
+#' @import visioneval stats VESimHouseholds
 #' @importFrom utils capture.output
 #Define function to estimate the income model
 estimateHousingModel <- function(Data_df, StartTerms_) {
@@ -570,7 +570,7 @@ ipf <-
     Units_ar <- Seed_ar
     #Function to sum up Units_ar by margin
     sumArray <- function(MrgnDims_) {
-      apply(Units_ar, MrgnDims_, sum)
+      apply(Units_ar, MrgnDims_, sum, na.rm=TRUE)
     }
     #Function to calculate RMSE error
     rmse <- function() {
@@ -580,13 +580,14 @@ ipf <-
       for (i in 1:length(MrgnDims_ls)) {
         MrgnSums_ <- c(MrgnSums_, as.vector(sumArray(MrgnDims_ls[[i]])))
       }
-      Err_ <- MrgnVals_ - MrgnSums_;
+      Err_ <- MrgnVals_ - MrgnSums_
       sqrt(sum(Err_^2) / (length(Err_)))
     }
     #Balance unit match or iterations exceeded
     NumIter <- 0
     RmseErr <- rmse()
-    while (RmseErr > RmseTarget & NumIter < MaxIter) {
+    writeLog( paste("RmseErr:",RmseErr,"; RmseTarget:",RmseTarget), Level="debug" )
+    while (all(RmseErr > RmseTarget & NumIter < MaxIter)) {
       for (i in 1:length(MrgnDims_ls)) {
         MrgnSum_ar <- sumArray(MrgnDims_ls[[i]])
         MrgnAdj_ar <- MrgnVals_ls[[i]] / MrgnSum_ar
@@ -711,7 +712,10 @@ PredictHousing <- function(L) {
   Bz <- L$Year$Bzone$Bzone
   rownames(HhIqProp_BzIq) <- Bz
   #Make sure that rows add to 1
-  HhIqProp_BzIq <- t(apply(HhIqProp_BzIq, 1, function(x) x / sum(x)))
+  HhIqProp_BzIq <- t(apply(HhIqProp_BzIq, 1, function(x) {
+    sumx <- sum(x)
+    if ( sumx > 0 ) x / sumx else rep(1/length(x),length(x))
+  }))
   
   #Balance housing units with housing demand and assign households to locations
   #----------------------------------------------------------------------------
@@ -749,6 +753,7 @@ PredictHousing <- function(L) {
     Bx <- L$Year$Bzone$Bzone[L$Year$Bzone$Azone == az]
     #If only one Bzone then all Azone households are in the Bzone
     if (length(Bx) == 1) {
+      writeLog( paste("Predict Housing for one Bzone in Azone",az), Level="warn" )
       Hh_df_Az[[az]]$Bzone <- rep(Bx, nrow(Hh_df_Az[[az]]))
       #Put results in Bzone_Hh
       Bzone_Hx <- Hh_df_Az[[az]]$Bzone
@@ -756,6 +761,7 @@ PredictHousing <- function(L) {
       Bzone_Hh[names(Bzone_Hx)] <- Bzone_Hx
       rm(Bzone_Hx)
     } else {
+      writeLog( paste("Predict Housing for",length(Bx),"Bzones in Azone",az), Level="info" )
       #Create matrices of margin totals
       #--------------------------------
       #Extract the unit demand by type and income quartile for households in Azone
@@ -795,7 +801,9 @@ PredictHousing <- function(L) {
       Ipf_ls <-
         ipf(Seed_BxHtIq,
             MrgnVals_ls = list(UnitDemand_BxHt, UnitDemand_HtIq),
-            MrgnDims_ls = list(c(1,2), c(2,3)))
+            MrgnDims_ls = list(c(1,2), c(2,3)),
+            RmseTarget=1.4e-5, MaxIter = 100
+            )
       Units_BxHtIq <- Ipf_ls$Units_ar
       if (Ipf_ls$NumIter == Ipf_ls$MaxIter) {
         Msg <-
@@ -805,15 +813,20 @@ PredictHousing <- function(L) {
                  " went to maximum number of iterations (", Ipf_ls$MaxIter,
                  ") without achieving RMSE criterion for margin control totals. ",
                  " RMSE error achieved was ", Ipf_ls$RmseErr, ".")
-        writeLog(Msg)
+        writeLog(Msg,Level="warn")
         rm(Msg)
+      } else if ( Ipf_ls$RmseErr > 1e-5 ) {
+        writeLog(paste("Undesirable RmseErr:",Ipf_ls$RmseErr,"after",Ipf_ls$MaxIter,"iterations in Azone",az),Level="info")
+      } else {
+        writeLog(paste("Total Iterations:",Ipf_ls$NumIter),Level="info")
       }
       rm(Seed_BxHtIq, UnitDemand_BxHt, Ipf_ls)
       #Convert allocation to whole numbers
       Units_BxHtIq <- round(Units_BxHtIq)
-      Units_HtIq <- apply(Units_BxHtIq, c(2,3), sum)
+      Units_HtIq <- apply(Units_BxHtIq, c(2,3), sum, na.rm=TRUE)
       UnitDiff_HtIq <-  UnitDemand_HtIq - Units_HtIq
       BxPropUnits_BxHtIq <- sweep(Units_BxHtIq, c(2,3), Units_HtIq, "/")
+      BxPropUnits_BxHtIq[is.na(BxPropUnits_BxHtIq)] <- 0
       for (ht in Ht) {
         for (iq in Iq) {
           UnitDiff_By <- table(
@@ -844,6 +857,8 @@ PredictHousing <- function(L) {
     }
   }
   
+  writeLog("Predict Housing Assigning Group Quarters",Level="info")
+  
   #Assign group quarters households to Bzones
   #------------------------------------------
   #Iterate through Azones to assign Bzones
@@ -856,6 +871,7 @@ PredictHousing <- function(L) {
     GQUnitDemand <- sum(IsGQ_Hh[L$Year$Household$Azone == az])
     #Continue calculating if any GQ demand
     if (GQUnitDemand >= 1) {
+      writeLog(paste("GQUnitDemand in Azone",az,"is",GQUnitDemand),Level="info")
       #If only one Bzone then all GQ households are in that Bzone
       if (length(Bx) == 1) {
         Bzone_Hx <- rep(Bx, GQUnitDemand)
@@ -864,6 +880,10 @@ PredictHousing <- function(L) {
         Bzone_Hh[names(Bzone_Hx)] <- Bzone_Hx
       } else {
         #Scale Bzone demand to match overall demand
+        if ( sum(GQUnits_Bx)<=0 ) {
+          writeLog(paste("GQUnitDemand",GQUnitDemand,"but no GQUnits_Bx in Azone",az,"- adding to first Bzone"),Level="error")
+          GQUnits_Bx[1] <- GQUnitDemand # Put them all in fhe first Bzone
+        }
         GQUnitDemand_Bx <- round(GQUnitDemand * GQUnits_Bx / sum(GQUnits_Bx))
         UnitDiff <- GQUnitDemand - sum(GQUnitDemand_Bx)
         UnitDiff_By <-
@@ -877,7 +897,7 @@ PredictHousing <- function(L) {
           L$Year$Household$HhId[IsGQ_Hh & L$Year$Household$Azone == az]
         Bzone_Hh[names(Bzone_Hx)] <- Bzone_Hx
       }
-    }
+    } else writeLog(paste("No GQUnitDemand in Azone",az),Level="warn")
   }
   
   #Tabulate households, population, workers, and units by Bzone

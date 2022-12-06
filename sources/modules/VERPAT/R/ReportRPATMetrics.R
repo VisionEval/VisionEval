@@ -22,8 +22,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-library(visioneval)
-
 #=============================================
 #SECTION 1: ESTIMATE AND SAVE MODEL PARAMETERS
 #=============================================
@@ -993,7 +991,7 @@ adjustHvyVehAgeDistribution <- function( CumDist_, AdjRatio ) {
 #' @name assignHvyVehFuelEconomy
 #' @export
 #'
-assignHvyVehFuelEconomy <- function( AgeDist_Ag, Mpg__Yr=TrkBusMpg__Yr, Type, CurrYear ) {
+assignHvyVehFuelEconomy <- function( AgeDist_Ag, Mpg__Yr, Type, CurrYear ) {
   # Calculate the sequence of years to use to index fleet average MPG
   Mpg_Yr <- unlist( Mpg__Yr[ , Type ] )
   Years <- names( Mpg_Yr ) <- rownames( Mpg__Yr )

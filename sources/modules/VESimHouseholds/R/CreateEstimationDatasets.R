@@ -256,3 +256,5 @@ Hh_df$UNITTYPE <- NULL
 #' @source CreateEstimationDatasets.R script.
 "Hh_df"
 visioneval::savePackageDataset(Hh_df, overwrite = TRUE)
+
+# rm(Hh_df) # Keep out of the R package code space (but needed for estimation)
