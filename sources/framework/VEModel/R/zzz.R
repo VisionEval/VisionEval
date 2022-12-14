@@ -5,7 +5,6 @@
 # runtime environment
 
 # .onAttach is called when a library attached to
-
 .onAttach <- function(libname, pkgname) {
   packageStartupMessage("Welcome to the new VisionEval!")
   initLog(Save=FALSE,Threshold=Sys.getenv("VE_LOGLEVEL",unset="warn")) # Set default logging threshold

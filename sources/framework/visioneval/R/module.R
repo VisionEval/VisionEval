@@ -1121,8 +1121,11 @@ getRegisteredGetSpecs <- function(Names_, Tables_, Groups_, NameRegistryDir = NU
 #' to occur. This function fetches the datasets from the datastore and returns
 #' them in the form they are required to be in to run the module.
 #'
-#' Armed with the return from this function, you can manually source
-#' a module and then step through its function call with the debugger...
+#' Armed with the return from this function, you can manually source a module
+#' and then step through its function call with the debugger...
+#'
+#' TODO: Still to determine if this will work without explicitly pre-loading a
+#' modelEnvironment().
 #'
 #' @param ModuleName a string identifying the name of the module.
 #' @param PackageName a string identifying the name of the package that the
@@ -1132,19 +1135,20 @@ getRegisteredGetSpecs <- function(Names_, Tables_, Groups_, NameRegistryDir = NU
 #' @param Geo a string identifying the geography to retrieve the data for if
 #' the module's 'RunBy' specification is not 'Region'. This argument is
 #' omitted if the 'RunBy' specification is 'Region'.
+#' @param Instance a string identifying a module instance (if the
+#'   same modeule appears twice or more in the model script).
 #' @param envir environment containing the ModelState_ls
 #' @return A list in standardized form containing all the datasets required by
 #' a module to run.
 #' @export
-fetchModuleData <- function(ModuleName, PackageName, Year, Geo = NULL, envir=modelEnvironment()) {
-
+fetchModuleData <- function(ModuleName, PackageName, Year, Geo = NULL, Instance=character(0), envir=modelEnvironment()) {
   #Load the package and module
   #---------------------------
   Function <- paste0(PackageName, "::", ModuleName)
   Specs <- paste0(PackageName, "::", ModuleName, "Specifications")
   M <- list()
   M$Func <- eval(parse(text = Function))
-  M$Specs <- processModuleSpecs(eval(parse(text = Specs)))
+  M$Specs <- processModuleSpecs(getModuleSpecs(ModuleName,PackageName,Instance=Instance))
   #Load any modules identified by 'Call' spec if any
   if (is.list(M$Specs$Call)) {
     Call <- list(
@@ -1155,17 +1159,19 @@ fetchModuleData <- function(ModuleName, PackageName, Year, Geo = NULL, envir=mod
       #Called module function when specified as package::module
       Function <- M$Specs$Call[[Alias]]
       #Called module function when only module is specified
-      if (length(unlist(strsplit(Function, "::"))) == 1) {
+      funcSplit <- unlist(strsplit(Function, "::"))
+      if (length(funcSplit) == 1) {
         Pkg_df <- getModelState(envir=envir)$ModulesByPackage_df
         Function <-
           paste(Pkg_df$Package[Pkg_df$Module == Function], Function, sep = "::")
+        funcSplit <- unlist(strsplit(Function, "::"))
         rm(Pkg_df)
       }
-      #Called module specifications
-      Specs <- paste0(Function, "Specifications")
+      names(funcSplit) <- c("Package","Module")
+
       #Assign the function and specifications of called module to alias
       Call$Func[[Alias]] <- eval(parse(text = Function))
-      Call$Specs[[Alias]] <- processModuleSpecs(eval(parse(text = Specs)))
+      Call$Specs[[Alias]] <- processModuleSpecs(getModuleSpecs(funcSplit["Module"],funcSplit["Package"]))
       Call$Specs[[Alias]]$RunBy <- M$Specs$RunBy
     }
   }
@@ -1304,20 +1310,65 @@ checkModuleExists <- function(ModuleName,
 #' \code{getModuleSpecs} a visioneval framework control function that retrieves
 #' the specifications list for a module and returns the specifications list.
 #'
-#' This function loads the specifications for a module in a package. It returns
+#' This function loads the specifications data file for a module in a package. It returns
 #' the specifications list.
+#'
+#' The function supports one level of indirection. If the data contains a "Function"
+#' element, the rest of the spec is ignored and the function is called with no arguments
+#' to generate the list of "Input","Get" and "Set". The function can optionally receive a
+#' copy of AllSpecs_ls (the specifications for all modules encountered so far in the
+#' model script). To request that parameter, add "Spec=TRUE" to the Specifications list
+#' containing the Function name.
 #'
 #' @param ModuleName A string identifying the name of the module.
 #' @param PackageName A string identifying the name of the package that the
 #' module is in.
-#' @return A specifications list that is the same as the specifications list
-#' defined for the module in the package.
+#' @param AllSpecs_ls If provided, a list of previously built model specifications. If
+#' not provided, retrieve list of specifications from the ModelState. See how this
+#' function is used in parseModuleCalls in initialization.R.
+#' @param Instance Name of module run instance for which to get specifications
+#' @param Cache passed on to module specification function
+#' @param envir If AllSpecs_ls is not provided, then use this environment to find the
+#' ModelState from which to extract AllSpecs_ls.
+#' @return A specifications list with the items used and created by the module in the package.
 #' @export
-getModuleSpecs <- function(ModuleName, PackageName) {
-  eval(parse(text = paste0(PackageName, "::", ModuleName, "Specifications")))
+getModuleSpecs <- function(ModuleName, PackageName, AllSpecs_ls=NA, Instance=character(0), Cache=FALSE, envir=modelEnvironment() ) {
+  specText <- paste0(PackageName, "::", ModuleName, "Specifications")
+  spec_ls <- eval(parse(text = specText))
+  if ( ! is.list(spec_ls) ) {
+    stop( 
+      writeLog(
+        paste("Ill-formed module specifications in",specText), 
+        Level="error"
+      )
+    )
+  }
+  if ( "Function" %in% names(spec_ls) ) {
+    specFunc <- paste0(PackageName, "::", spec_ls$Function)
+    specFormals <- names(eval(parse(text=paste0("formals(",specFunc,")"))))
+    wantAllSpecs <- "AllSpecs_ls" %in% specFormals
+    wantCache <- "Cache" %in% specFormals
+    if ( wantAllSpecs && ! is.list(AllSpecs_ls)  ) {
+      # The provisional AllSpecs_ls is provided as an argument when getModuleSpecs is called while AllSpecs_ls is being built,
+      # and it will contain all the specifications processed up to the point we encounter this module.
+      AllSpecs_ls <- getModelState(envir=envir)$AllSpecs_ls
+    }
+    wantInstance <- "Instance" %in% specFormals
+
+    Args <- character(0)
+    if ( wantAllSpecs && is.list(AllSpecs_ls) && isTRUE(spec_ls$Specs) ) Args[length(Args)+1] <- "AllSpecs_ls=AllSpecs_ls"
+    if ( wantInstance && length(Instance)==1 && nzchar(Instance) ) Args[length(Args)+1] <- "Instance=Instance"
+    if ( wantCache && Cache ) Args[length(Args)+1] <- "Cache=TRUE"
+    Args <- paste0("(",paste(collapse=",",Args),")")
+    spec_ls <- eval(parse(text = paste0(specFunc,Args)))
+  }
+  spec_ls
 }
 # Test_ls <-
-#   getModuleSpecs(ModuleName = "CreateBzones", PackageName = "vedemo1")
+#   getModuleSpecs(ModuleName = "CreateHouseholds", PackageName = "VESimHouseholds") # Data example
+# rm(Test_ls)
+# Test_ls <-
+#   getModuleSpecs(ModuleName = "Snapshot", PackageName = "VEModel") # Function example
 # rm(Test_ls)
 
 
@@ -1463,7 +1514,12 @@ processModuleSpecs <- function(Spec_ls) {
   }
   #Process the list components and return the results
   Out_ls <- list()
-  Out_ls$RunBy <- Spec_ls$RunBy
+  if (!is.null(Spec_ls$RunBy)) {
+    Out_ls$RunBy <- Spec_ls$RunBy
+  } else {
+    writeLog("Forcing RunBy into specification list",Level="info")
+    Out_ls$RunBy <- "Region"
+  }
   if (!is.null(Spec_ls$NewInpTable)) {
     Out_ls$NewInpTable <- Spec_ls$NewInpTable
   }

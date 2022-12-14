@@ -1237,7 +1237,7 @@ findDataset <- function(DatasetName, DstoreListing_df=NULL, envir=modelEnvironme
   for ( ds in dsPaths ) {
     if (
         class(DatasetName)!= "character" ||
-        class(ds$groupname[1])!="character" ||
+        class(ds$groupname)!="character" ||
         length(ds$groupname) == 0 || length(DatasetName)==0
       ) {
       writeLog("Failed to find path element; entering debug browser (Q to quit)",Level="error")
@@ -1313,10 +1313,10 @@ getDatasetAttr <- function(Name=NULL, Table=NULL, Group=NULL, DstoreListing_df=N
   # Warning: should call checkDataset first if the missing Dataset error needs to
   #   be accepted.
 
-  if ( missing(Table) || is.null(Table[1]) || missing(Group) || is.null(Group[1]) ) {
+  if ( missing(Table) || is.null(Table) || missing(Group) || is.null(Group) ) {
     stop(writeLog("getDatasetAttr: must provide Group and Table",Level="error"))
   }
-  if ( missing(Name) || is.null(Name[1]) ) {
+  if ( missing(Name) || is.null(Name) ) {
     DatasetName <- file.path(Group, Table)
   } else {
     DatasetName <- file.path(Group, Table, Name)
@@ -1523,9 +1523,7 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
   G <- getModelState(envir=envir)
   G$Year <- RunYear
   L$G <- G
-  #Get data specified in list
-  for (i in 1:length(GetSpec_ls)) {
-    Spec_ls <- GetSpec_ls[[i]]
+  for ( Spec_ls in GetSpec_ls ) { # unlike the original (1:length range), this works with empty GetSpec_ls
     Group <- Spec_ls$GROUP
     Table <- Spec_ls$TABLE
     Name <- Spec_ls$NAME

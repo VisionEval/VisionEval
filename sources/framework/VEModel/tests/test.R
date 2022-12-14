@@ -45,6 +45,7 @@ test_classic <- function(modelName="VERSPM-classic",clear=TRUE,log="info") {
 
   modelPath <- file.path("models",modelName)
   owd <- getwd()
+  testStep(paste("Runtime is",owd))
   on.exit(setwd(owd))
 
   if ( dir.exists(modelPath) && clear ) {
@@ -61,7 +62,7 @@ test_classic <- function(modelName="VERSPM-classic",clear=TRUE,log="info") {
     rm(rs)  # Don't keep the VEModel around
   }
 
-  testStep(paste("Running",modelName,"by sourcing scripts/run_model.R"))
+  testStep(paste("Running",modelName,"by sourcing scripts/run_model.R in",modelPath))
 
   setwd(modelPath)
   require(visioneval) # Put it on the search path for GetYears, RunModule, etc
@@ -1018,11 +1019,10 @@ test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
   print(qry)
 
   testStep("Clear test queries, if any...")
-  qfiles <- mod$query()
-
-  print(qfiles <- file.path(mod$modelPath,"queries",qfiles))
+  qfiles <- grep("^(Test-Query|Copy-Query)",mod$query(),value=TRUE)
+  print(qfiles)
+  qfiles <- file.path(mod$modelPath,"queries",qfiles)
   unlink(qfiles)
-  print(mod$query())
 
   testStep("Save the query and fix its extension...")
 
@@ -1124,18 +1124,12 @@ test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
 
 # Test query dimensions and filtering
 qrydir <- Sys.getenv("VE_test_source",unset=getwd())
-qryfile <- normalizePath(file.path(qrydir,"Filter-Query.VEqry"),winslash="/")
+qryfile <- normalizePath(file.path(qrydir,"Filter-Query.VEqry"),winslash="/",mustWork=FALSE)
 
 # Test query filter mechanism (and basic query processing)
 test_queryfilter <- function(runModel=FALSE,log="info") {
   testStep("Load base model")
   mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="base",log=log,reset=runModel)
-#   testStep("Install test query")
-#   mod.qry.path <- file.path(mod$modelPath,mod$setting("QueryDir"),basename(qryfile))
-#   qry.name <- basename(qryfile)
-#   message("Copying test query (",qryfile,")")
-#   message("To ",mod.qry.path)
-#   file.copy(qryfile,mod.qry.path,overwrite=TRUE)
 
   testStep(paste("Loading test query:",basename(qryfile)))
   logLevel(log)
@@ -1148,26 +1142,38 @@ test_queryfilter <- function(runModel=FALSE,log="info") {
   testStep("Extract results")
   df <- qr$extract()
   qr$export()  # Write to output directory
-  invisible(df)
+
+  testStep("Show model outputs")
+  print(mod$dir(outputs=TRUE,all.files=TRUE))
+  
+  invisible(mod)
 }
 
 # Torture test the query mechanism
-test_fullquery <- function(Force=TRUE,runModel=FALSE,log="info") {
+# Give it a non-existent query via queryName, for example...
+test_fullquery <- function(Force=TRUE,runModel=FALSE,queryName="Full-Query",log="info") {
+  logLevel("warn")
   testStep("Test Full-Query.VEqry")
   testStep("Opening test model and caching its results...")
   mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=runModel)
   testStep("Loading Query")
-  logLevel(log)
-  qry <- mod$query("Full-Query",load=TRUE)
-  print(qry)
-  testStep("Run Query")
-  logLevel(log)
-  qry$run(Force=Force)
-  testStep("Extract results (invisible data.frame)")
-  df <- qry$extract()
-  print(names(df))
-  print(nrow(df))
-  invisible(df)
+  qry <- mod$query(queryName,load=TRUE)
+  if ( qry$valid() ) {
+    testStep("Run Query")
+    logLevel(log)
+    qry$run(Force=Force)
+    testStep("Extract results (return invisible data.frame)")
+    df <- qry$extract()
+    if ( nrow(df) > 0 ) {
+      print(names(df))
+      print(nrow(df))
+      return( invisible(df) )
+    } # else fall through to return the qry itself for debugging
+  } else {
+    testStep("Full-Query.VEqry is not valid!")
+    qry$check(verbose=TRUE)
+  }
+  invisible(qry)
 }
 
 # Construct programmatic stages, run the model, and query it

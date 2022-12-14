@@ -396,10 +396,11 @@ parseUnitsSpec <- function(Spec_ls, ComponentName) {
     #NA if none or not a correct year
     getYear <- function(String) {
       CurrentString <- unlist(strsplit(as.character(Sys.Date()), "-"))[1]
-      if (is.na(as.numeric(String[1])) || is.na(String[1])) {
+      if ( is.na(String) || is.na(as.numeric(String)) ) {
         Result <- NA
       } else {
-        if (as.numeric(String[1]) < 1900 || as.numeric(String[1]) > CurrentString) {
+        stringVal <- as.numeric(String[1])
+        if (stringVal < 1900 || stringVal > CurrentString) {
           Result <- NA
         } else {
           Result <- String
@@ -1429,10 +1430,11 @@ parseInputFieldNames <- function(FieldNames_, Specs_ls, FileName) {
     #NA if none or not a correct year
     getYear <- function(String) {
       CurrentString <- unlist(strsplit(as.character(Sys.Date()), "-"))[1]
-      if (is.na(as.numeric(String)) | is.na(String)) {
+      if ( is.na(String) || is.na(as.numeric(String)) ) {
         Result <- NA
       } else {
-        if (as.numeric(String) < 1900 | as.numeric(String) > CurrentString) {
+        stringVal <- as.numeric(String[1])
+        if (stringVal < 1900 || stringVal > CurrentString) {
           Result <- NA
         } else {
           Result <- String

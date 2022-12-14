@@ -38,18 +38,18 @@ mini$setting() # list the names
 # Let's change the overall runtime configuration for the mini model, altering the Seed parameter
 # NOTE: mini does not define Seed - it will use the VE default
 
-viewSetup(mini$modelStages[[1]]) # Runtime settings for mini model
-mini$setting("Seed")
-mini$setting("Seed",source=TRUE)
+viewSetup(mini$modelStages[[1]])     # Runtime settings for mini model
+mini$setting("Seed")                 # Display value
+mini$setting("Seed",source=TRUE)     # Show where it came from
 
-viewSetup(fromFile=TRUE)
+viewSetup(fromFile=TRUE)             # The global visioneval.cnf (including defaults)
 updateSetup(Seed=2.3)                # update working set of parameters in memory
 mini$configure(fromFile=FALSE)       # use updated parameter to rebuild model
 viewSetup(fromFile=TRUE)             # No settings since file didn't exist
 viewSetup()                          # Created Seed=2.3 in memory
 
-mini$setting("Seed")
-mini$setting("Seed",source=TRUE)     # source is "interactive"
+mini$setting("Seed")                 # Show the setting
+mini$setting("Seed",source=TRUE)     # Show where it came from; source is "interactive"
 
 updateSetup(inFile=TRUE,Seed=2.3)    # if inFile==TRUE, update file parameters in memory
 viewSetup(fromFile=TRUE)             # Staged change - not yet in file
@@ -62,7 +62,7 @@ viewSetup(fromFile=TRUE)
 
 # To apply the new setting from the configuration file, we need to re-open the model
 # Default is to revisit configuration file (see mini$configure(fromFile=FALSE) above
-mini$configure()          
+mini$configure()
 mini$setting("Seed")
 
 # Now put the settings back the way they were

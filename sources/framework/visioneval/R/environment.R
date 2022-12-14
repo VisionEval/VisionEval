@@ -163,13 +163,18 @@ defaultVERunParameters <- function(Param_ls=list()) {
   if ( length(otherVEDefaults)>0 ) {
     for ( defs in otherVEDefaults[length(otherVEDefaults):1] ) {
       # process in reverse order so most recently loaded packages "win" any collisions
-      packageParams_ls <- as.environment(defs)$VEPackageRunParameters(Param_ls)
-      defaultParams_ls <- mergeParameters(defaultParams_ls,packageParams_ls)
+      packageParams_ls <- as.environment(defs)$VEPackageRunParameters()
+      packageParams_ls <- packageParams_ls[  which( ! names(packageParams_ls) %in% names(Param_ls) ) ]
+      packageParams_ls <- addParameterSource(
+        packageParams_ls,
+        Source=paste("Default from",defs), # VEPackageRunParameterse() should set that to its own notion of Source
+        onlyMissing=TRUE
+      )
+      Param_ls <- mergeParameters(Param_ls,packageParams_ls)
     }
   }
-  Param_ls <- mergeParameters(defaultParams_ls,Param_ls)
-  
-  # Now add the framework defaults (packages take precedence)
+
+  # Finally add the framework defaults (packages take precedence)
   tableParams_ls <- default.parameters.table[
     which( ! names(default.parameters.table) %in% names(Param_ls) )
   ]
@@ -222,10 +227,9 @@ defaultVERunParameters <- function(Param_ls=list()) {
 #'   and this path is opened directly.
 #' @param mustWork (default FALSE) if TRUE, and ParamFile is provided, throw an error
 #'   if ParamDir/ParamFile does not exist. Otherwise, return an empty list if no file is found.
-#' @return A list of Run Parameters if the configuration file was successfully processed. If
-#'   ParamFile is supplied and it does not exist in ParamDir, throw an error. If ParamFile is not
-#'   supplied and no configuration file is found, return an empty list. Otherwise, if everything
-#'   worked, return the list of parameters found in the file.
+#' @return A list of Run Parameters. If ParamFile is supplied and it does not exist in
+#' ParamDir, throw an error. If ParamFile is not supplied and no configuration file is
+#' found, return an empty list. Otherwise return the list of parameters found in the file.
 #' A 'source' attribute is also constructed if the list is not empty (see Details).
 #' @export
 readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mustWork=FALSE) {
@@ -304,9 +308,12 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mu
               )
             },
             error = function(e) {
-              writeLog("Failed to read JSON file",Level="error")
-              writeLog(paste("JSON:",conditionMessage(e)),Level="error")
+              writeLog("Failed to read JSON file",Level="info")
+              writeLog(paste("JSON:",conditionMessage(e)),Level="info")
               return(list())
+            },
+            warning = function(w) {
+              formatWarnings <- writeLog(c("Warning reading JSON:",conditionMessage(w)),Level="info")
             }
           )
         },
@@ -321,16 +328,15 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mu
             )
           },
           error = function(e) {
-            writeLog("Failed to read YAML file; retrying as JSON...",Level="error")
+            writeLog("Failed to read YAML file; retrying as JSON...",Level="info")
             writeLog(paste("YAML:",conditionMessage(e)),Level="info")
             invokeRestart("json",ParamPath)
           }
         )
       )
-      if ( ! is.list(ParamFile_ls) || length(ParamFile_ls)==0 ) {
-        stop(
-          writeLog(c("No parameters in loaded file:",ParamPath),Level="error")
-        )
+      if ( length(ParamFile_ls)==0 ) {
+        writeLog(c("No parameters in loaded file:",ParamPath),Level="warn")
+        writeLog("Make another attempt with log Level='info' for details",Level="warn")
       }
     }
     if ( length(ParamFile_ls)>0 && ! all(nzchar(names(ParamFile_ls))) ) {
@@ -346,6 +352,11 @@ readConfigurationFile <- function(ParamDir=NULL,ParamFile=NULL,ParamPath=NULL,mu
       if ( length(ParamFile_ls)==0 ) {
         writeLog("No parameters read",Level="debug")
       } else {
+        if ( !is.list(ParamFile_ls) ) { # it will be character containing a warning if read failed
+          stop(
+            writeLog(ParamFile_ls,Level="error")
+          )
+        }
         writeLog(paste("Successfully read parameters",if(!is.null(ParamPath)) paste("from", paste0("'",ParamPath,"'")) else ""),Level="debug")
       }
     }
@@ -422,7 +433,7 @@ addParameterSource <- function(Param_ls,Source="Manually added",onlyMissing=FALS
 addRunParameter <- function(Param_ls=list(),Source=NULL,...) {
   newParams_ls <- list(...)
   # if source not supplied, check if first item in newParams_ls has a source and use that
-  if ( missing(Source) || is.null(Source[1]) ) {
+  if ( missing(Source) || is.null(Source) ) {
     item.source <- attr(newParams_ls[[1]],"source")
     if ( ! is.null(item.source) ) Source <- item.source
   }
@@ -576,7 +587,7 @@ mergeParameters <- function(Param_ls,Keep_ls) {
 #'   file does not exist, unless "mustWork" is FALSE. ParamFile is ignored if ParamDir is not
 #'   provided.
 #' @param ParamPath The path of the file to open. If provided, then ParamDir/ParamFile are ignored
-#'   and this path is opened directly.
+#'   and this path is opened directly. Relative to ModelDir.
 #' @param keep A named list of run parameters whose values will be added to the items found in
 #'   the configuration file (these values take precedence over what is in the file)
 #' @param override A named list of run parameters whose values will be added to the items found
@@ -627,6 +638,7 @@ loadConfiguration <- function( # if all arguments are defaulted, return an empty
   Param_ls <- mergeParameters(Param_ls,keep) # items in keep replace Param_ls
   Param_ls <- mergeParameters(override,Param_ls) # items in Param_ls replace items in override
   if ( is.null(attr(Param_ls,"FILE")) ) attr(Param_ls,"FILE") <- ParamPath # Maintain FILE attribute after merging
+
   return(Param_ls)
 }
 
@@ -643,7 +655,7 @@ loadConfiguration <- function( # if all arguments are defaulted, return an empty
 #' @param Dir Directory (or directories) in which to seek files
 #' @param onlyExists A logical; if TRUE filter the list of files to just those that exist (or NA if
 #'   none); otherwise return all candidate names.
-#' @return the path(s) of files found on all combinations of Root(s), Dir(s) and File(s)
+#' @return the path(s) of files found on all combinations of Root(s), Dir(s) and File(s), or NA if none
 #' @export
 findFileOnPath <- function(File,Dir,onlyExists=TRUE) {
   dir.file <- character(0)
@@ -671,7 +683,7 @@ findRuntimeInputFile <- function(File,Dir="InputPath",Param_ls=NULL,StopOnError=
   inputPath <- getRunParameter(Dir,Param_ls=Param_ls)
   writeLog(paste("Input path raw:",inputPath,collapse=":"),Level="trace")
   candidates <- findFileOnPath( File=File, Dir=inputPath )
-  if ( StopOnError && ( length(candidates)==0 || is.na(candidates[1]) ) ) {
+  if ( StopOnError && ( length(candidates)==0 || is.na(candidates) ) ) {
     stop( writeLog(paste("Could not locate",File,"on",inputPath,collapse="; "),Level="error") )
   }
   return(candidates[1]) # if StopOnError==FALSE, return NA if no matching File was found
@@ -814,7 +826,7 @@ saveLog <- function(LogFile=NULL,envir=modelEnvironment()) {
 # futile.logger layout for visioneval (adjusted from futile.logger::layout.simple)
 
 prepare_arg <- function(x) {
-  if (is.null(x[1]) || length(x) == 0) return(deparse(x))
+  if (is.null(x) || length(x) == 0) return(deparse(x))
   return(x)
 }
 
@@ -935,7 +947,7 @@ writeLog <- function(Msg = "", Level="NONE", Logger="") {
     )
   } else {
     # Pick the logger
-    if ( ! is.character(Logger[1]) || ! nzchar(Logger[1]) ) {
+    if ( ! is.character(Logger) || ! nzchar(Logger[1]) ) {
       Logger <- if ( which(log.threshold==Level) >= which(log.threshold=="WARN") ) "stderr" else "ve.logger"
     }
     # Pick the log format 

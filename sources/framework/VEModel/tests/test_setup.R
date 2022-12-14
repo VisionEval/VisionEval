@@ -2,20 +2,19 @@
 # Comprehensively test VEModel and related interfaces from within the
 # VEModel Github source directory.
 
-# You should run this from the VEModel package root.
+# You should source this from the VEModel package root.
 # Make sure your .libPaths includes the built ve-lib (e.g. by
 # creating a suitable .REnviron file).
 
 # If you're looking at this file in a built runtime, you should look
-# at the test.R function the individual test_*
-# functions are code you can try interactively to test the framework.
-# You should NOT run the "rewind" or "setup" functions...
-# The test functions are a more detailed and up-to-date version of what the
-# walkthrough does: those are the target of test-based development for the
-# framework.
+# at the test.R function. The individual test_* functions are code you
+# can try interactively to test the framework. You should NOT run the
+# "rewind" or "setup" functions... The test functions are a more
+# detailed and up-to-date version of what the walkthrough does: those
+# are the target of test-based development for the framework.
 
 # starting in the root of the package, just do this
-#  source("tests/test_run.r")
+#  source("tests/test_setup.R")
 # It will create a temporary folder to use as a runtime
 # and list the available test functions.
 
@@ -24,6 +23,10 @@ if ( ! requireNamespace("pkgload",quietly=TRUE) ) {
 }
 
 # function: pseudo_package
+# run this once to create a separate runtime location for tests and
+# to load the package.
+# In general, you should run "rewind()" rather than "setup()" since
+# that will handle the case where you already have a runtime.
 setup <- function(ve.runtime=NULL) {
   # Creates or uses a fresh minimal runtime environment as a sub-directory of "tests"
   # Set VE_RUNTIME to some other location if desired (does not need to have a runtime
@@ -63,6 +66,8 @@ setup <- function(ve.runtime=NULL) {
   logLevel("info") # Can override for specific test functions
 }
 
+# Unload the "VEModel" package, so you can return to using the
+# built version, or load updated source code
 takedown <- function() {
   start.dir <- NA
   ve.runtime <- NA
@@ -85,12 +90,14 @@ takedown <- function() {
   loadhistory(".Rhistory") # get rid of rep("n",a.million.times) and other debugging leftovers
 }
 
+# set up the test runtime, reloading the package if it was already loaded
 rewind <- function() {
   cat("Rewinding...")
   takedown()
   setup()
 }
 
+# blow away the test runtime
 cleanup <- function() {
   takedown()
   runtimes <- grep("^(tests/)runtime.*",list.dirs("tests"),value=TRUE)

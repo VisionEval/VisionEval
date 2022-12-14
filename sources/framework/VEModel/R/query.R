@@ -118,7 +118,7 @@ ve.query.init <- function(
 
   # if "load==TRUE" and null QuerySpec/FileName, build the output name and
   #   see if it already exists
-  if ( !is.null(QuerySpec[1]) || !is.null(FileName) || load ) {
+  if ( !is.null(QuerySpec) || !is.null(FileName) || load ) {
     writeLogMessage("Loading Query...",Level="info")
     self$load(FileName=FileName,QuerySpec=QuerySpec,ModelPath=ModelPath,QueryDir=QueryDir)
   }
@@ -268,21 +268,27 @@ ve.query.check <- function(verbose=FALSE) {
       )
       next
     }
-    message("Spec name:",spec$Name)
+    if ( verbose ) msg <- paste("Checking Spec name:",spec$Name)
     spec$check( Names=query.names ) # names list for validating functions
     query.names <- c( query.names,spec$Name )
     if ( ! spec$valid() ) {
+      if ( verbose ) msg <- paste(msg,"(INVALID)")
       self$CheckMessages <- c(
         self$CheckMessages,
         paste0("Error checking specification '",spec$Name,"'"),
         spec$CheckMessages )
-    }
+    } else if ( verbose ) msg <- paste(msg,"(valid)")
+
   }
   return(self)
 }
 
-ve.query.valid <- function() {
+ve.query.valid <- function(log="info") {
   # summarize outcome of last check (as a logical)
+  writeLog(paste("CheckMessages length == 0",length(self$CheckMessages)==0),Level=log)
+  if ( length(self$CheckMessages) > 0 ) writeLog(self$CheckMessages,Level=log)
+  writeLog(paste("CheckMessages all empty:",all(!nzchar(self$CheckMessages))),Level=log)
+  
   return( length(self$CheckMessages)==0 || all(!nzchar(self$CheckMessages)) )
 }
 
@@ -614,9 +620,8 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
 
   Results <- self$results(Results) # generate list of valid VEQueryResults
   if ( length(Results)==0 ) {
-    stop(
-      writeLogMessage("No query results available; run the query first",Level="error")
-    )
+    writeLogMessage("No query results available; run the query first",Level="error")
+    return( data.frame() )
   }
 
   valueList <- lapply(Results,function(r) r$values() )
@@ -663,35 +668,6 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
     )
   }
 
-  # Filter list of measures to only those with GeoType attribute
-  # TODO: need to distinguish generated "seek measure" from original spec measure
-  # Probably want to attach an attribute for the original spec name to use in filtering
-#   if ( is.character(GeoType) && GeoType %in% c("Marea","Azone","Bzone") ) {
-#     whichGeoMeasures <- which(
-#       sapply(
-#         private$QuerySpec[seekMeasures],
-#         function(m) return( GeoType=="Region" || GeoType %in% m$By )
-#       )
-#     )
-#     if ( length(whichGeoMeasures)==0 ) {
-#       stop(
-#         writeLogMessage(paste("Requested GeoType is not found in requested Measures:",GeoType),Level="error")
-#       )
-#     }
-#     seekMeasures <- seekMeasures[ whichGeoMeasures ]
-#   }
-
-
-  # TODO: work differently on how to seek measures (see geomeasures above)
-#   if ( exportOnly ) {
-#     whichExport <- sapply( private$QuerySpec[seekMeasures],
-#       function(m) {
-#         return( "Export" %in% names(m$QuerySpec) )
-#       }
-#     )
-#     seekMeasures <- seekMeasures[ whichExport ]
-#   }
-    
   # Keep only measures that are being sought
   # Filter the measures using for loops rather than lapply to ensure names stay up to date
   for ( scenario in seq(valueList) ) {
@@ -897,13 +873,8 @@ ve.query.outputconfig <- function() {
 # Option to save the data.frame in some tabular output format (data.frame, csv, sql)
 # Export should be able to filter by Measure name, Year of Data (some scenarios will have more than
 # one year), and specific ModelStage name (for Results).
-# TODO: "query" function on VEModel should be able to limit to certain ModelStages (in which case
-# don't consider "Reportable").
 ve.query.export <- function(format="csv",OutputDir=NULL,SaveTo=NULL,Results=NULL,Years=NULL,GeoType=NULL,GeoValues=NULL) {
   needOutputDir <- missing(OutputDir) || ! is.null(OutputDir)
-  # TODO: Query extract template should be called QueryExportTemplate
-  # TODO: The template should probably belong to the ViEIO export format
-  # 
   if ( ! is.null(self$Model) ) {
     OutputPath <- self$Model$modelResults # Absolute path to ResultsDir for model
     if ( needOutputDir ) OutputDir <- self$Model$setting("OutputDir")
@@ -974,10 +945,15 @@ ve.query.results <- function(Results=NULL, Reload=FALSE) {
       Results <- self$Model$results()
       # Output file was set when Model was attached
     } else {
+      writeLog("No model from which to retrieve results",Level="info")
       return( list() ) # empty list if query has not been attached to a model
     }
   } else {
     self$outputfile() # will use self$Model output file if model is available, or global
+  }
+  if ( length(self$getlist())==0 ) {
+    writeLog("Query specification is empty: no query results available",Level="error")
+    return( list() )
   }
 
   if ( "VEResultsList" %in% class(Results) ) {
@@ -988,7 +964,7 @@ ve.query.results <- function(Results=NULL, Reload=FALSE) {
     # Handle pathological case of only one stage with Results
     Results <- list(Results)
   }
-  if ( Reload || is.null(self$QueryResults[1]) || length(self$QueryResults) < length(Results) ) {
+  if ( Reload || is.null(self$QueryResults) || length(self$QueryResults) < length(Results) ) {
     private$reload( Results ) # pulls up available query results
     if ( length(self$QueryResults) == 0 ) self$QueryResults <- NULL # No valid results
   }
@@ -1038,15 +1014,18 @@ ve.query.outputfile <- function(OutputFile=NULL) {
 
 ve.query.run <- function(
   Model      = NULL,  # Attached model on whose results to run (or a VEResultsList)
-  Force      = FALSE   # If true, re-run the query for all results even if they are up to date
+  Force      = FALSE  # If true, re-run the query for all results even if they are up to date
   )
 {
-  if ( ! self$valid() || length(private$QuerySpec)==0 ) {
-    stop(
-      writeLogMessage("Query specifications are not valid",Level="error")
-    )
+  if ( ! self$valid() ) {
+    msg <- writeLogMessage("Query specification is invalid",Level="error")
+    self$valid(log="error")
+    stop(msg)
   }
-  writeLogMessage(paste("Running query:",self$Name),Level="warn")
+  if ( length(private$QuerySpec)==0 ) {
+    writeLog(paste("No specifications defined for",self$QueryName),Level="error")
+  }
+  writeLogMessage(paste("Running query:",self$QueryName),Level="warn")
   if ( missing(Model) || is.null(Model) ) {
     Model <- self$Model # Use attached model if available
     if ( is.null(Model) ) stop( writeLogMessage("No model results available to run query",Level="error") )
@@ -1067,12 +1046,12 @@ ve.query.run <- function(
     }
   } else if ( "VEResultsList" %in% class(Model) ) {
     Results <- Model$results() # Downshift to plain list of VEResults
-    if ( class(Results) != "list" || class(Results[[1]])!="VEResults" ) {
+    if ( ! ("list" %in% class(Results)) || ! ("VEResults" %in% class(Results[[1]])) ) {
       stop( writeLogMessage("Program error: VEResultsList won't convert to list of VEResults",Level="error") )
     }
   } else if ( "VEResults" %in% class(Model) ) {
     Results <- list(Model) # Upshift a single VEResults object to a list of one
-    if ( class(Results) != "list" || class(Results[[1]])!="VEResults" ) {
+    if ( ! ("list" %in% class(Results)) || ! ("VEResults" %in% class(Results[[1]])) ) {
       stop( writeLogMessage("Program error: VEResultsList won't convert to list of VEResults",Level="error") )
     }
   } else {
@@ -1101,7 +1080,7 @@ ve.query.run <- function(
   # Check and compile the specifications; abort if not valid
   self$check()
 
-  if ( ! Force && length(Results)>0 ) {
+  if ( ! Force && length(Results)>0 && length(private$QuerySpec)>0 ) {
     # Reload cached results (updates self$QueryResults and check for validity)
     # private$reload returns all the Results, whether or not they
     # have query results
@@ -1114,8 +1093,8 @@ ve.query.run <- function(
         Timestamp <- tempEnv$Timestamp # Timestamp when query results were generated
         outOfDate <- ( 
           is.null(Timestamp) ||
-          is.null(r$Source$ModelState()$LastChanged[1]) ||
-          Timestamp < r$Source$ModelState()$LastChanged[1]
+          is.null(r$Source$ModelState()$LastChanged) ||
+          Timestamp < r$Source$ModelState()$LastChanged
         )
         return( ! outOfDate )
       }
@@ -1126,6 +1105,9 @@ ve.query.run <- function(
     } else {
       writeLogMessage(paste("Query results for",length(ResultsToUpdate),"model results out of",length(Results),"will be updated."),Level="info")
     }
+  } else if ( length(private$QuerySpec)==0 ) {
+    writeLogMessage("Query contains no valid specifications.",Level="error")
+    return(list())
   } else {
     # update everything
     ResultsToUpdate <- Results
@@ -1172,10 +1154,8 @@ VEQuery <- R6::R6Class(
     Model = NULL,                   # Attached model on which to run query
 
     # Methods
-    # TODO: rethink using "attached model" or "attached ResultsList" variation
     # Running the query will create a data file for each ModelStage/VEResults
-    # So it really just works on a list of VEResults in all cases (we can get such a list from the
-    # VEModel)
+    # So it really just works on a list of VEResults in all cases (we can get such a list from the VEModel)
     initialize=ve.query.init,           # initialize a new VEQuery object
     save=ve.query.save,                 # With optional file name prefix (this does an R 'dump' to source)
     attach=ve.query.attach,             # Install consistent QueryName, QueryDir from request
@@ -1216,7 +1196,7 @@ VEQuery <- R6::R6Class(
 ve.queryresults.init <- function(Query=NULL,VEResults=NULL) {
   # expect VEResuls$resultsPath to be normalized path
   self$Source <- VEResults # "Source" is a VEResults object
-  if ( is.null(Query) || is.null(self$Source) || is.null(self$Source$resultsPath[1]) ) return()
+  if ( is.null(Query) || is.null(self$Source) || is.null(self$Source$resultsPath) ) return()
 
   self$Path <- file.path(self$Source$resultsPath,Query$QueryResultsFile)
   self$Results <- if ( file.exists(self$Path) ) {
@@ -1314,7 +1294,7 @@ ve.spec.init <- function(other=NULL) {
 }
 
 deepPrint <- function(ell,join=" = ",suffix="",newline=TRUE) { # x may be a list
-  result <- if ( is.list(ell) || ( ! is.null(names(ell[1])) && length(ell)>1 ) ) {
+  result <- if ( is.list(ell) || ( ! is.null(names(ell)) && length(ell)>1 ) ) {
     index <- if ( !is.null(names(ell)) ) names(ell) else 1:length(ell)
     if ( newline ) {
       inner <- "\n"
@@ -1464,7 +1444,7 @@ ve.spec.check <- function(Names=character(0), Clean=TRUE) {
       }
     } else if ( "Function" %in% names(self$QuerySpec) ) {
       checkSymbols <- evaluateFunctionSpec(self$Name, self$QuerySpec, measureEnv=Names)
-      if ( ! is.character(checkSymbols[1]) || length(checkSymbols)>0 ) {
+      if ( ! is.character(checkSymbols) || length(checkSymbols)>0 ) {
         checkSymbols <- as.character(checkSymbols) # could be some other kind of error
         self$CheckMessages <- c(
           self$CheckMessages,
@@ -1795,7 +1775,7 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
 
   # TODO: verify that GeoType and GeoValues are the same for all "Symbols"
 
-  if ( is.null(GeoType[1]) || is.null(GeoValues[1]) ) {
+  if ( is.null(GeoType) || is.null(GeoValues) ) {
     writeLogMessage(paste("Cannot diagnose GeoType for Function",measureName),Level="error")
   }
 
@@ -1873,7 +1853,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
         QueryPrep_ls = QPrep_ls
       )
     # Create attribute for geographies present in this measure
-    if ( length(measure) == 1 || ( usingBreaks && ! is.array(measure[1]) ) ) {
+    if ( length(measure) == 1 || ( usingBreaks && ! is.array(measure) ) ) {
       GeoValues <- "Region"
       GeoType <- "Region"
       geoDim <- 0 # no geography breaks
@@ -1938,7 +1918,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
       }
       if ( GeoType == "Region" ) {
         # measure should be a standard vector of values for the break groups
-        if ( ! is.vector(measure[1]) || length(measure) == 1 ) {
+        if ( ! is.vector(measure) || length(measure) == 1 ) {
           stop(
             writeLogMessage(
               paste0(measureName,": ",

@@ -602,7 +602,7 @@ loadModel <- function(
       )
       BadBaseYear <- ! (envir$ModelState_ls$BaseYear == LoadDstore$ModelState_ls$BaseYear)
 
-      if ( BadGeography[1] || BadUnits[1] || BadDeflators[1] || BadBaseYear[1]) {
+      if ( BadGeography || BadUnits || BadDeflators || BadBaseYear) {
         elements <- paste(
           "Geography"[BadGeography],
           "Units"[BadUnits],
@@ -890,19 +890,18 @@ requirePackage <- function(Package) TRUE
 #' @param PackageName A string identifying the name of the package the module is
 #'   a part of.
 #' @param RunYear A string identifying the run year.
+#' @param Instance An instance name for modules appearing more than
+#'   once in the model script.
 #' @param envir An environment containing a pre-built or loaded ModelState_ls
 #' @return the list of Datastore inputs for this module ("L")
 #' @export
-getModuleL <- function(ModuleName, PackageName, RunYear, envir=modelEnvironment()) {
-
+getModuleL <- function(ModuleName, PackageName, RunYear, Instance=character(0), envir=modelEnvironment()) {
   writeLog(paste0("Getting Module 'L' data for ",PackageName,"::",ModuleName," in Year",RunYear),Level="info")
 
   #Load the package and module
   #---------------------------
-  ModuleSpecs <- paste0(PackageName, "::", ModuleName, "Specifications")
-
   M <- list()
-  M$Specs <- processModuleSpecs(eval(parse(text = ModuleSpecs)))
+  M$Specs <- processModuleSpecs(getModuleSpecs(ModuleName,PackageName,Instance=Instance,envir=envir))
 
   #Get the ModelState_ls
   # the ModelState_ls in the "envir" parameter must already contain the parsed model script
@@ -919,7 +918,8 @@ getModuleL <- function(ModuleName, PackageName, RunYear, envir=modelEnvironment(
       #Called module function when specified as package::module
       CallFunction <- M$Specs$Call[[Alias]]
       #Called module function when only module is specified
-      if (length(unlist(strsplit(CallFunction, "::"))) == 1) {
+      funcSplit <- unlist(strsplit(CallFunction, "::"))
+      if (length(funcSplit) == 1) {
         Pkg_df <- G$ModuleCalls_df
         if (sum (Pkg_df$Module == CallFunction) != 0  ) {
           Pkg_df <- G$ModuleCalls_df
@@ -934,12 +934,13 @@ getModuleL <- function(ModuleName, PackageName, RunYear, envir=modelEnvironment(
           
           rm(Pkg_df)
         }
+        funcSplit <- unlist(strsplit(CallFunction, "::"))
       }
+      names(funcSplit) <- c("Package","Module")
       #Called module specifications
-      CallSpecs <- paste0(CallFunction, "Specifications")
       #Assign the function and specifications of called module to alias
       Call$Func[[Alias]] <- eval(parse(text = CallFunction))
-      Call$Specs[[Alias]] <- processModuleSpecs(eval(parse(text = CallSpecs)))
+      Call$Specs[[Alias]] <- processModuleSpecs(getModuleSpecs(funcSplit["Module"],funcSplit["Package"],envir=envir))
       Call$Specs[[Alias]]$RunBy <- M$Specs$RunBy
     }
   }
@@ -1001,13 +1002,18 @@ getModuleL <- function(ModuleName, PackageName, RunYear, envir=modelEnvironment(
 #' "AllYears", only the base year "BaseYear", or for all years except the base
 #' year "NotBaseYear".
 #' @param RunYear A string identifying the run year.
+#' @param Instance Name of an instance if module appears more than
+#'   once in the model script
 #' @param StopOnErr a logical (default TRUE); if FALSE, report errors
 #' and continue anyway
+#' @param ... Additional parameters passed to the ModuleFunction at
+#'   runtime (see individual module documentation for additional
+#'   parameters it may understand. It's a runtime error to send something
+#'   through ... if the ModuleFunciton is not expecting it.
 #' @return list returned from module function, with Errors and Warnings as
 #'   attributes.
 #' @export
-runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE) {
-
+runModule <- function(ModuleName, PackageName, RunFor, RunYear, Instance=character(0), StopOnErr = TRUE, ...) {
   if ( ! modelRunning() ) invisible( list(Errors=character(0),Warnings="Model Not Running") )
   
   #Check whether the module should be run for the current run year
@@ -1022,14 +1028,17 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
   #Log and print starting message
   #------------------------------
   ModuleFunction <- paste0(PackageName, "::", ModuleName)
-  ModuleSpecs <- paste0(ModuleFunction, "Specifications")
-  Msg <- paste0("Start  module '", ModuleFunction, "' for year '", RunYear, "'. ")
+  Msg <- paste0("Start  module '", ModuleFunction, "' for year '", RunYear, "'.")
   writeLog(Msg,Level="warn")
   #Load the package and module
   #---------------------------
   M <- list()
   M$Func <- eval(parse(text = ModuleFunction))
-  M$Specs <- processModuleSpecs(eval(parse(text = ModuleSpecs)))
+
+  # use Cache parameter to avoid regenerating function-based specifications - those were built and
+  # cached during initialization
+  M$Specs <- processModuleSpecs(getModuleSpecs(ModuleName,PackageName,Instance=Instance,Cache=TRUE))
+
   #Load any modules identified by 'Call' spec if any
   if (is.list(M$Specs$Call)) {
     Call <- list(
@@ -1040,7 +1049,8 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
       #Called module function when specified as package::module
       CallFunction <- M$Specs$Call[[Alias]]
       #Called module function when only module is specified
-      if (length(unlist(strsplit(CallFunction, "::"))) == 1) {
+      funcSplit <- unlist(strsplit(CallFunction, "::"))
+      if (length(funcSplit) == 1) {
         Pkg_df <- getModelState()$ModuleCalls_df
         if (sum (Pkg_df$Module == CallFunction) != 0  ) {
           Pkg_df <- getModelState()$ModuleCalls_df
@@ -1055,12 +1065,13 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
           
           rm(Pkg_df)
         }
+        funcSplit <- unlist(strsplit(CallFunction, "::"))
       }
-      #Called module specifications
-      CallSpecs <- paste0(CallFunction, "Specifications")
+      names(funcSplit) <- c("Package","Module")
+
       #Assign the function and specifications of called module to alias
       Call$Func[[Alias]] <- eval(parse(text = CallFunction))
-      Call$Specs[[Alias]] <- processModuleSpecs(eval(parse(text = CallSpecs)))
+      Call$Specs[[Alias]] <- processModuleSpecs(getModuleSpecs(funcSplit["Module"],funcSplit["Package"]))
       Call$Specs[[Alias]]$RunBy <- M$Specs$RunBy
     }
   }
@@ -1081,11 +1092,20 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
       }
     }
     #Run module
-    if (exists("Call")) {
-      R <- M$Func(L, Call$Func)
-    } else {
-      R <- M$Func(L)
-    }
+    funcFormals <- names(formals(M$Func))
+    funcArgs                         <- "L=L"
+    if ("M"        %in% funcFormals && exists("Call"))     funcArgs <- c(funcArgs,"M=Call$Func")
+    if ("Instance" %in% funcFormals && length(Instance)>0) funcArgs <- c(funcArgs,"Instance=Instance")
+    if ("..."      %in% funcFormals && ...length()>0)      funcArgs <- c(funcArgs,"...")
+    funcCall <- paste0("M$Func(",paste(funcArgs,collapse=", "),")")
+    R <- eval(parse(text=funcCall))
+
+#     if (exists("Call")) {             # Call functions do not get Instance or ... parameters
+#       R <- M$Func(L=L, M=Call$Func)
+#     } else {
+#       R <- M$Func(L=L)
+#     }
+
     #Save results in datastore if no errors from module
     if (is.null(R$Errors) ) {
       setInDatastore(R, M$Specs, ModuleName, Year = RunYear, Geo = NULL)
@@ -1133,12 +1153,15 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
             getFromDatastore(Call$Specs[[Alias]], RunYear = RunYear, Geo, GeoIndex_ls = GeoIndex_ls[[Alias]])
         }
       }
-      #Run model for geographic area
-      if (exists("Call")) {
-        R <- M$Func(L, Call$Func)
-      } else {
-        R <- M$Func(L)
-      }
+      #Run moduled for geographic area
+      funcFormals <- names(formals(M$Func))
+      funcArgs                         <- "L=L"
+      if ("M"        %in% funcFormals && exists("Call"))     funcArgs <- c(funcArgs,"M=Call$Func")
+      if ("Instance" %in% funcFormals && length(Instance)>0) funcArgs <- c(funcArgs,"Instance=Instance")
+      if ("..."      %in% funcFormals && ...length()>0)      funcArgs <- c(funcArgs,"...")
+      funcCall <- paste0("M$Func(",paste(funcArgs,collapse=", "),")")
+      R <- eval(parse(text=funcCall))
+
       #Save results in datastore if no errors from module
       if (is.null(R$Errors)) {
         setInDatastore(R, M$Specs, ModuleName, RunYear, Geo, GeoIndex_ls)
@@ -1165,7 +1188,7 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
   }
   #Log and print ending message
   #----------------------------
-  Msg <- paste0("Finish module '", ModuleFunction, "' for year '", RunYear, "'. ")
+  Msg <- paste0("Finish module '", ModuleFunction, "' for year '", RunYear, "'.")
   writeLog(Msg,Level="warn")
   gc()
 
@@ -1217,6 +1240,7 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, StopOnErr = TRUE
 #' @return (invisible) The list of results returned by the module
 #' @export
 runScript <- function(Module, Specification=NULL, RunFor, RunYear, writeDatastore = FALSE) {
+  # TODO: need to update this based on changes to processing module specifications
   #Locate the Module function and Specification
   #  Substitute/Deparse to get the object/name passed as "Module"
   ModuleSource <- substitute(Module)
@@ -1281,7 +1305,7 @@ runScript <- function(Module, Specification=NULL, RunFor, RunYear, writeDatastor
   M$Func <- ModuleFunc
   M$Specs <- processModuleSpecs(ModuleSpecs)
 
-  # TODO: Factor the following out to support both runModule and runScript
+  # TODO: Factor the following out to support both runModule and runScript with the same code...
 
   #Load any modules identified by 'Call' spec if any
   if (is.list(M$Specs$Call)) {
@@ -1293,7 +1317,8 @@ runScript <- function(Module, Specification=NULL, RunFor, RunYear, writeDatastor
       #Called module function when specified as package::module
       CallFunction <- M$Specs$Call[[Alias]]
       #Called module function when only module is specified
-      if (length(unlist(strsplit(CallFunction, "::"))) == 1) {
+      funcSplit <- unlist(strsplit(CallFunction, "::"))
+      if (length(funcSplit) == 1) {
         Pkg_df <- getModelState()$ModuleCalls_df
         if (sum (Pkg_df$Module == CallFunction) != 0  ) {
           Pkg_df <- getModelState()$ModuleCalls_df
@@ -1308,12 +1333,13 @@ runScript <- function(Module, Specification=NULL, RunFor, RunYear, writeDatastor
           
           rm(Pkg_df)
         }
+        funcSplit <- unlist(strsplit(CallFunction, "::"))
       }
-      #Called module specifications
-      CallSpecs <- paste0(CallFunction, "Specifications")
+      names(funcSplit) <- c("Package","Module")
+
       #Assign the function and specifications of called module to alias
       Call$Func[[Alias]] <- eval(parse(text = CallFunction))
-      Call$Specs[[Alias]] <- processModuleSpecs(eval(parse(text = CallSpecs)))
+      Call$Specs[[Alias]] <- processModuleSpecs(getModuleSpecs(funcSplit["Module"],funcSplit["Package"]))
       Call$Specs[[Alias]]$RunBy <- M$Specs$RunBy
     }
   }

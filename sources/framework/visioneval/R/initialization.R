@@ -75,7 +75,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   DeflatorsFile <- getRunParameter("DeflatorsFile",Param_ls=Param_ls)
   DeflatorsFilePath <- file.path(ParamPath,DeflatorsFile)
   DeflatorsFilePath <- DeflatorsFilePath[file.exists(DeflatorsFilePath)][1] # Allow ParamPath to be a vector of Paths
-  if ( is.na(DeflatorsFilePath[1]) || length(DeflatorsFilePath)!=1 ) {
+  if ( is.na(DeflatorsFilePath) || length(DeflatorsFilePath)!=1 ) {
     stop(
       writeLog(
         paste("Deflators File",DeflatorsFile,"does not exist in",ParamPath),
@@ -88,7 +88,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   UnitsFile <- getRunParameter("UnitsFile",Param_ls=Param_ls)
   UnitsFilePath <- file.path(ParamPath,UnitsFile)
   UnitsFilePath <- UnitsFilePath[file.exists(UnitsFilePath)][1] # Allow ParamPath to be a vector of Paths
-  if ( is.na(UnitsFilePath[1]) || length(UnitsFilePath)!=1 ) {
+  if ( is.na(UnitsFilePath) || length(UnitsFilePath)!=1 ) {
     stop(
       writeLog(
         paste("Units File",UnitsFile,"does not exist in",ParamPath),
@@ -102,7 +102,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   GeoFile <- getRunParameter("GeoFile",Param_ls=Param_ls)
   GeoFilePath <- file.path(ParamPath,GeoFile)
   GeoFilePath <- GeoFilePath[file.exists(GeoFilePath)][1] # Allow ParamPath to be a vector of Paths
-  if ( is.na(GeoFilePath[1]) || length(GeoFilePath)!=1 ) {
+  if ( is.na(GeoFilePath) || length(GeoFilePath)!=1 ) {
     stop(
       writeLog(
         paste("Geography File",GeoFile,"does not exist in",ParamPath),
@@ -174,7 +174,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
 #' @export
 archiveResults <- function(RunParam_ls,ResultsDir=getwd(),SaveDatastore=NULL) {
 
-  if ( missing(SaveDatastore) || is.null(SaveDatastore[1]) ) {
+  if ( missing(SaveDatastore) || is.null(SaveDatastore) ) {
     SaveDatastore <- getRunParameter("SaveDatastore",Param_ls=RunParam_ls)
   } # if FALSE, do not archive
 
@@ -195,7 +195,7 @@ archiveResults <- function(RunParam_ls,ResultsDir=getwd(),SaveDatastore=NULL) {
   ModelStateName <- getRunParameter("ModelStateFile",Param_ls=RunParam_ls)
 
   # Get the timestamp from the newest ModelState, if available
-  if ( missing(ResultsDir) || ResultsDir[1] == ModelDir[1] ) { # classic model
+  if ( missing(ResultsDir) || ResultsDir == ModelDir ) { # classic model
     ModelStatePath <- file.path(ResultsDir,ModelStateName)
     if ( ! file.exists(ModelStatePath) ) {
       writeLog("No previous model state or information to save.",Level="warn")
@@ -589,7 +589,7 @@ getUnits <- function(Type_,envir=modelEnvironment()) {
 #' parse the list of module calls from the ModelScriptFile
 #'
 #' Process the raw list of module calls and their parameters from the ModelScriptFile and expand
-#' them into a detailee list of input/output specifications.
+#' them into a detailed list of input/output specifications.
 #'
 #' @param ModuleCalls_df a list of module calls returned from \code{parseModelScript}
 #' @param AlreadyInitialized a character vector of names of packages that
@@ -601,6 +601,7 @@ getUnits <- function(Type_,envir=modelEnvironment()) {
 parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized=character(0), RequiredPackages=character(0), Save=TRUE ) {
 
   ModuleCalls_df <- unique(ModuleCalls_df)
+  # Use 'Instance' as non-empty string to distinguish multiple calls that might have different specs
 
   # Report any required packages that are not also in module calls
   umc <- unique(ModuleCalls_df$PackageName)
@@ -636,12 +637,13 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized=character(0), R
         ModuleName = "Initialize",
         PackageName = Pkg,
         RunFor = "AllYears",
-        RunYear = "Year"
+        RunYear = "Year",
+        Instance = NA
       )
       Add_ls[[Pkg]] <- Add_df
     }
   }
-  #Insert Initialize module entries into ModuleCalls_df
+  writeLog("Adding initialize module entries",Level="info")
   Pkg_ <- names(Add_ls)
   for (Pkg in Pkg_) {
     Idx <- head(grep(Pkg, ModuleCalls_df$PackageName), 1)
@@ -693,6 +695,8 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized=character(0), R
     AllSpecs_ls[[i]]$ModuleName <- ModuleName
     PackageName <- ModuleCalls_df$PackageName[i]
     AllSpecs_ls[[i]]$PackageName <- PackageName
+    Instance <- ModuleCalls_df$Instance[i]
+    AllSpecs_ls[[i]]$Instance <- Instance
     AllSpecs_ls[[i]]$RunFor <- ModuleCalls_df$RunFor[i]
     names(AllSpecs_ls)[i] <- paste0(PackageName,"::",ModuleName)
     #Check module availability
@@ -704,7 +708,7 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized=character(0), R
     #Load and check the module specifications
     ## DEBUG
     ## writeLog(paste(PackageName,ModuleName,sep="::"),Level="warn")
-    Specs_ls <- processModuleSpecs(getModuleSpecs(ModuleName, PackageName))
+    Specs_ls <- processModuleSpecs(getModuleSpecs(ModuleName, PackageName, AllSpecs_ls=AllSpecs_ls, Instance=Instance))
     ## DEBUG
     ## print(paste("Get Spec length:",length(Specs_ls$Get)))
     Err <- checkModuleSpecs(Specs_ls, ModuleName)
@@ -774,7 +778,7 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized=character(0), R
         # Load and check the module specifications and add Get specs if
         # there are no specification errors
         for (k in 1:(length(Call_)-1)) { # Code above forces length(Call_) always to be 2 or fail
-          CallSpecs_ls <- processModuleSpecs(getModuleSpecs(Call_[length(Call_)], Call_[k]))
+          CallSpecs_ls <- processModuleSpecs(getModuleSpecs(Call_[length(Call_)], Call_[k], AllSpecs_ls=AllSpecs_ls))
           Err <- checkModuleSpecs(CallSpecs_ls, Call_[length(Call_)])
           if (length(Err) > 0) {
             Errors_ <- c(Errors_, Err)
@@ -863,7 +867,7 @@ documentModule <- function(ModuleName){
 
   #Make vignettes directory if doesn't exist
   #-----------------------------------------
-  if(!file.exists("inst/module_docs")) dir.create("inst/module_docs")
+  if(!file.exists("inst/module_docs")) dir.create("inst/module_docs",recursive=TRUE)
 
   #Define function to trim strings
   #-------------------------------
@@ -1137,6 +1141,26 @@ documentModule <- function(ModuleName){
     paste(getFirstWords(Words_ls), collapse = "<br>")
   }
 
+  #Insert documentation of dynamic spec functions
+  #----------------------------------------------
+  #Make a table of Function specifications
+  SpecNames_ <- "FUNCTION"
+  FuncSpecs_df <- makeSpecsTable(ModuleName, "Function", SpecNames_)
+  if (!is.null(FuncSpecs_df)) {
+    FuncMarkdown_ <- c(
+      "",
+      "## Specification Function",
+      paste0("Specifications for this module are generated by a function called '",FuncSpecs_df[1,"FUNCTION"],"'.\n"),
+      "See R help and discussion elsewhere in the module documentation.",
+      ""
+    )
+    #Add the markdown text to the documentation list
+    RevDocs_ls <- c(
+      RevDocs_ls,
+      list(FuncMarkdown_)
+    )
+  }
+
   #Insert documentation of user input files
   #----------------------------------------
   #Make a table of Inp specifications
@@ -1403,7 +1427,7 @@ readGeography <- function(Save=TRUE,Param_ls=NULL) {
   ParamPath <- getRunParameter("ParamPath",Param_ls=Param_ls)
   GeoFilePath <- file.path(ParamPath,GeoFile)
   GeoFilePath <- GeoFilePath[file.exists(GeoFilePath)][1] # Allow ParamPath to be a vector of Paths
-  if ( is.na(GeoFilePath[1]) || length(GeoFilePath)!=1 ) {
+  if ( is.na(GeoFilePath) || length(GeoFilePath)!=1 ) {
     stop(
       writeLog(
         paste("Geography File",GeoFile,"does not exist in",ParamPath),
@@ -1893,12 +1917,12 @@ ModelElementNames <- c(
 )
 ModelElementsRegex <- paste(ModelElementNames,collapse="|")
 
-ModuleCallNames <- c("ModuleName","PackageName","RunFor")
+ModuleCallNames <- c("ModuleName","PackageName","RunFor","Instance")
 ScriptCallNames <- c("Module","Specification","RunFor","ModuleType")
 
 normalizeElementFields <- function(Elements_ls,NeededNames) {
   missingNames <- setdiff(NeededNames,names(Elements_ls)) # names needed but not found
-  for ( name in missingNames ) Elements_ls[[name]] <- NA
+  for ( name in missingNames ) Elements_ls[[name]] <- NA  # will fill in RunFor and Instance, e.g.
   return(Elements_ls) # return a list with all and only NeededNames
 }
 

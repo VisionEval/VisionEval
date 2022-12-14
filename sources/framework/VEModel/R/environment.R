@@ -17,7 +17,7 @@ ve.env$RunParam_ls <- list()
 #'
 #' \code{modelEnvironment} returns an environment for managing the ve.runtime directory and its
 #' components, the default runtime parameters and other runtime needs. That environment contains the
-#' default RunParams_ls structure plus other components needed to manage global state for VEModel
+#' default RunParam_ls structure plus other components needed to manage global state for VEModel
 #' classes.
 #'
 #' \code{modelEnvironment} holds the RunParam_ls settings from the runtime directory (or its
@@ -125,22 +125,14 @@ default.parameters.table = list(
 #' call this function directly (e.g. to see what parameters are defined and defaulted in VEModel).
 #' Internally VEModel uses \code{visioneval::defaultVERuntimeParameters} to access these parameters,
 #' so it doesn't have to remember whether specific defaults are defined in visioneval itself or in
-#' VEModel (and one can transparently move the default definitions back and forth).
+#' VEModel, or some other package (and one can transparently move the default definitions back and forth).
 #'
-#' @param Param_ls a list (possibly empty) of already-defined parameters
-#' @return a named list for parameters not present in Param_ls containing default values for those
-#'   parameters
+#' @return a named list of parameters with default values defined in this package
 #' @import visioneval
 #' @export
-VEPackageRunParameters <- function(Param_ls=list()) {
-  defaultParams_ls <- default.parameters.table[
-    which( ! names(default.parameters.table) %in% names(Param_ls) )
-  ]
-  if ( length(defaultParams_ls)>0 ) {
-    defaultParams_ls <- visioneval::addParameterSource(defaultParams_ls,"Package VEModel Default")
-    Param_ls <- visioneval::mergeParameters(defaultParams_ls,Param_ls) # Param_ls will override
-  }
-  return(Param_ls)
+VEPackageRunParameters <- function() {
+  # Add the source attribute to the default.parameters.table and return the resulting list
+  visioneval::addParameterSource(default.parameters.table,"Package VEModel Default")
 }
 
 #LOAD RUNTIME CONFIGURATION
@@ -344,8 +336,7 @@ writeSetup <- function(object=NULL,filename=NULL,overwrite=FALSE) {
 #' \code{setRuntimeDirectory(getRuntimeEnvironment()$start.dir)}
 #'
 #' When that line runs, start.dir will again be reset, so running that line repeatedly will toggle
-#' between two directories (e.g. the one from which \code{R} was started and the one defined in the
-#' VE_RUNTIME environment variable...)
+#' between two directories.
 #'
 #' @param Directory a specific directory (absolute or relative to getwd()) to use as the runtime. If
 #' Directory is not provided, looks for a system environment variable VE_RUNTIME, and if that is not
@@ -354,9 +345,7 @@ writeSetup <- function(object=NULL,filename=NULL,overwrite=FALSE) {
 #' @export
 setRuntimeDirectory <- function(Directory=NULL) {
   if ( is.null(Directory) ) {
-    Directory <- if ( ! exists("ve.runtime",envir=ve.env,inherits=FALSE) ) {
-      Sys.getenv("VE_RUNTIME",unset=getwd())
-    } else ve.env$ve.runtime
+    Directory <- if ( ! exists("ve.runtime",envir=ve.env,inherits=FALSE) ) getwd() else ve.env$ve.runtime
   } else {
     Directory <- normalizePath(Directory,winslash="/",mustWork=FALSE)
     if ( ! dir.exists(Directory) ) {
@@ -467,10 +456,19 @@ getModelIndex <- function(reset=FALSE) {
   # Uses the package global ve.env to cache models and variants
   if ( ! reset && "modelIndex" %in% names(ve.env) ) return(ve.env$modelIndex)
 
-  # Hack for developing VEModel with pkgload
+  # Hack for developing packages with pkgload if package is not
+  # already built; not working in 4.1.3 due to environment/search problem
+  # for test functions - usePkgload appears only to work for VEModel
+  # or visioneval (where outside environment doesn't matter)
   pkgs <- utils::installed.packages(fields="Package")
   VE.pkgs <- grep("^VE",pkgs[,"Package"],value=TRUE)
-  if ( ! "VEModel" %in% VE.pkgs ) VE.pkgs <- c(VE.pkgs,VEModel="VEModel")
+  loaded.packages <- grep("package:VE",search(),value=TRUE)
+  for ( pkg.load in loaded.packages ) {
+    pkg <- sub("package:","",pkg.load)
+    if ( ! pkg %in% names(VE.pkgs) ) {
+      VE.pkg[pkg] <- pkg
+    }
+  }
   modelPaths <- sapply(VE.pkgs, function(p) system.file("models",package=p))
   modelPaths <- dir(modelPaths,pattern="model-index.cnf",recursive=TRUE,full.names=T)
   modelIndex <- list()
