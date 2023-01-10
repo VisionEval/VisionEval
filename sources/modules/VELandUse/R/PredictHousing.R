@@ -653,7 +653,11 @@ PredictHousing <- function(L) {
     #Calculate the single family housing proportion
     SFDU <- sum(L$Year$Bzone$SFDU[L$Year$Bzone$Azone == az])
     MFDU <- sum(L$Year$Bzone$MFDU[L$Year$Bzone$Azone == az])
-    PropSFDU <- SFDU / (SFDU + MFDU)
+    AllDU <- SFDU + MFDU
+    MissingHouseholds <- AllDU == 0
+    PropSFDU <- ifelse( ! MissingHouseholds,  SFDU / AllDU, 1.0 )
+    L$Year$Bzone$SFDU[ L$Year$Bzone$Azone == az & MissingHouseholds ] <- 1.0 # Force at least one household
+
     #Predict housing type
     HouseType_ <- applyBinomialModel(
       HouseTypeModel_ls,
@@ -663,8 +667,8 @@ PredictHousing <- function(L) {
     Hh_df_Az[[az]]$HouseType <- HouseType_
     names(HouseType_) <- Hh_df_Az[[az]]$HhId
     HouseType_Hh[names(HouseType_)] <- HouseType_
-    rm(SFDU, MFDU, PropSFDU, HouseType_)
   }
+  rm(SFDU, MFDU, PropSFDU, HouseType_)
   
   #Tabulate households by house type, income quartile, and Azone
   #-------------------------------------------------------------
