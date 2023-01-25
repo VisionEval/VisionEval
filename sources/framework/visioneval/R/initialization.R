@@ -134,6 +134,10 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   }
   newModelState_ls$DatastorePath <- Param_ls$DatastorePath
 
+  # Mark ModelState_ls as "Initialized" (cooperation with VEModel)
+  newModelState_ls$RunStatus <- "Initialized"
+
+  # Set up model run environment
   model.env$ModelState_ls <- newModelState_ls # Replace whatever is already there
   model.env$RunParam_ls <- Param_ls # Includes all the run Parameters, including "required"
 
