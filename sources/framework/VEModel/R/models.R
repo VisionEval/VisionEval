@@ -577,8 +577,6 @@ ve.model.initstages <- function( modelStages ) {
       writeLog(paste("Single stage",modelStages[[1]]$Name,"Reportable:",modelStages[[1]]$Reportable),Level="info")
     }
   } else {
-    # TODO: cascade "Out of Date" to any stage that is Run Complete itself but starts from a stage that is not Run Complete
-
     # Put names on Stages and identify reportable stages
     # Also fix up scenario Elements (adding to base stage...)
     startFromNames <- unlist(sapply(modelStages,function(s) s$StartFrom))
@@ -604,22 +602,10 @@ ve.model.initstages <- function( modelStages ) {
       )
     }
     for ( r in seq_along(stageNames) ) {
-      modelStages[[r]]$Reportable <- reportable[r]
+      stage <- modelStages[[r]]
+      stage$Reportable <- reportable[r]
+      self$fixRunStatus(stage) # check if "Run Complete" is out of date relative to StartFrom
     }
-
-    # Propagate Out of Date status from StartFrom to descendents
-    sapply( modelStages,
-      function(s) {
-        if (
-          s$RunStatus == codeStatus("Run Complete") &&
-          length(s$StartFrom)>0 && nzchar(s$StartFrom) &&
-          modelStages[[s$StartFrom]]$RunStatus != codeStatus("Run Complete")
-        ) {
-          s$RunStatus <- codeStatus("Out of Date")
-        }
-        s$RunStatus
-      }
-    )
   }
 
   return( modelStages )
@@ -1465,39 +1451,35 @@ ve.stage.load <- function(onlyExisting=TRUE,reset=FALSE, updateCheck=TRUE) {
       updateCheck=updateCheck,
       Message=paste("Loading Model",self$modelName)
     )
-    if ( ! self$addModelState(ms) ) {
+
+    browser(expr=self$Name=="state-pop-future")
+    if ( ! identical(ms,self$ModelState_ls) ) self$ModelState_ls <- ms
+    if ( is.list(self$ModelState_ls) && length(self$ModelState_ls)>0 ) {
+      if ( is.character(self$ModelState_ls$RunStatus) ) {
+        # visioneval::initModelState will set RunStatus to character string ("Initialized")
+        self$ModelState_ls$RunStatus <- codeStatus(self$ModelState_ls$RunStatus)
+      }
+      if ( ! "RunStatus" %in% names(self$ModelState_ls) ) {
+        self$ModelState_ls$RunStatus <- codeStatus("Loaded") # Only occurs with old-style model and an old run
+      }
+      if ( isFALSE(self$ModelState_ls$UpToDate) && self$ModelState_ls$RunStatus == codeStatus("Run Complete") ) {
+        # Internal stage configuration or input/structural files were altered
+        self$ModelState_ls$RunStatus <- codeStatus("Out of Date")
+      }
+      self$RunStatus <- self$ModelState_ls$RunStatus
+    } else {
+      self$RunStatus <- codeStatus("Uninitialized")
       if ( ! onlyExisting) {
         writeLog(
           paste0("Unable to build model state for stage ",self$Name,"!"),
           Level="warn"
         )
       }
-      return(FALSE)
-    } else return(TRUE)
-  } else return(TRUE)
-}
-
-# Member function to evaluate RunStatus of current model
-ve.stage.addModelState <- function(ms) {
-  if ( is.list(ms) && length(ms)>0 ) {
-    if ( ! identifcal(ms,self$ModelState_ls) ) self$ModelState_ls <- ms
-    if ( is.character(self$ModelState_ls$RunStatus) ) {
-      # visioneval::initModelState will set RunStatus to character string ("Initialized")
-      self$ModelState_ls$RunStatus <- codeStatus(self$ModelState_ls$RunStatus)
+      return(FALSE) # ModelState unavailable
     }
-    if ( ! "RunStatus" %in% names(self$ModelState_ls) ) {
-      self$ModelState_ls$RunStatus <- codeStatus("Loaded") # Only occurs with old-style model and an old run
-    }
-    if ( isFALSE(self$ModelState_ls$UpToDate) && self$ModelState_ls$RunStatus == codeStatus("Run Complete") ) {
-      self$ModelState_ls$RunStatus <- codeStatus("Out of Date")
-    }
-    self$RunStatus <- self$ModelState_ls$RunStatus
-    return(TRUE)
-  } else {
-    self$RunStatus <- codeStatus("Uninitialized")
-    return(FALSE)
   }
-}    
+  return(TRUE) # ModelState available
+}
 
 globalVariables(c("runPath", "RunParam_ls")) # attached in function environment when running
 run.function <- function() {
@@ -1590,13 +1572,13 @@ ve.stage.pstatus <- function(start=FALSE) {
         "Not started"
       } else if ( start ) {
         paste("Started at",tformat(self$RunStarted))
-      } else if ( ! is.null(self$RunCompleted) ) {
-        paste("Completed at",tformat(self$RunCompleted),"after",tdiff(self$RunStarted,self$RunCompleted))
+      } else if ( ! is.null(self$RunCompleted) && ! is.null(self$RunStarted) ) {
+        paste("Completed in",tdiff(self$RunStarted,self$RunCompleted))
       } else {
         paste("Running for",tdiff(self$RunStarted,Sys.time()),"since",tformat(self$RunStarted))
       }
     ),
-    ":",self$Name
+    " : ",self$Name
   )
 }
 
@@ -1638,7 +1620,8 @@ ve.stage.run <- function(log="warn",UseFuture=TRUE) {
     # Run inline
     writeLog(paste("Running stage:",self$Name),Level="warn")
     environment(run.function) <- run.env
-    self$completed( run.function() )
+    runStatus <- run.function()
+    self$completed( runStatus )
   }
 
   return(self)
@@ -1920,7 +1903,7 @@ ve.model.updateStatus <- function() {
 # if reset==TRUE, force rebuild of the ModelState_ls when the model runs
 # if outOfDate is a list of numeric indices, mark those stages as "Out of Date"
 #   regardless of their internal check
-ve.model.load <- function(onlyExisting=TRUE,reset=FALSE, outOfDate=NULL) {
+ve.model.load <- function(onlyExisting=TRUE,reset=FALSE, outOfDate=NULL, updateCheck=TRUE) {
 
   if ( ! self$valid() ) {
     stop(
@@ -1933,67 +1916,73 @@ ve.model.load <- function(onlyExisting=TRUE,reset=FALSE, outOfDate=NULL) {
 
   # Load or Create the ModelState_ls for each stage
   # Includes a copy of the model state for the StartFromStage
-  outOfDateStatus <- codeStatus("Out of Date")
   for ( index in seq_along(self$modelStages) ) {
     stage <- self$modelStages[[index]]
-    writeLog(paste("Loading stage",stage$Name),Level="info")
+    writeLog(paste("Checking stage status",stage$Name),Level="info")
 
-    # Now load the current stage model state
-    stage$load(onlyExisting=onlyExisting,reset=reset)
+    # Load the current stage model state
+    loadStatus <- stage$load(onlyExisting=onlyExisting,reset=reset,updateCheck=updateCheck)
 
-    # Check RunStatus and LastChanged date in StartFrom stage to mark this stage as out of date
-    if ( stage$RunStatus == codeStatus("Run Complete") ) {
-      if ( # There is a StartFrom stage
-        is.character( stage$RunParam_ls$StartFrom ) &&
-        length( stage$RunParam_ls$StartFrom )>0 &&
-        nzchar(stage$RunParam_ls$StartFrom)
-      ) {
-        startFrom <- stage$RunParam_ls$StartFrom
-        startFromState_ls <- self$modelStages[[startFrom]]$ModelState_ls # may be NULL
-        if ( ! onlyExisting && ! is.list(startFromState_ls) ) {
-          # No ModelState exists for StartFrom stage (should never happen; should at least get "Initialized")
-          stop(
-            writeLog(paste("(internal error) StartFrom",startFrom,"for stage",self$Name,"has not been built."),Level="error")
-          )
-        }
-        if ( "RunStatus" %in% names(startFromState_ls) ) {
-          if ( startFromState_ls$RunStatus != codeStatus("Run Complete") ) {
-            stage$RunStatus <- outOfDateStatus
-          } else { # StartFrom Stage has run; check if this stage was run before it
-            if ( ! "LastChanged" %in% names(startFromState_ls) ) {
-              # Shouldn't happen - "Run Complete" implies that something got changed in the
-              # the earlier stage's model state
-              writeLog(paste("(internal error) StartFrom for",self$Name,"is Run Complete but never changed."),Level="error")
-              stage$RunStatus <- outOfDateStatus
-            } else if (
-              "LastChanged" %in% names(stage$ModelState_ls)  &&
-              stage$ModelState_ls$LastChanged < startFromState_ls$LastChanged
-            ) {
-              stage$RunStatus <- outOfDateStatus
-            } else if ( is.numeric(outOfDate) && index %in% outOfDate  ) {
-              # If user named this stage to re-run manually
-              # Caution: will cascade to stages that StartFrom this one,
-              # so watch out if explicitly re-running base stage of many scenarios...
-              stage$RunStatus <- outOfDateStatus
-            }
-            # If we get this far, Run Complete status for this stage survived!
-          }
-        } else {
-          # StartFrom stage lacks RunStatus (which should never happen unless we turned
-          # an archaic model run into a StartFrom stage)
-          stage$RunStatus <- outOfDateStatus
-        }
-      }
-      # Finally, mark the stage out of date if it was explicitly requested by the user
-      
-    } # else the stage will run again, since it is not Run Complete
-
+    # Check if complete stage was outdated due to StartFrom stage
+    if ( loadStatus && stage$RunStatus == codeStatus("Run Complete") ) {
+      self$fixRunStatus(stage, outOfDate) # Check if its StartFrom is out of date, or set user Out of Date
+    }
+    # Now see if this stage (and its followers) were requested for individual reset
+    if ( is.numeric(outOfDate) && index %in% outOfDate  ) {
+      # Caution: will cascade to stages that StartFrom this one,
+      # so watch out if explicitly re-running base stage of many scenarios...
+      writeLog(paste("User requested reset for stage",self$Name),Level="info")
+      stage$RunStatus <- codeStatus("Out of Date")
+    }
     self$modelStages[[index]] <- stage
   }
   # Update self$overallStatus
   self$updateStatus()
   return(self$printStatus())
 }
+
+ve.model.fixRunStatus <- function(stage,outOfDate=integer(0)) {
+  writeLog("Checking if previous run is out of date",Level="info")
+  if ( # There is a StartFrom stage
+    is.character( stage$RunParam_ls$StartFrom ) &&
+    length( stage$RunParam_ls$StartFrom )>0 &&
+    nzchar(stage$RunParam_ls$StartFrom)
+  ) {
+    startFrom <- stage$RunParam_ls$StartFrom
+    startFromState_ls <- self$modelStages[[startFrom]]$ModelState_ls # may be NULL
+    if ( ! is.list(startFromState_ls) ) {
+      # No ModelState exists for StartFrom stage (should never happen; should at least get "Initialized")
+      writeLog(paste("(internal warning) StartFrom",startFrom,"for stage",self$Name,"has not been built."),Level="warn")
+      stage$RunStatus <- codeStatus("Out of Date")
+    } else if ( "RunStatus" %in% names(startFromState_ls) ) {
+      if ( startFromState_ls$RunStatus != codeStatus("Run Complete") ) {
+        writeLog(paste("StartFrom stage",startFrom,"for stage",self$Name,"is not Run Complete"),Level="info")
+        stage$RunStatus <- codeStatus("Out of Date")
+      } else { # StartFrom Stage has run; check if this stage was run before it
+        writeLog(paste("Checking LastChanged date",self$Name),Level="info")
+        if ( ! "LastChanged" %in% names(startFromState_ls) ) {
+          # Shouldn't happen - "Run Complete" implies that something got changed in the
+          # the earlier stage's model state
+          writeLog(paste("(internal error) StartFrom for",self$Name,"is Run Complete but never changed."),Level="error")
+          stage$RunStatus <- codeStatus("Out of Date")
+        } else if (
+          "LastChanged" %in% names(stage$ModelState_ls)  &&
+          stage$ModelState_ls$LastChanged < startFromState_ls$LastChanged
+        ) {
+          writeLog(paste(stage$Name,"out of date due to LastChanged"),Level="info")
+          stage$RunStatus <- codeStatus("Out of Date")
+        }
+        # If we get this far, Run Complete status for this stage survived!
+      }
+    } else {
+      # StartFrom stage lacks RunStatus (which should never happen unless we turned
+      # an archaic model run into a StartFrom stage)
+      stage$RunStatus <- codeStatus("Out of Date")
+    }
+  }
+  return( stage$RunStatus )
+}
+
 
 ################################################################################
 #                                 Running Models                               #
@@ -2314,6 +2303,7 @@ ve.model.run <- function(run="continue",stage=character(0),watch=TRUE,dryrun=FAL
             runningList <- runningList[ which(sapply(runningList,function(stg) stg$running())) ]
             sapply( done, function(stg) {
               # Log process completion status to console for stage no longer running
+              # Status will be evaluated later be reloading the model stages
               stg$completed()
               writeLog( stg$processStatus(), Level="warn")
             } )
@@ -3020,6 +3010,7 @@ VEModel <- R6::R6Class(
     addstage=ve.model.addstage,             # Add a stage programmatically
     valid=function() private$p.valid,       # report valid state
     load=ve.model.load,                     # load the model state for each stage (slow - defer until needed)
+    fixRunStatus=ve.model.fixRunStatus,     # set each complete stage RunStatus to respect StartFrom
     plan=ve.model.plan,                     # Choose a multiprocessing plan
     run=ve.model.run,                       # run a model (or just a subset of stages)
     print=ve.model.print,                   # provides generic print functionality
@@ -3081,7 +3072,6 @@ VEModelStage <- R6::R6Class(
     runnable=ve.stage.runnable,     # Does the stage have all it needs to run?
     print=ve.stage.print,           # Print stage summary
     load=ve.stage.load,             # Read existing ModelState.Rda if any
-    addModelState=ve.stage.addModelState, # save model state and check its RunStatus
     run=ve.stage.run,               # Run the stage (build results)
     completed=ve.stage.completed,   # Gather results of multiprocessing
     running=ve.stage.running,       # Check if stage is still running
