@@ -76,3 +76,12 @@ variants:
         - stage-pop-synth
         - stage-pop-base
         - stage-pop-future
+  private:
+    # illustrates private model configuration, but just reproduces base model
+    private: true
+    description: VERSPM 3.0 (private version)
+    config: visioneval-base.cnf
+    scripts: scripts-base
+    inputs: inputs-base
+    defs: defs
+    queries: queries

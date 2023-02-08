@@ -2701,10 +2701,9 @@ openModel <- function(modelPath="",log="error") {
 #                      MANAGE "STANDARD MODELS" (VEModel Examples)                       #
 ##########################################################################################
 
-#' Look up a standard model in the index of avaialble models
+#' Look up a standard model in the index of available models
 #' @param model bare name of standard model (if not provided, list available models)
-#' @param variant name of variant with the model (use "" to get list
-#of available variants)
+#' @param variant name of variant with the model (use "" to get list of available variants)
 #' @param private if TRUE and showing an index, include private models
 #' @return the full path to that model template
 #' @export
@@ -2777,10 +2776,21 @@ findStandardModel <- function( model, variant="", private=FALSE ) {
 }
 
 ## install a standard model with data identified by "variant"
-#  We're still expecting to distribute standard models in the runtime (but for now, those will
-#   be the "classic" models)
+# This is the principal way to get hold of a model for learning or testing, though a model
+# directory can simply be copied into the runtime "models" directory to make it available.
 
-installStandardModel <- function( modelName, modelPath, confirm=TRUE, overwrite=FALSE, variant="base", log="error" ) {
+# modelName is model set to search for ("VERSPM", "VE-State", etc)
+# variant is model variant (default is "base", which must be defined for any new model). If variant
+#   is "", will list available model variants
+# modelPath is path + name into which to install the model (rather than default modelName-variant)
+# confirm if FALSE will just attempt the installation without user input
+# overwrite if TRUE will destroy any existing model on modelPath and reinstall
+# private if TRUE will also list model variants marked "private" (typically test models that
+#   contain a limited set of modules, or input data that is broken in some specific way; see
+#   VEModel/inst/models for examples)
+# log is the default error logging level ("warn" will show additional warnings; "info" will give
+#   step-by-step information. Levels "trace" and "debug" are also possible but not widely used)
+installStandardModel <- function( modelName, variant="base", modelPath=NULL, confirm=TRUE, overwrite=FALSE, private=FALSE, log="error" ) {
   # Locate and install standard modelName into modelPath
   #   modelName says which standard model to install. If it is missing or empty, return a
   #     list of available models
@@ -2791,7 +2801,7 @@ installStandardModel <- function( modelName, modelPath, confirm=TRUE, overwrite=
   #   If dirname(modelPath) also does not exist, tell user dirname(modelPath) does not exist and
   #     they have to try again.
 
-  model <- findStandardModel( modelName, variant )
+  model <- findStandardModel( modelName, variant, private=private )
   if ( is.data.frame(model) ) {
     return(model) # Data.frame is a subset of the model index
   } # Otherwise model is a list with details on the model we need to install
@@ -2894,10 +2904,12 @@ installStandardModel <- function( modelName, modelPath, confirm=TRUE, overwrite=
 #'   just do it.
 #' @param overwrite if TRUE (default = FALSE) then overwrite (recreate) any modelName that already
 #'   exists - otherwise modelName is disambiguated as "modelName(1)", "modelName(2)" etc.
+#' @param private if TRUE, include standard model templates marked "private" (intended for test
+#'   models that include subsets of run scripts or deliberately "damaged" input files)
 #' @param log a string describing the minimum level to display
 #' @return A VEModel object of the model that was just installed
 #' @export
-installModel <- function(modelName=NULL, variant="base", modelPath=NULL, confirm=TRUE, overwrite=FALSE, log="warn") {
+installModel <- function(modelName=NULL, variant="base", modelPath=NULL, confirm=TRUE, overwrite=FALSE, private=FALSE, log="warn") {
   # Load system model configuration (clear the log status)
   initLog(Save=FALSE,Threshold=log, envir=new.env())
   model <- installStandardModel(modelName, modelPath, confirm=confirm, overwrite=overwrite, variant=variant, log=log)
