@@ -175,9 +175,12 @@ getModelRoots <- function(get.root=0,Param_ls=NULL) {
   #    getwd()
   modelRoot <- file.path(roots,visioneval::getRunParameter("ModelRoot",Param_ls=Param_ls))
   if ( length(modelRoot)>0 ) {
+    # Keep any modelRoot which is an absolute path
     if ( isAbsolutePath(modelRoot[1]) ) {
-      modelRoot <- modelRoot[1]
-    } else { # happens if ve.runtime is defined but not an absolute pqth (unlikely)
+      
+      modelRoot = modelRoot[isAbsolutePath(modelRoot)]
+
+      } else { # happens if ve.runtime is defined but not an absolute pqth (unlikely)
       test.paths <- normalizePath(file.path(roots,modelRoot))
       modelRoot <- test.paths[dir.exists(test.paths)]
       if ( length(modelRoot[1])==0 || ! nzchar(modelRoot[1]) ) {
@@ -770,7 +773,7 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, showRootDir=TRUE, all.files=F
     root <- results <- outputs <- inputs <- archive <- TRUE
   }
 
-  if ( missing(shorten[1]) || shorten[1] ) {
+  if ( missing(shorten) || shorten ) {
     shorten <- self$modelPath
   } else shorten <- ""
   if ( is.null(stage) ) {
@@ -1572,6 +1575,7 @@ ve.stage.levels <- function(level) {
   return(character(0))
 }
 
+# Return process status
 ve.stage.pstatus <- function(start=FALSE) {
   paste0(
     paste(
@@ -1815,7 +1819,7 @@ ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
       s$print(details,configs)
     }
     scenarioCount <- length(which(scenarioStages))
-    if ( scenarioCount > 0 || ! is.null(self$modelScenarios[1]) ) {
+    if ( scenarioCount > 0 || ! is.null(self$modelScenarios) ) {
       if ( ! details ) {
         cat(scenarioCount,"Scenario stages defined in",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
       } else {
@@ -2192,8 +2196,12 @@ ve.model.run <- function(run="continue",stage=NULL,watch=TRUE,dryrun=FALSE,log="
       for ( ms in rg ) { # iterate over names of stages to run
         stg <- self$modelStages[[ms]]
         stg$run(log=LogLevel,UseFuture=FALSE)
-        # inline execution will mark stage complete and reload the stage
         writeLog( stg$processStatus(), Level="warn")
+        if ( stg$RunStatus != codeStatus("Run Complete") ) {
+          stop (
+            writeLog("Run Failed.",Level="error")
+          )
+        }
       }
     } else {
       lastStatusReport <- NULL
@@ -2325,7 +2333,7 @@ ve.stage.watchlog <- function(stop=FALSE,delay=2) {
 ################################################################################
 
 ve.model.scenarios <- function( fromFile=FALSE  ) {
-  if ( is.null(self$modelScenarios[1]) || fromFile ) {
+  if ( is.null(self$modelScenarios) || fromFile ) {
     self$modelScenarios <- VEModelScenarios$new(baseModel=self,fromFile=fromFile)
   }
   if ( is.null(self$modelScenarios) ) {
