@@ -57,6 +57,8 @@ Components:
       - future
       - future.callr
       - jrc
+      - RSQLite
+#       RSQLite is only needed for the walkthrough extract script
 #    Github:
 #      - anders-biostat/jrc
 #    To build properly, need to do externals after creating ve.lib!

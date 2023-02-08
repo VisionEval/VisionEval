@@ -110,27 +110,28 @@ print(dir(mini.defs,full.names=TRUE))
 mini <- openModel(basename(mini.dir))
 print(mini) # Still has no input files
 
-# Now lets use VEModel functions to tell us what the necessary inputs are.
+# Now let's use VEModel functions to tell us what the necessary inputs are.
 
 # Note that this strategy won't work if the baseModel has a complex InputPath
 #   (files in stage and scenario folders or otherwise distributed)
 # In that case, you probably want to use "insider information" to copy the files using
 #   File Explorer or an equivalent tool
 
-# Set the base model inputs directory
-# TODO: dir is not working right: inputs=TRUE should just list the
-# "inputs" directory/directories.
+# Locate the base model inputs directory
 base.inputs <- unique(baseModel$dir(inputs=TRUE,shorten=FALSE))
 
 # Get the list of inputs required in the mini script we set up earlier
 inputs <- mini$list(inputs=TRUE,details=c("FILE"))
 
 # Always need model_parameters.json
+
+# Note that "model_parameters.json" does not meet the formal definition of an "input" (i.e.
+# something explicitly used by modules in their specifications).
 required.files <- unique(file.path(base.inputs,c(inputs[,"FILE"],"model_parameters.json")))
 required.files <- required.files[which(file.exists(required.files))]
 
+message("Copying required files...")
 file.copy(from=required.files,to=mini.inputs)
-message("Copying model_parameters.json")
 
 # Re-open the mini model, applying the configuration changes
 # You need to do this explicitly (or implicitly by using openModel again) every time
@@ -138,8 +139,10 @@ message("Copying model_parameters.json")
 
 mini$configure()
 
-# list the inputs again showing that INPUTDIR is now the mini model inputs (previously NA)
+# list the inputs again showing that INPUTDIR is now the mini model
+# inputs (previously NA)
 inputs <- mini$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
+print(inputs)
 
 # List what is actually in the model's inputs directory using its own
 # "dir" function. Notice that the model directory is shown first;
@@ -157,7 +160,7 @@ required.exists <- file.exists(required.files)
 required.files <- sub( runtimeEnvironment()$ve.runtime, "", required.files )
 required.files <- data.frame(EXIST=ifelse(is.na(inputs$INPUTDIR),FALSE,required.exists),FILE=required.files)
 
-# The rRequired Files (all should EXIST)
+# The required Files (all should EXIST)
 print(unique(required.files))
 
 # Now let's see what we can do with the mini model

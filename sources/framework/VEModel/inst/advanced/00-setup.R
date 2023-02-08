@@ -1,9 +1,9 @@
 ### setup.R
 #   Set up the walkthrough environment
 #   It's harmless to run this again, but generally you should just
-#   let it auto-run by using "ve.test()" or (end-user runtime) "walkthrough()"
+#   let it auto-run by using "ve.test()" or (end-user runtime) "walkthrough"
 #   In dev environment, no parameters on ve.test() will load the walkthrough
-#   In runtime enviroment, "walkthrough()" will do the same (in walkthrough's own runtime)
+#   In runtime enviroment, "walkthrough" will do the same (in walkthrough's own runtime)
 
 local( {  # Wrapping in "local" will leave no new names in the user's environment
   # First part is redundant with standard developer or runtime setup
@@ -47,10 +47,4 @@ local( {  # Wrapping in "local" will leave no new names in the user's environmen
   message(walkthrough.action," walkthrough runtime directory:")
   setwd(walkthroughRuntime)
   message(getwd())
-  # Make sure there is a "Models" directory in the actual runtime folder
-  modelRoot <- file.path(
-    walkthroughRuntime,
-    visioneval::getRunParameter("ModelRoot") # Uses runtime configuration or default value "models"
-  )
-  if ( ! dir.exists(modelRoot) ) dir.create(modelRoot,recursive=TRUE,showWarnings=FALSE)
 } )

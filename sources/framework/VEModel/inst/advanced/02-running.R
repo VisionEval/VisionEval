@@ -6,7 +6,6 @@ require(VEModel)
 
 # Assuming you've done install.R and have some models around
 
-# Only need the following if you're in a new R session after doing 01-install.R
 mod <- openModel("VERSPM-run")
 print(mod) # Should say "Run complete"
 
@@ -30,6 +29,6 @@ mod.pop <- openModel("VERSPM-pop")
 
 mod.pop$run() # just run it - one stage at a time
 
-# Continue with 03-extract.R to learn about the parts of a VisionEval model
+# Continue with 03-structure.R to learn about the parts of a VisionEval model
 # See model-stages.R for more information on model stages
 # See scenarios.R for more information on scenarios

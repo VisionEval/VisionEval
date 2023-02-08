@@ -77,7 +77,7 @@ test_classic <- function(modelName="VERSPM-classic",clear=TRUE,log="info") {
   return(rs)
 }
 
-test_install <- function(modelName="VERSPM",variant="base",installAs="",log="info") {
+test_install <- function(modelName="VERSPM",variant="base",installAs="",overwrite=TRUE,confirm=FALSE,log="info") {
 
   if ( ! missing(log) ) logLevel(log)
 
@@ -88,15 +88,19 @@ test_install <- function(modelName="VERSPM",variant="base",installAs="",log="inf
     }
   }
 
-  if ( nzchar(modelName) && nzchar(variant) && nzchar(installAs) ) {
-    # TODO: create modelExists function? Still want to make people work to delete a model...
-    if ( dir.exists(file.path("models",installAs)) ) {
-      testStep(paste0("Clearing previous installation at ",installAs))
-      unlink(file.path("models",installAs), recursive=TRUE)
+  if ( nzchar(modelName)[1] && nzchar(variant)[1] && nzchar(installAs)[1] ) {
+    if ( dir.exists(existingModel <- file.path("models",installAs)) ) {
+      if ( overwrite ) {
+        testStep(paste0("Clearing previous installation at ",installAs))
+        unlink(file.path("models",installAs), recursive=TRUE)
+      } else {
+        rs <- openModel(existingModel)
+      }
     }
-
-    testStep(paste("Installing",modelName,"model variant",variant,"from package as",installAs))
-    rs <- installModel(modelName,variant=variant,modelPath=installAs,log=log,confirm=FALSE,overwrite=TRUE)
+    if (overwrite) {
+      testStep(paste("Installing",modelName,"model variant",variant,"from package as",installAs))
+      rs <- installModel(modelName,variant=variant,modelPath=installAs,log=log,confirm=confirm,overwrite=TRUE)
+    }
   } else {
     if ( nzchar(modelName) ) {
       testStep(paste0("Directory of available variants for ",modelName))
@@ -173,16 +177,20 @@ test_flatten <- function(log="info") {
   setwd(owd)
 }
 
-test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",reset=FALSE,log="info") {
+test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",reset=FALSE,log="info",confirm=FALSE) {
 
   if ( ! missing(log) ) logLevel(log)
   model.dir <- dir("models")
   if ( missing(modelName) || ! nzchar(modelName[1]) ) {
     return(model.dir)
   }
-  if ( ! modelName %in% model.dir ) {
-    reset <- TRUE
-    rs <- test_install(modelName=baseModel,variant=variant,installAs=modelName,log="info")
+  if ( ! modelName %in% model.dir || reset ) {
+    if ( modelName %in% model.dir ) {
+      reset <- TRUE
+      modelPath <- file.path("models",modelName)
+      unlink(modelPath,recursive=TRUE)
+    }
+    rs <- test_install(modelName=baseModel,variant=variant,installAs=modelName,log="info",confirm=confirm)
   }
 
   if ( ! reset ) {
@@ -667,10 +675,7 @@ test_load <- function(model=NULL, log="info" ) {
 
 test_select <- function( log="info" ) {
   testStep("Manipulate model selection to pick and retrieve fields")
-  mod <- openModel("VERSPM-pop") # use staged model to exercise DatastorePath
-  if ( ! mod$valid() ) {
-    stop("Install and run VERSPM, variant='pop'")
-  }
+  mod <- test_run("VERSPM-pop","VERSPM","pop")
   rs <- mod$results("stage-pop-future")
   if ( "VEResultsList" %in% class(rs) ) {
     rs <- rs$results()
@@ -700,16 +705,13 @@ test_results <- function (log="info") {
 
   testStep("Manipulate Model Results in Detail")
 
-  testStep("Copy model and get 'results' and 'selection' from empty model...")
-  mod <- openModel("VERSPM-pop") # use staged model to exercise DatastorePath
-  if ( ! mod$valid() ) {
-    stop("Install and run VERSPM, variant='pop'")
-  }
+  mod <- test_run("VERSPM-pop","VERSPM",var="pop") # use staged model to exercise DatastorePath
+
   if ( "COPY" %in% dir("models") ) unlink("models/COPY",recursive=TRUE)
-  cp <- mod$copy("COPY")
+  cp <- mod$copy("COPY") # Also copies results by default
   cat("Directory before clearing...\n")
   print(cp$dir())
-  cp$clear(force=TRUE,outputOnly=FALSE)
+  cp$clear(force=TRUE,outputOnly=FALSE) # Blow away all outputs
   cat("Directory after clearing...\n")
   print(cp$dir())
   cat("Results after clearing... (Generates error)\n")
@@ -718,13 +720,12 @@ test_results <- function (log="info") {
   cat("Selection after clearing...\n")
   sl <- rs$select()
   print(sl)
-  rm(cp)
+  rm(cp) # Should be no results
 
-  testStep("Pull out results and selection from mod (head 12)...")
+  testStep("Pull out results and selection from VERSPM-pop test model...")
   cat("Results...\n")
   rs <- mod$results()  # Gets results for final Reportable stage (only)
 
-  # TODO: rs may be a list of VEResults (not just a single object)?
   # Use case is mostly for doing queries over a set of scenarios...
   # Return a list if mod$results(all.stages=TRUE) or mod$results(stages=c(stage1,stage2)) with
   # length(stages)>1 : all reportable stages in that case.
@@ -819,6 +820,7 @@ test_build_query <- function(log="info",break.query=TRUE,reset=FALSE) {
   # If multiple==TRUE, copy the test model and its results a few times, then submit the
   # list of all the copies to VEQuery. Each column of results will be the same (see
   # test_scenarios for a run that will generate different results in each column).
+  # if break.query, do some deliberately bad stuff to see the error messages
 
   testStep("Set up Queries")
   testStep("Opening test model and caching its results...")
@@ -1180,11 +1182,11 @@ test_fullquery <- function(Force=TRUE,runModel=FALSE,queryName="Full-Query",log=
 test_addstages <- function(reset=FALSE,log="info") {
   # Merge this with test_scenario
   if ( ! missing(log) ) logLevel(log)
-  testStep("Acquiring test model")
-  mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",reset=reset)
-  print(mod)
-  qry <- mod$query("Test-Query")
-  print(qry)
+  testStep("Acquiring test model and test query")
+  # TODO: set up so we have a model and a suitable query
+  mod.setup <- test_build_query(reset=reset)
+  print(mod.setup$Model)
+  print(mod.setup$Query)
 
   testStep("Build multiple scenarios...")
   # Generate several copies of mod future year
@@ -1197,10 +1199,10 @@ test_addstages <- function(reset=FALSE,log="info") {
   #   to have all the scenarios be the same.
   stagePath.1 <- file.path(mod$modelPath,"Scenario-1")
   if ( ! dir.exists( stagePath.1 ) ) dir.create(stagePath.1)
+  cat("Adding Stage 1\n")
   mod$addstage(
     Name="Scenario-1",
     Dir="Scenario-1",
-    ModelDir=mod$modelPath, # TODO: Why do we need this?
     # TODO: InputPath = NULL, # from one of the category test scenarios
     Scenario="Scenario 1",
     Description="Same as original...",
@@ -1209,12 +1211,12 @@ test_addstages <- function(reset=FALSE,log="info") {
     Years=mod$setting("Years",stage="stage-pop-future"),
     ModelScript=mod$setting("ModelScript",stage="stage-pop-future")
   )
+  cat("Adding Stage 2\n")
   stagePath.2 <- file.path(mod$modelPath,"Scenario-2")
   if ( ! dir.exists( stagePath.2 ) ) dir.create(stagePath.2)
   mod$addstage(
     Name="Scenario-2",
     Dir="Scenario-2",
-    ModelDir=mod$modelPath,
     # TODO: InputPath = NULL, # from a different category test scenario
     Scenario="Scenario 2",
     Description="Same as original...",
@@ -1223,6 +1225,9 @@ test_addstages <- function(reset=FALSE,log="info") {
     Years=mod$setting("Years",stage="stage-pop-future"),
     ModelScript=mod$setting("ModelScript",stage="stage-pop-future")
   )
+
+  testStep("Model should have stages")
+  print(mod)
 
   # Force Reportable on stage-pop-future (auto-detect says no since
   # the other scenarios start from it).
@@ -1235,6 +1240,10 @@ test_addstages <- function(reset=FALSE,log="info") {
   mod$run() # runs with "continue" - will just do the newly added stages
 
   testStep("Query the model")
+
+  qry <- mod$query("Test-Query")
+  print(qry)
+
   # Make a list of VEResults objects from the VEModel list and run query on it
   qry$run(mod,Force=TRUE) # might be leftovers from another query test
   extract <- qry$extract()
@@ -1347,27 +1356,12 @@ test_scenarios <- function(
 ) {
   logLevel(log)
 
-  testStep(paste("Checking and installing scenario model"))
-  existingModel <- dir.exists(modelPath <- file.path("models","VERSPM-scenario"))
-  if ( install || ! existingModel ) {
-    if ( install && existingModel ) unlink(modelPath,recursive=TRUE)
-    cat( sep="", if ( existingModel) "Existing" else "Installing",":\n", modelPath, "\n" )
+  scenarioVariant <- if (useStages) "scenarios-ms" else "scenarios-cat"
+  scenarioModelName <- paste0("VERSPM-",scenarioVariant)
+  testStep(paste("Selecting, installing, and running scenarios as",if(useStages)"Model Stages"else"Scenario Combinations"))
 
-    # useStages==TRUE will do the model stage scenario, otherwise combinations
-    if ( ! existingModel  ) scenarioVariant <- if (useStages) "scenarios-ms" else "scenarios-cat"
-    mod <- installModel("VERSPM-scenario",variant=scenarioVariant,modelName="VERSPM",log=log,confirm=FALSE)
-  } else {
-    cat(sep="","Using existing model:\n",modelPath,"\n")
-    mod <- openModel("VERSPM-scenario")
-  }
-
-  if ( run ) {
-    testStep("Running model...")
-    mod$run()             # does nothing if existing model has "run complete status"
-  }
-  if ( mod$printStatus() != "Run Complete" ) {
-    stopTest("Scenario model is not yet run")
-  }
+  existingModel <- dir.exists(modelPath <- file.path("models",scenarioModelName))
+  mod <- test_run(scenarioModelName,baseModel="VERSPM",variant=scdenarioVariant,reset=install,log=log,confirm=FALSE)
 
   testStep("Loading scenario query")
   qr <- mod$query(querySpec) # Fails if model has not been run
@@ -1398,24 +1392,28 @@ test_scenarios <- function(
   )))
 }
 
-test_visual <- function(categories=TRUE,popup=FALSE,reset=FALSE,log="info") {
+test_visual <- function(popup=FALSE,reset=FALSE,log="info") {
+
+  scenarioVariant <- "scenarios-cat"
+  scenarioModelName <- paste0("VERSPM-",scenarioVariant)
+  testStep(paste("Selecting, installing, and running scenarios as Scenario Combinations"))
+
+  existingModel <- dir.exists(modelPath <- file.path("models",scenarioModelName))
+  mod <- test_run(scenarioModelName,baseModel="VERSPM",variant=scdenarioVariant,reset=install,log=log,confirm=FALSE)
 
   # Models need to have been created with test_install...
-  modelName <- if ( categories ) "test-VERSPM-scenarios-cat" else "test-VERSPM-scenarios-ms"
-  testStep(paste("Opening Model:",modelName))
-  mod <- openModel(modelName,log="warn") # presume the model opening is uncomplicated
-  print(mod)
-  testStep("Running Model")
-  mod$run()
   testStep("Opening Query")
   logLevel(log) # Now examine at requested log level
   qr <- mod$query( mod$query() )
   print(qr)
+
   testStep(paste0("Running Query, Force=",reset))
   results <- qr$run(Force=reset)
+
   testStep("Extracting Query (prints data.frame)")
   extract <- qr$extract(metadata=FALSE,exportOnly=TRUE)
   print( extract )
+
   testStep("Building visual data")
   jsonvars <- qr$visual(QueryResults=extract) # pure extraction return jsonvars
   if ( popup ) {

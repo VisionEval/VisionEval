@@ -67,7 +67,7 @@ mini.1$dir(results=TRUE, all.files=TRUE) # Now results for two stages
 #  combinations of inputs, where we are only interested in the model
 #  results
 # This mechanism is used internally to build "combination" scenarios
-# (see "scenarios.R" in the walkthrough)
+# (see "08-scenarios.R" in the walkthrough)
 
 # First we'll set up the inputs.
 # Need to do that first, since the InputPath won't be added if
@@ -126,7 +126,6 @@ rs <- mini.1$results()
 rs$extract() # runs "extract" on each model stage results
 print(mini.1$dir(outputs=TRUE,all.files=TRUE))
 
-# Check out "queries.R" in the walkthrough for how to summarize
+# Check out "07-queries.R" in the walkthrough for how to summarize
 # differences between stages / scenarios.
-
 

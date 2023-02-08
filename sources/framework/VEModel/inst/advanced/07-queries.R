@@ -20,8 +20,7 @@ print(vrb)
 
 qry <- vrb$query("Full-Query")
 qry$run() # vrb model is attached
-vrb$dir(output=TRUE,all.files=TRUE)
-shell.exec(file.path(vrb$modelPath,vrb$dir(output=TRUE,all.files=TRUE)[1]))
+vrb$dir(output=TRUE) # No "outputs" yet (just "results")
 
 # Extracting query outputs (use GeoType, GeoValue)
 q.results <- qry$extract(GeoType="Marea",GeoValues="RVMPO")
