@@ -615,7 +615,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
   # if "data" is true, include data columns. If false, only generate metadata (used, e.g., by the
   #   visualizer JSON generation function)
   # exportOnly, if TRUE, only includes metrics with the Export attribute set (conventionally to
-  #   TRUE, but we're considering only present/mssing)
+  #   TRUE, but we're considering only present/missing)
 
   Results <- self$results(Results) # generate list of valid VEQueryResults
   if ( length(Results)==0 ) {
@@ -676,6 +676,10 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
   } # TODO: verify that it works if we've accidentally filtered seekMeasures down to nothing
 
   # Build data.frame with requested measure results (filtered to specific GeoValues), and metadata
+  # TODO: let the user decide if they want scenarios in rows or columns.
+  # If rows, Model, Scenario, Description, Year, Geography are first columns, followed by measures
+  # If columns
+  
   results.df <- NULL
   Scenarios <- character(0)
   ScenarioYears <- character(0)
@@ -684,11 +688,14 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
     ScenarioName <- attr(value,"ScenarioName")
     Elements <- attr(value,"ScenarioElements")
     for ( year in names(value) ) {
+      # TODO: may want to push row/column orientation down into makeMeasureDataFrame
       theseResults <- makeMeasureDataframe(value[[year]],year,data,wantMetadata)
       writeLogMessage(paste("Results for",ScenarioName,"Year",year),Level="info")
       writeLogMessage(paste(theseResults$Measure,collapse=","),Level="info")
 
       # plus initial columns for first results are metadata if requested
+      # TODO: scenarios in rows does not easily support column metadata; need to
+      # spawn a different table for that.
       if ( is.null(results.df) ) {
         if ( wantMetadata && length(metadata>0) ) {
           results.df <- theseResults[,c("Measure",metadata)]
@@ -700,7 +707,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
         }
       }
       if ( data ) {
-        # Note: following line may add more than one column to results.df
+        # Note: following line may add more than one column (or row if scenarios in rows) to results.df
         results.df[paste(ScenarioName,as.character(year),sep=".")] <- theseResults$Value
         Scenarios <- c( Scenarios, ScenarioName ) # dupes if multiple years for scenarios
         ScenarioYears <- c( ScenarioYears, year )
@@ -708,6 +715,7 @@ ve.query.extract <- function(Results=NULL, Measures=NULL, Years=NULL, metadata=T
       } else break # Only gathering metadata
     }
     if ( ! data ) break # don't loop if not generating data
+    # TODO: do the metadata loop separately (different output file)
   }
   if ( is.null(results.df) ) results.df <- data.frame()
   if ( length(Scenarios)>0 ) {

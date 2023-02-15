@@ -1564,6 +1564,45 @@ test_06_scenarios <- function(
   )))
 }
 
+test_07_extrafields <- function(reset=FALSE,installSQL=TRUE,log="info") {
+  testStep("Will modify a version of VERSPM-base as VERSPM-export")
+  mod <- test_01_run("VERSPM-export",reset=reset,log=log)
+  testStep("Get existing geo.csv")
+  paramPath <- mod$setting("ParamPath",shorten=FALSE)
+  geoFile <- mod$setting("GeoFile")
+  geoPath <- file.path(paramPath,geoFile)
+  if ( ! file.exists(geoPath) ) stop("Failed to locate geo.csv")
+  Geo_df <- read.csv(geoPath, colClasses="character") # currently will only support character field extensions
+  print(names(Geo_df))
+  testStep("Tag half the Bzones randomly with a new label")
+  TagField <- sample(paste("Tag",1:2,sep="_"),nrow(Geo_df),replace=TRUE)
+  Geo_df$TagField <-TagField
+  write.csv(Geo_df,file.path(paramPath,geoFile),row.names=FALSE,na="NA")
+  testStep("Re-open the model and run it to add updated geography to Datastore")
+  mod <- openModel("VERSPM-export")
+  mod$run("reset",log=log)
+  testStep("See Global/Bzone/TagField in selection fields")
+  rs <- mod$results()
+  print( sl <- rs$find(Group="Global",Table="Bzone",select=TRUE) )
+  message("The framework query function requires joined tables to be in the same group...")
+  message("Three solutions are obvious:")
+  message(" (1) return data.frames from two group selections and merge/aggregate manually [needs R chops]")
+  message(" (2) fix visioneval::summarizeDatasets to add Group/Table structure to Tables specification [difficult]")
+  message(" (3) [Used Here] export to SQL and run a simple query there")
+  if ( ( ! require(DBI) || ! require(RSQLite) ) && installSQL ) {
+    install.into <- .libPaths()[1]     # Pick a better lib location if you have one
+    install.packages("DBI",lib=install.into)
+    require(DBI)
+    install.into <- .libPaths()[1]     # Pick a better lib location if you have one
+    install.packages("RSQLite",lib=install.into)
+    require(RSQLite)
+  }
+  df <- sl$extract()
+
+  testStep("Display table of query results")
+  return(mod)
+}
+
 test_08_visual <- function(popup=FALSE,reset=FALSE,log="info") {
 
   scenarioVariant <- "scenarios-cat"
@@ -1571,7 +1610,7 @@ test_08_visual <- function(popup=FALSE,reset=FALSE,log="info") {
   testStep(paste("Selecting, installing, and running scenarios as Scenario Combinations"))
 
   existingModel <- dir.exists(modelPath <- file.path("models",scenarioModelName))
-  mod <- test_run(scenarioModelName,baseModel="VERSPM",variant=scdenarioVariant,reset=install,log=log,confirm=FALSE)
+  mod <- test_01_run(scenarioModelName,baseModel="VERSPM",variant=scdenarioVariant,reset=install,log=log,confirm=FALSE)
 
   # TODO: Ensure models created with test_00_install...
   testStep("Opening Query")

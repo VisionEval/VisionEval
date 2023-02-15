@@ -1510,6 +1510,8 @@ checkGeography <- function(Geo_df) {
       )
     }
   }
+
+  #TODO: Complete or remove Czone implementation
   #Determine whether entries are correct if Bzones have been specified and
   #Czones are unspecified
   if (BzoneSpecified & !CzoneSpecified) {
@@ -1563,7 +1565,7 @@ checkGeography <- function(Geo_df) {
         "At least one Azone is assigned more than one Marea.")
     }
   }
-  #Return messages and
+  #Return messages and elements for ModelState
   Update_ls <- list(Geo_df = Geo_df, BzoneSpecified = BzoneSpecified,
     CzoneSpecified = CzoneSpecified)
   list(Messages = Messages_, Update = Update_ls)
@@ -1597,9 +1599,20 @@ checkGeography <- function(Geo_df) {
 #' @export
 initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) {
   G <- getModelState(envir=envir)
+
+  #Get FILE and INPUTDIR attribute for specifications
+  filename <- attr(G$Geo_df,"file")
+  if ( is.character(filename) ) {
+    FILE <- basename(filename)
+    INPUTDIR <- dirname(filename)
+  } else {
+    FILE <- INPUTDIR <- as.character(NA)
+  }
+
   #Make lists of zone specifications
   Mareas_ <- unique(G$Geo_df$Marea)
-  MareaSpec_ls <- list(MODULE = "visioneval",
+  MareaSpec_ls <- list(
+    MODULE = "visioneval",
     NAME = "Marea",
     TABLE = "Marea",
     TYPE = "character",
@@ -1607,9 +1620,14 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
     NAVALUE = "NA",
     PROHIBIT = "",
     ISELEMENTOF = "",
-    SIZE = max(nchar(Mareas_)))
+    SIZE = max(nchar(Mareas_)),
+    FILE = FILE,
+    INPUTDIR = INPUTDIR
+  )
+  
   Azones_ <- unique(G$Geo_df$Azone)
-  AzoneSpec_ls <- list(MODULE = "visioneval",
+  AzoneSpec_ls <- list(
+    MODULE = "visioneval",
     NAME = "Azone",
     TABLE = "Azone",
     TYPE = "character",
@@ -1617,10 +1635,15 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
     NAVALUE = "NA",
     PROHIBIT = "",
     ISELEMENTOF = "",
-    SIZE = max(nchar(Azones_)))
+    SIZE = max(nchar(Azones_)),
+    FILE = FILE,
+    INPUTDIR = INPUTDIR
+  )
+
   if(G$BzoneSpecified) {
     Bzones_ <- unique(G$Geo_df$Bzone)
-    BzoneSpec_ls <- list(MODULE = "visioneval",
+    BzoneSpec_ls <- list(
+      MODULE = "visioneval",
       NAME = "Bzone",
       TABLE = "Bzone",
       TYPE = "character",
@@ -1628,11 +1651,16 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
       NAVALUE = "NA",
       PROHIBIT = "",
       ISELEMENTOF = "",
-      SIZE = max(nchar(Bzones_)))
+      SIZE = max(nchar(Bzones_)),
+      FILE = FILE,
+      INPUTDIR = INPUTDIR
+    )
   }
+
   if(G$CzoneSpecified) {
     Czones_ <- unique(G$Geo_df$Czone)
-    CzoneSpec_ls <- list(MODULE = "visioneval",
+    CzoneSpec_ls <- list(
+      MODULE = "visioneval",
       NAME = "Czone",
       TABLE = "Czone",
       TYPE = "character",
@@ -1640,8 +1668,50 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
       NAVALUE = "NA",
       PROHIBIT = "",
       ISELEMENTOF = "",
-      SIZE = max(nchar(Czones_)))
+      SIZE = max(nchar(Czones_)),
+      FILE = FILE,
+      INPUTDIR = INPUTDIR
+    )
   }
+
+  # closure to create specification list for extra fields
+  getExtraGeoFields <- function(Geo_df) {
+    extraFields <- ! names(Geo_df) %in% c("Marea","Azone","Bzone","Czone")
+    extraFieldSpecs <- list()
+    fieldSpec <- list(
+      MODULE = "visioneval",
+      UNITS = "",
+      NAVALUE = "NA",
+      PROHIBIT = "",
+      ISELEMENTOF = "",
+      FILE = FILE,
+      INPUTDIR = INPUTDIR
+    )
+    for ( name in names(Geo_df)[extraFields] ) {
+      writeLog(paste("Extra field in geo.csv:",name),Level="info")
+      nameSpec <- fieldSpec
+      nameSpec$NAME <- name
+      nameSpec$SIZE <- max(nchar(Geo_df[[name]]))
+      Type <- mode(Geo_df[[name]])
+      if ( Type == "numeric" ) Type <- "double" # Probably either "character" or "double"
+      nameSpec$TYPE <- Type
+      extraFieldSpecs[[name]] <- nameSpec
+    }
+    return(extraFieldSpecs)
+  }
+
+  extraFieldSpecs <- getExtraGeoFields(G$Geo_df) # names other than "Marea","Azone","Bzone","Czone"
+
+  writeExtraFields <- function(Geo_df,extraFieldSpecs,Table,envir) {
+    GroupTable <- paste0("Global/",Table)
+    for ( name in names(extraFieldSpecs) ) { # Geo_df column names
+      Spec_ls <- extraFieldSpecs[[name]]
+      Spec_ls$TABLE = Table # Might be Azone or Bzone depending on smallest geography
+      writeToTable(Geo_df[[name]], Spec_ls, Group = "Global", Index = NULL, envir=envir)
+      writeLog(paste("Adding Field",name,"to",GroupTable),Level="info")
+    }
+  }
+
   #Initialize geography tables and zone datasets
   if (is.null(GroupNames)) GroupNames <- c("Global", G$Years)
   for (GroupName in GroupNames) {
@@ -1663,17 +1733,22 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
       writeToTable(G$Geo_df$Azone, AzoneSpec_ls, Group = GroupName, Index = NULL, envir=envir)
       MareaSpec_ls$TABLE = "Azone"
       writeToTable(G$Geo_df$Marea, MareaSpec_ls, Group = GroupName, Index = NULL, envir=envir)
+      if (GroupName=="Global") {
+        writeExtraFields(G$Geo_df,extraFieldSpecs,Table="Azone",envir=envir) # Writes to "Global/Azone" table
+      }
       #Write to Marea table
       MareaSpec_ls$TABLE = "Marea"
       writeToTable(Mareas_, MareaSpec_ls, Group = GroupName, Index = NULL, envir=envir)
-    }
-    if (G$BzoneSpecified & !G$CzoneSpecified) {
+    } else if (G$BzoneSpecified & !G$CzoneSpecified) {
       #Write to Bzone table
       writeToTable(G$Geo_df$Bzone, BzoneSpec_ls, Group = GroupName, Index = NULL, envir=envir)
       AzoneSpec_ls$TABLE = "Bzone"
       writeToTable(G$Geo_df$Azone, AzoneSpec_ls, Group = GroupName, Index = NULL, envir=envir)
       MareaSpec_ls$TABLE = "Bzone"
       writeToTable(G$Geo_df$Marea, MareaSpec_ls, Group = GroupName, Index = NULL, envir=envir)
+      if (GroupName=="Global") {
+        writeExtraFields(G$Geo_df,extraFieldSpecs,Table="Bzone",envir=envir) # Writes to "Global/Bzone" table
+      }
       #Write to Azone table
       AzoneGeo_df <- G$Geo_df[!duplicated(G$Geo_df$Azone),]
       AzoneSpec_ls$TABLE = "Azone"
@@ -1684,8 +1759,7 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
       #Write to Marea table
       MareaSpec_ls$TABLE = "Marea"
       writeToTable(Mareas_, MareaSpec_ls, Group = GroupName, Index = NULL, envir=envir)
-    }
-    if (G$CzoneSpecified) {
+    } else if (G$CzoneSpecified) {
       #Write to Czone table
       writeToTable(G$Geo_df$Czone, CzoneSpec_ls, Group = GroupName, Index = NULL, envir=envir)
       BzoneSpec_ls$TABLE = "Czone"
@@ -1717,6 +1791,8 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
   Message <- "Geography sucessfully added to datastore."
   writeLog(Message,Level="info")
   TRUE
+  # TODO: return the list of specifications used to create the geography
+  # TODO: include FILE as geo.csv and INPUTDIR as ParamPath
 }
 
 #LOAD MODEL PARAMETERS

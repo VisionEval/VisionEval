@@ -1937,7 +1937,7 @@ mergeDatastoreListings <- function(baseListing, addListing) {
 #' \code{copyDatastore} a visioneval framework datastore function that copies the
 #' Datastore associated with a ModelState_ls to another location.
 #'
-#' Use cases for this functionn are: (1) standalone copying of a Datastore (copies associated
+#' Use cases for this function are: (1) standalone copying of a Datastore (copies associated
 #'   ModelState and updates Datastore listing); (2) archiveDatastore (copies ModelState for item
 #'   being archived); (3) loadDatastore / LoadModel (uses ModelState whose Datastore is being
 #''  updated).
@@ -2000,7 +2000,7 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
       writeLog(paste0("Copy Datastore without Flattening ",ifelse(success,"Succeeded","Failed"),"."),Level="warn")
     }
     if ( ! success ) {
-      paths <- ModelState_ls$DatastorePath[1] # Only copy proximate Datastore (why this would work but not file.copy is mysteriaus...)
+      paths <- ModelState_ls$DatastorePath[1] # Only copy proximate Datastore (why this would work but not file.copy is mysterious...)
     }
   } else {
     paths <- rev(ModelState_ls$DatastorePath) # Copy all the elements from back up the path (overlay onto the oldest path element)
@@ -2035,7 +2035,7 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
       assignDatastoreFunctions(envir=readDS)
       ds <- ms$Datastore
 
-      # Make sure all the groups area present and accounted for
+      # Make sure all the groups are present and accounted for
       gtn <- strsplit(ds$groupname,"/") # May need to revise if groupname starts with /
       groups <- unlist(gtn[which(sapply(gtn,length)==1)])
       groupNotInDatastore <- ! groups %in% writeDS$ModelState_ls$Datastore$groupname
@@ -2061,7 +2061,7 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
           TableEntry <- which(ds$groupname == TableName)[1]                 # check source
           Length <- ds$attributes[[TableEntry]]$LENGTH                      # Get Length parameter
           if ( is.null(Length) ) {
-            writeLog("datastore.R circa #2054: Table LENGTH attribute is NULL",Level="error")
+            writeLog("datastore.R circa #2064: Table LENGTH attribute is NULL",Level="error")
             writeLog("enter debug browser (Q to quit)",Level="error")
             browser()
           }

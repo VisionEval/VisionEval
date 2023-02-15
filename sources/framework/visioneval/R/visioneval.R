@@ -871,8 +871,6 @@ prepareModelRun <- function(
       initDatastoreGeography(GroupNames = NewYears_)
       loadModelParameters(FlagChanges=TRUE)
       # FlagChanges: A bunch of warnings are printed if the model parameters changed
-      # TODO: Abandon ship if there are significant changes to the modelp parameters between
-      #       this model run and the earlier one that is being loaded.
     }
   }
 

@@ -331,16 +331,16 @@ ve.results.units <- function(selected=TRUE,display=NULL) {
 
 # ve.results.export just does ve.results.extract, but it sets saveResults=TRUE
 ve.results.export <- function(
-  saveTo=TRUE,
+  saveResults=TRUE,
   ... # dots are just passed through to extract (prefix, saveTo, select, convertUnits, data)
 ) {
-  return( self$extract(saveTo=saveTo,...) ) # makes saveTo "not missing"
+  return( self$extract(saveResults=saveResults,...) ) # forces saving
 }
 
 # saveResults, if TRUE, will save a file to the SaveTo location, with the indicated prefix, if any
 ve.results.extract <- function(
   saveResults=FALSE,
-  saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls), # if missing, don't save
+  saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls), # directory in which to save
   prefix = "",            # Label to further distinguish output files, if desired (setting also starts saving)
   select=NULL,            # replaces self$selection if provided
   convertUnits=TRUE,      # will convert if display units are present; FALSE not to attempt any conversion

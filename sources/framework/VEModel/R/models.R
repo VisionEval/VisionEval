@@ -1747,10 +1747,6 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
   #   The field specifications shown are just the ones accessed in that/those particular stages
   # If you call "list" multiple times, it will use cached results. If you change the model after
   # loading it, reset=TRUE will force a complete reload from the run_model.R script(s).
-  # TODO: Include only Reportable stages unless name specified. If a reportable stage is
-  #   requested, include the "StartFrom" tree for this stage as well. So augment the
-  #   stage list by including "StartFrom" stages for each named stage (or each
-  #   Reportable stage by default).
 
   if ( ! private$p.valid ) {
     writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
@@ -2579,6 +2575,9 @@ ve.model.results <- function(stage=character(0)) {
     # Extract from the list - works for everything
     # selections are problematic since they are tied to specific result sets
     extract <- function(stage=character(0),...) {
+      # TODO: beef this up to handle an output format/destination
+      # Create output tables, append results to them so a single set of tables
+      #   can accumulate results from all reportable stages.
       if ( length(stage)==0 ) stage<-names(results)
       for ( stg in stage ) {
         results[[stg]]$extract(...)
