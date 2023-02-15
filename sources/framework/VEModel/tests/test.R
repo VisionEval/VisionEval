@@ -1,3 +1,5 @@
+# Test functions for VEModel
+
 # Load required packages
 
 if ( ! requireNamespace("visioneval",quietly=TRUE) ) {
@@ -17,7 +19,8 @@ if ( ! requireNamespace("future.callr",quietly=TRUE) ) {
 }
 
 if ( ! "package:VEModel" %in% search() ) {
-  # Will be there already if running from test_setup.R inside VEModel package
+  # Will be there already if running from test_setup.R inside VEModel
+  # package or using pkgLoad via ve.test()
   message("Loading built VEModel package")
   require("VEModel",quietly=TRUE)
 }
@@ -30,74 +33,50 @@ testStep <- function(msg) {
   cat("",paste(msg,collapse="\n"),"",sep="\n")
 }
 
-stopTest <- function(msg) {
+stopTest <- function(msg="Stop Test") {
   stop(msg)
 }
 
-# TODO throughout: use test_install() as the standard method for creating
-# models. ALlow the user to keep earlier test runs (just create a name variant)
-# or to blow away what is already there (runs and all).
-
-# Check that we can source run_model.R to run a classic model
-test_classic <- function(modelName="VERSPM-classic",clear=TRUE,log="info") {
-
-  if ( ! missing(log) ) logLevel(log)
-
-  modelPath <- file.path("models",modelName)
-  owd <- getwd()
-  testStep(paste("Runtime is",owd))
-  on.exit(setwd(owd))
-
-  if ( dir.exists(modelPath) && clear ) {
-    testStep("Clearing model to start from scratch")
-    unlink(modelPath,recursive=TRUE)
-  } else {
-    testStep("Re-running existing installation")
-  }
-
-  if ( ! dir.exists(modelPath) ) {
-    testStep(paste("Installing classic VERSPM model from package as",modelName))
-    rs <- installModel("VERSPM",variant="classic",modelPath=modelName,log=log,confirm=FALSE)
-    modelName <- rs$modelName
-    rm(rs)  # Don't keep the VEModel around
-  }
-
-  testStep(paste("Running",modelName,"by sourcing scripts/run_model.R in",modelPath))
-
-  setwd(modelPath)
-  require(visioneval) # Put it on the search path for GetYears, RunModule, etc
-  source("run_model.R")
-  detach("package:visioneval") # But leave the namespace loaded
-
-  testStep("Reviewing model status")
-
-  setwd(owd)
-  rs <- openModel(modelName)
-  cat("Model Status:",rs$printStatus(),"\n")
-  return(rs)
+getModelDirectory <- function() { # hack to support pkgload which won't see the function as exported for some reason
+  return(
+    if ( ! "getModelDirectory" %in% getNamespaceExports("VEModel") ) {
+      # Hack to support pkgload from source folder which does not have a Namespace
+      if ( "package:VEModel" %in% search() ) {
+        vem <- as.environment("package:VEModel")
+        vem$getModelDirectory()
+      } else stop("package:VEModel failed to load!")
+    } else {
+      VEModel::getModelDirectory()
+    }
+  )
 }
 
-test_install <- function(modelName="VERSPM",variant="base",installAs="",overwrite=TRUE,confirm=FALSE,log="info") {
+# Basic installer test - also used later to wrap model installations for other tests
+test_00_install <- function(
+  modelName="VERSPM",variant="base",installAs="",
+  overwrite=TRUE,confirm=FALSE,log="warn"
+) {
 
-  if ( ! missing(log) ) logLevel(log)
+  logLevel(log)
 
   if ( ! nzchar(variant) ) variant <- ""
   if ( missing(installAs) || ! nzchar(installAs[1]) ) {
-    if ( nzchar(variant) && nzchar(modelName) ) {
-      installAs <- paste0("test-",modelName,"-",variant)
-    }
+    if ( all( nzchar(c(variant,modelName)) ) ) installAs <- paste0("test-",modelName,"-",variant)
   }
 
-  if ( nzchar(modelName)[1] && nzchar(variant)[1] && nzchar(installAs)[1] ) {
+  rs <- NULL
+  if ( all( nzchar( c(modelName[1],variant[1],installAs[1]) ) ) ) {
     if ( dir.exists(existingModel <- file.path("models",installAs)) ) {
       if ( overwrite ) {
         testStep(paste0("Clearing previous installation at ",installAs))
         unlink(file.path("models",installAs), recursive=TRUE)
+        overwrite <- TRUE
       } else {
-        rs <- openModel(existingModel)
+        message("install opens existing model")
+        rs <- openModel(existingModel,log=log)
       }
     }
-    if (overwrite) {
+    if ( overwrite || is.null(rs) ) {
       testStep(paste("Installing",modelName,"model variant",variant,"from package as",installAs))
       rs <- installModel(modelName,variant=variant,modelPath=installAs,log=log,confirm=confirm,overwrite=TRUE)
     }
@@ -107,7 +86,7 @@ test_install <- function(modelName="VERSPM",variant="base",installAs="",overwrit
     } else {
       testStep("Directory of available models")
     }
-    rs <- installModel(modelName=modelName,variant="")
+    rs <- installModel(modelName=modelName,variant="",log=log,private=TRUE)
   }
   # NOTE: pkgload bug - print.VEAvailableModels/Variants not recognized for class dispatch...
   if ( "VEAvailableModels" %in% class(rs) ) {
@@ -120,132 +99,261 @@ test_install <- function(modelName="VERSPM",variant="base",installAs="",overwrit
   return(invisible(rs))
 }
 
-test_all_install <- function(overwrite=FALSE,log="warn") {
+test_00_install_all <- function(listonly=FALSE,private=FALSE,overwrite=FALSE,log="warn") {
 
-  if ( ! missing(log) ) logLevel(log)
+  logLevel(log)
 
-  testStep("Installing all models")
-  models   <- test_install("")               # List available models by package
-  models   <- unique(models$Model)           # Vector of available model names
-  variants <- list(                          # List available variants
-    "VERSPM"   =test_install("VERSPM",var=""),
-    "VERPAT"   =test_install("VERPAT",var=""),
-    "VE-State" =test_install("VE-State",var="")
-  )
-  variants <- lapply(variants,function(v) v$Variant)
+  testStep("Listing all available Models and Variants")
+  models     <- installModel("")     # List available models by package
+  modelnames <- unique(models$Model) # Vector of available model names
+  
+  cat("Available models:\n")
+  print(models) # a data.frame
 
-  installed <- sapply(
-    models,
+  variants <- lapply(modelnames,
+    function(mn) {
+      installModel(mn,var="",private=private)
+    }
+  ) # returns list of data.frames
+  names(variants) <- modelnames
+
+  if ( listonly ) {
+    testStep("Available models and variants:")
+    print(variants)
+    return(invisible(variants))
+  }
+
+  testStep("Installing all available model variants")
+
+  openFirst <- missing(overwrite) # If model exists, open it and overwrite if not Run Complete
+  modelRoot <- getModelDirectory()
+  installed <- lapply(
+    modelnames,
     function(m) {
-      cat("\nInstalling model",m,"\n")
-      vars <- variants[[m]]
+      cat("Installing model variants for ",m,"\n",sep="")
+      vars <- variants[[m]]$Variant
       mods <- lapply(
         vars,
         function(v) {
-          cat("\nInstalling model",m,"variant",v,"\n")
-          model <- installModel(m,variant=v,confirm=FALSE,overwrite=overwrite)
+          installMsg <- "Installing"
+          cat("\n   Model",m," Variant",v,": ")
+          do.overwrite <- overwrite
+          modelPath <- paste("all-install",m,v,sep="-")
+          if ( ( openFirst || overwrite ) && dir.exists( file.path(modelRoot,modelPath) ) ) {
+            model <- openModel(modelPath)
+            if ( ! openFirst || ! model$valid() || model$printStatus() != "Run Complete" ) {
+              do.overwrite <- TRUE
+              installMsg <- paste0("Re-",installMsg)
+            } else {
+              cat(" Preserving run ('overwrite=TRUE' to remove)")
+              return(model)
+            }
+          }
+          # Not returning opened model - re-install it (overwriting if bad earlier effort)
+          cat(installMsg)
+          model <- installModel(
+            m,variant=v,
+            modelPath=modelPath,
+            confirm=FALSE,overwrite=do.overwrite,log=log
+          )
           return(model)
         }
       )
+      cat("\n\n")
       names(mods) <- sapply(mods,function(m)m$modelName)
       return(mods)
     }
   )
-  names(installed) <- models
-  return(installed)
+  names(installed) <- modelnames
+  cat("\nInstallation completed successfully.\n")
+  
+  # installed will be a list with elements for each model type (VERSPM, VERPAT, etc)
+  # each element is a list of opened (but not run) VEModel's for each model variant
+  testStep("Installed these models:")
+  print(installed)
+  return(invisible(installed))
 }
 
-test_flatten <- function(log="info") {
-  testStep("run staged model with database path")
-  vr <- openModel("VERSPM-pop")
-  if ( ! vr$valid() ) {
-    stop("Install and run VERSPM, variant='pop'")
+# Check that we can source run_model.R to run a classic model
+# Does direct installation (keep consistent with test_nn_install)
+test_01_classic <- function(modelName="VERSPM-classic",clear=TRUE,log="info") {
+
+  logLevel(log)
+
+  modelPath <- file.path("models",modelName)
+  owd <- getwd()
+  testStep(paste("Runtime is",owd))
+  on.exit(setwd(owd))
+
+  needInstall <- TRUE
+  if ( dir.exists(modelPath) && clear ) {
+    testStep("Clearing model to start from scratch")
+    unlink(modelPath,recursive=TRUE)
+  } else if ( dir.exists(modelPath) ) {
+    needInstall <- ! all( existingFiles <- file.exists(
+      file.path( modelPath, requiredFiles <- c(
+        "run_model.R",
+        "defs/geo.csv",
+        "defs/units.csv",
+        "defs/deflators.csv",
+        "inputs/azone_carsvc_characteristics.csv" # hoping that if one is there, all are
+      ) )
+    ) )
+    if ( ! needInstall ) {
+      testStep("Attempting to re-run without install")
+      unlink(dir(modelPath,pattern="^Log.*txt$",full.names=TRUE))
+      unlink(dir(modelPath,pattern="^Datastore.*",full.names=TRUE),recursive=TRUE)
+      unlink(dir(modelPath,pattern="^ModelState.*",full.names=TRUE))
+    } else {
+      message("Need to re-install due to missing files")
+      print(requiredFiles[ ! existingFiles ])
+      unlink(modelPath,recursive=TRUE) # leave nothing to chance
+    }
   }
-  vr$run(log=log) # use "continue" - won't re-run if already ucla luskin ocnference center
-  print(vr)
-  testStep("prepare receiving directory")
-  ToDir <- normalizePath("testFlatten")
-  if ( dir.exists(ToDir) ) unlink(ToDir,recursive=TRUE)
-  dir.create(ToDir)
-  ms <- tail(vr$modelStages,1)[[1]]
-  assign("ModelState_ls",ms$ModelState_ls,envir=visioneval::modelEnvironment(Clear="test_flatten"))
-  modelPath <- ms$RunPath
-  owd <- setwd(modelPath) # so we can find the datastore to copy
-  on.exit(setwd(owd))     # return to original directory even on failure
-  print( c(ls(visioneval::modelEnvironment()),modelPath,ToDir) )
-  visioneval::copyDatastore(ToDir,Flatten=c(TRUE,TRUE))
+  if ( needInstall ) {
+    testStep(paste("Installing classic VERSPM model from package as",modelName))
+    rs <- test_00_install(
+      "VERSPM",variant="classic",installAs=modelName,
+      log=log,overwrite=clear,confirm=FALSE
+    )
+    modelName <- rs$modelName
+    rm(rs)  # Don't keep the VEModel around - will run manually below
+  }
+
+  testStep(paste("Running",modelName,"by sourcing scripts/run_model.R in",modelPath))
+
+  # Note that requiring visioneval explicitly is needed to run a classic model
+  # due to explicit dependencies in the run_model.R script. New-style models handle
+  # that internally.
+  setwd(modelPath)
+  require(visioneval) # Put it on the search path for GetYears, RunModule, etc
+  source("run_model.R")
+  detach("package:visioneval") # But leave the namespace loaded
+
+  testStep("Reviewing model status (will get confused by incomplete RunParam_ls)")
+
   setwd(owd)
+  rs <- openModel(modelName)
+  cat("Model Status:",rs$printStatus(),"\n")
+  return(rs)
+  # return model object for further analysis (can be re-run in VEModel environment)
+  # rs$run() will ignore classic results and construct a "results" directory,
+  #   which makes the "classic" model slightly "post-modern"
 }
 
-test_run <- function(modelName="VERSPM-base",baseModel="VERSPM",variant="base",reset=FALSE,log="info",confirm=FALSE) {
+# This test is also used internally later to make sure a model run is available
+# for things like extracting results or running queries.
 
-  if ( ! missing(log) ) logLevel(log)
+test_01_run <- function(
+  modelName="VERSPM-base",baseModel="VERSPM",variant="base",
+  reset=FALSE,log="info",confirm=FALSE
+) {
+  logLevel(log)
   model.dir <- dir("models")
-  if ( missing(modelName) || ! nzchar(modelName[1]) ) {
+  if ( all(c(missing(modelName),missing(baseModel))) ) {
+    message("Choose a model to run, or name a new one to install")
     return(model.dir)
   }
+  if ( missing(modelName) ) modelName <- paste(baseModel,variant,sep="-")
   if ( ! modelName %in% model.dir || reset ) {
     if ( modelName %in% model.dir ) {
       reset <- TRUE
       modelPath <- file.path("models",modelName)
       unlink(modelPath,recursive=TRUE)
     }
-    rs <- test_install(modelName=baseModel,variant=variant,installAs=modelName,log="info",confirm=confirm)
+    mod <- test_00_install(modelName=baseModel,variant=variant,installAs=modelName,log="warn",confirm=confirm)
   }
 
   if ( ! reset ) {
     testStep(paste("Attempting to re-open existing model:",modelName))
-    rs <- openModel(modelName)
-    if ( rs$overallStatus != codeStatus("Run Complete") ) {
-      print(rs)
+    mod <- openModel(modelName,log=log)
+    if ( mod$overallStatus != codeStatus("Run Complete") ) {
+      print(mod)
+      message("\nModel is not Complete; Rebuilding...")
       reset <- TRUE
-      message("\nStage is not Complete; Rebuilding model")
     } else {
       message("Returning existing model run")
     }
   }
   if (reset) {
-    rs <- openModel(modelName)
-    testStep(paste("Running model",rs$modelName))
-    rs$run(run="reset",log=log) # clears results directory
+    mod <- openModel(modelName,log=log)
+    testStep(paste("Running model with 'reset'",mod$modelName))
+    mod$run(run="reset",log=log) # clears results directory
   }
-  return(rs)
+  return(mod)
 }
 
-# Test model runs through basic model configuration
+test_01A_flatten <- function(useResults=FALSE, log="info") {
+  logLevel(log)
+
+  testStep("Flatten Datastore (Low-level test)")
+  message("Ensure staged model is available (with DatastorePath)")
+  vr <- test_01_run("VERSPM-pop","VERSPM","pop",log=log)
+  print(vr)
+
+  testStep("prepare receiving directory")
+  ToDir <- normalizePath("testFlatten")
+  if ( dir.exists(ToDir) ) {
+    if ( useResults ) {
+      rs <- openResults(ToDir)
+      if ( rs$valid() ) {
+        return(rs)
+      }
+    }
+    unlink(ToDir,recursive=TRUE)
+  }
+  if ( ! dir.exists(ToDir) ) dir.create(ToDir)
+
+  testStep(paste("Flattening Datastore"))
+  ms <- tail(vr$modelStages,1)[[1]]
+  assign("ModelState_ls",ms$ModelState_ls,envir=visioneval::modelEnvironment(Clear="test_01A_flatten"))
+  modelPath <- ms$RunPath
+  owd <- setwd(modelPath) # so we can find the datastore to copy
+  on.exit(setwd(owd))     # return to original directory even on failure
+  message("Flatten Parameters")
+  print( c(ls(visioneval::modelEnvironment()),modelPath,ToDir) )
+  visioneval::copyDatastore(ToDir,Flatten=c(TRUE,TRUE))
+  message("Directory after flattening")
+  print(dir(ToDir)) # Should now have the flattened datastore and modelstate
+  
+  testStep("Return flattened Datastore as a VEResults object")
+  results <- openResults(ToDir)
+  print(results)
+  setwd(owd)
+  return(results)
+}
+
+# test_02_model runs through basic model configuration "by hand"
 # oldstyle creates defs/run_parameters.json; if not oldstyle, create visioneval.cnf
-# reset forces the base model to rebuild (no special reason to do that; the base model
-#  need not have been run).
 # modelName is the particular variant of VERSPM to use as a base. The base model MUST
 #  be a version of VERSPM since we use its first two modules to create the "Bare" model
 # log="warn" will confine to a streamlined list of log messages like what a regular user
 #  would see. "info" gives lots of gory details.
-test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log="info", brief=FALSE) {
+# brief=TRUE conducts some deeper tests.
+test_02_model <- function(modelName="VERSPM-Test", oldstyle=FALSE, log="info", brief=FALSE) {
 
   if ( ! missing(log) ) logLevel(log)
 
   cat("*** Test Model Management Functions ***\n")
   options(warn=2) # Make warnings into errors...
 
-  testStep("open (and maybe run) the full test version of VERSPM")
-  due.to <- "reset request"
+  testStep("open the full test version of VERSPM")
+  reinstall <- FALSE
   if ( modelName %in% openModel() ) {
     mod <- openModel(modelName)
-    if ( ! mod$overallStatus == codeStatus("Run Complete") ) {
-      reset = TRUE
-      due.to = paste("status",mod$printStatus())
-    }
-  } else {
-    reset = TRUE
-    due.to = paste(modelName,"doesn't exist")
+    if ( ! mod$valid() ) reinstall <- TRUE
+  } else reinstall <- TRUE
+  if ( reinstall ) {
+    mod <- test_00_install(modelName="VERSPM",variant="base",installAs=modelName,overwrite=FALSE,confirm=FALSE,log=log)
   }
-  if ( isTRUE(reset) ) {
-    cat("Re-running model due to",due.to,"\n")
-    mod <- test_run(modelName=modelName,baseModel="VERSPM",variant="base",reset=TRUE,log=log)
-  }
+
   if (! "VEModel" %in% class(mod) ) {
+    message("Hmm: ",modelName," is not a VEModel")
     return(mod)
-  } else print(mod,details=TRUE)
+  } else {
+    message("We'll mine this model for sample inputs")
+    print(mod,details=TRUE)
+  }
 
   testStep("Gather base model parameters")
   base.dir <- mod$modelPath
@@ -295,9 +403,7 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
 
   testStep(paste0("Create configuration: ",if (oldstyle) "defs/run_parameters.json" else "visioneval.cnf"))
 
-  # Create run_model.R script (two variants)
   # Create model-specific configuration
-  # TODO: does the "unboxing" also work for yaml?
   runConfig_ls <-  list(
       Model       = jsonlite::unbox("BARE Model Test"),
       Scenario    = jsonlite::unbox("Test"),
@@ -339,28 +445,18 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
   #   if the file does not exist on the model's InputPath (which is the case
   #   for the bare model).
 
-  base.inputs <- unique(mod$dir(inputs=TRUE,showRootDir=FALSE)) # List short names of input paths for each stage
-  cat("Base Inputs",base.inputs,"\n")
-  base.inputs <- unique(mod$dir(inputs=TRUE,shorten=FALSE)) # Now get the full path name for inputs
-  inputs <- bare$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
+  base.inputs <- unique(mod$dir(inputs=TRUE,all.files=TRUE,showRootDir=FALSE)) # List short names of input paths for each stage
+  cat("Base Inputs",base.inputs,collapse="\n",sep="\n")
+  base.inputs <- unique(mod$dir(inputs=TRUE,all.files=TRUE,shorten=FALSE)) # Now get the input directory path names for inputs
+  inputs <- bare$list(inputs=TRUE,details=c("FILE","INPUTDIR"),reset=TRUE) # reset: Opening it before made a "dud" ModelState_ls
   cat("Input Directories (should be NA - files don't exist yet):\n")
   print( unique(inputs[,"INPUTDIR"]) )
   # INPUTDIR will be NA since files don't exist
   # INPUTDIR is where it actually found the files,
-  #   versus INPUTPATH (which is all the places they might be)
-  required.files <- unique(file.path(base.inputs,inputs[,"FILE"]))
+  #   versus INPUTPATH (which is all the places they might be
+  required.files <- unique(sapply(inputs[,"FILE"],function(f) grep(paste0(f,"$"),base.inputs)))
+  required.files <- base.inputs[ required.files ]
   required.files <- required.files[which(file.exists(required.files))]
-  cat("Required Files:\n")
-  print(basename(required.files))
-
-  testStep("Copy model parameters to 'inputs' - could also be in 'defs')")
-
-  # Inputs for sample modules: CreateHouseholds and PredictWorkers
-  # Historically, model_parameters.json was in ParamDir; the framework will
-  #   look in both ParamDir and InputDir; sample model has it in InputDir
-  from <- file.path(base.inputs,"model_parameters.json")
-  file.copy(from=from,to=bare.inputs) # or copy to bare.defs...
-  print(dir(bare.inputs))
 
   testStep(paste("Copy required input files from",mod$modelName))
 
@@ -369,6 +465,15 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
   file.copy(from=from, to=bare.inputs )
   print(bare.inputs)
   print(dir(bare.inputs,full.names=TRUE))
+
+  testStep("Copy model parameters to 'inputs' - could also be in 'defs')")
+
+  # Inputs for sample modules: CreateHouseholds and PredictWorkers
+  # Historically, model_parameters.json was in ParamDir; the framework will
+  #   look in both ParamDir and InputDir; sample model has it in InputDir
+  from <- base.inputs[ grep("model_parameters.json$",base.inputs) ]
+  file.copy(from=from,to=bare.inputs) # or copy to bare.defs...
+  print(dir(bare.inputs))
 
   testStep("Re-open the bare model")
   bare$configure()
@@ -384,7 +489,7 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
 
   testStep("run the bare model")
 
-  bare$run() # no results yet - it will try to 'continue' then 'reset' if not 'Complete'
+  bare$run() # no results yet - it will try to 'continue' then 'reset' if not 'Run Complete'
 
   if ( brief ) {
     testStep("Skipping deeper tests")
@@ -399,7 +504,7 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
 
   updateSetup(
     bare$modelStages[[1]],
-    Source="test.R/test_model()",
+    Source="test.R/test_02_model()",
     Scenario="Run with save",
     Description="This run will save prior results"
   )
@@ -412,12 +517,12 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
 
   updateSetup(
     bare$modelStages[[1]],
-    Source="test.R/test_model()",
+    Source="test.R/test_02_model()",
     Scenario="Run with 'continue'",
     Description="This run should not do anything"
   )
   bare$run(run="continue") # examine last run status and don't run if "Complete"
-  print(bare$dir(root=TRUE,results=TRUE))
+  print(bare$dir(root=TRUE,results=TRUE,archive=TRUE))
   cat("Log path should be the same as previous run:\n")
   print(bare$log())
   
@@ -425,13 +530,13 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
 
   updateSetup(
     bare$modelStages[[1]],
-    Source="test.R/test_model()",
+    Source="test.R/test_02_model()",
     Scenario="Run with 'reset'",
     Description="This run should rebuild current results but not change archived list"
   )
   bare$run(run="reset") # Should regenerate just the unarchived results
   cat("Results should still have one saved version plus the current results:\n")
-  print(bare$dir(results=TRUE))
+  print(bare$dir(results=TRUE,archive=TRUE))
   cat("Log path should be new compared to latest run:\n")
   print(bare$log())
 
@@ -443,13 +548,17 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
 
   testStep("extract model results, show directory")
   br <- bare$results()
+  print(br)
   br$extract(prefix="BareTest")
+  # Or use br$extract(saveResults=TRUE)
+  # Or use br$export, which does not require arguments to save
+  # br$extract() just returns a list of data.frames...
 
   cat("Directory:\n")
   print(bare$dir(output=TRUE,all.files=TRUE))
 
   testStep("clear the bare model extracts")
-  cat("Interactive clearing:\n")
+  cat("Interactive clearing of outputs (not results):\n")
   bare$clear(force=!interactive())
 
   testStep("model after clearing outputs...")
@@ -462,6 +571,7 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
   testStep("copy a model (includes results and outputs)")
   cp <- bare$copy("BARE-COPY")
   print(cp)
+  cat("Model directory of BARE-COPY")
   print(cp$dir())
 
   testStep("Forcibly clear results from model copy")
@@ -491,7 +601,9 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
   print(cp$dir(all.files=TRUE))
 
   testStep("Delete model in file system")
+  cat("The model:\n")
   print(cp)
+  cat("All current models:\n")
   print(dir("models"))
   cat("Unlinking",cp$modelName,"\n")
   unlink(file.path("models",cp$modelName),recursive=TRUE)
@@ -506,13 +618,13 @@ test_model <- function(modelName="Test-VERSPM", oldstyle=FALSE, reset=FALSE, log
   return(bare)
 }
 
-test_multicore <- function(model=NULL, log="info", workers=3) {
+test_02_multicore <- function(model=NULL, log="info", workers=3) {
 
   logLevel(log)
 
   testStep("Finding BARE model template")
   if ( is.null(model) ) {
-    model <- test_model("JRSPM",brief=TRUE,log=log) # skip the deeper tests, return BARE model
+    model <- test_02_model(brief=TRUE,log=log) # skip the deeper tests, use BARE model
   } else {
     print(model)
   }
@@ -520,7 +632,7 @@ test_multicore <- function(model=NULL, log="info", workers=3) {
   testStep("Copy model...")
   modelPath <- file.path("models","CORE-test")
   if ( dir.exists(modelPath) ) unlink(modelPath,recursive=TRUE)
-  coreModel <- model$copy("CORE-test",copyResults=FALSE,log=log)
+  coreModel <- model$copy("CORE-test",copyResults=FALSE)
   print(coreModel)
 
   testStep("Create CORE-base stage")
@@ -540,7 +652,7 @@ test_multicore <- function(model=NULL, log="info", workers=3) {
 
   testStep("Run the CORE-test model inline")
   coreModel$plan("inline")   # "sequential" maps over to the same thing
-  coreModel$run()            # should look identical to test_model run and BARE-test
+  coreModel$run()            # should look identical to test_model run and BARE
   # In particular, you should see the Logfile scrolling past "live"
   print(coreModel)
 
@@ -562,12 +674,6 @@ test_multicore <- function(model=NULL, log="info", workers=3) {
   }
   cat("Show model with new stages\n")
   print(coreModel)
-
-#   testStep("Run model with sequential to check")
-#   coreModel$plan("inline")
-#   coreModel$run("continue")
-# 
-#   stopTest("Done checking stage runs")
 
   logLevel(log=log)
 
@@ -592,139 +698,10 @@ test_multicore <- function(model=NULL, log="info", workers=3) {
   return(invisible(coreModel))
 }
 
-test_load <- function(model=NULL, log="info" ) {
-  # Tests the LoadModel functionality (pre-load Datastore and then
-  #   execute additional steps from the copied data.all
-  testStep("Finding BARE model template")
-  if ( is.null(model) ) {
-    model <- test_model("JRSPM",brief=TRUE,log=log) # skip the deeper tests
-    model$run(log=log)                      # run it anyway (default="continue" does nothing)
-  }
-  testStep("Copy model...")
-  modelPath <- file.path("models","LOAD-test")
-  if ( dir.exists(modelPath) ) unlink(modelPath,recursive=TRUE)
-  loadModelName <- "LOAD-test"
-  loadModel <- model$copy(loadModelName,copyResults=FALSE)
-  print(loadModel)
-  testStep("Set up load script...")
-  baseModelPath <- loadModel$setting("ModelDir",shorten=FALSE)
-  runModelFile <- file.path(
-    baseModelPath,
-    loadModel$setting("ModelScript")
-  )
-  runModel_vc <- c(
-    '',
-    'for(Year in getYears()) {',
-    'runModule("AssignLifeCycle","VESimHouseholds",RunFor = "AllYears",RunYear = Year)',
-    'runModule("PredictIncome", "VESimHouseholds", RunFor = "AllYears", RunYear = Year)',
-    'runModule("PredictHousing", "VELandUse", RunFor = "AllYears", RunYear = Year)',
-    'runModule("LocateEmployment", "VELandUse", RunFor = "AllYears", RunYear = Year)',
-    'runModule("AssignLocTypes", "VELandUse", RunFor = "AllYears", RunYear = Year)',
-    '}'
-  )
-  cat(runModelFile,paste(runModel_vc,collapse="\n"),sep="\n")
-  writeLines(runModel_vc,con=runModelFile)
-
-  testStep("Configure LoadModel")
-  # We'll just do it from scratch rather than reading/modifying
-  # Region, BaseYear and Years don't change
-  runConfig_ls <-  list(
-    Model       = jsonlite::unbox("LOAD Model Test"),
-    Scenario    = jsonlite::unbox("Test LoadModel / LoadDatastore"),
-    Description = jsonlite::unbox("Add a step onto a different previous model"),
-    Region      = jsonlite::unbox(model$setting("Region")),
-    BaseYear    = jsonlite::unbox(model$setting("BaseYear")),
-    Years       = loadModel$setting("Years"),
-    LoadModel   = jsonlite::unbox(model$modelPath) # could be any form accepted by openModel
-    # Could also set LoadStage (last Reportable stage is used by default)
-  )
-  configFile <- file.path(baseModelPath,"visioneval.cnf")
-  yaml::write_yaml(runConfig_ls,configFile)
-
-  testStep(paste("Reload model",loadModelName," with LoadDatastore"))
-  loadModel <- openModel(loadModelName,log=log)
-
-  testStep("Copy additional inputs")
-  base.model <- openModel("JRSPM")
-  base.inputs <- base.model$setting("InputPath",shorten=FALSE)
-  
-  cat("Base Inputs",base.inputs,"\n")
-  inputs <- loadModel$list(inputs=TRUE,details=c("FILE","INPUTDIR"))
-  required.files <- unique(file.path(base.inputs,inputs[,"FILE"]))
-  required.files <- required.files[which(file.exists(required.files))]
-  cat("Required Files:\n")
-  print(basename(required.files))
-
-  testStep("Copying additional input files")
-  bare.inputs <- file.path(loadModel$setting("InputPath",shorten=FALSE))
-  testStep("Remove base model inputs - will just have new ones")
-  unlink(bare.inputs,recursive=TRUE)
-  dir.create(bare.inputs)
-  from <- required.files
-  file.copy(from=from, to=bare.inputs )
-
-  testStep("Copy model parameters to 'inputs' - could also be in 'defs')")
-  from <- file.path(base.inputs,"model_parameters.json")
-  file.copy(from=from,to=bare.inputs) # or copy to bare.defs...
-  print(dir(bare.inputs))
-
-  testStep("Run model, loading datastore")
-  loadModel$run("reset",log=log)
-  return(loadModel)
-}
-
-test_select <- function( log="info" ) {
-  testStep("Manipulate model selection to pick and retrieve fields")
-  mod <- test_run("VERSPM-pop","VERSPM","pop")
-  rs <- mod$results("stage-pop-future")
-  if ( "VEResultsList" %in% class(rs) ) {
-    rs <- rs$results()
-    rs <- rs[length(rs)]
-  }
-  testStep("Directly access results using 'find'")
-  cat("Result has",length(find <- rs$find()),"fields\n") # All the fields...
-  print(head(find$fields(),n=10)) # First 10 or so field descriptors
-  testStep("Access the selection")
-  sl <- rs$select()
-  cat("Fields to select from:",length(sl$fields()),"\n")
-  testStep("Finding Worker table for 2038")
-  print(sl$find(Group="2038",Table="Worker"))
-  testStep("Finding Worker table for 2038 straight from the results")
-  wkr <- sl$find(Group="2038",Table="Worker") 
-  print(wkr)
-  testStep("Selecting Worker table and extracting to a data.frame")
-  rs$select(wkr)
-  wrk.table <- rs$extract(saveTo=FALSE)[[1]] # only one table returned in a list
-  print(wrk.table[sample(nrow(wrk.table),10),])
-  return(rs)
-}
-
-test_results <- function (log="info") {
-
-  if ( ! missing(log) ) logLevel(log)
+# results parameter if provided should be a VEResults object
+test_03_results <- function (existingResults=FALSE,log="info") {
 
   testStep("Manipulate Model Results in Detail")
-
-  mod <- test_run("VERSPM-pop","VERSPM",var="pop") # use staged model to exercise DatastorePath
-
-  if ( "COPY" %in% dir("models") ) unlink("models/COPY",recursive=TRUE)
-  cp <- mod$copy("COPY") # Also copies results by default
-  cat("Directory before clearing...\n")
-  print(cp$dir())
-  cp$clear(force=TRUE,outputOnly=FALSE) # Blow away all outputs
-  cat("Directory after clearing...\n")
-  print(cp$dir())
-  cat("Results after clearing... (Generates error)\n")
-  rs <- cp$results()
-  print(rs)
-  cat("Selection after clearing...\n")
-  sl <- rs$select()
-  print(sl)
-  rm(cp) # Should be no results
-
-  testStep("Pull out results and selection from VERSPM-pop test model...")
-  cat("Results...\n")
-  rs <- mod$results()  # Gets results for final Reportable stage (only)
 
   # Use case is mostly for doing queries over a set of scenarios...
   # Return a list if mod$results(all.stages=TRUE) or mod$results(stages=c(stage1,stage2)) with
@@ -732,6 +709,37 @@ test_results <- function (log="info") {
   # An individual stage can also be called out explicitly (and in that case, it does not
   #   need to be Reportable).
 
+  rs <- if ( ! existingResults ) {
+    logLevel("warn")
+    mod <- test_01_run("VERSPM-pop","VERSPM",var="pop",log="warn") # use staged model to exercise DatastorePath
+    # Testing model copy
+    cat("Copying model...\n")
+    if ( "COPY" %in% dir("models") ) unlink("models/COPY",recursive=TRUE)
+    cp <- mod$copy("COPY") # Also copies results by default
+    cat("Directory before clearing...\n")
+    print(cp$dir())
+    cp$clear(force=TRUE,outputOnly=FALSE) # Blow away all outputs
+    cat("Directory after clearing...\n")
+    print(cp$dir())
+    cat("Results after clearing... (Generates error)\n")
+    rs <- cp$results()
+    print(rs)
+    cat("Selection after clearing...\n")
+    sl <- rs$select()
+    print(sl)
+    rm(cp) # Should be no results
+
+    testStep("Pull out results and selection from VERSPM-pop test model...")
+    cat("Results...\n")
+    mod$results()  # Gets results for final Reportable stage (only)
+  } else {
+    # Don't use the flatten test if you want to test DatastorePath changes
+    mod <- NULL
+    test_01A_flatten(useResults=TRUE,log="warn") # May take a while if we haven't flattened it yet
+  }
+  logLevel(log)
+
+  cat("Results:\n")
   print(rs)
   cat("Selection...\n")
   sl <- rs$select() # Get full field list
@@ -768,12 +776,22 @@ test_results <- function (log="info") {
   un <- rs$list(details=TRUE)[,c("Group","Table","Name","Units")]
   spd <- un[ grepl("MI/",un$Units)&grepl("sp",un$Name,ignore.case=TRUE), ]
   spd$DisplayUnits <- "MI/HR"
-  cat("Writing display_units.csv into ")
-  display_units_file <- file.path(
+  cat("Writing display_units.csv\n")
+  display_units_file <- if ( is.null(mod) ) {
+    # just write it into the runtime directory (getwd())
+    message("No model: display_units in runtime directory")
+    file.path(
+      runtimeEnvironment()$ve.runtime, # VEModel function
+      visioneval::getRunParameter("DisplayUnitsFile",Param_ls=mod$RunParam_ls)
+    )
+  } else {
+    message("Model provided: display_units in ParamDir")
+    file.path(
       mod$modelPath,
       visioneval::getRunParameter("ParamDir",Param_ls=mod$RunParam_ls),
       visioneval::getRunParameter("DisplayUnitsFile",Param_ls=mod$RunParam_ls)
     )
+  }
   cat(display_units_file,"\n")
   write.csv(spd,file=display_units_file)
 
@@ -799,32 +817,76 @@ test_results <- function (log="info") {
   testStep("Exporting speed fields using DATASTORE units")
   sl$export(prefix="Datastore",convertUnits=FALSE)  # Using DATASTORE units
 
-  testStep("Model directory")
-  print(mod$dir())
+  if ( ! is.null(mod) ) {
+    testStep("Model directory")
+    print(mod$dir())
 
-  testStep("Model directory of results")
-  print(mod$dir(results=TRUE))
-  
-  testStep("Model directory of outputs")
-  print(mod$dir(outputs=TRUE))
-  
-  testStep("Interactively clear outputs but leave results")
-  mod$clear(outputOnly=TRUE, force=FALSE)
+    testStep("Model directory of results")
+    print(mod$dir(results=TRUE))
 
-  testStep("Directory after clearing")
-  mod$dir()
+    testStep("Model directory of outputs")
+    print(mod$dir(outputs=TRUE))
+
+    testStep("Interactively clear outputs but leave results")
+    mod$clear(outputOnly=TRUE, force=FALSE)
+
+    testStep("Directory after clearing")
+    print(mod$dir())
+  } else {
+    testStep("Outputs written to runtime directory")
+    print(getwd())
+    print(dir())
+    message("Contents of outputs directory")
+    print(dir("outputs"))
+  }
+  return(rs) 
 }
 
-test_build_query <- function(log="info",break.query=TRUE,reset=FALSE) {
+test_03_select <- function( log="info" ) {
+
+  logLevel(log)
+
+  testStep("Manipulate model selection to pick and retrieve fields")
+  mod <- test_01_run("VERSPM-pop","VERSPM","pop")
+  rs <- mod$results("stage-pop-future")
+  if ( "VEResultsList" %in% class(rs) ) {
+    rs <- rs$results()    # get an actual list
+    rs <- rs[length(rs)]  # get the last element of that list, as a list
+  }
+
+  testStep("Directly access results using 'find'")
+  cat("Result has",length(find <- rs$find()),"fields\n") # All the fields...
+  print(head(find$fields(),n=10)) # First 10 or so field descriptors
+
+  testStep("Access the selection")
+  sl <- rs$select()
+  cat("Fields to select from:",length(sl$fields()),"\n")
+
+  testStep("Finding Worker table for 2038")
+  print(sl$find(Group="2038",Table="Worker"))
+
+  testStep("Finding Worker table for 2038 straight from the results")
+  wkr <- sl$find(Group="2038",Table="Worker") 
+  print(wkr)
+
+  testStep("Selecting Worker table and extracting to a data.frame")
+  rs$select(wkr)
+  wrk.table <- rs$extract(saveTo=FALSE)[[1]] # only one table returned in a list
+  print(wrk.table[sample(nrow(wrk.table),10),])
+
+  return(rs)
+}
+
+test_05_build_query <- function(log="info",break.query=TRUE,reset=FALSE) {
   # Process the standard query list for the test model
   # If multiple==TRUE, copy the test model and its results a few times, then submit the
   # list of all the copies to VEQuery. Each column of results will be the same (see
-  # test_scenarios for a run that will generate different results in each column).
+  # test_06_scenarios for a run that will generate different results in each column).
   # if break.query, do some deliberately bad stuff to see the error messages
 
   testStep("Set up Queries")
   testStep("Opening test model and caching its results...")
-  mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=reset)
+  mod <- test_01_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=reset)
   rs <- mod$results()
 
   testStep("Show query directory (may be empty)...")
@@ -853,7 +915,7 @@ test_build_query <- function(log="info",break.query=TRUE,reset=FALSE) {
     Units = "Miles per day",
     Description = "Daily vehicle miles traveled by households residing in the urban area"
   )
-  qry$add(spec)
+  qry$add(VEQuerySpec$new(spec))
   qry$print(details=TRUE)
 
   testStep("Names of specifications in added query...")
@@ -904,12 +966,12 @@ test_build_query <- function(log="info",break.query=TRUE,reset=FALSE) {
   return(qry)
 }
 
-test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
+test_05_query <- function(log="info",Force=TRUE,runModel=FALSE) {
   # Test the basic query mechanism (yields only scalar results)
 
   testStep("Set up Queries and Run on Model Results")
   testStep("Opening test model and caching its results...")
-  mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=runModel)
+  mod <- test_01_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=runModel)
   rs <- mod$results()
 
   testStep("Show query directory (may be empty)...")
@@ -1121,7 +1183,13 @@ test_query <- function(log="info",Force=TRUE,runModel=FALSE) {
   qry$run(rs,Force=TRUE) # Won't re-run if query is up to date
 
   testStep("Returning extracted query data.frame for further exploration")
-  return(df)
+  return(
+    list(
+      Results = df,
+      Model = mod,
+      Query = qry
+    )
+  )
 }
 
 # Test query dimensions and filtering
@@ -1129,9 +1197,9 @@ qrydir <- Sys.getenv("VE_test_source",unset=getwd())
 qryfile <- normalizePath(file.path(qrydir,"Filter-Query.VEqry"),winslash="/",mustWork=FALSE)
 
 # Test query filter mechanism (and basic query processing)
-test_queryfilter <- function(runModel=FALSE,log="info") {
+test_05_queryfilter <- function(runModel=FALSE,log="info") {
   testStep("Load base model")
-  mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="base",log=log,reset=runModel)
+  mod <- test_01_run("VERSPM-query",baseModel="VERSPM",variant="base",log=log,reset=runModel)
 
   testStep(paste("Loading test query:",basename(qryfile)))
   logLevel(log)
@@ -1153,11 +1221,11 @@ test_queryfilter <- function(runModel=FALSE,log="info") {
 
 # Torture test the query mechanism
 # Give it a non-existent query via queryName, for example...
-test_fullquery <- function(Force=TRUE,runModel=FALSE,queryName="Full-Query",log="info") {
+test_06_fullquery <- function(Force=TRUE,runModel=FALSE,queryName="Full-Query",log="info") {
   logLevel("warn")
   testStep("Test Full-Query.VEqry")
   testStep("Opening test model and caching its results...")
-  mod <- test_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=runModel)
+  mod <- test_01_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log,reset=runModel)
   testStep("Loading Query")
   qry <- mod$query(queryName,load=TRUE)
   if ( qry$valid() ) {
@@ -1179,15 +1247,13 @@ test_fullquery <- function(Force=TRUE,runModel=FALSE,queryName="Full-Query",log=
 }
 
 # Construct programmatic stages, run the model, and query it
-test_addstages <- function(reset=FALSE,log="info") {
+test_06_addstages <- function(reset=FALSE,log="info") {
   # Merge this with test_scenario
   if ( ! missing(log) ) logLevel(log)
   testStep("Acquiring test model and test query")
-  # TODO: set up so we have a model and a suitable query
-  mod.setup <- test_build_query(reset=reset)
-  print(mod.setup$Model)
-  print(mod.setup$Query)
-
+  results <- test_05_query(log=log,Force=reset,runModel=reset)
+  mod <- results$Model
+  
   testStep("Build multiple scenarios...")
   # Generate several copies of mod future year
   # Inputs will be sought up the "StartFrom" tree.
@@ -1197,6 +1263,7 @@ test_addstages <- function(reset=FALSE,log="info") {
   #   it just uses the inputs found in earlier stages. For the
   #   purposes of testing the query functionality, it suffices here
   #   to have all the scenarios be the same.
+  print(mod$modelPath)
   stagePath.1 <- file.path(mod$modelPath,"Scenario-1")
   if ( ! dir.exists( stagePath.1 ) ) dir.create(stagePath.1)
   cat("Adding Stage 1\n")
@@ -1241,6 +1308,9 @@ test_addstages <- function(reset=FALSE,log="info") {
 
   testStep("Query the model")
 
+  cat("Available queries:\n")
+  print(mod$query())
+
   qry <- mod$query("Test-Query")
   print(qry)
 
@@ -1256,13 +1326,104 @@ test_addstages <- function(reset=FALSE,log="info") {
   # VEResults and query that (Note difference between a character vector - list of
   # model names and a list of character strings, which are the result paths).
   qry$run(mod$results())
-  qry$extract()
-  qry$export()
+  testStep("Query results in a data.frame")
+  print( qry$extract()[,-2:-3] )
 
+  testStep("Export and List outputs directory contentss")
+  qry$export()
   print(mod$dir(outputs=TRUE))
 
   testStep("Done with programmatic stage tests")
   return(qry)
+}
+
+test_07_load <- function(log="info" ) {
+  # Tests the LoadModel functionality (pre-load Datastore and then
+  #   execute additional steps from the copied data.all)
+  testStep("Finding BARE model template")
+
+  baseModelName <- 
+  model <- test_02_model(brief=TRUE,log=log) # skip the deeper tests
+  model$run(log=log)                         # run it anyway (default="continue" does nothing)
+
+  testStep("Copy model...")
+  modelPath <- file.path("models","LOAD-test")
+  if ( dir.exists(modelPath) ) unlink(modelPath,recursive=TRUE)
+  loadModelName <- "LOAD-test"
+  loadModel <- model$copy(loadModelName,copyResults=FALSE)
+  print(loadModel)
+  testStep("Set up load script...")
+  baseModelPath <- loadModel$setting("ModelDir",shorten=FALSE)
+  runModelFile <- file.path(
+    baseModelPath,
+    loadModel$setting("ModelScript")
+  )
+  # These are the steps from VERSPM that would follow those in the BARE model test
+  runModel_vc <- c(
+    '',
+    'for(Year in getYears()) {',
+    'runModule("AssignLifeCycle","VESimHouseholds",RunFor = "AllYears",RunYear = Year)',
+    'runModule("PredictIncome", "VESimHouseholds", RunFor = "AllYears", RunYear = Year)',
+    'runModule("PredictHousing", "VELandUse", RunFor = "AllYears", RunYear = Year)',
+    'runModule("LocateEmployment", "VELandUse", RunFor = "AllYears", RunYear = Year)',
+    'runModule("AssignLocTypes", "VELandUse", RunFor = "AllYears", RunYear = Year)',
+    '}'
+  )
+  cat(runModelFile,paste(runModel_vc,collapse="\n"),sep="\n")
+  writeLines(runModel_vc,con=runModelFile)
+
+  testStep("Configure LoadModel")
+  # We'll just do it from scratch rather than reading/modifying
+  # Region, BaseYear and Years don't change
+  runConfig_ls <-  list(
+    Model       = jsonlite::unbox("LOAD Model Test"),
+    Scenario    = jsonlite::unbox("Test LoadModel / LoadDatastore"),
+    Description = jsonlite::unbox("Add a step onto a different previous model"),
+    Region      = jsonlite::unbox(model$setting("Region")),
+    BaseYear    = jsonlite::unbox(model$setting("BaseYear")),
+    Years       = model$setting("Years"), # don't unbox - expecting a list
+    LoadModel   = jsonlite::unbox(model$modelPath) # could be any form accepted by openModel
+    # Could also set LoadStage (last Reportable stage is used by default)
+  )
+  configFile <- file.path(baseModelPath,"visioneval.cnf")
+  yaml::write_yaml(runConfig_ls,configFile)
+
+  testStep(paste("Reload model",loadModelName," with LoadDatastore"))
+  loadModel <- openModel(loadModelName,log=log)
+
+  testStep("Acquiring base model for additional inputs")
+  # should be the same model used in test_02_mode.()
+  base.model <- test_00_install(modelName="VERSPM",variant="base",installAs="VERSPM-Test",overwrite=FALSE,confirm=FALSE)
+
+  testStep("Copy additional inputs")
+  base.inputs <- base.model$setting("InputPath",shorten=FALSE)
+  
+  cat("Base Inputs",base.inputs,"\n")
+  inputs <- loadModel$list(inputs=TRUE,details=c("FILE","INPUTDIR")) # needed files comes from new model
+  required.files <- unique(file.path(base.inputs,inputs[,"FILE"]))   # location comes from base model
+  required.files <- required.files[which(file.exists(required.files))]
+  cat("Required Files:\n")
+  print(basename(required.files))
+
+  testStep("Copying additional input files")
+  bare.inputs <- file.path(loadModel$setting("InputPath",shorten=FALSE))
+
+  testStep("Remove base model inputs - will just have new ones")
+  unlink(bare.inputs,recursive=TRUE)
+  dir.create(bare.inputs)
+  from <- required.files
+  file.copy(from=from, to=bare.inputs )
+
+  testStep("Copy model parameters to 'inputs' - could also be in 'defs')")
+  from <- file.path(base.inputs,"model_parameters.json")
+  file.copy(from=from,to=bare.inputs) # or copy to bare.defs...
+  print(dir(bare.inputs))
+
+  testStep("Run model, loading datastore")
+  loadModel$run("reset",log=log)
+  print(loadModel)
+
+  return(invisible(loadModel))
 }
 
 # TODO: once scenario testing is complete, add a test for the visualizer (writing to file
@@ -1270,12 +1431,12 @@ test_addstages <- function(reset=FALSE,log="info") {
 # queries in the new structure, set up the category scenarios variant, and make sure
 # it can run all the way through (model run, query generation on single scenario,
 # category scenario generation, visualizer on multiple scenarios)
-test_rpat <- function(run=TRUE) {
+test_07_verpat <- function(run=TRUE) {
   testStep("Testing VERPAT as JRPAT")
   verpat <- openModel("JRPAT")
   if ( ! verpat$valid() ) {
     testStep("Installing VERPAT as JRPAT")
-    verpat <- installModel("VERPAT",modelPath="JRPAT")
+    verpat <- installModel("VERPAT",modelPath="JRPAT",confirm=FALSE)
   }
   if ( run || ! verpat$results()$valid() ) {
     testStep("Clearing previous extracts")
@@ -1288,66 +1449,77 @@ test_rpat <- function(run=TRUE) {
 }
 
 # Test the setup management functions
-test_setup <- function(model=NULL) {
-  testStep("Parameter defaults...")
-  visioneval::defaultVERunParameters()
+test_08_setup <- function(model=NULL) {
+  testStep("Raw parameter defaults (named list with attributes)...")
+  print(visioneval::defaultVERunParameters())
 
-  testStep("Runtime setup (none to start)")
+  testStep("Viewing parameter defaults in data.frame format")
+  viewSetup(Param_ls=visioneval::defaultVERunParameters())
+
+  testStep("Global runtime setup: visioneval.cnf within ve.runtime")
   conf.file <- file.path(runtimeEnvironment()$ve.runtime,"visioneval.cnf")
   if ( file.exists(conf.file) ) unlink(conf.file)
+  getSetup(reload=TRUE) # Loaded an empty file
 
-  testStep("Load ve.runtime configuration")
-  getSetup(reload=TRUE)
-
-  testStep("View initial setup (empty list)")
+  testStep("View initial global runtime setup (empty list)")
   viewSetup(fromFile=TRUE)
 
   testStep("Install test model (based on runtime configuration)...")
-  setup <- if ( dir.exists(file.path("models","Setting-Test")) ) {
-    openModel("Setting-Test")
-  } else {
-    installModel("VERSPM","Setting-Test",variant="pop")
-  }
-  print(setup)
+  setup <- test_00_install("VERSPM","pop",installAs="Setting-Test",overwrite=TRUE)
 
-  testStep("Initial model configuration")
+  testStep("Initial model configuration (notice explicit Seed)")
   viewSetup(setup)
-  cat("Seed setting in model:",setup$setting("Seed"),"\n")
+  cat("\nSeed setting in model (source is model's visioneval.cnf):\n")
+  print(setup$setting("Seed",source=TRUE))
+  
   testStep("Remove Seed parameter from model configuration file")
   updateSetup(setup,inFile=TRUE,drop="Seed")
   writeSetup(setup,overwrite=TRUE)
-  testStep("Reload model with Seed parameter from default")
-  setup$configure()
+  cat("Notice: no Seed listed explicitly; will use global or default\n")
+  viewSetup(setup,fromFile=TRUE)
+
+  testStep("Reload model, now without explicit Seed")
+  setup$configure() # or use openModel again; the latter is better if model has been run
   cat("Value of Seed:",setup$setting("Seed",defaults=TRUE),"\n")
-  cat("Setting source...\n")
+  cat("Source of Seed setting...\n")
   print(setup$setting("Seed",defaults=TRUE,source=TRUE)) # Show source for Seed parameter: now default
+
+  testStep("Current loaded model setup...")
   viewSetup(setup)
 
-  testStep("Update Seed in ve.runtime setup")
+  testStep("Update Seed for global visioneval.cnf")
   updateSetup(inFile=TRUE,Seed=2.5)
 
-  testStep("View runtime setup with changed Seed")
+  testStep("View runtime setup with changed Seed (what would be in the file)")
   viewSetup(fromFile=TRUE)
 
-  testStep("Writing new runtime visioneval.cnf")
+  testStep("Save new runtime visioneval.cnf")
   writeSetup() # creates a backup file if setup already exists
 
-  testStep("Runtime setup file now has seed")
-  cat("Runtime configuration previously loaded:\n")
-  viewSetup(fromFile=FALSE) # Still has old value of Seed in global runtime
+  cat("Existing runtime configuration in memory (empty list:  not loaded):\n")
+  viewSetup(fromFile=FALSE) # Still has no value for Seed in global runtime
+
+  cat("Runtime configuration after reloading from file (now has value):\n")
   getSetup(reload=TRUE) # force reload of runtime configuration
-  cat("Runtime configuration after reloading from file:\n")
   viewSetup(fromFile=FALSE) # Now has reloaded file value in regular runtime
 
-  testStep("Reopen model and see changed setup")
+  testStep("Reopen model and see changed setup (Seed = 2.5) from global")
   setup$configure() # Reopen the model from saved configuration
-  cat("Seed setting in model:",setup$setting("Seed"),"\n")
-  cat("Setting source...\n")
-  print(setup$setting("Seed",defaults=TRUE,source=TRUE)) # Show source for Seed parameter: now default
+  cat("Seed setting that will be used (global config):\n")
+  print(setup$setting("Seed",defaults=TRUE,source=TRUE))
+
+  testStep("Removing global configuration file for ve.runtime")
   unlink(conf.file) # Don't leave the runtime visioneval.cnf around
+  getSetup(reload=TRUE)
+
+  testStep("Reopen model one more time and Seed is now back to default")
+  setup$configure() # Reopen the model from saved configuration
+  cat("Seed setting that will be used (default):\n")
+  print(setup$setting("Seed",defaults=TRUE,source=TRUE))
+
 }
 
-test_scenarios <- function(
+test_06_scenarios <- function(
   useStages=TRUE,
   run=useStages,
   querySpec="VERSPM-scenarios",
@@ -1361,7 +1533,7 @@ test_scenarios <- function(
   testStep(paste("Selecting, installing, and running scenarios as",if(useStages)"Model Stages"else"Scenario Combinations"))
 
   existingModel <- dir.exists(modelPath <- file.path("models",scenarioModelName))
-  mod <- test_run(scenarioModelName,baseModel="VERSPM",variant=scenarioVariant,reset=install,log=log,confirm=FALSE)
+  mod <- test_01_run(scenarioModelName,baseModel="VERSPM",variant=scenarioVariant,reset=install,log=log,confirm=FALSE)
 
   testStep("Loading scenario query")
   qr <- mod$query(querySpec) # Fails if model has not been run
@@ -1392,7 +1564,7 @@ test_scenarios <- function(
   )))
 }
 
-test_visual <- function(popup=FALSE,reset=FALSE,log="info") {
+test_08_visual <- function(popup=FALSE,reset=FALSE,log="info") {
 
   scenarioVariant <- "scenarios-cat"
   scenarioModelName <- paste0("VERSPM-",scenarioVariant)
@@ -1401,7 +1573,7 @@ test_visual <- function(popup=FALSE,reset=FALSE,log="info") {
   existingModel <- dir.exists(modelPath <- file.path("models",scenarioModelName))
   mod <- test_run(scenarioModelName,baseModel="VERSPM",variant=scdenarioVariant,reset=install,log=log,confirm=FALSE)
 
-  # Models need to have been created with test_install...
+  # TODO: Ensure models created with test_00_install...
   testStep("Opening Query")
   logLevel(log) # Now examine at requested log level
   qr <- mod$query( mod$query() )
