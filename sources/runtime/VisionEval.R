@@ -56,7 +56,7 @@ local({
   }
 
   for ( i in 1:nrow(ve.vars) ) {
-    # Expect ve.vars[i,1] == "that.R"
+    # Expect ve.vars[i,1] == "that.R" , i.e. a literal variable name
     # Expect ve.vars[i,2] == R version like what comes from system R.version
     assign(ve.vars[i,1],ve.vars[i,2],envir=env.loc)
   }
@@ -240,12 +240,18 @@ if ( install.success ) {
   # function to set up the walkthrough and its runtime
   env.loc$walkthrough <- function(reset=FALSE) {
     # Locate walkthrough directory (sub-directory of ve.runtime)
-    if ( ! dir.exists("walkthrough") ) { # in case we're not in ve.runtime
-      if ( dir.exists(env.loc$ve.runtime) ) {
+    if ( ! exists("env.loc") ) env.loc <- as.environment("ve.env")
+    if ( ! dir.exists("walkthrough") ) { # in case we're not in a configured ve.runtime
+      if ( dir.exists(env.loc$ve.runtime) && getwd() != env.loc$ve.runtime ) {
         setwd(env.loc$ve.runtime)
       }
       if ( ! dir.exists("walkthrough") ) {
-        stop("Walkthrough is not available in ",env.loc$ve.runtime)
+        if ( dir.exists(load.walkthrough <- file.path(env.loc$ve.load.dir,"walkthrough") ) ) {
+          file.copy(load.walkthrough,env.loc$ve.runtime,recursive=TRUE)
+        }
+      }
+      if ( ! dir.exists("walkthrough") ) {
+        stop("Walkthrough is not available in ",env.loc$ve.runtime," or ",env.loc$ve.load.dir)
       }
     }
     setwd("walkthrough") # Go there
@@ -263,13 +269,14 @@ if ( install.success ) {
   # Change to the runtime directory
   if ( dir.exists(env.loc$ve.runtime) ) setwd(env.loc$ve.runtime) else env.loc$ve.runtime <- getwd()
   message("Running in ",env.loc$ve.runtime)
+  if ( ! dir.exists("models") ) dir.create("models")
 
   # Make sure there is a "Models" directory in the actual runtime folder
-  env.loc$ModelRoot <- file.path(
-    env.loc$ve.runtime,
-    visioneval::getRunParameter("ModelRoot") # Uses runtime configuration or default value "models"
-  )
-  if ( ! dir.exists(env.loc$ModelRoot) ) dir.create(env.loc$ModelRoot,recursive=TRUE,showWarnings=FALSE)
+  env.loc$ModelRoot <- VEModel::getModelDirectory() # Uses runtime configuration or default value "models"
+  if ( ! dir.exists(env.loc$ModelRoot) ) {
+    message("Creating runtime ",basename(env.log$ModelRoot)," directory")
+    dir.create(env.loc$ModelRoot,recursive=TRUE,showWarnings=FALSE)
+  }
 
 } else {
   # We need the following for the Mac or Linux to do the installation in "user space"

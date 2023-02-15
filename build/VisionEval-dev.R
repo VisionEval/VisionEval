@@ -175,9 +175,11 @@ evalq(
     # use.git says that the build will be using the git branch name instead of "visioneval"
     # use.env says to look for VE_RUNTIME in the environment
     # changeDir says to change the directory to ve.runtime; if FALSE, stay in current directory
-    # copyFiles says to copy the built files from the built runtime to the "working" runtime (e.g. runtime.test)
-    #   copyFiles can be TRUE (copy entire runtime) or a vector of sub-directories of load.runtime to copy
-    #   (e.g. "walkthrough")
+    # copyFiles says to copy the built files from a built runtime to the "working" runtime (e.g. runtime.test)
+    #   copyFiles can be TRUE (copy entire runtime) or a vector of sub-directories of load.runtime to copy (e.g.
+    #   "walkthrough"). The runtime will work as long as the original built runtime exists, even if the files are not
+    #   copied. Copying the files creates a "standalone" runtime. Note that any models or other files in the runtime
+    #   will also be copied.
     ve.run <- function(runtime=NULL, use.git=FALSE,use.env=TRUE,changeDir=TRUE,copyFiles=FALSE) {
       ve.runtime <- get.ve.runtime(runtime, use.git=use.git,use.env=use.env)
       message("get.ve.runtime returned ",ve.runtime,": use.env ",use.env)
@@ -208,7 +210,7 @@ evalq(
       # Load auxiliary files to the current runtime if requested (will overwrite existing)
       if ( ( is.character(copyFiles) || isTRUE(copyFiles) ) && load.runtime != ve.runtime ) {
         if ( is.character(copyFiles ) ) {
-          # copy
+          # copy from the copyFiles location (possibly not the built runtime)
           for ( cf in copyFiles ) {
             # need to copy all.files to include .Rprofile; full.names to identify which
             # file and sub-hierarchy to bring across.
@@ -218,6 +220,7 @@ evalq(
             file.copy( to.copy, to.dir, recursive=TRUE )
           }
         } else {
+          # copy the current runtime
           to.copy <- dir(load.runtime,all.files=TRUE, full.names=TRUE, no..=TRUE)
           file.copy( to.copy , ve.runtime, recursive=TRUE )
           load.runtime <- ve.runtime # Load the startup script from load.runtime
@@ -237,10 +240,12 @@ evalq(
           as.environment("ve.env")
         }
         env.loc$ve.runtime <- ve.runtime
+        env.loc$ve.load.dir <- load.runtime
         if ( ve.runtime != getwd() ) setwd(ve.runtime)
-        source(startup.file,chdir=TRUE)
+        source(startup.file,chdir=TRUE) # chdir will permit finding ve-lib in suitable places outside the runtime
+        VEModel::setRuntimeDirectory(getwd())
       } else {
-        message("No startup file in ",ve.load.dir)
+        message("No startup file in ",load.runtime)
         message("Have you run ve.build()?")
       }
 
@@ -285,6 +290,7 @@ evalq(
           # ve.test("VEModel",tests=character(0),changeRuntime=FALSE,usePkgload=NULL)
         } else {
           require(VEModel,quietly=TRUE)      # Walkthrough requires VEModel
+          VEModel::setRuntimeDirectory(ve.runtime)
           message("\nWalkthrough scripts:")
           print(walkthroughScripts)
           return(invisible(walkthroughScripts))
@@ -353,7 +359,6 @@ evalq(
         }
         model.path <- file.path(ve.runtime,"models")
         if ( ! dir.exists(model.path) ) dir.create(model.path)
-        Sys.setenv(VE_RUNTIME=ve.runtime) # override VEModel notion of ve.runtime
         # Use changeRuntime=FALSE to debug this module in a different module's runtime directory
         # Load the other module with changeRuntime=TRUE
         # then the new module with changeRuntime=FALSE
@@ -398,6 +403,7 @@ evalq(
       if ( ! is.logical(usePkgload) ) usePkgload <- framework.package
       if ( usePkgload ) {
         # Use pkgload::load_all to load up the VEPackage (setwd() to the package root first)
+        message("pkgload::",VEPackage.path)
         pkgload::load_all(VEPackage.path)
       } else {
         # Don't want to use pkgload with module packages since it will re-estimate them
@@ -425,6 +431,15 @@ evalq(
       }
 
       setwd(ve.runtime)
+      if ( ! "setRuntimeDirectory" %in% getNamespaceExports("VEModel") ) {
+        # Hack to support pkgload from source folder which does not have a Namespace
+        if ( "package:VEModel" %in% search() ) {
+          vem <- as.environment("package:VEModel")
+          vem$setRuntimeDirectory(ve.runtime)
+        } else stop("package:VEModel failed to load!")
+      } else {
+        VEModel::setRuntimeDirectory(ve.runtime)
+      }
       
       # A list of the objects loaded from the "tests" will be displayed after loading
       if ( length(walkthroughScripts)>0 ) {
