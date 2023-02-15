@@ -13,6 +13,7 @@ dev/
 docs/
 external/
 Log_*.txt
-plan.txt
 Test/
 make*out
+sources/**/*.zip
+
