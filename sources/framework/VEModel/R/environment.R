@@ -364,6 +364,20 @@ setRuntimeDirectory <- function(Directory=NULL) {
   return( ve.env$ve.runtime <- getwd() )
 }
 
+# GET MODEL DIRECTORY
+# ===================
+# Get the model directory (ve.runtime/models)
+#' Get the model directory
+#' Return the directory (usually "models" within \code{getRuntimeDirectory()}) from which models will
+#'   be opened and in which models will be sought.
+#' @return The full path of the models directory
+#' @export
+getModelDirectory <- function() {
+  return ( file.path( getRuntimeDirectory(), visioneval::getRunParameter("ModelRoot") ) )
+}
+
+# GET RUNTIME DIRECTORY
+# ========================
 # Get the runtime directory (ve.runtime)
 #' Get the runtime directory
 #' Return the runtime directory established when VEModel package is loaded or by a later call to
@@ -528,7 +542,7 @@ showModelIndex <- function(reset=FALSE, private=FALSE) {
   modelIndex <- getModelIndex(reset)
   modelSources <- list()
   for ( m in names(modelIndex) ) {
-    cat("Model",m,"Variants",paste(names(modelIndex[[m]]),collapse=", "),"\n")
+    writeLog(paste("Model",m,"Variants",paste(names(modelIndex[[m]]),collapse=", ")),Level="info")
     if ( length(modelIndex[[m]]) == 0 ) {
       modelSources$Model   <- c(modelSources$Model,m)
       modelSources$Variant <- c(modelSources$Variant,"None")

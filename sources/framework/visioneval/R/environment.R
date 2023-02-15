@@ -787,7 +787,9 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
     filepaths <- dir(newRP$InputPath,full.names=TRUE)
     for ( filepath in filepaths ) changed <- changedFile(changed, "InputPath", filepath)
     filepaths <- dir(newRP$ParamPath,full.names=TRUE)
-    for ( filepath in filepaths ) changed <- changedFile(changed, "ParamPath", filepath)
+    # Might get display_units.csv or some other file that doesn't matter in ParamPath...
+    filepaths <- filepaths[ sub("\\.(csv|json)$","",basename(filepaths)) %in% c("geo","units","deflators","run_parameters") ]
+    for ( check in filepaths )changed <- changedFile(changed, "ParamPath", filepath)
   }
 
   # Convert "changed" data.frame to a list of descriptive strings and

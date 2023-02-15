@@ -329,20 +329,19 @@ ve.results.units <- function(selected=TRUE,display=NULL) {
   return( Units_df[,returnFields] )
 }
 
-# ve.results.export just does ve.results.extract, but it explicitly provides saveTo
-# so saving to a file will happen by default (extract defaults to producing a list of data.frames)
+# ve.results.export just does ve.results.extract, but it sets saveResults=TRUE
 ve.results.export <- function(
-  saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
-  ... # dots are just passed through to extract (prefix, select, convertUnits, data)
+  saveTo=TRUE,
+  ... # dots are just passed through to extract (prefix, saveTo, select, convertUnits, data)
 ) {
   return( self$extract(saveTo=saveTo,...) ) # makes saveTo "not missing"
 }
 
-# saveTo, if provided, is a file name or a format structure
-# default saveTo is never used (saveTo will be "missing"), but illustrates one way to provide it
+# saveResults, if TRUE, will save a file to the SaveTo location, with the indicated prefix, if any
 ve.results.extract <- function(
+  saveResults=FALSE,
   saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls), # if missing, don't save
-  prefix = "",            # Label to further distinguish output files, if desired
+  prefix = "",            # Label to further distinguish output files, if desired (setting also starts saving)
   select=NULL,            # replaces self$selection if provided
   convertUnits=TRUE,      # will convert if display units are present; FALSE not to attempt any conversion
   data=NULL               # NULL (default) means generate both data and metadata if saving, otherwise just data
@@ -355,7 +354,7 @@ ve.results.extract <- function(
     stop("Nothing selected to extract.")
   }
 
-  saving <- !missing(saveTo) && is.character(saveTo) && nzchar(saveTo)[1]
+  saving <- ( saveResults || ! missing(prefix) ) && is.character(saveTo) && nzchar(saveTo)[1]
   if ( saving ) {
     saveTo <- saveTo[1]
     outputPath <- if ( isAbsolutePath(saveTo) ) saveTo else file.path(self$resultsPath,saveTo)
@@ -883,13 +882,14 @@ ve.select.none <- function() {
 
 # Build data.frames based on selected groups, tables and dataset names
 ve.select.extract <- function(
+  saveResults=FALSE,
   saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
   prefix="",
   convertUnits=TRUE,
   data=NULL
 ) {
   # Delegates to the result object, setting its selection in the process
-  invisible( self$results$extract(saveTo,prefix=prefix,select=self,convertUnits=convertUnits,data=data) )
+  invisible( self$results$extract(saveResults=saveResults,saveTo=saveTo,prefix=prefix,select=self,convertUnits=convertUnits,data=data) )
 }
 
 #' Conversion method to turn a VESelection into a vector of selection indices

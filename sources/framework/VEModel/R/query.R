@@ -1339,7 +1339,6 @@ specSummarizeElements <- c(
 )
 
 ve.spec.print <- function() {
-  # TODO, more class-specific result
   # If function, print its expression
   # If summarize, print its elements (nicely)
   if ( ! self$valid() ) {

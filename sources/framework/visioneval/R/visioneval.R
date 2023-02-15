@@ -387,14 +387,19 @@ loadModel <- function(
     } else {
       ms <- list()
     }
-    # Opening existing model results rather than building a new ModelState_ls
+    # Opening existing model results rather than building a new
+    # ModelState_ls
+    MSUpToDate <- FALSE
     if ( length(ms)>0 ) {
       if ( updateCheck ) {
         # Finish building ModelState_ls from current RunParam_ls and compare to previous result
         writeLog("Checking updated RunParam_ls against previous ModelState_ls",Level="info")
         testRunParam_ls <- initModelState(Save=FALSE,Param_ls=RunParam_ls,envir=new.env()) # transient environment
 
-        # Set OutOfDate flag if RunParam_ls does not sufficiently match what is in the ModelState_
+        # Set OutOfDate flag if RunParam_ls does not sufficiently match what is in the ModelState_.
+        # Note that an old style model that was run by sourcing "run_model.R" and then opened
+        # by VEModel::openModel will fail this check. The model will show up as "Initialized" and
+        # the old run will be ignored...
         upToDate <- checkUpToDate( testRunParam_ls, oldRunParam_ls, ms$LastChanged )
         if ( ! upToDate$Status ) {
           outOfDateMsg <- "(Out of Date)"
@@ -402,17 +407,19 @@ loadModel <- function(
           writeLog(upToDate$Changes,Level="warning")
         } else {
           outOfDateMsg <- paste0("(Up to date with ",length(ms)," elements)")
-          writeLog("Opened existing ModelState_ls",Level="info")
-          if ( length(upToDate$Changes)>0 ) writeLog(upToDate$Changes,Level="info")
+          writeLog(c("Opened existing ModelState_ls",outOfDateMsg),Level="info")
+          if ( length(upToDate$Changes)>0 ) {
+            writeLog(c("Insignificant changed elements:",upToDate$Changes),Level="info")
+          }
         }
         # Shorthand to relay out of date status to caller
-        ms$UpToDate <- upToDate$Status
-      } else ms$UpToDate <- TRUE
+        MSUpToDate <- upToDate$Status
+      } else MSUpToDate <- TRUE
     } else {
       writeLog("No existing ModelState_ls",Level="info")
-      ms$UpToDate <- FALSE
+      MSUpToDate <- FALSE
     }
-    return(ms) # Returns empty list if no ModelState_ls
+    return(structure(ms,UpToDate=MSUpToDate)) # Returns empty list if no ModelState_ls
   }
 
   # If we get here we might be running the model, or building an in-memory ModelState_ls
@@ -599,11 +606,19 @@ loadModel <- function(
   #=====================================
 
   if ( LoadDatastore && length(DstoreConflicts)==0 ) {
-    if ( !file.exists(LoadDstore$Name) ) {
+    if ( is.na(LoadDstore$Name) ) {
+      DstoreConflicts <- c(DstoreConflicts,
+        paste0(
+          "No existing LoadDatastoreName specified from other model.\n",
+        )
+      )
+    } else if ( !file.exists(LoadDstore$Name) ) {
       DstoreConflicts <- c(DstoreConflicts,
         paste0(
           "Failed to load existing Datastore ",LoadDstore$Name,".\n",
-          "Perhaps the full path name was not specified?\nWas the other model run?\nDoes the output still exist?"
+          "Perhaps the full path name was not specified?\nWas the other model run?\nDoes the output still exist?\n",
+          "If the Datastore is the same as the current stage, just remove LoadDatastore from the model configuration\n",
+          "Then re-insert it to resume the crashed model."
         )
       )
     } else { # loading and file exists

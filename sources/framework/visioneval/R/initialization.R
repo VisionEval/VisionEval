@@ -385,10 +385,10 @@ loadModelState <- function(FileName=getModelStateFileName(),envir=NULL) {
   }
   ModelState_ls <- get0( "ModelState_ls", envir=envir, ifnotfound=list() )
   if ( length(ModelState_ls) > 0 ) {
-    writeLog("Saved RunParam_ls from ModelState_ls",Level="info")
+    writeLog("Saved RunParam_ls from ModelState_ls",Level="debug") 
     Param_ls <- ModelState_ls$RunParam_ls
   } else {
-    writeLog("RunParam_ls from environmentment",Level="info")
+    writeLog("RunParam_ls from environmentment",Level="debug")
     Param_ls <- get0( "RunParam_ls", envir=envir, ifnotfound=list() )
   }
   return ( Param_ls )
