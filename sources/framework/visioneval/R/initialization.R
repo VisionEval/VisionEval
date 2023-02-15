@@ -58,11 +58,6 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
     stop( writeLog(Message,Level="error") )
   }
 
-  # Reformat BaseYear and Years if they were entered as numbers
-  # Classically, they went in as strings. Numbers are more natural to write.
-  if ( is.numeric(Param_ls$BaseYear) ) Param_ls$BaseYear <- as.character(Param_ls$BaseYear)
-  if ( is.numeric(Param_ls$Years) ) Param_ls$Years <- as.character(Param_ls$Years)
-
   # Install the parameters that do exist - the required parameters become the foundation for
   # ModelState_ls. Other parameters are placed in newModelState_ls$RunParameters,
   # (including things like ParamDir, UnitsFile, etc.)
@@ -116,7 +111,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   Messages_ <- CheckResults_ls$Messages
   if (length(Messages_) > 0) {
     writeLog(Messages_,Level="error")
-    stop(paste0("One or more errors in ", GeoFilePath, ". See log for details."))
+    stop(paste0("Errors found in ", GeoFilePath, ". See log for details."))
   } else {
     writeLog("Geographical indices successfully read.",Level="info")
   }
@@ -147,8 +142,6 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
   #   ModelState.Rda is the model description for this run
   #   Datastore are the model results for this run
   if ( Save) save("ModelState_ls", envir=model.env, file = file.path(RunPath,getModelStateFileName(model.env$RunParam_ls)))
-
-  writeLog(paste0("Parameter Names from initModelState:\n",paste(names(model.env$RunParam_ls),collapse=",")),Level="info")
 
   return(Param_ls) 
 }
@@ -388,8 +381,10 @@ loadModelState <- function(FileName=getModelStateFileName(),envir=NULL) {
   }
   ModelState_ls <- get0( "ModelState_ls", envir=envir, ifnotfound=list() )
   if ( length(ModelState_ls) > 0 ) {
+    writeLog("Saved RunParam_ls from ModelState_ls",Level="info")
     Param_ls <- ModelState_ls$RunParam_ls
   } else {
+    writeLog("RunParam_ls from environmentment",Level="info")
     Param_ls <- get0( "RunParam_ls", envir=envir, ifnotfound=list() )
   }
   return ( Param_ls )
@@ -795,9 +790,9 @@ parseModuleCalls <- function( ModuleCalls_df, AlreadyInitialized=character(0), R
     #If any errors, print to log and stop execution
     if (length(Errors_) > 0) {
       Msg <-
-      paste0("There are one or more errors in the module calls:\n",
+      paste0("There are errors in the module calls:\n",
         "package not installed, or module not present in package, ",
-        "or errors in module specifications.")
+        "or invalid module specifications.")
       writeLog(c(Msg,Errors_),Level="error")
       stop(Msg," Check log for details")
     }
@@ -1443,7 +1438,7 @@ readGeography <- function(Save=TRUE,Param_ls=NULL) {
   Messages_ <- CheckResults_ls$Messages
   if (length(Messages_) > 0) {
     writeLog(Messages_,Level="error")
-    stop(paste0("One or more errors in ", GeoFilePath, ". See log for details."))
+    stop(paste0("Errors in ", GeoFilePath, ". See log for details."))
   } else {
     writeLog("Geographical indices successfully read.",Level="info")
   }
@@ -2018,6 +2013,7 @@ processInputFiles <- function(AllSpecs_ls) {
   #         }
   #       }
   #     }
+  InpErrors_ <- character(0)
   for (Spec in AllSpecs_ls) {
     Module <- Spec$ModuleName
     Package <- Spec$PackageName
@@ -2025,10 +2021,10 @@ processInputFiles <- function(AllSpecs_ls) {
     ModuleSpecs_ls <- (Spec$Specs)
     #If there are inputs, process them
     if (!is.null(ModuleSpecs_ls$Inp)) {
-      ProcessedInputs_ls[[EntryName]] <- processModuleInputs(ModuleSpecs_ls, Module)
+      ProcessedInputs_ls[[EntryName]] <- processModuleInputs(ModuleSpecs_ls, Module, Package)
       # Process inputs with Initialize function
-      if (Module == "Initialize") {
-        if (length(ProcessedInputs_ls[[EntryName]]$Errors) == 0) {
+      if (length(ProcessedInputs_ls[[EntryName]]$Errors) == 0) {
+        if (Module == "Initialize") {
           initFunc <- eval(parse(text = paste(Package, Module, sep = "::")))
           InitData_ls <- ProcessedInputs_ls[[EntryName]]
           InitializedInputs_ls <- initFunc(InitData_ls)
@@ -2038,16 +2034,16 @@ processInputFiles <- function(AllSpecs_ls) {
             writeLog(InitializedInputs_ls$Warnings,Level="warn")
           }
         }
+      } else {
+        writeLog(paste0("Error in inputs for ",EntryName),Level="info")
+        InpErrors_ <- c( InpErrors_, ProcessedInputs_ls[[EntryName]]$Errors )
       }
     }
   }
   #Check whether there are any input errors
-  InpErrors_ <- unlist(lapply(ProcessedInputs_ls, function (x) {
-    x$Errors
-  }))
   HasErrors <- length(InpErrors_ != 0)
   if (HasErrors) {
-    writeLog(InpErrors_,Level="errors")
+    writeLog(InpErrors_,Level="error")
     stop("Input files have errors. Check the log for details.")
   }
   rm(InpErrors_)

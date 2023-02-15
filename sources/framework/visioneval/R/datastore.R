@@ -1773,8 +1773,8 @@ inputsToDatastore <- function(Inputs_ls, ModuleSpec_ls, ModuleName, envir=modelE
   if (length(Inputs_ls$Errors) != 0) {
     Msg <-
     paste0(
-      "Unable to write module inputs for module '", ModuleName, "'. ",
-      "There are one or more errors in the inputs or input specifications."
+      "Unable to write module inputs for module '", ModuleName, "' ",
+      "due to errors in the inputs or input specifications."
     )
     stop(Msg)
   }

@@ -700,7 +700,7 @@ CreateHouseholds <- function(L) {
       "file include some non-integer values for the year", L$G$Year, ".",
       "These have been rounded to the nearest whole number."
     )
-    addWarningMsg("Out_ls", Msg)
+    addWarningMsg(Msg) # Attaches to Out_ls in the current frame by default
     rm(Msg)
   }
   rm(AllInt)
@@ -723,7 +723,7 @@ CreateHouseholds <- function(L) {
       "file include some non-integer values for the year", L$G$Year, ".",
       "These have been rounded to the nearest whole number."
     )
-    addWarningMsg("Out_ls", Msg)
+    addWarningMsg(Msg) # Attaches to Out_ls in the current frame by default
     rm(Msg)
   }
   rm(AllInt)

@@ -1361,7 +1361,7 @@ test_scenarios <- function(
   testStep(paste("Selecting, installing, and running scenarios as",if(useStages)"Model Stages"else"Scenario Combinations"))
 
   existingModel <- dir.exists(modelPath <- file.path("models",scenarioModelName))
-  mod <- test_run(scenarioModelName,baseModel="VERSPM",variant=scdenarioVariant,reset=install,log=log,confirm=FALSE)
+  mod <- test_run(scenarioModelName,baseModel="VERSPM",variant=scenarioVariant,reset=install,log=log,confirm=FALSE)
 
   testStep("Loading scenario query")
   qr <- mod$query(querySpec) # Fails if model has not been run

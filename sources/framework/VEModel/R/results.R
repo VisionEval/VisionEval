@@ -329,13 +329,23 @@ ve.results.units <- function(selected=TRUE,display=NULL) {
   return( Units_df[,returnFields] )
 }
 
-# TODO: finish the "data" flag - data +/- metadata
-ve.results.extract <- function(
+# ve.results.export just does ve.results.extract, but it explicitly provides saveTo
+# so saving to a file will happen by default (extract defaults to producing a list of data.frames)
+ve.results.export <- function(
   saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls),
+  ... # dots are just passed through to extract (prefix, select, convertUnits, data)
+) {
+  return( self$extract(saveTo=saveTo,...) ) # makes saveTo "not missing"
+}
+
+# saveTo, if provided, is a file name or a format structure
+# default saveTo is never used (saveTo will be "missing"), but illustrates one way to provide it
+ve.results.extract <- function(
+  saveTo=visioneval::getRunParameter("OutputDir",Param_ls=private$RunParam_ls), # if missing, don't save
   prefix = "",            # Label to further distinguish output files, if desired
   select=NULL,            # replaces self$selection if provided
   convertUnits=TRUE,      # will convert if display units are present; FALSE not to attempt any conversion
-  data=NULL               # NULL means generate both data and metadata if saving, otherwise just data
+  data=NULL               # NULL (default) means generate both data and metadata if saving, otherwise just data
                           # TRUE means generate ONLY data (no metadata)
                           # FALSE means generate ONLY the metadata (no data)
 ) {
@@ -345,7 +355,7 @@ ve.results.extract <- function(
     stop("Nothing selected to extract.")
   }
 
-  saving <- is.character(saveTo) && nzchar(saveTo)[1]
+  saving <- !missing(saveTo) && is.character(saveTo) && nzchar(saveTo)[1]
   if ( saving ) {
     saveTo <- saveTo[1]
     outputPath <- if ( isAbsolutePath(saveTo) ) saveTo else file.path(self$resultsPath,saveTo)
@@ -360,13 +370,16 @@ ve.results.extract <- function(
         )
       )
     }
-    # Write out the selected fields
+    # Write out the selected fields (metadata)
     utils::write.csv(
       file=file.path(outputPath,"!SelectedFields.csv"),
       data.frame(SelectedFields = self$selection$fields()),
       row.names=FALSE
     )
   }
+
+  want.data <- ! is.logical(data) || data
+  want.metadata <- !is.logical(data) || ! data
 
   metadata <- self$modelIndex[ select$selection, ]
   if ( convertUnits ) {
@@ -430,7 +443,7 @@ ve.results.extract <- function(
     # Handle tables with different lengths of data elements ("multi-tables")
     # readDatastoreTables will have returned a ragged list rather than a data.frame
 
-    # TODO: Make this unnecessary by fixing VERPAT so it works correctly (a "Table"
+    # TODO: Make the following unnecessary by fixing VERPAT so it works correctly (a "Table"
     #   should always have the same number of elements in its Datasets).
 
     if ( ! all(is.df <- sapply(Data_ls$Data,is.data.frame)) ) {
@@ -468,15 +481,19 @@ ve.results.extract <- function(
 
       # Write the files (data = .csv) and a metadata file (meta = .metadata.csv)
       for ( table in dataNames ) {
-        fn <- file.path(outputPath,paste(prefix,Files[table],sep="_"))
+        prefix.files <- if ( !is.null(prefix) && !is.na(prefix) && nzchar(prefix[1]) ) {
+          paste(prefix,Files[table],sep="_")
+        } else Files[table]
+        fn <- file.path(outputPath,prefix.files)
         disp.fn <- sub(paste0(self$resultsPath,"/"),"",fn,fixed=TRUE)
         df2w <- Data_ls$Data[[table]]
         writeLog(paste("Extracting",sub("\\.[^.]*$","",disp.fn),paste0("(",nrow(df2w)," rows)")),Level="warn")
-        data <- ! is.logical(data) || data
-        if ( data ) {
+        if ( want.data ) {
           utils::write.csv(df2w,file=fn,row.names=FALSE)
-        } 
-        utils::write.csv(Metadata_ls[[table]],file=sub("\\.csv$",".metadata.csv",fn),row.names=FALSE)
+        }
+        if ( want.metadata ) {
+          utils::write.csv(Metadata_ls[[table]],file=sub("\\.csv$",".metadata.csv",fn),row.names=FALSE)
+        }
       }
 
       # Accumulate results list (names on list are "group.table")
@@ -587,8 +604,8 @@ VEResults <- R6::R6Class(
     valid=ve.results.valid,          # has the model been run, etc.
     select=ve.results.select,        # return the object's selection object
     find=ve.results.find,            # does select() then VESelection$find
-    extract=ve.results.extract,      # generate files or data.frames from model results
-    export=ve.results.extract,       # alias for 'extract'
+    extract=ve.results.extract,      # generate data.frames from model results
+    export=ve.results.export,        # alias for 'extract' except that saving to a file is the default
     list=ve.results.list,            # show the modelIndex
     queryprep=ve.results.queryprep,  # For query or other external access
     print=ve.results.print,          # summary of model results (index)

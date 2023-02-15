@@ -306,6 +306,49 @@ Calculate4DMeasuresSpecifications <- list(
 visioneval::savePackageDataset(Calculate4DMeasuresSpecifications, overwrite = TRUE)
 
 
+#Define a Validation Function for some of the input files
+#--------------------------------------------------------
+#' Validation function for checking input files (optional)
+#'
+#' Validation function takes a data.frame and a file name from which the data.frame was
+#' loaded and does basic sanity checks, returning a (possibly empty) report. see
+#' \code{visioneval::processModuleInputs}. The file name should be one listed in the
+#' "Inp" section of the module Specifications
+#'
+#' The specific check for Calculate4DMeasures will warn if there are zones with zero
+#' developable area. That's possibly recoverable, so it's a Warning not an Error, but
+#' such zones should be merged with other zones that "have something in them".
+#'
+#' @param File The name of the file from which Data_df was loaded (to select the test)
+#' @param Data_df A data.frame loaded from the named file
+#' @return A list of two lists, Errors and Warnings, which will be empty if no errors
+#    were encountered, and will have messages if there were problems.
+#' @export
+Calculate4DMeasuresValidateInputFile <- function( File, Data_df ) {
+  FileValidation_ls <- list(Errors=character(0),Warnings=character(0))
+  if ( inherits(Data_df,"data.frame") && is.character(File) && nzchar(File[1]) ) {
+    if ( File == "bzone_unprotected_area.csv" ) {
+      missingValues <- which(
+        {
+          # Error if Total area not specified or zero
+          TotalArea <- with( Data_df, UrbanArea + TownArea + RuralArea )
+          is.na(TotalArea) | TotalArea == 0
+        }
+      )
+      if ( any(missingValues) ) {
+        Msg <- paste(
+          c(
+            "These BZones have no developable land area:",
+            paste0(Data_df$Geo[missingValues],"(",Data_df$Year[missingValues],")")
+          )
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+      }
+    }
+  }
+  return(FileValidation_ls)
+}
+
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
 #=======================================================
@@ -416,15 +459,13 @@ Calculate4DMeasures <- function(L) {
   IsHighDensity_ <- D1B_ > 100
   HighDensityBzones_ <- Bz[IsHighDensity_]
   if (any(IsHighDensity_)) {
-    Msg <- paste0(
-      "The following Bzones in the year ", L$G$Year, " ",
-      "have population densities greater than ",
-      "100 persons per acre: ", paste(HighDensityBzones_, collapse = ", "), ". ",
-      "This density is a relatively high level. ",
-      "Check your Bzone area and housing inputs for these Bzones and make ",
-      "sure that they are correct."
+    Msg <- c(
+      paste0("The following Bzones in the year ", L$G$Year, " ",
+      "have high population densities (greater than ",
+      "100 persons per acre):"),
+      HighDensityBzones_ # This will be a potentially long list in large models...
     )
-    addWarningMsg("Out_ls", Msg)
+    addWarningMsg(Msg) # Attaches to Out_ls in the current frame by default
     rm(Msg)
   }
   rm(IsHighDensity_, HighDensityBzones_)

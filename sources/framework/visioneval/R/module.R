@@ -75,14 +75,14 @@ initDataList <- function() {
 #' create the Error component if it does not already exist and will add an error
 #' message to the vector.
 #'
-#' @param ResultsListName the name of the results list given as a character
-#' string
 #' @param ErrMsg a character string that contains the error message
+#' @param ResultsListName the name of the results list given as a character
+#' string (Default is "Out_ls")
 #' @return None. The function modifies the results list by adding an error
 #' message to the Errors component of the results list. It creates the Errors
 #' component if it does not already exist.
 #' @export
-addErrorMsg <- function(ResultsListName, ErrMsg) {
+addErrorMsg <- function(ErrMsg, ResultsListName="Out_ls") {
   Results_ls <- get(ResultsListName, envir = parent.frame())
   Results_ls$Errors <- c(Results_ls$Errors, ErrMsg)
   assign(ResultsListName, Results_ls, envir = parent.frame())
@@ -107,14 +107,14 @@ addErrorMsg <- function(ResultsListName, ErrMsg) {
 #' addWarningMsg will create the Warning component if it does not already exist
 #' and will add a warning message to the vector.
 #'
-#' @param ResultsListName the name of the results list given as a character
-#' string
 #' @param WarnMsg a character string that contains the warning message
+#' @param ResultsListName the name of the results list given as a character
+#' string; default is Out_ls (standard module return list)
 #' @return None. The function modifies the results list by adding a warning
 #' message to the Warnings component of the results list. It creates the
 #' Warnings component if it does not already exist.
 #' @export
-addWarningMsg <- function(ResultsListName, WarnMsg) {
+addWarningMsg <- function(WarnMsg,ResultsListName="Out_ls") {
   Results_ls <- get(ResultsListName, envir = parent.frame())
   Results_ls$Warnings <- c(Results_ls$Warnings, WarnMsg)
   assign(ResultsListName, Results_ls, envir = parent.frame())

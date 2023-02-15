@@ -508,6 +508,71 @@ PredictHousingSpecifications <- list(
 visioneval::savePackageDataset(PredictHousingSpecifications, overwrite = TRUE)
 
 
+#Define a Validation Function for some of the input files
+#--------------------------------------------------------
+#' Validation function for checking input files (optional)
+#'
+#' Validation function takes a data.frame and a file name from which the data.frame was
+#' loaded and does basic sanity checks, returning a (possibly empty) report. see
+#' \code{visioneval::processModuleInputs}. The file name should be one listed in the
+#' "Inp" section of the module Specifications
+#'
+#' The specific check for PredictHouseing warn if the income quartiles add up to more than
+#' 100% and if the total housing units of all types add up to zero.
+#'
+#' @param File The name of the file from which Data_df was loaded (to select the test)
+#' @param Data_df A data.frame loaded from the named file
+#' @return A list of two lists, Errors and Warnings, which will be empty if no errors
+#    were encountered, and will have messages if there were problems.
+#' @export
+# sources\modules\VELandUse\r\PredictHousing.R:       FILE = "bzone_dwelling_units.csv",
+# sources\modules\VELandUse\r\PredictHousing.R:       FILE = "bzone_hh_inc_qrtl_prop.csv",
+# -- Bzone_hhincquartile.csv:  that add up to more than 100%
+# -- Bzone_dwelling_units.csv: SFDU & MFDU & GQDU all = 0
+PredictHousingValidateInputFile <- function( File, Data_df ) {
+  FileValidation_ls <- list(Errors=character(0),Warnings=character(0))
+  if ( inherits(Data_df,"data.frame") && is.character(File) && nzchar(File[1]) ) {
+    if ( File == "bzone_hh_inc_qrtl_prop.csv" ) {
+      badPercent <- which(
+        {
+          # Error if total of all four quartiles is greater than 100%
+          IncProp <- with( Data_df, HhPropIncQ1 + HhPropIncQ2 + HhPropIncQ3 + HhPropIncQ4 )
+          is.na(IncProp) | IncProp > 100
+        }
+      )
+      if ( any(badPercent) ) {
+        Msg <- paste(
+          c(
+            "These BZones have income quartiles summing to more than 100%:",
+            paste0(Data_df$Geo[badPercent],"(",Data_df$Year[badPercent],")")
+          )
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+        # NOTE: this is reported as an error so the model will crash if there are any failed Bzones.
+        # Should it just be a warning? Should we create a VE run parameter to control behavior?
+      }
+    } else if ( File == "bzone_dwelling_units.csv" ) {
+      noHousing <- which(
+        {
+          # Error if there is not at least one housing unit of any type
+          TotDU <- with( Data_df, SFDU + MFDU + GQDU )
+          is.na(TotDU) | TotDU < 1
+        }
+      )
+      if ( any(noHousing) ) {
+        Msg <- paste(
+          c(
+            "These BZones have no housing units:",
+            paste0(Data_df$Geo[noHousing],"(",Data_df$Year[noHousing],")")
+          )
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+      }
+    }
+  }
+  return(FileValidation_ls)
+}
+
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
 #=======================================================

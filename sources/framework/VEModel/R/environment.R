@@ -239,6 +239,10 @@ viewSetup <- function(object=NULL,Param_ls=NULL,fromFile=FALSE,...) {
 #' @import visioneval
 #' @export
 updateSetup <- function(object=NULL,inFile=FALSE,Source="interactive",Param_ls=list(),drop=character(0),...) {
+  # TODO: for purposes of model Run Status, change the LastUpdate time stamp of "object" to "now" so
+  # when we next run the model, stages with a "RunComplete" time stamp earlier than now will all be
+  # marked for reset.
+
   # merge ... into Param_ls
   Param_ls <- visioneval::mergeParameters(
     Param_ls,

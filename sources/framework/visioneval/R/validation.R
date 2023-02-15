@@ -44,7 +44,7 @@ checkSpecConsistency <- function(Spec_ls, DstoreAttr_) {
     Errors_ <- c(Errors_, Message)
   }
   if (!is.null(Spec_ls$PROHIBIT) & !is.null(DstoreAttr_$PROHIBIT)) {
-    if (!all(Spec_ls$PROHIBIT %in% DstoreAttr_$PROHIBIT) |
+    if (!all(Spec_ls$PROHIBIT %in% DstoreAttr_$PROHIBIT) ||
         !all(DstoreAttr_$PROHIBIT %in% Spec_ls$PROHIBIT)) {
       SpecProhibit <- paste(Spec_ls$PROHIBIT, collapse = ", ")
       DstoreProhibit <- paste(DstoreAttr_$PROHIBIT, collapse = ", ")
@@ -57,7 +57,7 @@ checkSpecConsistency <- function(Spec_ls, DstoreAttr_) {
     }
   }
   if (!is.null(Spec_ls$ISELEMENTOF) & !is.null(DstoreAttr_$ISELEMENTOF)) {
-    if (!all(Spec_ls$ISELEMENTOF %in% DstoreAttr_$ISELEMENTOF) |
+    if (!all(Spec_ls$ISELEMENTOF %in% DstoreAttr_$ISELEMENTOF) ||
         !all(DstoreAttr_$ISELEMENTOF %in% Spec_ls$ISELEMENTOF)) {
       SpecElements <- paste(Spec_ls$ISELEMENTOF, collapse = ", ")
       DstoreElements <- paste(DstoreAttr_$ISELEMENTOF, collapse = ", ")
@@ -382,8 +382,8 @@ parseUnitsSpec <- function(Spec_ls, ComponentName) {
         Result <- NA
       } else {
         SciTest_ <- as.numeric(unlist(strsplit(String, "e")))
-        if (length(SciTest_) != 2 |
-            any(is.na(SciTest_)) |
+        if (length(SciTest_) != 2 ||
+            any(is.na(SciTest_)) ||
             SciTest_[1] != 1) {
           Result <- NaN
         } else {
@@ -660,7 +660,7 @@ checkUnits <- function(DataType, Units) {
   }
 
   #Check if Units is a character type and has length equal to one
-  if (length(Units) != 1 | typeof(Units) != "character") {
+  if (length(Units) != 1 || typeof(Units) != "character") {
     Msg <- paste0(
       "Units value is not correctly specified. ",
       "Must be a string and must not be a vector."
@@ -1087,8 +1087,8 @@ checkModuleSpecs <- function(Specs_ls, ModuleName) {
     if (length(Err_) != 0) {
       Msg <-
         paste0(
-          "'RunFor' specification for module '", ModuleName,
-          "' has one or more errors as follows.")
+          "'RunFor' specification for module '", ModuleName,"' has errors."
+        )
       Errors_ <- c(Errors_, Msg, Err_)
     }
   }
@@ -1098,8 +1098,8 @@ checkModuleSpecs <- function(Specs_ls, ModuleName) {
   if (length(Err_) != 0) {
     Msg <-
       paste0(
-        "'RunBy' specification for module '", ModuleName,
-        "' has one or more errors as follows.")
+        "'RunBy' specification for module '", ModuleName,"' has  errors"
+      )
     Errors_ <- c(Errors_, Msg, Err_)
   }
   rm(Err_)
@@ -1115,7 +1115,7 @@ checkModuleSpecs <- function(Specs_ls, ModuleName) {
       Msg <-
         paste0(
           "'NewInpTable' specification for module '", ModuleName,
-          "' has one or more errors as follows.")
+          "' has errors as follows.")
       Errors_ <- c(Errors_, Msg, Err_)
     }
     rm(Err_)
@@ -1131,8 +1131,8 @@ checkModuleSpecs <- function(Specs_ls, ModuleName) {
     if (length(Err_) != 0) {
       Msg <-
         paste0(
-          "'NewSetTable' specification for module '", ModuleName,
-          "' has one or more errors as follows.")
+          "'NewSetTable' specification for module '", ModuleName,"' has errors."
+        )
       Errors_ <- c(Errors_, Msg, Err_)
     }
     rm(Err_)
@@ -1149,7 +1149,7 @@ checkModuleSpecs <- function(Specs_ls, ModuleName) {
       Msg <-
         paste0(
           "'Inp' specification for module '", ModuleName,
-          "' has one or more errors as follows.")
+          "' has errors as follows.")
       Errors_ <- c(Errors_, Msg, Err_)
     }
     rm(Err_)
@@ -1165,8 +1165,8 @@ checkModuleSpecs <- function(Specs_ls, ModuleName) {
     if (length(Err_) != 0) {
       Msg <-
         paste0(
-          "'Get' specification for module '", ModuleName,
-          "' has one or more errors as follows.")
+          "'Get' specification for module '", ModuleName,"' has errors."
+        )
       Errors_<- c(Errors_, Msg, Err_)
     }
     rm(Err_)
@@ -1183,7 +1183,7 @@ checkModuleSpecs <- function(Specs_ls, ModuleName) {
       Msg <-
         paste0(
           "'Set' specification for module '", ModuleName,
-          "' has one or more errors as follows.")
+          "' has errors as follows.")
       Errors_<- c(Errors_, Msg, Err_)
     }
     rm(Err_)
@@ -1224,7 +1224,7 @@ checkModuleSpecs <- function(Specs_ls, ModuleName) {
           Msg <-
             paste0(
               "'Call' specification for module '", ModuleName,
-              "' is incorrect. The value for '", name, "' is not a string."
+              "': The value for '", name, "' is not a string."
             )
           Errors_ <- c(Errors_, Msg)
         }
@@ -1236,7 +1236,7 @@ checkModuleSpecs <- function(Specs_ls, ModuleName) {
   #-------------
   if (length(Errors_) != 0) {
     Msg <- paste0(
-      "Module ", ModuleName, " has one or more errors as follow:"
+      "Module ", ModuleName, " has errors."
     )
     Errors_ <- c(Msg, Errors_)
   }
@@ -1416,8 +1416,8 @@ parseInputFieldNames <- function(FieldNames_, Specs_ls, FileName) {
         Result <- NA
       } else {
         SciTest_ <- as.numeric(unlist(strsplit(String, "e")))
-        if (length(SciTest_) != 2 |
-            any(is.na(SciTest_)) |
+        if (length(SciTest_) != 2 ||
+            any(is.na(SciTest_)) ||
             SciTest_[1] != 1) {
           Result <- NaN
         } else {
@@ -1584,419 +1584,461 @@ parseInputFieldNames <- function(FieldNames_, Specs_ls, FileName) {
 #' @param ModuleSpec_ls a list of module specifications that is consistent with
 #' the VisionEval requirements.
 #' @param ModuleName a string identifying the name of the module (used to document
+#' module in error messages, and to seek a module-specific validation function).
+#' @param PackageName a string identifying the package containing the module (used
+#' with ModuleName to seek <PackageName>::<ModuleName>ValidateInputs function, which
+#' exists in some VE 3.0+ modules)
 #' module in error messages).
 #' @return A list containing the results of the input processing. The list has
 #' two components. The first (Errors) is a vector of identified file and data
 #' errors. The second (Data) is a list containing the data in the input files
 #' organized in the standard format for data exchange with the datastore.
 #' @export
-processModuleInputs <- function(ModuleSpec_ls, ModuleName) {
-    G <- getModelState()
-    InpSpec_ls <- (ModuleSpec_ls$Inp)
+processModuleInputs <- function(ModuleSpec_ls, ModuleName, PackageName) {
+  G <- getModelState()
+  InpSpec_ls <- (ModuleSpec_ls$Inp)
 
-    #ORGANIZE THE SPECIFICATIONS BY INPUT FILE AND NAME
-    SortSpec_ls <- list()
-    FilePath_ <- character(0)
-    for (i in 1:length(InpSpec_ls)) {
-      Spec_ls <- InpSpec_ls[[i]]
-      File <- basename(Spec_ls$FILE) # should already be a base name
-      Spec_ls$FILEPATH <- file.path(Spec_ls$INPUTDIR,File)
-      if ( is.na( FilePath_[File] ) ) {
-        pos <- length(FilePath_)+1
-        FilePath_[pos] <- Spec_ls$FILEPATH
-        names(FilePath_)[pos] <- File
-      } else if ( Spec_ls$FILEPATH != FilePath_[File] ) {
-        # All the field specs for this FILE need to have the same INPUTDIR
-        stop(
-          writeLog(
-            c(
-              paste("Multiple locations for File",File,"are not resolved:"),
-              paste(FilePath_[File],Spec_ls$FILEPATH,sep=",")
-            ),
-            Level="error"
+  #ORGANIZE THE SPECIFICATIONS BY INPUT FILE AND NAME
+  SortSpec_ls <- list()
+  FilePath_ <- character(0)
+  for (i in 1:length(InpSpec_ls)) {
+    Spec_ls <- InpSpec_ls[[i]]
+    File <- basename(Spec_ls$FILE) # should already be a base name
+    Spec_ls$FILEPATH <- file.path(Spec_ls$INPUTDIR,File)
+    if ( is.na( FilePath_[File] ) ) {
+      pos <- length(FilePath_)+1
+      FilePath_[pos] <- Spec_ls$FILEPATH
+      names(FilePath_)[pos] <- File
+    } else if ( Spec_ls$FILEPATH != FilePath_[File] ) {
+      # All the field specs for this FILE need to have the same INPUTDIR
+      stop(
+        writeLog(
+          c(
+            paste("Multiple locations for File",File,"are not resolved:"),
+            paste(FilePath_[File],Spec_ls$FILEPATH,sep=",")
           ),
-          call.=FALSE
-        )
-      }
-      Name <- Spec_ls$NAME
-      if (is.null(SortSpec_ls[[File]])) {
-        SortSpec_ls[[File]] <- list()
-      }
-      SortSpec_ls[[File]][[Name]] <- Spec_ls
-      rm(Spec_ls, File, Name)
+          Level="error"
+        ),
+        call.=FALSE
+      )
+    }
+    Name <- Spec_ls$NAME
+    if (is.null(SortSpec_ls[[File]])) {
+      SortSpec_ls[[File]] <- list()
+    }
+    SortSpec_ls[[File]][[Name]] <- Spec_ls
+    rm(Spec_ls, File, Name)
+  }
+
+  #IDENTIFY MODULE-SPECIFIC VALIDATION FUNCTIONS (Applied Below)
+  # These functions are intended to do row-level validation on the input data
+  # Versus column-level validation which is controlled by the data item spec
+  # Archetypal application is making sure that each Bzone has at least one dwelling unit of any type
+  ValidationFunctionName <- paste0(PackageName, "::", ModuleName, "ValidateInputFile")
+  ValidationFunction <- try( eval(parse(text = ValidationFunctionName)), silent=TRUE ) # Should produce a "function"
+  if ( ! is.function(ValidationFunction) ) {
+    ValidationFunction <- NULL
+  }
+
+  #Initialize a list to store all the input data
+  Data_ls <- initDataList()
+
+  #ITERATE THROUGH SORTED SPECIFICATIONS AND LOAD DATA INTO LIST
+  FileErr_ls <- list()
+  FileWarn_ls <- list()
+  Files_ <- names(SortSpec_ls)
+  for (File in Files_) {
+    #Initialize FileErr_ and FileWarn_
+    FileErr_ <- character(0)
+    FileWarn_ <- character(0)
+    #Extract the specifications
+    Spec_ls <- SortSpec_ls[[File]]
+    #We defer error handling to here so we can report on all missing files at once.
+    if ( ! file.exists(FilePath_[File]) ) {
+      Msg <-
+      paste(
+        "Input file error.", "File '", File, "' required by '",
+        PackageName,"::",ModuleName, "' is not present in",FilePath_[File]
+      )
+      FileErr_ <- c(FileErr_, Msg)
+      FileErr_ls <- c(FileErr_ls, FileErr_)
+      next()
+    }
+    #Read in the data file and check that it is properly formatted
+    Data_df <- try(read.csv(FilePath_[File], as.is = TRUE), silent = TRUE)
+    if ( inherits(Data_df,"try-error") ) {
+      Msg <- c(
+        paste0(
+          "Input file error. File '", File, "' required by '",
+          PackageName,"::",ModuleName, "' is not properly formatted.",
+          " Could be caused by rows not having same number of entries",
+          " or values not properly comma separated. Here's the error message:"
+        ),
+        as.character(Data_df) # it's an error report now, not a data.frame
+      )
+      FileErr_ <- c(FileErr_, Msg)
+      FileErr_ls <- c(FileErr_ls, FileErr_)
+      next()
     }
 
-    #Initialize a list to store all the input data
-    Data_ls <- initDataList()
+    # TODO: Do a "try"/"recover" loop to check for encoding when loading the input file and use it
+    # if available; if the BOM is not found, re-try with plain UTF-8 encoding.
+    #
+    # Remove the Byte order mark that sometimes appears in the beginning of UTF-8 files on
+    # Windows. Byte Order Mark can't be saved in this windows encoded text file so I include it as
+    # raw The real solution is to use read.csv with fileEncoding='UTF-8-BOM' but that requires
+    # knowing the encoding of the CSV file ahead of time The BOM is \uEFBBBF or
+    # rawToChar(as.raw(c(0xef, 0xbb, 0xbf))) but it gets converted to 0xef 0x2e 0x2e when it is
+    # read in on a machine using WIN1252 locale.
+    #
+    # See https://stackoverflow.com/questions/39593637/dealing-with-byte-order-mark-bom-in-r
+    bom <- rawToChar(as.raw(c(0xef, 0x2e, 0x2e)))
+    names(Data_df) <- stringr::str_replace(names(Data_df), bom, "")
 
-    #ITERATE THROUGH SORTED SPECIFICATIONS AND LOAD DATA INTO LIST
-    FileErr_ls <- list()
-    FileWarn_ls <- list()
-    Files_ <- names(SortSpec_ls)
-    for (File in Files_) {
-      #Initialize FileErr_ and FileWarn_
-      FileErr_ <- character(0)
-      FileWarn_ <- character(0)
-      #Extract the specifications
-      Spec_ls <- SortSpec_ls[[File]]
-      #We defer error handling to here so we can report on all missing files at once.
-      if ( ! file.exists(FilePath_[File]) ) {
+    #Parse the field names of the data file
+    ParsedNames_ls <- parseInputFieldNames(names(Data_df), Spec_ls, File)
+    ParsingErrors_ <- unlist(lapply(ParsedNames_ls, function(x) x$Error))
+    if (length(ParsingErrors_) != 0) {
+      writeLog(
+        c("Input file field name errors as follows:", ParsingErrors_),Level="error")
+      FileErr_ <- c(FileErr_, ParsingErrors_)
+      FileErr_ls <- c(FileErr_ls, FileErr_)
+      next()
+    }
+    names(Data_df) <- names(ParsedNames_ls)
+    rm(ParsingErrors_)
+    #Identify the group and table the data is to be placed in
+    Group <- unique(unlist(lapply(Spec_ls, function(x) x$GROUP)))
+    if (length(Group) != 1) {
+      Msg <-
+      paste0(
+        "Input specification error for module '", PackageName,"::",ModuleName,
+        "' for input file '", File, "'. ",
+        "All datasets must have the same 'Group' specification."
+      )
+      FileErr_ <- c(FileErr_, Msg)
+      Group <- Group[1]
+    }
+    Table <- unique(unlist(lapply(Spec_ls, function(x) x$TABLE)))
+    if (length(Table) != 1) {
+      Msg <-
+      paste0(
+        "Input specification error for module '", PackageName,"::",ModuleName,
+        "' for input file '", File, "'. ",
+        "All datasets must have the same 'Table' specification."
+      )
+      FileErr_ <- c(FileErr_, Msg)
+      Table <- Table[1]
+    }
+    #Add Table and table attributes to data list if not already there
+    if (is.null(Data_ls[[Group]][[Table]])) {
+      Data_ls[[Group]][[Table]] <- list()
+    }
+
+    #If Group is Year and Table is not Region, check Geo and Year fields
+    #-------------------------------------------------------------------
+    if (Group  == "Year" & Table != "Region") {
+      #Check that there are 'Year' and 'Geo' fields
+      HasYearField <- "Year" %in% names(Data_df)
+      HasGeoField <- "Geo" %in% names(Data_df)
+      if (!(HasYearField & HasGeoField)) {
         Msg <-
-          paste(
-            "Input file error.", "File '", File, "' required by '",
-            ModuleName, "' is not present in",FilePath_[File]
-          )
+        paste0(
+          "Input file error for module '", PackageName,"::",ModuleName,
+          "' for input file '", File, "'. ",
+          "'Group' specification is 'Year' or 'RunYear' ",
+          "but the input file is missing required 'Year' ",
+          "and/or 'Geo' fields."
+        )
         FileErr_ <- c(FileErr_, Msg)
         FileErr_ls <- c(FileErr_ls, FileErr_)
         next()
       }
-      #Read in the data file and check that it is properly formatted
-      Data_df <- try(read.csv(FilePath_[File], as.is = TRUE), silent = TRUE)
-      if (class(Data_df) == "try-error") {
-        Msg <-
+      #Remove rows from Data_df for years other than model run years
+      Data_df <- Data_df[Data_df$Year %in% G$Years,]
+      #Check that the file thas inputs for all years and geographic units
+      #If so, save Year and Geo to table
+      CorrectYearGeo <-
+      checkInputYearGeo(Data_df$Year, Data_df$Geo, Group, Table)
+      if (CorrectYearGeo$CompleteInput & !CorrectYearGeo$DupInput) {
+        #If Year and Geo data have not be added to the table then add them
+        if (is.null(Data_ls[[Group]][[Table]]$Year)) {
+          Data_ls[[Group]][[Table]]$Year <- Data_df$Year
+          Data_ls[[Group]][[Table]]$Geo <- Data_df$Geo
+          #Otherwise sort the input dataframe to be consistent
+        } else {
+          Data_df <- local({
+            #Year and Geo vector to match against
+            YearGeoToMatch_ <- paste(
+              Data_ls[[Group]][[Table]]$Year,
+              Data_ls[[Group]][[Table]]$Geo,
+              sep = "-"
+            )
+            #Year and Geo vector in Data_df
+            DataYearGeo_ <- paste(Data_df$Year, Data_df$Geo, sep = "-")
+            #Sort Data_df to match the Year and Geo order in the table
+            Data_df[match(YearGeoToMatch_, DataYearGeo_),]
+          })
+        }
+      } else {
+        if (!CorrectYearGeo$CompleteInput) {
+          Msg <-
           paste0(
-            "Input file error. File '", File, "' required by '",
-            ModuleName, "' is not properly formatted. Could be caused by rows ",
-            "not having same number of entries or values not properly comma ",
-            "separated."
-          )
-
-        FileErr_ <- c(FileErr_, Msg)
-        FileErr_ls <- c(FileErr_ls, FileErr_)
-        next()
-      }
-
-      # TODO: Do a "try"/"recover" loop to check for encoding and use
-      # it if available; if the BOM is not found, re-try with plain
-      # UTF-8 encoding.
-      #
-      # Remove the Byte order mark that sometimes appears in the beginning of
-      # UTF-8 files on Windows.  Byte Order Mark can't be saved in this
-      # windows encoded text file so I include it as raw
-      # The real solution is to use read.csv with fileEncoding='UTF-8-BOM'
-      # but that requires knowing the encoding of the CSV file ahead of time
-      # The BOM is \uEFBBBF or rawToChar(as.raw(c(0xef, 0xbb, 0xbf)))
-      # but it gets converted to 0xef 0x2e 0x2e when it is read in on a
-      # machine using WIN1252 locale.
-      # See https://stackoverflow.com/questions/39593637/dealing-with-byte-order-mark-bom-in-r
-      bom <- rawToChar(as.raw(c(0xef, 0x2e, 0x2e)))
-      names(Data_df) <- stringr::str_replace(names(Data_df), bom, "")
-
-      #Parse the field names of the data file
-      ParsedNames_ls <- parseInputFieldNames(names(Data_df), Spec_ls, File)
-      ParsingErrors_ <- unlist(lapply(ParsedNames_ls, function(x) x$Error))
-      if (length(ParsingErrors_) != 0) {
-        writeLog(
-          c("Input file field name errors as follows:", ParsingErrors_),Level="error")
-        FileErr_ <- c(FileErr_, ParsingErrors_)
-        FileErr_ls <- c(FileErr_ls, FileErr_)
-        next()
-      }
-      names(Data_df) <- names(ParsedNames_ls)
-      rm(ParsingErrors_)
-      #Identify the group and table the data is to be placed in
-      Group <- unique(unlist(lapply(Spec_ls, function(x) x$GROUP)))
-      if (length(Group) != 1) {
-        Msg <-
-          paste0(
-            "Input specification error for module '", ModuleName,
+            "Input file error for module '", PackageName,"::",ModuleName,
             "' for input file '", File, "'. ",
-            "All datasets must have the same 'Group' specification."
+            "Is missing inputs for the following Year/", Table,
+            " combinations: ", CorrectYearGeo$MissingInputs
           )
-        FileErr_ <- c(FileErr_, Msg)
-        Group <- Group[1]
-      }
-      Table <- unique(unlist(lapply(Spec_ls, function(x) x$TABLE)))
-      if (length(Table) != 1) {
-        Msg <-
+          FileErr_ <- c(FileErr_, Msg)
+        }
+        if(CorrectYearGeo$DupInput){
+          Msg <-
           paste0(
-            "Input specification error for module '", ModuleName,
+            "Input file error for module '", PackageName,"::",ModuleName,
             "' for input file '", File, "'. ",
-            "All datasets must have the same 'Table' specification."
+            "Has duplicate inputs for the following Year/", Table,
+            " combinations: ", CorrectYearGeo$DuplicatedInputs
           )
+          FileErr_ <- c(FileErr_, Msg)
+        }
+        FileErr_ls <- c(FileErr_ls, FileErr_)
+        next()
+      }
+    }
+
+    #If Group is BaseYear or Global, and if Table is Azone, Bzone, Czone, or
+    #Marea, check that geography is complete and correct
+    #-----------------------------------------------------------------------
+    if (Group %in% c("BaseYear", "Global") &
+      Table %in% c("Azone", "Bzone", "Czone", "Marea")) {
+      #Check that there is a 'Geo' field
+      HasGeoField <- "Geo" %in% names(Data_df)
+      if (!HasGeoField) {
+        Msg <-
+        paste0(
+          "Input file error for module '", PackageName,"::",ModuleName,
+          "' for input file '", File, "'. ",
+          "'Table' specification is ", Table,
+          " but the input file is missing required 'Geo' field."
+        )
         FileErr_ <- c(FileErr_, Msg)
-        Table <- Table[1]
+        FileErr_ls <- c(FileErr_ls, FileErr_)
+        next()
       }
-      #Add Table and table attributes to data list if not already there
-      if (is.null(Data_ls[[Group]][[Table]])) {
-        Data_ls[[Group]][[Table]] <- list()
-      }
-
-      #If Group is Year and Table is not Region, check Geo and Year fields
-      #-------------------------------------------------------------------
-      if (Group  == "Year" & Table != "Region") {
-        #Check that there are 'Year' and 'Geo' fields
-        HasYearField <- "Year" %in% names(Data_df)
-        HasGeoField <- "Geo" %in% names(Data_df)
-        if (!(HasYearField & HasGeoField)) {
+      #Check that the 'Geo' field is complete and not duplicated
+      GeoDuplicated <- any(duplicated(Data_df$Geo))
+      GeoIncomplete <- any(!(G$Geo_df[[Table]] %in% Data_df$Geo))
+      #If duplicated or incomplete print out errors
+      if (GeoDuplicated || GeoIncomplete) {
+        if (GeoDuplicated) {
+          DupGeo_ <- unique(Data_df$Geo[GeoDuplicated])
           Msg <-
-            paste0(
-              "Input file error for module '", ModuleName,
-              "' for input file '", File, "'. ",
-              "'Group' specification is 'Year' or 'RunYear' ",
-              "but the input file is missing required 'Year' ",
-              "and/or 'Geo' fields."
-            )
+          paste0(
+            "Input file error for module '", PackageName,"::",ModuleName,
+            "' for input file '", File, "'. ",
+            "Has duplicate inputs for the following geographic areas: ",
+            paste(DupGeo_)
+          )
           FileErr_ <- c(FileErr_, Msg)
-          FileErr_ls <- c(FileErr_ls, FileErr_)
-          next()
+          rm(DupGeo_)
         }
-        #Remove rows from Data_df for years other than model run years
-        Data_df <- Data_df[Data_df$Year %in% G$Years,]
-        #Check that the file thas inputs for all years and geographic units
-        #If so, save Year and Geo to table
-        CorrectYearGeo <-
-          checkInputYearGeo(Data_df$Year, Data_df$Geo, Group, Table)
-        if (CorrectYearGeo$CompleteInput & !CorrectYearGeo$DupInput) {
-          #If Year and Geo data have not be added to the table then add them
-          if (is.null(Data_ls[[Group]][[Table]]$Year)) {
-            Data_ls[[Group]][[Table]]$Year <- Data_df$Year
-            Data_ls[[Group]][[Table]]$Geo <- Data_df$Geo
-            #Otherwise sort the input dataframe to be consistent
-          } else {
-            Data_df <- local({
-              #Year and Geo vector to match against
-              YearGeoToMatch_ <- paste(
-                Data_ls[[Group]][[Table]]$Year,
-                Data_ls[[Group]][[Table]]$Geo,
-                sep = "-"
-              )
-              #Year and Geo vector in Data_df
-              DataYearGeo_ <- paste(Data_df$Year, Data_df$Geo, sep = "-")
-              #Sort Data_df to match the Year and Geo order in the table
-              Data_df[match(YearGeoToMatch_, DataYearGeo_),]
-            })
-          }
+        if (GeoIncomplete) {
+          IncompleteGeo_ <- G$Geo_df[[Table]][GeoIncomplete]
+          Msg <-
+          paste0(
+            "Input file error for module '", PackageName,"::",ModuleName,
+            "' for input file '", File, "'.",
+            "Is missing inputs for the following geographic areas: ",
+            paste(IncompleteGeo_)
+          )
+          FileErr_ <- c(FileErr_, Msg)
+          rm(IncompleteGeo_)
+        }
+        FileErr_ls <- c(FileErr_ls, FileErr_)
+        next()
+        #If no errors, process Geo
+      } else {
+        #If Geo not in table, add to table
+        if (is.null(Data_ls[[Group]][[Table]]$Geo)) {
+          Data_ls[[Group]][[Table]]$Geo <- Data_df$Geo
+          #Otherwise reorder Data_df to match Geo order in table
         } else {
-          if (!CorrectYearGeo$CompleteInput) {
-            Msg <-
-              paste0(
-                "Input file error for module '", ModuleName,
-                "' for input file '", File, "'. ",
-                "Is missing inputs for the following Year/", Table,
-                " combinations: ", CorrectYearGeo$MissingInputs
-              )
-            FileErr_ <- c(FileErr_, Msg)
-          }
-          if(CorrectYearGeo$DupInput){
-            Msg <-
-              paste0(
-                "Input file error for module '", ModuleName,
-                "' for input file '", File, "'. ",
-                "Has duplicate inputs for the following Year/", Table,
-                " combinations: ", CorrectYearGeo$DuplicatedInputs
-              )
-            FileErr_ <- c(FileErr_, Msg)
-          }
-          FileErr_ls <- c(FileErr_ls, FileErr_)
-          next()
+          Data_df <- local({
+            GeoToMatch_ <- Data_ls[[Group]][[Table]]$Geo
+            Data_df[match(GeoToMatch_, Data_df$Geo),]
+          })
         }
       }
+    }
 
-      #If Group is BaseYear or Global, and if Table is Azone, Bzone, Czone, or
-      #Marea, check that geography is complete and correct
-      #-----------------------------------------------------------------------
-      if (Group %in% c("BaseYear", "Global") &
-          Table %in% c("Azone", "Bzone", "Czone", "Marea")) {
-        #Check that there is a 'Geo' field
-        HasGeoField <- "Geo" %in% names(Data_df)
-        if (!HasGeoField) {
-          Msg <-
-            paste0(
-              "Input file error for module '", ModuleName,
-              "' for input file '", File, "'. ",
-              "'Table' specification is ", Table,
-              " but the input file is missing required 'Geo' field."
-            )
-          FileErr_ <- c(FileErr_, Msg)
-          FileErr_ls <- c(FileErr_ls, FileErr_)
-          next()
-        }
-        #Check that the 'Geo' field is complete and not duplicated
-        GeoDuplicated <- any(duplicated(Data_df$Geo))
-        GeoIncomplete <- any(!(G$Geo_df[[Table]] %in% Data_df$Geo))
-        #If duplicated or incomplete print out errors
-        if (GeoDuplicated | GeoIncomplete) {
-          if (GeoDuplicated) {
-            DupGeo_ <- unique(Data_df$Geo[GeoDuplicated])
-            Msg <-
-              paste0(
-                "Input file error for module '", ModuleName,
-                "' for input file '", File, "'. ",
-                "Has duplicate inputs for the following geographic areas: ",
-                paste(DupGeo_)
-              )
-            FileErr_ <- c(FileErr_, Msg)
-            rm(DupGeo_)
-          }
-          if (GeoIncomplete) {
-            IncompleteGeo_ <- G$Geo_df[[Table]][GeoIncomplete]
-            Msg <-
-              paste0(
-                "Input file error for module '", ModuleName,
-                "' for input file '", File, "'.",
-                "Is missing inputs for the following geographic areas: ",
-                paste(IncompleteGeo_)
-              )
-            FileErr_ <- c(FileErr_, Msg)
-            rm(IncompleteGeo_)
-          }
-          FileErr_ls <- c(FileErr_ls, FileErr_)
-          next()
-          #If no errors, process Geo
-        } else {
-          #If Geo not in table, add to table
-          if (is.null(Data_ls[[Group]][[Table]]$Geo)) {
-            Data_ls[[Group]][[Table]]$Geo <- Data_df$Geo
-            #Otherwise reorder Data_df to match Geo order in table
-          } else {
-            Data_df <- local({
-              GeoToMatch_ <- Data_ls[[Group]][[Table]]$Geo
-              Data_df[match(GeoToMatch_, Data_df$Geo),]
-            })
-          }
-        }
+    #If Group is Year and Table is Region, check years are complete
+    #--------------------------------------------------------------
+    if (Group  == "Year" & Table == "Region") {
+      #Check that there is a 'Year' field
+      HasYearField <- "Year" %in% names(Data_df)
+      if (!HasYearField) {
+        Msg <-
+        paste0(
+          "Input file error for module '", PackageName,"::",ModuleName,
+          "' for input file '", File, "'. ",
+          "'Table' specification is ", Table,
+          " but the input file is missing required 'Year' field."
+        )
+        FileErr_ <- c(FileErr_, Msg)
+        FileErr_ls <- c(FileErr_ls, FileErr_)
+        next()
       }
-
-      #If Group is Year and Table is Region, check years are complete
-      #--------------------------------------------------------------
-      if (Group  == "Year" & Table == "Region") {
-        #Check that there is a 'Year' field
-        HasYearField <- "Year" %in% names(Data_df)
-        if (!HasYearField) {
+      #Remove rows from Data_df for years other than model run years
+      Data_df <- Data_df[Data_df$Year %in% G$Years,]
+      #Check that the 'Year' field is complete and not duplicated
+      YearDuplicated <- any(duplicated(Data_df$Year))
+      YearIncomplete <- any(!(G$Years %in% Data_df$Year))
+      if (YearDuplicated || YearIncomplete) {
+        if (YearDuplicated) {
+          DupYear_ <- unique(Data_df$Year[YearDuplicated])
           Msg <-
-            paste0(
-              "Input file error for module '", ModuleName,
-              "' for input file '", File, "'. ",
-              "'Table' specification is ", Table,
-              " but the input file is missing required 'Year' field."
-            )
+          paste0(
+            "Input file error for module '", PackageName,"::",ModuleName,
+            "' for input file '", File, "'. ",
+            "Has duplicate inputs for the following years: ",
+            paste(DupYear_)
+          )
           FileErr_ <- c(FileErr_, Msg)
-          FileErr_ls <- c(FileErr_ls, FileErr_)
-          next()
+          rm(DupYear_)
         }
-        #Remove rows from Data_df for years other than model run years
-        Data_df <- Data_df[Data_df$Year %in% G$Years,]
-        #Check that the 'Year' field is complete and not duplicated
-        YearDuplicated <- any(duplicated(Data_df$Year))
-        YearIncomplete <- any(!(G$Years %in% Data_df$Year))
-        if (YearDuplicated | YearIncomplete) {
-          if (YearDuplicated) {
-            DupYear_ <- unique(Data_df$Year[YearDuplicated])
-            Msg <-
-              paste0(
-                "Input file error for module '", ModuleName,
-                "' for input file '", File, "'. ",
-                "Has duplicate inputs for the following years: ",
-                paste(DupYear_)
-              )
-            FileErr_ <- c(FileErr_, Msg)
-            rm(DupYear_)
-          }
-          if (YearIncomplete) {
-            IncompleteYear_ <- G$Years[YearIncomplete]
-            Msg <-
-              paste0(
-                "Input file error for module '", ModuleName,
-                "' for input file '", File, "'.",
-                "Is missing inputs for the following years: ",
-                paste(IncompleteYear_)
-              )
-            FileErr_ <- c(FileErr_, Msg)
-            rm(IncompleteYear_)
-          }
-          FileErr_ls <- c(FileErr_ls, FileErr_)
-          next()
-          #Process Year input
+        if (YearIncomplete) {
+          IncompleteYear_ <- G$Years[YearIncomplete]
+          Msg <-
+          paste0(
+            "Input file error for module '", PackageName,"::",ModuleName,
+            "' for input file '", File, "'.",
+            "Is missing inputs for the following years: ",
+            paste(IncompleteYear_)
+          )
+          FileErr_ <- c(FileErr_, Msg)
+          rm(IncompleteYear_)
+        }
+        FileErr_ls <- c(FileErr_ls, FileErr_)
+        next()
+        #Process Year input
+      } else {
+        #If table doesn't contain Year entry, add
+        if (is.null(Data_ls[[Group]][[Table]]$Year)) {
+          Data_ls[[Group]][[Table]]$Year <- Data_df$Year
+          #Otherwise sort Data_df to match Year order in table
         } else {
-          #If table doesn't contain Year entry, add
-          if (is.null(Data_ls[[Group]][[Table]]$Year)) {
-            Data_ls[[Group]][[Table]]$Year <- Data_df$Year
-            #Otherwise sort Data_df to match Year order in table
-          } else {
+          Data_df <- local( {
             YearToMatch_ <- Data_ls[[Group]][[Table]]$Year
             Data_df[match(YearToMatch_, Data_df$Year),]
-          }
+          })
         }
       }
+    }
 
-      #Check and load data into list
-      #-----------------------------
-      DataErr_ls <- list(Errors = character(0), Warnings = character(0))
-      for (Name in names(Spec_ls)) {
-        ThisSpec_ls <- Spec_ls[[Name]]
-        Data_ <- Data_df[[Name]]
-        DataCheck_ls <-
-          checkDataConsistency(Name, Data_, ThisSpec_ls)
-        if (length(DataCheck_ls$Errors) != 0) {
-          DataErr_ls$Errors <-
-            c(DataErr_ls$Errors, DataCheck_ls$Errors)
-          next()
-        }
-        if (length(DataCheck_ls$Warnings) != 0) {
-          DataErr_ls$Warnings <-
-            c(DataErr_ls$Warnings, DataCheck_ls$Warnings)
-        }
-        #Convert currency
-        if (ThisSpec_ls$TYPE == "currency") {
-          FromYear <- ParsedNames_ls[[Name]]$Year
-          ToYear <- G$BaseYear
-          if (!is.na(FromYear) &  FromYear != ToYear) {
-            Data_ <- deflateCurrency(Data_, FromYear, ToYear)
-            rm(FromYear, ToYear)
-          }
-        }
-        #Convert units
-        SimpleTypes_ <- c("integer", "double", "character", "logical")
-        ComplexTypes_ <- names(Types())[!(names(Types()) %in% SimpleTypes_)]
-        if (ThisSpec_ls$TYPE %in% ComplexTypes_) {
-          FromUnits <- ThisSpec_ls$UNITS
-          Conversion_ls <- convertUnits(Data_, ThisSpec_ls$TYPE, FromUnits)
-          Data_ <- Conversion_ls$Values
-          #Update UNITS to reflect datastore units
-          ThisSpec_ls$UNITS <- Conversion_ls$ToUnits
-          rm(FromUnits, Conversion_ls)
-        }
-        rm(SimpleTypes_, ComplexTypes_)
-        #Convert magnitude
-        Multiplier <- ParsedNames_ls[[Name]]$Multiplier
-        if (!is.na(Multiplier)) {
-          Data_ <- convertMagnitude(Data_, Multiplier, 1)
-        }
-        rm(Multiplier)
-        #Assign UNITS attribute to Data_ because storage units may be different
-        #than the input data UNITS
-        attributes(Data_) <- list(UNITS = ThisSpec_ls$UNITS)
-        #Assign Data_ to Data_ls
-        Data_ls[[Group]][[Table]][[Name]] <- Data_
-      }
-      if (length(DataErr_ls$Errors) != 0) {
-        Msg <-
-          paste0(
-            "Input file error for module '", ModuleName,
-            "' for input file '", File, "'. ",
-            "Has one or more errors in the data inputs as follows:"
-          )
-        FileErr_ <- c(FileErr_, Msg, DataErr_ls$Errors)
-        writeLog(FileErr_,Level="error")
-      }
-      FileErr_ls <- c(FileErr_ls, FileErr_)
-      if (length(DataErr_ls$Warnings) != 0) {
-        Msg <-
-          paste0(
-            "Input file warnings for module '", ModuleName,
-            "' for input file '", File, "'. ",
-            "Has one or more warnings for the data inputs as follows:"
-          )
-        FileWarn_ <- c(FileWarn_, Msg, DataErr_ls$Warnings)
-        writeLog(FileWarn_,Level="warn")
-      }
-      FileWarn_ls <- c(FileWarn_ls, FileWarn_)
-    }#End loop through input files
+    # Set up to identify and report validation errors on data rows and columns
 
-    #RETURN THE RESULTS
-    list(
-      Errors = unlist(FileErr_ls),
-      Warnings = unlist(FileWarn_ls),
-      Data = Data_ls)
-  }
+    DataErr_ls <- list(Errors = character(0), Warnings = character(0))
+
+    #Row validation is performed by Module-Specific validation functions
+    #   <ModuleName>ValidateInputFile
+    # Define that function in the Module .R file
+
+    #Perform Module-Specific validation function, if there is one
+    # ValidationFunction was created above
+    # If the function does exist, pass it these parameters:
+    #    File (name of current .csv file)
+    #    Data_df (the rectified data.frame with the input file contents)
+    # The function should do row checking (proportions < 1, areas > 0, etc.)
+    # The function should return a named list with character vectors "Errors" and "Warnings"
+    if ( is.function(ValidationFunction) ) {
+      FileValidation_ls <- ValidationFunction(File,Data_df)
+      if (length(FileValidation_ls$Errors) > 0) {
+        DataErr_ls$Errors   <- c(DataErr_ls$Errors, FileValidation_ls$Errors)
+      }
+      if (length(FileValidation_ls$Warnings) > 0) {
+        DataErr_ls$Warnings <- c(DataErr_ls$Warnings, FileValidation_ls$Warnings)
+      }
+    }
+
+    #Check and load data into list
+    #-----------------------------
+    # These checks examine individual data columns based on column Inp Specification
+    for (Name in names(Spec_ls)) {
+      ThisSpec_ls <- Spec_ls[[Name]]
+      Data_ <- Data_df[[Name]]
+      DataCheck_ls <-
+      checkDataConsistency(Name, Data_, ThisSpec_ls)
+      if (length(DataCheck_ls$Errors) != 0) {
+        DataErr_ls$Errors <-
+        c(DataErr_ls$Errors, DataCheck_ls$Errors)
+        next()
+      }
+      if (length(DataCheck_ls$Warnings) != 0) {
+        DataErr_ls$Warnings <-
+        c(DataErr_ls$Warnings, DataCheck_ls$Warnings)
+      }
+      #Convert currency
+      if (ThisSpec_ls$TYPE == "currency") {
+        FromYear <- ParsedNames_ls[[Name]]$Year
+        ToYear <- G$BaseYear
+        if (!is.na(FromYear) &  FromYear != ToYear) {
+          Data_ <- deflateCurrency(Data_, FromYear, ToYear)
+          rm(FromYear, ToYear)
+        }
+      }
+      #Convert units
+      SimpleTypes_ <- c("integer", "double", "character", "logical")
+      ComplexTypes_ <- names(Types())[!(names(Types()) %in% SimpleTypes_)]
+      if (ThisSpec_ls$TYPE %in% ComplexTypes_) {
+        FromUnits <- ThisSpec_ls$UNITS
+        Conversion_ls <- convertUnits(Data_, ThisSpec_ls$TYPE, FromUnits)
+        Data_ <- Conversion_ls$Values
+        #Update UNITS to reflect datastore units
+        ThisSpec_ls$UNITS <- Conversion_ls$ToUnits
+        rm(FromUnits, Conversion_ls)
+      }
+      rm(SimpleTypes_, ComplexTypes_)
+      #Convert magnitude
+      Multiplier <- ParsedNames_ls[[Name]]$Multiplier
+      if (!is.na(Multiplier)) {
+        Data_ <- convertMagnitude(Data_, Multiplier, 1)
+      }
+      rm(Multiplier)
+      #Assign UNITS attribute to Data_ because storage units may be different
+      #than the input data UNITS
+      attributes(Data_) <- list(UNITS = ThisSpec_ls$UNITS)
+      #Assign Data_ to Data_ls
+      Data_ls[[Group]][[Table]][[Name]] <- Data_
+    }
+
+    # Accumualte sum of errors and warnings
+    if (length(DataErr_ls$Errors) != 0) {
+      Msg <-
+      paste0(
+        "Input file errors for module '", PackageName,"::",ModuleName,
+        "' in file '", File, "':"
+      )
+      FileErr_ <- c(FileErr_, Msg, DataErr_ls$Errors)
+#      writeLog(FileErr_,Level="error")
+    }
+    FileErr_ls <- c(FileErr_ls, FileErr_)
+    if (length(DataErr_ls$Warnings) != 0) {
+      Msg <-
+      paste0(
+        "Input file warnings for module '", PackageName,"::",ModuleName,
+        "' in file '", File, "':"
+      )
+      FileWarn_ <- c(FileWarn_, Msg, DataErr_ls$Warnings)
+#      writeLog(FileWarn_,Level="warn")
+    }
+    FileWarn_ls <- c(FileWarn_ls, FileWarn_)
+  } #End loop through input files
+
+  #RETURN THE RESULTS
+  # Success (No Errors) will allow Data to be added to Datastore
+  list(
+    Errors = unlist(FileErr_ls),
+    Warnings = unlist(FileWarn_ls),
+    Data = Data_ls
+  )
+}

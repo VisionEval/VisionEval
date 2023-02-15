@@ -199,7 +199,7 @@ function(ModuleName,Param_ls=NULL,...) {
     writeLog(Msg,Level="error")
     writeLog(Errors_,Level="error")
     Msg <- paste0("Specifications for module '", ModuleName,
-      "' have one or more errors. Check the log for details.")
+      "' have errors. Check the log for details.")
     stop(Msg)
     rm(Msg)
   }
@@ -216,8 +216,8 @@ function(ModuleName,Param_ls=NULL,...) {
   if (length(DeveloperWarnings_) != 0) {
     writeLog(DeveloperWarnings_,Level="warn")
     Msg <- paste0(
-      "Specifications check for module '", ModuleName, "' generated one or ",
-      "more warnings. Check log for details."
+      "Specifications check for module '", ModuleName,
+      "' generated warnings. Check log for details."
     )
     warning(Msg)
     rm(DeveloperWarnings_ls, DeveloperWarnings_, Msg)
@@ -227,7 +227,7 @@ function(ModuleName,Param_ls=NULL,...) {
   #--------------------------------------
   if (is.null(Specs_ls$Inp)) {
     writeLog("No inputs to process.", Level="warn")
-    # If no inputs and is Initialize module return
+    # If no inputs and the module is "Initialize", we're done
     # i.e. all inputs are optional and none are provided
     if (ModuleName == "Initialize") return()
   } else {

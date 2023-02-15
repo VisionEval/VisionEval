@@ -655,8 +655,8 @@ Initialize <- function(L) {
 
   #Add Errors and Warnings to Out_ls and return
   #--------------------------------------------
-  Out_ls$Errors <- Errors_
-  Out_ls$Warnings <- Warnings_
+  addErrorMsg(Errors_)
+  addWarningMsg(Warnings_)
   Out_ls
 }
 

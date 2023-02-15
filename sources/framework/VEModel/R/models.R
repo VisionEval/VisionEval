@@ -259,60 +259,15 @@ findModel <- function( modelDir, Param_ls=getSetup() ) {
   return(modelPath)
 }
 
-ve.model.torun <- function( reset="continue", details=FALSE ) {
-  # Grand steps:
-  #    "open" will be TRUE if length(reset)
-  #    "open" will be FALSE (i.e. run it) if length(reset)>1 (by convention, second element will be "run")
-  #    If open:
-  #       reset is "save", COPY all the results to an archive and proceed to further checks below
-  #       reset is "reset", do all the checks, and destroy invalid stages
-  #       reset is "continue", do all checks, and mark invalid stages in Run Status ("Not Run" or "Out of Date")
-  #    If not open
-  #       reset is "save", MOVE all the results to an archive and report "Not Run" status for all stages  
-  #       reset is "reset", blow away all the model results and return "Not Run" status
-  #       reset is "continue", do all checks and blow away only "Out of Date" stages
-  #    Do all checks:
-  #       See below about what to check for each stage, return an list of stage statuses
-  #       Once a stage is "Out of Date" or "Not Run", any stage starting from it inherits that status
-
-  #    Once done with all checks
-  #       if details==FALSE, just list the newer visioneval.cnf files and structural files by stage.
-  #       if details==TRUE, report the parameters that have changed.
-
-  # TODO: one day also be able to do this check on two pairs of results (ignoring file dates and
-  #    just checking the run parameters - in that case will also report on different ModelStages)
-  #    Probably want a different function/utility for that.
-  
-  # Return:
-  #    Identify the stages that need to be run (and perhaps also "Run Complete" on those that are good)
-  #    Later when running:
-  #    User can ask for certain stages to run (by name or absolute position), which will back up
-  #       from that stage through its Startfrom chain. If StartFrom is not Run Complete, check its
-  #       StartFrom and if its status is not Run Complete, keep backing up. If no StartFrom, start
-  #       from that first stage. If the StartFrom stage is Run Complete, then its child that we were
-  #       just looking at is the place to start.
-  #    Plus use structure function to attach attributes about what was wrong
-  #       (no results, out of date parameters or files)
-
-  # Things we need to consider for each stage with results:
-  #    Load the stage's ModelState_ls and separately build the run parameters from the
-  #    configuration. Walk through the elements in each and compare them (present in both,
-  #    file date for that parameter in loaded configuration older than ModelState run.
-  #    Also check the structural files
-  #    Any visioneval.cnf elements with new elements (but be gentle with ModelStages - new ones
-  #       of those are fine (as are dropped ones - those will be blown away if not "open")
-  #    Any modelScript files in ScriptsDir
-  #    Any of the files in ParamDir
-  #    Any of the input files for each stage (walk the stage's InputPath)
-  #    All of those comparisons done stage-by-stage using its CompleteDate if RunStatus is Run Complete
+ve.model.torun <- function() {
+  # Cascade unrun and out-of-date status from StartFrom stage to those that start from it
 }
 
 # configure installs the model parameters (initializing or re-initializing)
 # `fromFile` says to reload self$loadParam_ls, otherwise use self$runParam_ls; it is rarely desirable
 #   to change the default, which supports in-memory modifications.
-# `reset` says what to do when configuring a model that already has results (at the bottom, do model$torun)
-# `open` if TRUE says be minimally invasive on cleanup; if FALSE says do the cleanup now (passed to model$torun)
-ve.model.configure <- function(modelPath=NULL, fromFile=TRUE, reset="continue", open=TRUE) {
+# 
+ve.model.configure <- function(modelPath=NULL, fromFile=TRUE) {
 
   if ( missing(modelPath) || ! is.character(modelPath) ) {
     modelPath <- self$modelPath
@@ -577,44 +532,6 @@ ve.model.configure <- function(modelPath=NULL, fromFile=TRUE, reset="continue", 
   writeLog("Initializing Model Stages",Level="info")
   self$modelStages <- self$initstages( self$modelStages )
 
-#   # Not clear this is still needed
-#   # Check for scenario element consistency (this should be taken care
-#   # of automatically when ScenarioElements are loaded and built).
-#   stageNames <- names(self$modelStages)
-#   checkElements <- function(base,check) {
-#     return(
-#       length(base)>0 &&
-#       ( length(base) == length(check) ) &&
-#       ! is.null( names(base) ) &&
-#       ! is.null( names(check) ) &&
-#       all(names(base) %in% names(check))
-#     )
-#   }
-#   scenarioElements <- character(0)
-#   for ( s in seq_along(stageNames) ) {
-#     stage <- self$modelStages[[s]]
-#     if ( ! stage$Reportable ) next # only concerned about reportable stages
-# 
-#     elements <- stage$ScenarioElements
-#     if ( ! checkElements( elements, self$setting("ScenarioElements",stageNames[s],defaults=FALSE) ) ) {
-#       writeLog(paste("Inconsistent ScenarioElements within",stageNames[s]),Level="error")
-#       browser()
-#     }
-#     if ( length(scenarioElements)==0 ) {
-#       scenarioElements = elements
-#     } else if ( ! checkElements( scenarioElements, elements ) ) {
-#       writeLog(paste("Different ScenarioElements in",stageNames[s]),Level="error")
-#       browser()
-#     }
-#   }
-#   if ( length(scenarioElements)==0 ) {
-#     writeLog("No Stages have ScenarioElements (visualizer is unavailable)!",Level="error")
-#     browser()
-#   }
-
-  # self$torun(reset=reset
-
-  # Update the model status
   self$specSummary <- NULL # regenerate when ve.model.list is next called
   self$updateStatus()
 
@@ -630,7 +547,6 @@ ve.model.initstages <- function( modelStages ) {
     stage <- modelStages[[stage_seq]]      # stage is a VEModelStage object
     if ( stage_seq > 1 && isTRUE(stage$RunParam_ls$LoadDatastore) ) {
       # Only the first stage performs LoadDatastore
-      # Consider amending to allow any stage that does not "StartFrom"
       stage$RunParam_ls$LoadDatastore <- FALSE
       stage$RunParam_ls[["LoadDatastoreName"]] <- NULL
     }
@@ -661,6 +577,8 @@ ve.model.initstages <- function( modelStages ) {
       writeLog(paste("Single stage",modelStages[[1]]$Name,"Reportable:",modelStages[[1]]$Reportable),Level="info")
     }
   } else {
+    # TODO: cascade "Out of Date" to any stage that is Run Complete itself but starts from a stage that is not Run Complete
+
     # Put names on Stages and identify reportable stages
     # Also fix up scenario Elements (adding to base stage...)
     startFromNames <- unlist(sapply(modelStages,function(s) s$StartFrom))
@@ -674,7 +592,7 @@ ve.model.initstages <- function( modelStages ) {
         modelStages[reportable],
         function(s) {
           if ( ! s$IsScenario ) { # reportable stage is not associated with Scenarios
-            # Probably the StartFrom stage
+            # Probably the StartFrom stage / Base scenario
             elementNames <- names(scenarios$Elements) # may be NULL
             s$ScenarioElements <- rep("0",length(elementNames))
             names(s$ScenarioElements) <- elementNames
@@ -686,25 +604,33 @@ ve.model.initstages <- function( modelStages ) {
     for ( r in seq_along(stageNames) ) {
       modelStages[[r]]$Reportable <- reportable[r]
     }
+
+    # Propagate Out of Date status from StartFrom to descendents
+    sapply( modelStages,
+      function(s) {
+        if (
+          s$RunStatus == codeStatus("Run Complete") && nzchar(s$StartFrom) &&
+          modelStages[[s$StartFrom]]$RunStatus != codeStatus("Run Complete")
+        ) {
+          s$RunStatus <- codeStatus("Out of Date")
+        }
+        s$RunStatus
+      }
+    )
   }
+
   return( modelStages )
 }
 
 # Initialize a VEModel from modelPath
 # modelPath may be a full path, and will be expanded into known model directories
 #  if it is a relative path.
-# "reset" parameter says what to do if the opened model contains results
-ve.model.init <- function(modelPath, reset="continue") {
 
-  # Opportunity to override names of ModelState, run_model.R, Datastore, etc.
-  # Also to establish standard model directory structure (inputs, results)
-
-  # Identify the run_model.R root location(s)
-  # Also, update self$RunParam_ls with model-specific configuration
-  writeLog(paste("Finding",modelPath),Level="info")
+ve.model.init <- function(modelPath) {
+  writeLog(paste("Finding",modelPath),Level="info") # for debugging point of failure
   modelPath <- findModel(modelPath) # expand to disk location
   if ( nzchar(modelPath) ) {
-    self$configure(modelPath, reset=reset)
+    self$configure(modelPath) # actually do the initialization
   } else {
     self$updateStatus() # deliver the bad news on no model path
   }
@@ -917,7 +843,8 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, showRootDir=TRUE, all.files=F
     mstates <- dir(stagePaths,pattern="^ModelState(_[[:digit:]]{4}-.*)*\\.Rda$",full.names=TRUE)
     dstores <- dir(stagePaths,pattern="^Datastore(_[[:digit:]]{4}-.*)*$",full.names=TRUE)
     logs    <- dir(stagePaths,pattern="Log(_[[:digit:]]{4}-.*)+\\.txt",full.names=TRUE)
-    resultFiles <- c(mstates,dstores,logs)
+    qresults<- dir(stagePaths,pattern="^Query_.*.Rda$",full.names=TRUE)
+    resultFiles <- c(mstates,dstores,logs,qresults)
   } else resultFiles <- character(0)
 
   if ( root ) {
@@ -1090,7 +1017,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
     }
   }
   if ( ! force ) cat("Nothing else to delete.\n")
-  self$load(onlyExisting=TRUE,reset=TRUE) # Reload cached model state
+  self$load(onlyExisting=TRUE,reset=TRUE) # Reload model states (now that results may be gone)
   return(invisible(force))
 }
 
@@ -1494,7 +1421,7 @@ ve.stage.runnable <- function(priorStages) {
   }
   writeLog(paste("DatastoreType:",self$RunParam_ls$DatastoreType),Level="info")
 
-  # Check if stage can run (enough parameters to run visioneval::loadModel and visioneval::prepareModelRun)
+  # Check if stage can run (enough parameters)
   missingParameters <- visioneval::verifyModelParameters(self$RunParam_ls)
   private$complete <- length(missingParameters) == 0
   if ( ! private$complete ) {
@@ -1509,6 +1436,7 @@ ve.stage.runnable <- function(priorStages) {
   }
 
   # Load ModelState.Rda if it already exists (prior run)
+
   if ( ! self$load(onlyExisting=TRUE) ) self$RunStatus <- codeStatus("Initialized")
 
   return(TRUE)
@@ -1516,23 +1444,31 @@ ve.stage.runnable <- function(priorStages) {
 
 # Load the model state for the stage
 # Create it if onlyExisting=FALSE (that's a time-consuming operation)
-# if reset==TRUE, 
-ve.stage.load <- function(onlyExisting=TRUE,reset=FALSE) {
+# if reset==TRUE, force reload/rebuild of ModelState when model runs
+# otherwise, reload is skipped of a ModelState is already loaded.
+ve.stage.load <- function(onlyExisting=TRUE,reset=FALSE, updateCheck=TRUE) {
   if ( reset ) self$ModelState_ls <- NULL
   if ( is.null(self$ModelState_ls) ) {
     envir = visioneval::modelEnvironment(Clear="ve.stage.load")
     envir$RunModel <- FALSE
-    # We're expecting not to write anything, but we'll set useful
-    #  directories anyway.
+    # We're expecting not to write anything, but we'll set useful directories anyway.
     owd <- if ( dir.exists(self$RunPath) ) {
       setwd(self$RunPath)
     } else setwd(self$RunParam_ls$ModelDir)
     on.exit(setwd(owd))
-    ms <- visioneval::loadModel(self$RunParam_ls,onlyExisting=onlyExisting,Message=paste("Loading Model",self$modelName))
+    ms <- visioneval::loadModel(
+      self$RunParam_ls,
+      onlyExisting=onlyExisting,
+      updateCheck=updateCheck,
+      Message=paste("Loading Model",self$modelName)
+    )
     if ( is.list(ms) && length(ms)>0 ) { # Stash the ModelState if created successfully
       self$ModelState_ls <- ms
       if ( ! "RunStatus" %in% names(self$ModelState_ls) ) {
         self$ModelState_ls$RunStatus <- codeStatus("Loaded")
+      }
+      if ( isFALSE(self$ModelState_ls$UpToDate) && self$ModelState_ls$RunStatus == codeStatus("Run Complete") ) {
+        self$ModelState_ls$RunStatus <- codeStatus("Out of Date")
       }
       self$RunStatus <- self$ModelState_ls$RunStatus
       return(TRUE)
@@ -1572,9 +1508,9 @@ run.function <- function() {
       # Initialize Log, create new ModelState
       ve.model$RunModel <- TRUE
       visioneval::initLog(Threshold=log,Save=TRUE,envir=ve.model) # Log stage
-      visioneval::loadModel(RunParam_ls)
-      visioneval::setModelState()                       # Save ModelState.Rda
-      visioneval::prepareModelRun()                     # Initialize Datastore
+      visioneval::loadModel(RunParam_ls) # Rebuild the ModelState_ls
+      visioneval::setModelState()        # Save ModelState.Rda
+      visioneval::prepareModelRun()      # Initialize Datastore
 
       # Run the model script
       sys.source(RunParam_ls$ModelScriptPath,envir=new.env())
@@ -1703,7 +1639,7 @@ ve.stage.completed <- function( runStatus=NULL ) {
     }
   }
   self$RunStatus <- runStatus
-  self$load(onlyExisting=TRUE)
+  self$load(onlyExisting=TRUE,updateCheck=FALSE) # Don't need to check since we just ran it
 }
 
 # Print a model stage summary
@@ -1808,6 +1744,7 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
   # Update specSummary
   if ( reset || is.null(self$specSummary) ) {
     writeLog("Loading model specifications (may take some time)...",Level="warn")
+    # TODO: should use new model state if the stage is "out of date"
     self$load(onlyExisting=FALSE) # Create new model states if they are not present in the file system
     for ( stage in self$modelStages ) {
       writeLog(paste("Loading Stage specs for",stage$Name),Level="info")
@@ -1913,15 +1850,16 @@ ve.model.log <- function(shorten=TRUE) {
 # Ordered Factor for RunStatus levels
 
 StatusLevelCodes <- c(
-  "Unknown",
-  "Uninitialized",
-  "Run Failed",
-  "Load Failed",
-  "No Stages Defined",
-  "Initialized",
-  "Loaded",
-  "Running",
-  "Run Complete"
+  "Unknown",             # Catchall; should not appear
+  "Uninitialized",       # Model or stage exists but has no configuration
+  "Run Failed",          # An error prevented the model script from running to completion
+  "Out of Date",         # Model or stage changed since current results were generated
+  "Load Failed",         # Some configuration error or missing file prevented loading the model
+  "No Stages Defined",   # Model configuration does not define any stages
+  "Initialized",         # Model stage is ready to run
+  "Loaded",              # Model state loaded from results generated by pre-3.0 VisionEval
+  "Running",             # Model is running (or crashed) and results are possibly incomplete
+  "Run Complete"         # Model stage ran to successful completion
 )
 
 # Helper - Decode status and handle "out of bounds"
@@ -1962,21 +1900,12 @@ ve.model.updateStatus <- function() {
   }
 }
 
-# Helper function:
-#    Key function here is to create an in-memory copy of each stage's ModelState_ls
-#      either by loading, or by initializing
-#    Also need to handle the StartFrom earlier model stage (where to find the
-#      model state that goes into DatastorePath, as well as the model state to
-#      interrogate for VERequiredPackages).
-#  Resulting structure can be explored for model inputs and outputs, script, etc.
-
-# Two needs:
-#   1. Load existing model states if stages have been run before
-#   2. Build new model states if not running to parse the model script and check that
-#      everything is where it needs to be - unintrusive
-# Second step will not be performed if "onlyExisting" is TRUE (the default)
-
-ve.model.load <- function(onlyExisting=TRUE,reset=FALSE) {
+# Load the model from configuration, respecting existing results
+# if onlyExisting, just load existing ModelState
+# if reset==TRUE, force rebuild of the ModelState_ls when the model runs
+# if outOfDate is a list of numeric indices, mark those stages as "Out of Date"
+#   regardless of their internal check
+ve.model.load <- function(onlyExisting=TRUE,reset=FALSE, outOfDate=NULL) {
 
   if ( ! self$valid() ) {
     stop(
@@ -2001,14 +1930,14 @@ ve.model.load <- function(onlyExisting=TRUE,reset=FALSE) {
           StartFromModelState=startFromState_ls
         )
       } else if ( ! onlyExisting ) {
-        # Expect if we're loading a ModelState that the earlier stage has a
-        # ModelState_ls, which might be newly intialized.
+        # No ModelState exists for StartFrom stage
         stop(
           writeLog(paste("StartFrom",startFrom,"has no ModelState_ls!"),Level="error")
         )
       }
     }
     stage$load(onlyExisting=onlyExisting,reset=reset)
+    if ( is.numeric(outOfDate) && index %in% outOfDate ) stage$RunStatus <- codeStatus("Out of Date")
     self$modelStages[[index]] <- stage
   }
   # Update self$overallStatus
@@ -2078,7 +2007,7 @@ ve.model.plan <- function(plan="callr",workers=parallelly::availableCores(omit=1
 }
 
 # Run the modelStages
-ve.model.run <- function(run="continue",stage=NULL,watch=TRUE,dryrun=FALSE,log="warn") {
+ve.model.run <- function(run="continue",stage=NULL,watch=TRUE,dryrun=FALSE,limit=0,log="warn") {
   # run parameter can be
   #      "continue" (run all steps, starting from first incomplete; "reset" is done on the first
   #      incomplete stage and all subsequent ones, then execution continues)q
@@ -2089,10 +2018,12 @@ ve.model.run <- function(run="continue",stage=NULL,watch=TRUE,dryrun=FALSE,log="
   # "continue" will unlink/recreate starting from the first stage that is not "Run Complete", and
   #   skip any later stages in the same Run Group that are complete.
 
-  # if "stage" is provided, "run" is ignored: the run will reset that stage and subsequent ones
-  #   and then do "continue". No saving will occur.
+  # if "stage" is provided, "run" is ignored: the run will reset that stage and later ones that
+  # start from it, and then do "continue". No saving will occur.
   # "stage" could perhaps be a vector of stages - just those stages will be reset or re-run.
-  #   "stage" can be specified either as an index position in self$modelStages or as a named position
+  # "stage" can be specified either as an index position in self$modelStages or as a named position
+
+  # if "limit" is greater than zero, only run that number of stages
 
   # "watch", if TRUE, applies if only one stage is running in a group (no multiprocessing for whatever reason)
   #   then it will open a non-blocking connection to the stage log and echo out whatever is written there
@@ -2118,19 +2049,34 @@ ve.model.run <- function(run="continue",stage=NULL,watch=TRUE,dryrun=FALSE,log="
   workingResultsDir <- self$modelResults
 
   # Determine which stages need to be-rerun
+
+  # Use the 'stage' parameter name or number
+  # Each listed stage will be "reset", along with any that start from it
+  stageNames <- names(self$modelStages)
+  if ( is.character(stage) ) { # pre-process character stages to integers
+    stage <- sort( as.integer( sapply(stage,function(s) which( stageNames %in% stage )) ) )
+  }
+  if ( is.numeric(stage) ) {
+    stage <- stage[ stage<=length(self$modelStages) ]
+  }
+  # These are then passed to self$load and marked as "Out of Date"
+
   completeStatus <- codeStatus("Run Complete")
   if ( run=="continue" ) {
-    self$load(onlyExisting=TRUE,reset=TRUE) # Open any existing ModelState_ls to see which may be complete
+    self$load(onlyExisting=TRUE,reset=TRUE,outOfDate=stage)
+    # self$load includes check for "Out of Date" on each stage, and will also mark
+    # any stage explicitly requested for run as "Out of Date"
+
     alreadyRun <- ( sapply( self$modelStages, function(s) s$RunStatus ) == completeStatus )
     if ( all(alreadyRun) ) {
       self$overallStatus <- completeStatus
       writeLog("Model Run Complete",Level="warn")
       return(invisible(self$printStatus()))
     } else {
-      toRun <- which(!alreadyRun)[1] # start from first un-run stage
+      toRun <- which(!alreadyRun)[1] # start from first un-run or out-of-date stage
     }
   } else {
-    toRun <- 1 # Start at first stage
+    toRun <- 1 # Start at first stage if "save" or "reset"
   }
   if ( toRun == 1 && run != "save" ) run <- "reset" # If starting over, process SaveDatastore as needed
   writeLog(paste("Starting stage to run:",toRun),Level="info")
@@ -2165,13 +2111,17 @@ ve.model.run <- function(run="continue",stage=NULL,watch=TRUE,dryrun=FALSE,log="
   }
 
   # Identify stages to run
-  runStages <- names(self$modelStages)
+
+  runStages <- stageNames
   if ( toRun > length(runStages) ) { # should never happen
     writeLog(paste("Stages:",runStages,collapse=","),Level="info")
     msg <- writeLog(paste("Starting stage",toRun,"comes after last stage",length(runStages)),Level="error")
     return( invisible(self$overallStatus) )
   }
-  runStages <- runStages[toRun:length(runStages)]
+
+  # Optionally limit the number of stages to run...
+  limit <- if ( limit == 0 ) length(runStages) else min((length(runStages)-(toRun-1)),(toRun+limit))
+  runStages <- runStages[toRun:limit]
 
   BaseInputPath <- visioneval::getRunParameter("InputPath",Param_ls=self$RunParam_ls)
   if ( ! isAbsolutePath(BaseInputPath) ) {
@@ -2255,8 +2205,9 @@ ve.model.run <- function(run="continue",stage=NULL,watch=TRUE,dryrun=FALSE,log="
         # inline execution will mark stage complete and reload the stage
         writeLog( stg$processStatus(), Level="warn")
         if ( stg$RunStatus != codeStatus("Run Complete") ) {
+          browser() # examine attribute of model state run status
           stop (
-            writeLog("Run Failed.",Level="error")
+            writeLog(c("Run Failed.",stg$RunStatus),Level="error")
           )
         }
       }
@@ -2588,7 +2539,7 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
     if ( ! dir.exists(QueryPath) ) QueryPath <- self$modelPath;
     queries <- dir(QueryPath,pattern="\\.(VEqry|R)$",ignore.case=TRUE)
     if ( length(queries)==0 ) queries <- "No queries defined"
-    return(queries)
+    return(structure(queries,QueryPath=QueryPath))
   }
   # Let VEquery find the query...
   return(
@@ -2640,13 +2591,30 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
 #'   square brackets to index the list by position (`VEModelList[1]`) or by name
 #'   (`VEModelList['VERSPM']`).
 #'
+#' If a model with existing results is opened, a check is made to ensure that the model
+#' configuration has not been changed. The 'reset' parameter says how to handle existing results.
+#' If reset=='continue', then only run stages that are up to date with the model configuration and
+#' not "Run Complete". If any stages are out of date, generate an error message and do not open the
+#' model.
+#' If reset=='save', the full set of model results are archived to a new timestamped results
+#' archive folder. Then any stage that is out of date with its model configuration or that is
+#' not 'Run Complete' will be reset (results erased).
+#' If reset=="reset", any stage that is out of date with its model configuration or that is
+#' not 'Run Complete' will be reset (results erased). No previous results will be saved.
+#'
+#' Note that reset behavior is different from what happens when reset is specified as a model
+#' runs. When opening a model, stages will only be reset if they did not previously complete
+#' successfully, or if the stage results are out of date compared to the model configuration for
+#' that stage (i.e. something was edited to make the stage results inconsistent with the model
+#' specification).
+#'
 #' @param modelPath Directory containing a VisionEval model; if an empty character string is
 #'     provided, prints a list of available models (see details)
 #' @param log a character string identifying the log level to be displayed
 #' @return A VEModel object or a VEModelList of available models if no modelPath or modelName is
-#'   provided; see details and `vignette("VEModel")`
+#'     provided; see details and `vignette("VEModel")`
 #' @export
-openModel <- function(modelPath="",reset="continue",log="error") {
+openModel <- function(modelPath="",log="error") {
   if ( missing(modelPath) || !nzchar(modelPath) ) {
     return(
       dir(
@@ -2658,7 +2626,7 @@ openModel <- function(modelPath="",reset="continue",log="error") {
     )
   } else {
     if ( !is.null(log) ) initLog(Save=FALSE,Threshold=log, envir=new.env())
-    return( VEModel$new(modelPath = modelPath, reset=reset) )
+    return( VEModel$new(modelPath = modelPath) )
   }
 }
 
