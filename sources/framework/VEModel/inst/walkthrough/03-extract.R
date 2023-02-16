@@ -53,7 +53,7 @@ print(modelspecs.full.list[sample(nrow(modelspecs.full.list),10),])
 # See the "07-queries.R" walkthrough.
 
 # Here's the basic extraction of everything in the final Reportable model stage
-results$extract()
+results$extract(saveResults=TRUE)   # if not saveResults, return a list of data.frames, invisibly
 mwr$dir(output=TRUE)                # Just shows the sub-directory names holding outputs
 
 outputs <- mwr$dir(output=TRUE,all.files=TRUE) # Lists all the extracted output files
@@ -61,7 +61,9 @@ print(outputs)
 
 # Inspect one of the metadata files. Metadata is very basic: just the field
 # group/table/name and units (plus display units if those are different, see below)
-metadata.HH2038 <- read.csv( file=grep("2038_Household.*metadata\\.csv",outputs,value=TRUE))
+outputs <- mwr$dir(output=TRUE,all.files=TRUE,shorten=FALSE) # full path name on files
+metadata.file <- grep("2038_Household.*metadata\\.csv",outputs,value=TRUE)
+metadata.HH2038 <- read.csv( file=metadata.file )
 metadata.HH2038[1:10,]
 
 # You can select certain Groups (e.g. just the Years), Tables and Files rather than
@@ -79,7 +81,6 @@ print(wkr$fields()) # same...
 # Will get both tables in all Groups (unless you select a specific Group)
 wkr.veh <- results$find(Table=c("Worker","Vehicle"))
 print(wkr.veh)
-rm(wkr.veh)
 
 results$select( wkr ) # filters results on selected fields
 print(results) # Just the Worker tables selected
@@ -91,10 +92,10 @@ results$select() # clear selection (selects all)
 print(results) # Everything selected againg
 
 # "all-in-one" instruction to find and select fields at once
-results$find(Group="Year",Table=c("Worker","Vehicle",select=TRUE)
+results$find(Group="Year",Table=c("Worker","Vehicle"),select=TRUE)
 print(results) # Just the Worker tables selected
 
-results$extract()  # just extract Worker and Vehicle Tables in each year
+results$extract(saveResults=TRUE)  # just extract Worker and Vehicle Tables in each year
 
 # There are much more nuanced selection features available, see https://visioneval.org/docs
 
@@ -118,7 +119,7 @@ mwr$dir(outputs=TRUE,all.files=TRUE) # in case you forgot what is in each extrac
 
 # Select fields using a "pattern" (R regular expression applied just to the field name)
 selected <- results$find(pattern="speed",Group="Year",Table=c("Household","Vehicle","Marea","Bzone"))
-print(selectedf$fields()) # only fields that have "speed" in their name
+print(selected$fields()) # only fields that have "speed" in their name
 
 ########################
 # CHANGING DISPLAY UNITS
@@ -192,12 +193,12 @@ print(selected$fields())  # now with added key fields
 print(results$units()) # Units for the results...
 
 # Extracting speed fields using DISPLAY units ("prefix" adjusts the extracted results file name)
-selected$extract(prefix="DisplayUnits")                 # Using DISPLAY units
+selected$extract(saveResults=TRUE,prefix="DisplayUnits")                 # Using DISPLAY units
 
 # Extract speed fields using DATASTORE units
-# Note: "export" is the same (for now) as "extract"
+# Note: "export" is the same as "extract" except it saves by default
 # Eventually, "extract" will always produce a list of data.frames, and "export" will save it
-selected$extract(prefix="Datastore",convertUnits=FALSE)  # Using DATASTORE units
+selected$export(prefix="Datastore",convertUnits=FALSE)  # Using DATASTORE units
 
 # In general, it is better to use queries to do the extraction and unit conversion
 # since you may confuse yourself when you load up the extracted raw data into your
@@ -213,7 +214,8 @@ print(slf)
 slf$addkeys() # Add table key fields (see below)
 print(slf)    # Note that it now contains Marea as key
 
-# extract can produce a list of R data.frames instead of .csv files
+# export will save to a file by default
+# extract will, by default, produce a list of R data.frames instead of .csv files
 # you can save those in any file format that can understand a table of rows and columns
 extracted.df <- slf$extract(saveTo=FALSE)
 # returns a named list of data.frames whose names correspond to the tables
