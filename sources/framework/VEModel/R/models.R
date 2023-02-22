@@ -606,7 +606,9 @@ ve.model.initstages <- function( modelStages, updateCheck=TRUE ) {
     }
     for ( r in seq_along(stageNames) ) {
       stage <- modelStages[[r]]
-      stage$Reportable <- reportable[r]
+      if ( ! isTRUE(stage$Reportable) ) {
+        stage$Reportable <- reportable[r] # Include explicitly reportable stages
+      }
       self$fixRunStatus(stage) # check if "Run Complete" is out of date relative to StartFrom
     }
   }
