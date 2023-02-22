@@ -22,7 +22,7 @@ source("../01-install.R")
 # use as the basis for your own models
 
 #########################
-# INSTALL BUILT-IN MODELS
+# RUN BUILT-IN MODELS
 #########################
 
 source("../02-running.R")   # Basic elements of running models
