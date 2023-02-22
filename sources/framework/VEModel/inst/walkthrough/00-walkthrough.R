@@ -34,6 +34,7 @@ source("../03-extract.R")
 #
 # Expects "VERSPM-run" model to be present and "Run Complete"
 
-source("../04-queries.R")       # Develop and run queries
+source("../04-scenarios.R")     # Run scenarios
 
-source("../05-export.R")    # Move VisionEval results into another analysis system
+source("../05-queries.R")       # Develop and run queries
+
