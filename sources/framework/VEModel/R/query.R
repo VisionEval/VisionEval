@@ -232,12 +232,10 @@ ve.query.load <- function(FileName=NULL,QuerySpec=NULL,ModelPath=NULL,QueryDir=N
     if ( !is.null(FileName) ) {
       writeLogMessage(Level="warn",paste("Loading",FileName))
       if ( file.exists(FileName) ) {
-        # Load the query from FileName, commandeering the modelEnvironment
-        ve.model <- visioneval::modelEnvironment() # Don't need to clear ve.model
-        writeLogMessage(paste("Loading Query:",FileName),Level="info")
-        writeLogMessage(paste("QueryFile:",self$QueryFile),Level="info")
-        sys.source(FileName,envir=ve.model)
-        self$add(ve.model$QuerySpec) # will interpret the list of lists as a list of VEQuerySpec
+        # Load the query from FileName, creating an environment to hold it
+        load.env <- new.env()
+        sys.source(FileName,envir=load.env)
+        self$add(get(ls(load.env)[1],envir=load.env)) # roundabout load to allow any name for Query object
       } else {
         writeLogMessage(Level="warn",paste("File does not exist:",FileName))
       }
@@ -308,7 +306,8 @@ ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
     spec <- list(obj)
     names(spec) <- obj$Name
   } else {
-    stop("Cannot interpret object as query or specification:\n",deparse(obj))
+     message("Cannot interpret object as query or specification:\n",deparse(obj))
+     return(self)
   }
 
   # Validate and interpret "location", "before" and "after"
@@ -1014,8 +1013,9 @@ ve.query.outputfile <- function(OutputFile=NULL) {
 }
 
 ve.query.run <- function(
-  Model      = NULL,  # Attached model on whose results to run (or a VEResultsList)
-  Force      = FALSE  # If true, re-run the query for all results even if they are up to date
+  Model      = NULL,   # Attached model on whose results to run (or a VEResultsList)
+  Force      = FALSE,  # If true, re-run the query for all results even if they are up to date
+  log        = "warn"  # log level to display while running the query
   )
 {
   if ( ! self$valid() ) {
@@ -1026,7 +1026,11 @@ ve.query.run <- function(
   if ( length(private$QuerySpec)==0 ) {
     writeLog(paste("No specifications defined for",self$QueryName),Level="error")
   }
-  writeLogMessage(paste("Running query:",self$QueryName),Level="warn")
+  visioneval::initLog(Threshold=log,Save=TRUE,envir=new.env()) # Log level for display in this function
+
+  msg <- writeLogMessage(paste("Running query:",self$QueryName),Level="warn")
+  message("Should see messge:",msg)
+
   if ( missing(Model) || is.null(Model) ) {
     Model <- self$Model # Use attached model if available
     if ( is.null(Model) ) stop( writeLogMessage("No model results available to run query",Level="error") )
@@ -1781,7 +1785,6 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
   }
 
   # Now we can evaluate the expression
-  message(paste("Evaluating expression:",Expression))
   # browser(expr=any(grepl("LowInc",Expression)))
   measure <- try( eval(Expression, envir=measureEnv) )
 
