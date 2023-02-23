@@ -1029,7 +1029,6 @@ ve.query.run <- function(
   visioneval::initLog(Threshold=log,Save=TRUE,envir=new.env()) # Log level for display in this function
 
   msg <- writeLogMessage(paste("Running query:",self$QueryName),Level="warn")
-  message("Should see messge:",msg)
 
   if ( missing(Model) || is.null(Model) ) {
     Model <- self$Model # Use attached model if available
