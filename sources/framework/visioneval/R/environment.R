@@ -752,7 +752,8 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
     # Check files against lastRun date (files must be older)
     # Model Script is obviously very important!
     changedFile <- function(changed,parameter,filepath) {
-      if ( file.mtime(filepath) > lastRun ) {
+      if ( file.exists(filepath) && file.mtime(filepath) > lastRun ) {
+        # Check does nothing if file being checked does not exist
         writeLog(
           c(
             paste("Changed file:",basename(filepath)),
@@ -770,7 +771,7 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
             Within = ""
           )
         )
-      } else {
+#      } else {
 #         writeLog(
 #           c(
 #             paste("Unchanged:",basename(filepath)),
@@ -789,7 +790,7 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
     filepaths <- dir(newRP$ParamPath,full.names=TRUE)
     # Might get display_units.csv or some other file that doesn't matter in ParamPath...
     filepaths <- filepaths[ sub("\\.(csv|json)$","",basename(filepaths)) %in% c("geo","units","deflators","run_parameters") ]
-    for ( check in filepaths )changed <- changedFile(changed, "ParamPath", filepath)
+    for ( filepath in filepaths ) changed <- changedFile(changed, "ParamPath", filepath)
   }
 
   # Convert "changed" data.frame to a list of descriptive strings and
