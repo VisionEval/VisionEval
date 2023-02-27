@@ -2699,11 +2699,14 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
 #'
 #' @param modelPath Directory containing a VisionEval model; if an empty character string is
 #'     provided, prints a list of available models (see details)
+#' @param updateCheck if TRUE, perform check on existing results to detect changed model
+#'     parameters; if FALSE, skip the check. If the specific string "reset" will reset the
+#'     LastChanged date for the results to force them to be up to date.
 #' @param log a character string identifying the log level to be displayed
 #' @return A VEModel object or a VEModelList of available models if no modelPath or modelName is
 #'     provided; see details and `vignette("VEModel")`
 #' @export
-openModel <- function(modelPath="",log="error") {
+openModel <- function(modelPath="",updateCheck=TRUE,log="error") {
   if ( missing(modelPath) || !nzchar(modelPath) ) {
     modelRoot <- getModelDirectory() # returns absolute path
     return(
@@ -2715,7 +2718,7 @@ openModel <- function(modelPath="",log="error") {
     )
   } else {
     if ( !is.null(log) ) initLog(Save=FALSE,Threshold=log, envir=new.env())
-    return( VEModel$new(modelPath = modelPath) )
+    return( VEModel$new(modelPath = modelPath,updateCheck=updateCheck) )
   }
 }
 

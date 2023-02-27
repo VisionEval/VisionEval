@@ -301,7 +301,9 @@ getModelParameters <- function(DotParam_ls=list(),DatastoreName=NULL,LoadDatasto
 #' @param onlyExisting a logical - if TRUE and not modelRunning(), simply load an existing model state.
 #'   if FALSE, create a new model state in memory if there is not one already
 #' existing model state. Ignored if modelRunning().
-#' @param updateCheck if FALSE, skip the upToDate check for existing results
+#' @param updateCheck if FALSE, skip the upToDate check for existing
+#'   results, if the specific character string "reset", update
+#'   ModelState_ls for existing results to be "Sys.time()"
 #' @param RunDir the directory in which to seek/create the model run
 #' @param envir The environment into which to load the ModelState
 #' @return The ModelState_ls that was constructed (or NULL if only loading a non-existent one)
@@ -387,19 +389,25 @@ loadModel <- function(
     } else {
       ms <- list()
     }
-    # Opening existing model results rather than building a new
-    # ModelState_ls
+    # Opening existing model results rather than building a new ModelState_ls (check for upToDate)
     MSUpToDate <- FALSE
     if ( length(ms)>0 ) {
-      if ( updateCheck ) {
+      if ( is.character(updateCheck) && updateCheck=="reset" ) {
+        # If "reset", don't do the update check. Instead, touch the ModelState_ls with new
+        # LastChanged date
+        setModelState(list(LastChanged=Sys.time()),Save=TRUE,envir=envir)
+        ms <- envir$ModelState_ls # reattach to current frame for return
+        MSUpToDate <- TRUE
+      } else if ( updateCheck ) {
         # Finish building ModelState_ls from current RunParam_ls and compare to previous result
         writeLog("Checking updated RunParam_ls against previous ModelState_ls",Level="info")
         testRunParam_ls <- initModelState(Save=FALSE,Param_ls=RunParam_ls,envir=new.env()) # transient environment
 
-        # Set OutOfDate flag if RunParam_ls does not sufficiently match what is in the ModelState_.
+        # Set OutOfDate flag if RunParam_ls does not sufficiently match what is in the ModelState.
         # Note that an old style model that was run by sourcing "run_model.R" and then opened
         # by VEModel::openModel will fail this check. The model will show up as "Initialized" and
-        # the old run will be ignored...
+        # the old run will be ignored... Reload the model with updateCheck=FALSE (or
+        # updateCheck="reset") to skip the check (and optionally reset the ModelState)
         upToDate <- checkUpToDate( testRunParam_ls, oldRunParam_ls, ms$LastChanged )
         if ( ! upToDate$Status ) {
           outOfDateMsg <- "(Out of Date)"
@@ -419,7 +427,7 @@ loadModel <- function(
       writeLog("No existing ModelState_ls",Level="info")
       MSUpToDate <- FALSE
     }
-    return(structure(ms,UpToDate=MSUpToDate)) # Returns empty list if no ModelState_ls
+    return(structure(ms,UpToDate=MSUpToDate)) # ms is empty list if no ModelState_ls
   }
 
   # If we get here we might be running the model, or building an in-memory ModelState_ls
