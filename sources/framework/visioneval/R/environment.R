@@ -90,7 +90,6 @@ getRunParameter <- function(Parameter,Param_ls=NULL,Default=NA) {
   }
   if ( ! is.list(Param_ls) ) { # if provided, look only there, otherwise in ve.model
     Param_ls <- get0("RunParam_ls",envir=ve.model,ifnotfound=list())
-    # TODO: add source to any Param_ls elements that do not already have a source
     Param_ls <- addParameterSource(Param_ls,"ve.model$RunParam_ls",onlyMissing=TRUE)
   } else {
     sources <- lapply(Param_ls,function(p) attr(p,"source"))
@@ -642,6 +641,26 @@ loadConfiguration <- function( # if all arguments are defaulted, return an empty
   return(Param_ls)
 }
 
+# HELPER FUNCTION TO COMPARE INDIVIDUAL RUN PARAMETER ITEMS
+#==========================================================
+# This is an internal helper function and not exported
+# Compare elements in a RunParam_ls list
+# @param baseItem an item to compare from an existing list
+# @param newItem an item to copare from the next list
+# @param ModelDir a list that is either empty or contains two named elements, "old" and "new"; if
+# baseItem and newItem are character strings and ModelDir is non-empty, replace the string in "old"
+# with the string in "new" prior to comparing.
+# @return a logical TRUE if the items are the same, and FALSE if not
+checkIdentical <- function(baseItem,newItem,ModelDir) {
+  if ( mode(baseItem) == "character" && is.list(ModelDir) && all( c("old","new") %in% names(ModelDir) ) ) {
+    baseItem <- gsub(ModelDir$old,ModelDir$new,baseItem)
+  }
+  identical <- isTRUE( mode(baseItem)==mode(newItem) )
+  identical <- identical && isTRUE( length(baseItem)==length(newItem) )
+  identical <- identical && isTRUE( all(baseItem==newItem) ) # if vectors or lists, must have the same order of elements
+  return(identical)
+}
+
 # FIND SIGNIFICANT CHANGES IN RUN PARAMETERS
 #===========================================
 #' Compare two RunParam_ls lists and report key differences
@@ -674,14 +693,8 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
     )
   }
 
-  # TODO: create "important" function, which should look at the
-  #   type of change (add, remove, change), to tag name changes
-  #   Only important changes will be considered in decidign "up to date"
-  #   though all changes will be reported.
-
   # Function to identify important parameters
   # These include "Seed","Years","BaseYear","ParamDir","InputPath"
-  #   
   important <- function(nm) {
     nm %in% c(
       "InputPath",
@@ -693,6 +706,15 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
     )
   }
 
+  # Function to identify irrelevant parameters
+  # This is just "ParsedScript" for now (will have been built in a completed model
+  # but won't be present in one that was just loaded).
+  irrelevant <- function(nm) {
+    nm %in% c(
+      "ParsedScript"
+    )
+  }
+
   # Empty data.frame to accumulate changes
   changed <- data.frame(
     Names     =character(0),
@@ -701,9 +723,16 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
     Within    =character(0)
   )
   # Function to recurse into a list comparing names:
-  checkList <- function( changed, baseRP, newRP, inScope="" ) {
+  checkList <- function( changed, baseRP, newRP, ModelDir, inScope="" ) {
     baseNames <- names(baseRP)
     newNames <- names(newRP)
+
+    # Get rid of irrelevant names
+    if ( ! nzchar(inScope) ) {
+      baseNames <- baseNames[  ! irrelevant(baseNames) ]
+      newNames <- newNames[ ! irrelevant(newNames) ]
+    }
+
     # names in base but not existing
     changedBase <- data.frame(
       Names = (chgNames <- setdiff(baseNames,newNames)),
@@ -731,8 +760,8 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
     inBoth = intersect(baseNames,newNames)
     for ( nm in inBoth ) {
       if ( is.list(baseRP[[nm]]) && is.list(newRP[[nm]]) ) {
-        changed <- checkList(changed, baseRP[[nm]],newRP[[nm]],inScope=augment(inScope,nm))
-      } else if ( ! identical(baseRP[[nm]],newRP[[nm]]) ) {
+        changed <- checkList(changed, baseRP[[nm]],newRP[[nm]],ModelDir,inScope=augment(inScope,nm))
+      } else if ( ! checkIdentical(structure(baseRP[[nm]],nm=nm),newRP[[nm]], ModelDir) ) {
         changed <- rbind( changed,
           oneChange <- data.frame(
             Names = nm,
@@ -746,7 +775,15 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
     return( changed )
   }
 
-  changed <- checkList( changed , baseRP, newRP )
+  # Grab changed ModelDir to make silent replacement while checking
+  ModelDir <- if ( "ModelDir" %in% names(newRP) && ! isTRUE( baseRP$ModelDir == newRP$ModelDir ) ) {
+    list(
+      old = baseRP$ModelDir,
+      new = newRP$ModelDir # and we'll substitute that in path-like parameters
+    )
+  } else list()
+  
+  changed <- checkList( changed , baseRP, newRP, ModelDir )
 
   if ( ! is.null(lastRun) ) {
     # Check files against lastRun date (files must be older)
@@ -803,7 +840,7 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
       Changes = gsub(" +$","",
         with(changed,
           paste(
-            ifelse(nzchar(Within),paste0(,"::",Names),Names),
+            ifelse(nzchar(Within),paste0(Within,"::",Names),Names),
             Change,
             ifelse(Important,"(Important)",""),
             sep=" "

@@ -128,7 +128,7 @@ initModelState <- function(Save=TRUE,Param_ls=NULL,RunPath=NULL,envir=modelEnvir
 
   # Establish RunPath and DatastorePath in parameters and ModelState_ls
   if ( is.null(RunPath) ) RunPath <- getwd()   # Where the model results are going
-  newModelState_ls$ModelStatePath <- RunPath;
+  newModelState_ls$ModelStatePath <- RunPath;  # Will create ModelStateFile (parameter) in that path
   if ( ! "DatastorePath" %in% names(Param_ls) ) { # DatastorePath used for virtual linkage
     Param_ls$DatastorePath <- RunPath
   }
@@ -185,35 +185,31 @@ archiveResults <- function(RunParam_ls,ResultsDir=getwd(),SaveDatastore=NULL) {
   ModelDir <- getRunParameter("ModelDir",Param_ls=RunParam_ls)
   ResultsName <- getRunParameter("ArchiveResultsName",Param_ls=RunParam_ls)
 
-  # TODO: rework this for staged models: ResultsDir will have a series of
-  # sub-directories, so we want to do a recursive dir looking for
-  # ModelStateFile name...
-  # TODO: different behavior for missing ResultsDir
   ModelStateName <- getRunParameter("ModelStateFile",Param_ls=RunParam_ls)
 
   # Get the timestamp from the newest ModelState, if available
   if ( missing(ResultsDir) || ResultsDir == ModelDir ) { # classic model
-    ModelStatePath <- file.path(ResultsDir,ModelStateName)
-    if ( ! file.exists(ModelStatePath) ) {
+    ModelStateFile <- file.path(ResultsDir,ModelStateName)
+    if ( ! file.exists(ModelStateFile) ) {
       writeLog("No previous model state or information to save.",Level="warn")
       return(invisible(character(0)))
     }
   } else { # Model with separate results directory ("ResultsDir")
-    ModelStatePath <- file.path(ResultsDir,dir( ResultsDir, pattern=ModelStateName, recursive=TRUE))
-    if ( length(ModelStatePath) == 0 ) {
+    ModelStateFile <- file.path(ResultsDir,dir( ResultsDir, pattern=ModelStateName, recursive=TRUE))
+    if ( length(ModelStateFile) == 0 ) {
       writeLog("No previous model state or information to save.",Level="warn")
       return(invisible(character(0)))
     }
     # Get the newest ModelState
-    ModelStatePath <- ModelStatePath[ order(file.info(ModelStatePath)[,"mtime"]) ][length(ModelStatePath)]
-    if ( ! file.exists(ModelStatePath) ) {
+    ModelStateFile <- ModelStateFile[ order(file.info(ModelStateFile)[,"mtime"]) ][length(ModelStateFile)]
+    if ( ! file.exists(ModelStateFile) ) {
       writeLog("No previous model state or information to save.",Level="warn")
       return(invisible(character(0)))
     }
   }    
 
   # Use the "newest" ModelState for the timestamp
-  ModelState_ls <- readModelState(FileName=ModelStatePath,envir=new.env())
+  ModelState_ls <- readModelState(FileName=ModelStateFile,envir=new.env())
 
   if ( "LastChanged" %in% names(ModelState_ls) ) {
     TimeStamp <- ModelState_ls$FirstCreated
@@ -345,7 +341,7 @@ archiveResults <- function(RunParam_ls,ResultsDir=getwd(),SaveDatastore=NULL) {
     if ( remove[file] ) {
       if ( file=="Datastore" ) unlink(DatastoreName,recursive=TRUE)
       if ( file=="Outputs"   ) unlink(OutputDir,recursive=TRUE)
-      if ( file=="ModelState") unlink(ModelStatePath)
+      if ( file=="ModelState") unlink(ModelStateFile)
       if ( file=="Logs"      ) unlink(LogPath)
     } else {
       writeLog(paste("Saving prior results failed; Not removing",file),Level="error")
@@ -371,8 +367,13 @@ archiveResults <- function(RunParam_ls,ResultsDir=getwd(),SaveDatastore=NULL) {
 #' @param envir An environment into which to load ModelState.Rda (default ve.model)
 #' @return The RunParam_ls from the saved model state (or an empty list if not found)
 #' @export
-loadModelState <- function(FileName=getModelStateFileName(),envir=NULL) {
+loadModelState <- function(FileName=NULL,envir=NULL) {
   if ( is.null(envir) ) envir = modelEnvironment()
+  explicitFileName <- if ( is.character(FileName) && file.exists(FileName[1]) ) TRUE else {
+    FileName <- getModelStateFileName()
+    FALSE
+  }
+  # Get here with a file name
   if (file.exists(FileName)) {
     loaded <- try (silent=TRUE,
       load(FileName,envir=envir)
@@ -391,6 +392,16 @@ loadModelState <- function(FileName=getModelStateFileName(),envir=NULL) {
     writeLog("RunParam_ls from environmentment",Level="debug")
     Param_ls <- get0( "RunParam_ls", envir=envir, ifnotfound=list() )
   }
+  if ( explicitFileName ) {
+    # Make sure internal record of ModelState location tracks with where we're loading it from
+    FileName=normalizePath(FileName,mustWork=TRUE,winslash="/")
+    ModelStatePath <- dirname(FileName)
+    if ( envir$ModelState_ls$ModelStatePath != ModelStatePath ) {
+      writeLog(paste("Loading model state originally created as",envir$ModelState_ls$ModelStatePath),Level="warn")
+      envir$ModelState_ls$ModelStatePath = ModelStatePath
+    }
+    envir$ModelStateFile <- FileName
+  }
   return ( Param_ls )
 }
 
@@ -407,9 +418,8 @@ loadModelState <- function(FileName=getModelStateFileName(),envir=NULL) {
 #' parameters are passed (see \code{readModelState}).
 #'
 #' @param envir An R environment with assigned Datastore functions and a ModelState_ls
-#' @param ... If there are any parameters, this quietly becomes a call to
-#' readModelState(...) which can subset, read a different file, load
-#' into an environment, etc.
+#' @param ... If there are any parameters, this quietly becomes a call to readModelState(...) which
+#'    can subset, read a different file, load into an environment, etc.
 #' @return The model state list
 #' @export
 getModelState <- function(envir=NULL,...) {
@@ -457,7 +467,7 @@ setModelState <- function(ChangeState_ls=list(), FileName = NULL, Save=TRUE, env
   }
 
   if ( Save ) {
-    if ( is.null(FileName) ) FileName <- file.path(envir$ModelState_ls$ModelStatePath,getModelStateFileName())
+    if ( is.null(FileName) ) FileName <- envir$ModelStateFile # file.path(envir$ModelStatePath,getModelStateFileName())
     writeLog(paste0("Saving ",paste(names(ChangeState_ls),collapse=",")),Level="trace")
     writeLog(paste0("To file: ",FileName),Level="trace")
     result <- try(save("ModelState_ls",envir=envir,file=FileName))

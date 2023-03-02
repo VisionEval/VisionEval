@@ -344,8 +344,8 @@ loadModel <- function(
 
   # Get status of current model state
   # Expect that getwd() contains (or will contain) the ModelState.Rda we're working on
-  envir$ModelStatePath <- normalizePath(ModelStateFile,winslash="/",mustWork=FALSE)
-  if ( ! grepl("\\.Rda$",envir$ModelStatePath) ) {
+  envir$ModelStateFile <- normalizePath(ModelStateFile,winslash="/",mustWork=FALSE)
+  if ( ! grepl("\\.Rda$",envir$ModelStateFile) ) {
     stop(
       writeLog("Configuration Error: ModelStateFile name must have '.Rda' extension",Level="error"),
       call.=FALSE
@@ -382,8 +382,8 @@ loadModel <- function(
 
   # If only loading (not Running and wanting existing ModelState_ls)
   if ( ! RunModel && onlyExisting ) {
-    if ( file.exists(envir$ModelStatePath) ) {
-      oldRunParam_ls <- loadModelState(envir$ModelStatePath,envir=envir)
+    if ( file.exists(envir$ModelStateFile) ) {
+      oldRunParam_ls <- loadModelState(envir$ModelStateFile,envir=envir)
       ms <- envir$ModelState_ls
       if ( !is.list(ms) ) ms <- list() # file may have nothing in it, yielding a failure
     } else {
@@ -786,7 +786,7 @@ prepareModelRun <- function(
   #### IMPORTANT: The working directory must be the place we want to write the ModelState file and
   ####            create the Datastore. The "ResultsDir" (plus RunStep/Scenario)
 
-  # ModelStatePath may be a subdirectory of ResultsDir if the model is staged
+  # ModelState_ls$ModelStatePath may be a subdirectory of ResultsDir if the model is staged
   RunDirectory <- envir$ModelState_ls$ModelStatePath
 
   owd <- setwd(RunDirectory)

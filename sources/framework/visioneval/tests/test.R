@@ -101,8 +101,8 @@ test_deep_copy <- function(modelName="Classic",log="info") {
   modelPath <- normalizePath(file.path("models",modelName),winslash="/",mustWork=TRUE)
   ModelStateFile <- getRunParameter("ModelStateFile",Param_ls=list()) # Default "ModelState.Rda"
   envir <- modelEnvironment(Clear="")
-  envir$ModelStatePath <- file.path(modelPath,ModelStateFile)
-  RunParam_ls <- loadModelState(envir$ModelStatePath,envir=envir)
+  envir$ModelStateFile <- file.path(modelPath,ModelStateFile)
+  RunParam_ls <- loadModelState(envir$ModelStateFile,envir=envir)
   ToDir <- file.path(modelPath,"TestDeepCopy")
   testStep("Creating target directory...")
   if ( dir.exists(ToDir) ) {
