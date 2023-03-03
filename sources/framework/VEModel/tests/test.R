@@ -30,7 +30,8 @@ logLevel <- function(log="info") {
 }
 
 testStep <- function(msg) {
-  cat("",paste(msg,collapse="\n"),"",sep="\n")
+  # Use 'message' to get contrasting color in RStudio
+  message(paste(paste(msg,collapse="\n"),sep="\n"))
 }
 
 stopTest <- function(msg="Stop Test") {
@@ -877,6 +878,110 @@ test_03_select <- function( log="info" ) {
   return(rs)
 }
 
+test_05_query_extract <- function(log="info") {
+  testStep("Set up model")
+  mod <- test_01_run("VERSPM-query",baseModel="VERSPM",variant="pop",log=log)
+  testStep("Build a query spec...")
+  spec <- VEQuerySpec$new()
+  QuerySpec <- list(
+    list(
+      Name = "TotalHhDvmt",
+      Summarize = list(
+        Expr = "sum(Dvmt)",
+        Units = c(
+          Dvmt = "MI/DAY"
+        ),
+        Table = "Household"
+      ),
+      Units = "Miles per day",
+      Description = "Total daily vehicle miles traveled by households"
+    ),
+    list(
+      Name = "MareaHhDvmt",
+      Summarize = list(
+        Expr = "sum(Dvmt)",
+        Units = c(
+          Dvmt = "MI/DAY",
+          Marea = ""
+        ),
+        By = "Marea",
+        Table = "Household"
+      ),
+      Units = "Miles per day",
+      Description = "Daily vehicle miles traveled by households residing in each Marea"
+    ),
+    list(
+      Name = "AzoneHhDvmt",
+      Summarize = list(
+        Expr = "sum(Dvmt)",
+        Units = c(
+          Dvmt = "MI/DAY",
+          Azone = ""
+        ),
+        By = "Azone",
+        Table = "Household"
+      ),
+      Units = "Miles per day",
+      Description = "Daily vehicle miles traveled by households residing in each Azone"
+    ),
+    list(
+      Name = "AzoneHhPopByInc",
+      Summarize = list(
+        Expr = "sum(HhSize)",
+        Units = c(
+          HhSize = "",
+          Income = "USD",
+          Azone = ""
+        ),
+        By = c("Azone","Income"),
+        Breaks = list(
+          Income = c(20000, 40000, 60000, 80000, 100000)
+        ),
+        BreakNames = list(
+          Income = c("20000+", "40000+", "60000+", "80000+", "100000+")
+        ),
+        Table = "Household"
+      ),
+      Units = "Persons",
+      Description = "Number of persons by income strata in each Azone"
+    ),
+    list(
+      Name = "BzoneVehByPowertrain",
+      Summarize = list(
+        Expr = "count(VehId)",
+        Units = c(
+          VehId = "",
+          HhId = "",
+          Bzone = "",
+          Powertrain = ""
+        ),
+        By = c("Bzone","Powertrain"),
+        Table = list(
+          Household = c("HhId","Bzone"),
+          Vehicle = c("VehId","Powertrain")
+        ),
+        Key = "HhId"
+      ),
+      Units = "Vehicles",
+      Description = "Number of vehicles by powertrain in each Bzone"
+    )
+  )
+  qry <- VEQuery$new(QuerySpec=QuerySpec)
+  print(qry)
+  testStep("Force run the query...")
+  qry$run(mod,Force=TRUE,log=log)
+  testStep("Classic extraction...")
+  extr <- qry$extract()
+  print(extr[sample(nrow(extr),20),])
+  testStep("Long extraction...")
+  extr <- qry$extract(longScenarios=TRUE)
+  print(nrow(extr))
+  print(extr[sample(nrow(extr),min(nrow(extr),20)),])
+  testStep("Export the long format as .csv")
+  qry$export(longScenarios=TRUE,format="csv",SaveTo=paste0("ExportTest_%timestamp%",qry$Name))
+  return(qry)
+}
+
 test_05_build_query <- function(log="info",break.query=TRUE,reset=FALSE) {
   # Process the standard query list for the test model
   # If multiple==TRUE, copy the test model and its results a few times, then submit the
@@ -1157,20 +1262,24 @@ test_05_query <- function(log="info",Force=TRUE,runModel=FALSE) {
     cat("  ModelStage Results:",result$Source$Name,"\n")
   }
 
-  testStep("Extract query results into data.frame")
-  df <- query.results <- qry$extract() # Constructs the data.frame of query results
-  # TODO: should the data.frame be cached (not just the raw results?)
-  print(names(df))
-  print(df)
+  testStep("Extract query results into data.frame (wide format)")
+  wdf <- query.results <- qry$extract(longScenarios=FALSE) # Constructs the data.frame of query results
+  print(names(wdf))
+  print(wdf)
 
-  testStep("Extract query results into .csv file (default name)")
+  testStep("Extract query results into data.frame (long format)")
+  ldf <- query.results <- qry$extract(longScenarios=TRUE) # Constructs the data.frame of query results
+  print(names(ldf))
+  print(ldf)
+
+  testStep("Extract query results into .csv file (default name, wide format)")
   df <- qry$export(format="csv")
   df <- qry$export() # Does the same thing again, possibly overwriting
   # Each extract creates a new file with a different timestamp, but
-  # the timestamps only differ by minutes: figure out how that works.
+  # the timestamps only differ by minutes
 
-  testStep("Export query results into explicitly named .csv file")
-  qry$export(format="csv",SaveTo=paste0("TestQuery_%timestamp%",qry$Name))
+  testStep("Export query results into explicitly named .csv file (long format)")
+  qry$export(format="csv",longScenarios=TRUE,SaveTo=paste0("LongFormat_%timestamp%",qry$Name))
 
   testStep("Show output files, which will include exports and queries")
   mod$dir(outputs=TRUE,all.files=TRUE)
@@ -1182,10 +1291,21 @@ test_05_query <- function(log="info",Force=TRUE,runModel=FALSE) {
   testStep("Force the query to run on the bare results rather than the model...")
   qry$run(rs,Force=TRUE) # Won't re-run if query is up to date
 
-  testStep("Returning extracted query data.frame for further exploration")
+  testStep("Export just the data (wide format)...")
+  qry$export(format="csv",longScenarios=FALSE,SaveTo=paste0("WideDataOnly_%timestamp%",qry$Name))
+
+  testStep("Extract just the metadata (long format)...")
+  df <- qry$extract(wantMetadata=TRUE,wantData=FALSE,longScenarios=TRUE)
+  print(df[sample(nrow(df),min(nrow(df),20)),]) # Random sample of 20 rows in "long" format
+
+  testStep("Extract just the metadata (wide format)...")
+  df <- qry$extract(wantMetadata=TRUE,wantData=FALSE,longScenarios=FALSE)
+  print(df[sample(nrow(df),min(nrow(df),20)),]) # Random sample of 20 rows in "long" format
+
+  testStep("Returning extracted query data.frame, in long format, for further exploration")
   return(
     list(
-      Results = df,
+      Results = qry$extract(longScenarios=TRUE),
       Model = mod,
       Query = qry
     )

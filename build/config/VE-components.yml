@@ -37,6 +37,7 @@ Components:
       - jsonlite
       - yaml
       - stringr
+      - reshape2
       - knitr
       - bookdown            # for rendering documentation
     BioC:

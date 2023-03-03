@@ -12,6 +12,7 @@ build/*make*.out
 dev/
 docs/
 external/
+shared/
 Log_*.txt
 Test/
 make*out

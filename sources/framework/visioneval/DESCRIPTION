@@ -27,6 +27,7 @@ Imports:
     jsonlite,
     yaml,
     stringr,
+    reshape2,
     rhdf5,
     knitr,
     futile.logger

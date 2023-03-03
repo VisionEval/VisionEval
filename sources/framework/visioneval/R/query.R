@@ -60,6 +60,7 @@ prepareForDatastoreQuery <- function(DstoreLocs_, DstoreType) {
     Prep_ls$Dir <- DstoreLocs_
   }
   #Get listing for each datastore
+  #TODO: later code only allows a single Datastore
   Prep_ls$Listing <- lapply(DstoreLocs_, function(x) {
     return( readModelState(FileName = file.path(dirname(x),getModelStateFileName())) )
   })
@@ -123,6 +124,8 @@ listGroups <- function(QueryPrep_ls) {
 #' group in the datastore(s).
 #' @export
 listTables <- function(Group, QueryPrep_ls) {
+  # TODO: This function should look back up the DatastorePath and
+  # only allow one Datastore
   lapply(QueryPrep_ls$Listing, function(x) {
     DstoreListing_df <- x$Datastore
     Tables_ <- unique(DstoreListing_df$group)
@@ -203,7 +206,7 @@ listDatasets <- function(Table, Group, QueryPrep_ls) {
 #' \code{documentDatastoreTables} a visioneval framework query user function that saves a zip
 #' archive of a set of csv-formatted text files which document tables in a datastore.
 #'
-#' This function inventories all datsets in the tables in a datastore and
+#' This function inventories all datasets in the tables in a datastore and
 #' creates a set of csv-formatted text files where the dataset inventory for
 #' each table is in a csv-formatted text file having the name of the table.
 #' Each csv file lists the names of the datasets, their types, their units, and
@@ -220,6 +223,8 @@ listDatasets <- function(Table, Group, QueryPrep_ls) {
 #' @return a logical identifying whether the archive file has been saved.
 #' @export
 documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
+  # TODO: Assumes there will be only one Datastore in QueryPrep_ls
+  # TODO: Should walk up the DatastorePath to flatten the Datastore
   GroupNames_ <- QueryPrep_ls$Listing$Datastore$Datastore$groupname
   Groups_ <- GroupNames_[-grep("/", GroupNames_)]
   if (any(Groups_ == "")) {
@@ -278,14 +283,14 @@ documentDatastoreTables <- function(SaveArchiveName, QueryPrep_ls) {
 #' component of the list is the name of a table from which identified datasets are retrieved and the
 #' value is a data frame or list containing the identified datasets (it will be a data.frame if all
 #' the datsets have the same length, otherwise it will be a named list with each element having
-#' the name of the dataset. The 'Missing' component is a list which identifies the datasets that
+#' the name of the dataset). The 'Missing' component is a list which identifies the datasets that
 #' are entirely missing in each table.
 #' @export
 readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
   #Extract the datastore listings
   MS_ls <- QueryPrep_ls$Listing;
   #Datastore locations
-  DstoreLocs_ <- QueryPrep_ls$Dir # Can be a vector...
+  DstoreLocs_ <- QueryPrep_ls$Dir # TODO: just have a single Datastore in QueryPrep
   #Get data from table
   Tb <- names(Tables_ls)
   Out_ls <- list()
@@ -297,9 +302,9 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
     Out_ls[[tb]] <- list()
     Ds <- names(Tables_ls[[tb]])
     for (Loc in DstoreLocs_) {
-      # Though written for a vector, currently only supporting one Datastore
+      # TODO: Though written for a vector, currently only supporting one Datastore
       # Streamline this to use DatastorePath from within root.
-      # ModelState; DstoreLoc will then no longer be a list.
+      # DstoreLoc will then no longer be a list.
       query.env <- new.env()
       query.env$ModelState_ls <- MS_ls[[Loc]]
       assignDatastoreFunctions(envir=query.env) # uses modelstate type
@@ -420,6 +425,7 @@ isOperator <- function(Symbol) {
   Operators_ <- c("+", "-", "*", "/")
   deparse(Symbol) %in% Operators_
 }
+# Identify whether symbol is an operand
 isOperand <- function(Symbol) {
   Functions_ <- c("sum", "count", "mean", "wtmean", "max", "min", "median", "c")
   Operators_ <- c("+", "-", "*", "/", "%in%")
@@ -507,6 +513,10 @@ getOperators <- function(AST) {
 #'   named component of the list is a vector of values to be used to split the
 #'   respective By dataset into groups. Minimum and maximum values do not need
 #'   to be specified as they are computed from the dataset.
+#' @param BreakNames is a list of character vectors the same length as Breaks_ls (or NULL)
+#'   indicating names to use for levels in the factor generated from Breaks_ls. Must have
+#'   the same names as Breaks_ls, and each element the same length as the corresponding
+#'   element in Breaks_ls
 #' @param Table a string or named list identifying the datastore table(s) where
 #'   the datasets identified in the 'Expr' argument and 'By' argument are
 #'   located. If all datasets are located in the same table, then the value of
@@ -545,6 +555,7 @@ checkQuerySpec <- function(
     Units = NULL,
     By = NULL,
     Breaks_ls = NULL,
+    BreakNames = NULL,
     Table = NULL,
     Key = NULL,
     QuerySpec = list()
@@ -552,13 +563,13 @@ checkQuerySpec <- function(
 
   # Based on QuerySpec, override with named function parameters
   params <- list( Expr = Expr, Units = Units,
-    By = By, Breaks_ls = Breaks_ls, Table = Table,
-    Key = Key
+    By = By, Breaks_ls = Breaks_ls, BreakNames = BreakNames,
+    Table = Table, Key = Key
   )
   params <- params[ ! sapply(params,is.null) ]
   if ( length(params) > 0 ) QuerySpec[ names(params) ] <- params;
 
-  # By, Breaks_ls and Key are optional
+  # By, Breaks_ls, BreakNames, and Key are optional
   # Expr, Units, and Table are required
   if ( ! all( found<-((reqd<-c("Expr","Units","Table")) %in% names(QuerySpec))) ) {
     Errors_ <- c(
@@ -566,6 +577,9 @@ checkQuerySpec <- function(
       paste( reqd[!found],collapse=", ")
     )
     return( list(CompiledSpec=QuerySpec, Errors = Errors_) )
+  }
+  if ( "BreakNames" %in% QuerySpec && ! "Breaks_ls" %in% QuerySpec ) {
+    writeLog("Ignored BreakNames in specification without Breaks_ls",Level="warn")
   }
 
   # Run the original function, but save all the created variables
@@ -752,7 +766,7 @@ checkQuerySpec <- function(
 #' Summarize the values in a table dataset according to the values in another
 #' dataset in the table.
 #'
-#' \code{summarizeDataset} a visioneval framework query user function that summarizes the values
+#' \code{summarizeDatasets} a visioneval framework query user function that summarizes the values
 #' in a table dataset according to the values in another dataset in the table.
 #'
 #' This function is used to calculate summary measures from one or more
@@ -811,6 +825,10 @@ checkQuerySpec <- function(
 #'   named component of the list is a vector of values to be used to split the
 #'   respective By dataset into groups. Minimum and maximum values do not need
 #'   to be specified as they are computed from the dataset.
+#' @param BreakNames is a list of character vectors the same length as Breaks_ls (or NULL)
+#'   indicating names to use for levels in the factor generated from Breaks_ls. Must have
+#'   the same names as Breaks_ls, and each element the same length as the corresponding
+#'   element in Breaks_ls
 #' @param Table a string or named list identifying the datastore table(s) where
 #'   the datasets identified in the 'Expr' argument and 'By' argument are
 #'   located. If all datasets are located in the same table, then the value of
@@ -863,6 +881,7 @@ function(
   By_ = NULL,
   By = By_,
   Breaks_ls = NULL,
+  BreakNames = NULL,
   Table = NULL,
   Key = NULL,
   Group = NULL,
@@ -873,7 +892,7 @@ function(
   # Check and prepare the Query Specification
   checkedSpec <- checkQuerySpec(
     Expr=Expr,Units=Units,
-    By=By, Breaks_ls=Breaks_ls,
+    By=By, Breaks_ls=Breaks_ls, BreakNames=BreakNames,
     Table=Table,Key=Key,
     QuerySpec
   )
@@ -904,8 +923,20 @@ function(
   }
   Data_ls <- Datasets$Data_ls;
 
+  # Can't handle unmerged tables...
+  if ( length(Data_ls$Data) > 1 ) {
+    writeLog( c(
+      msg<-"Unsupported: Multiple unrelated Datastores in Query",
+      Datasets$Errors), Level="error"
+    )
+    stop(msg)
+  }
+
   # Perform the query computations
-  calcResults <- performQuery( CompiledSpec, Data_ls )
+  # NOTE: only respects first DStoreLoc in QueryPrep_ls
+  calcResults <- performQuery( CompiledSpec, Data_ls, QueryPrep_ls$Listing[[1]]$Geo_df )
+
+  # Check for errors in query computation
   if ( length(calcResults$Errors)>1 || any(nzchar(calcResults$Errors)) ) {
     writeLog( c(
       msg<-"Error(s) performing SummarizeDatasets",
@@ -913,18 +944,23 @@ function(
     )
     stop(msg)
   }
+
+  # calcResults$Result is a data.frame
   return( calcResults$Result )
 }
 
 #----------------------------------------------------------
 # Helper function to get datasets needed to process a Query
 #----------------------------------------------------------
+
+meltResults <- function(byResults,...) reshape2::melt(unclass(byResults),...)
+
 getQueryDatasets <- function(CompiledSpec, QueryPrep_ls) with ( CompiledSpec, {
   # Process differently depending on whether we have one Table or a list of them
   if (!is.list(Table)) {
-    #-----------------------------------------------------------
-    #Retrieve and format datasets if they are in a single tables
-    #-----------------------------------------------------------
+    #----------------------------------------------------------
+    #Retrieve and format datasets if they are in a single table
+    #----------------------------------------------------------
     #Get the datasets from the datastore
     Tables_ls <- list()
     Tables_ls[[Table]] <- Units
@@ -1014,6 +1050,7 @@ getQueryDatasets <- function(CompiledSpec, QueryPrep_ls) with ( CompiledSpec, {
       rm(Data_df)
     }
     #Prepare data if there is no key
+    # TODO: do we even want to support this? Seems pointless...
     if (is.null(Key)) {
       #If no By variables, combine all datasets into one list
       if (is.null(By)) {
@@ -1043,78 +1080,86 @@ getQueryDatasets <- function(CompiledSpec, QueryPrep_ls) with ( CompiledSpec, {
 #-----------------------------------------------------------
 #Helper function to calculate measures if By is specified
 #-----------------------------------------------------------
-calcWithBy <- function(CompiledQuery, CalcData_ls) with ( CompiledQuery,
-  {
-    #If there is a By argument do calculations by group and return as array
-    By_ls <- list()
-    #Check and process the By data into categories
-    for (nm in By) {
-      ByData_ <- CalcData_ls[[nm]]
-      # ByData_ <- CalcData_ls[[1]][[nm]]
-      if (!is.numeric(ByData_)) {
-        if (is.factor(ByData_)) {
-          By_ls[[nm]] <- ByData_
-        }
-        if (is.character(ByData_)) {
-          By_ls[[nm]] <- as.factor(ByData_)
-        }
+calcWithBy <- function(CompiledQuery, CalcData_ls, Geo_df) {
+  By_ls <- list() # Will become a list of factorized break columns in CalcData_ls
+  #Check and process the By fields into a list of factors with the same names
+  writeLog(paste("running calcWithBy..."),Level="info")
+  for (nm in CompiledQuery$By) {
+    byData <- CalcData_ls[[nm]]
+    if (! is.numeric(byData)) {
+      if (is.factor(byData)) {
+        By_ls[[nm]] <- byData
+      } else if (is.character(byData)) {
+        By_ls[[nm]] <- as.factor(byData)
       } else {
-        if (is.integer(ByData_) | all(round(ByData_) == as.integer(ByData_))) {
-          ByData_ <- as.integer(ByData_)
-          if (exists("Breaks_ls") && !is.null(Breaks_ls[[nm]])) {
-            Breaks_ <- unique(c(min(ByData_), Breaks_ls[[nm]], max(ByData_)))
-            By_ls[[nm]] <- cut(ByData_, Breaks_, include.lowest = TRUE)
-          } else {
-            By_ls[[nm]] <- as.factor(ByData_)
-          }
-        }
-        if (is.double(ByData_) & !all(round(ByData_) == as.integer(ByData_))) {
-          if (exists("Breaks_ls") && !is.null(Breaks_ls[[nm]])) {
-            Breaks_ <- unique(c(min(ByData_), Breaks_ls[[nm]], max(ByData_)))
-            By_ls[[nm]] <- cut(ByData_, Breaks_, include.lowest = TRUE)
-          } else {
-            msg <- (paste(nm, "is non-integer. Breaks must be specified."))
-            return(list(Result=NA,Errors=msg))
-          }
-        }
+        msg <- paste0("Cannot evaluate By on field '",nm,"' due to invalid storage mode: ",mode(byData))
+        return(list(Result=NA,Errors=msg))
       }
-    }
-    #Identify the dimension names for each By dimension
-    ByNames_ls <- lapply(By_ls, function(x) as.character(levels(x)))
-
-    #Set up array to store results
-    Results_ar <- array(NA,
-      dim = unlist(lapply(ByNames_ls, length)),
-      dimnames = ByNames_ls)
-    #Calculate values if length of By is 1
-    if (length(By) == 1) {
-      for (n1 in ByNames_ls[[1]]) {
-        Select_ <- By_ls[[1]] == n1
-        if (sum(Select_) != 0) {
-          DataSelect_ls <- lapply(CalcData_ls, function(x) x[Select_])
-          Results_ar[n1] <- eval(parse(text = Expr), envir = DataSelect_ls)
+    } else { # Numeric data
+      breakInteger <- is.integer(byData) || all(round(byData) == as.integer(byData))
+      BreakNames <- if ( is.null(CompiledQuery$BreakNames[[nm]]) ) NULL else c("min",CompiledQuery$BreakNames[[nm]])
+      if (breakInteger) {
+        byData <- as.integer(byData)
+        if ( ! is.null(CompiledQuery$Breaks_ls[[nm]]) ) {
+          # Set the break names explicitly if available
+          Breaks_ <- c(-.Machine$integer.max, CompiledQuery$Breaks_ls[[nm]], .Machine$integer.max)
+          By_ls[[nm]] <- cut(byData, Breaks_, labels=BreakNames, include.lowest = TRUE)
         } else {
-          Results_ar[n1] <- NA
+          # Each integer value is a break level
+          # (careful - only intended for things like a numeric land use type; not
+          # something like HhID with a zillion records)`
+          By_ls[[nm]] <- as.factor(byData)
+        }
+      } else { # non-integer data
+        if ( ! is.null(CompiledQuery$Breaks_ls[[nm]])) {
+          Breaks_ <- c(c(-Inf, CompiledQuery$Breaks_ls[[nm]], Inf))
+          By_ls[[nm]] <- cut(byData, Breaks_, labels=BreakNames, include.lowest = TRUE)
+        } else {
+          msg <- (paste0("'",nm,"' is numeric non-integer. Breaks must be specified."))
+          return(list(Result=NA,Errors=msg))
         }
       }
     }
-    #Calculate values if length of By is 2
-    if (length(By) == 2) {
-      for (n1 in ByNames_ls[[1]]) {
-        for (n2 in ByNames_ls[[2]]) {
-          Select_ <- By_ls[[1]] == n1 & By_ls[[2]] == n2
-          if (sum(Select_) != 0) {
-            DataSelect_ls <- lapply(CalcData_ls, function(x) x[Select_])
-            Results_ar[n1,n2] <- eval(parse(text = Expr), envir = DataSelect_ls)
-          } else {
-            Results_ar[n1,n2] <- NA
-          }
-        }
-      }
-    }
-    return(list(Result=Results_ar,Errors=""))
   }
-)
+  writeLog(paste("By_ls names:",paste(names(By_ls),collapse=",")),Level="info")
+
+  # Perform the query computation
+  measureExpr <- parse(text=CompiledQuery$Expr)
+  measureFunc <- function(x) eval(measureExpr,envir=x) # x is "environmentable" e.g. a subsetted data.frame...
+  Results_ar <- by(CalcData_ls,By_ls,measureFunc) # Actually perform the query computation
+  # Results_ar has same number of Dim's as By, Dimnames are the break values for
+  # each By element, cells are the results of evaluating measureFunc
+  # NA's are introduced automatically for missing groups
+
+  # Melt into a data.frame
+  Results_df <- meltResults(Results_ar,value.name="Measure")
+
+  # Add in enclosing geographies
+  # Attach enclosing geographies to calcResults$Result
+  byFields <- originalByFields <- names(Results_df)[ names(Results_df) != "Measure" ]
+  geoRank <- c("Bzone","Azone","Marea")
+  smallGeo <- which( geoRank %in% byFields)[1] # Smallest relevant geograpy
+  if ( ! is.na(smallGeo) ) {
+    # find the bigger geographies
+    biggerGeo <- geoRank[-(1:smallGeo)]
+    if ( length(biggerGeo) > 0 ) {
+      biggerGeo <- biggerGeo[ ! biggerGeo %in% byFields ] # eliminate geoFields that are already present
+    }
+    if ( length(biggerGeo) > 0 ) { # skip if enclosing geoFields are already there... (shouldn't happen)
+      geoMerge <- Geo_df[,c(geoRank[smallGeo],biggerGeo)]
+      geoMerge <- geoMerge[!duplicated(geoMerge),] # toss duplicates for unnecessary smaller geographies
+      Results_df <- merge(Results_df,geoMerge) # automatic use matching smallGeo field
+    }
+  }
+  if ( ! "Region" %in% byFields && nrow(Results_df)>0 ) {
+    Results_df$Region <- "Region" # add redundant flag for Region
+  } else {
+    Results_df$Region <- character(0) # make sure there's a field on the empty data.frame
+  }
+
+  Results_df <- structure(Results_df,byFields=originalByFields)
+  return(list(Result=Results_df,Errors=""))
+}
 
 #---------------------------------
 # Functions for performing queries
@@ -1133,75 +1178,45 @@ wtmean <- function(x, w) sum(x * w) / sum(w)
 #'
 #' @param CompiledSpec a list as returned from checkQuerySpec
 #' @param Data_ls a data specification as returned from getQueryDatasets
-#' @return a list with two elements, Result and Errors. Result is the numeric result as either a
-#' vector, a matrix or an array depending on the By value. Errors is a character vector. If it is
-#' length zero or contains any non-empty strings, than an error condition has been specified.
+#' @param Geo_df is the model geography from ModelState_ls$Geo_df
+#' @return a list with two elements, Result and Errors. Result is a data.frame with By
+#'   columns and a column called Measure, or NA. Errors is a character vector. If Result is
+#'   length zero or contains any non-empty strings, than an error condition has been specified.
 #' @export
-performQuery <- function( CompiledSpec, Data_ls )
-with( CompiledSpec,
-  {
-    #----------------------------------------------
-    #Calculate the Expression and Return the Result
-    #----------------------------------------------
-    if ( "By" %in% names(CompiledSpec) ) {
-      # There is a By argument, with one or two merged datasets
-      if ( length(Data_ls$Data) == 1 ) {
-        #If there is a By but only one merged dataset
-        calcResults <- calcWithBy(CompiledSpec,Data_ls$Data[[1]])
-        if ( length(calcResults$Errors)>0 && any(nzchar(calcResults$Errors)) ) {
-          return( list(Result=NA,Errors=calcResults$Errors) )
-        } else {
-          return( calcResults )
-        }
-      } else if (length(Data_ls$Data) > 1) {
-        #If there is a By but several tables, calculate results for each table
-        calcResults_ls <- lapply(
-          Data_ls$Data,
-          function(x) {d
-            calcResults <- calcWithBy(CompiledSpec,x)
-            if ( length(calcResults$Errors)>0 && any(nzchar(calcResults$Errors)) ) {
-              return( list(Result=NA,Errors=calcResults$Errors) )
-            } else return( calcResults )
-          }
-        )
-        # Assemble Errors
-        Errors_ <- character(0)
-        for ( res in calcResults_ls ) {
-          if ( length(res$Errors)>0 && any(nzchar(res$Errors)) ) {
-            Errors_ <- c(Errors_,res$Errors)
-          }
-        }
-        if ( length(Errors_)>0 && any(nzchar(Errors_)) ) {
-          return( list(Result=NA,Errors=Errors_) )
-        } else {
-          Results_ls <- lapply( calcResults_ls, function(r) r$Result )
-        } 
-
-        #Check that they conform if 1 By variable
-        if (length(By) == 1) {
-          Names_ls <- lapply(Results_ls, function(x) names(x))
-          AllNames_ <- sort(unique(unlist(Names_ls)))
-          Results_ls <- lapply(Results_ls, function(x) {
-            Vals_ <- setNames(rep(NA, length(AllNames_)), AllNames_)
-            Vals_[names(x)] <- x
-            Vals_
-          })
-        }
-
-        #Check that they conform if 2 By variables (e.g. geography and breaks)
-        if (length(By) == 2) {
-          # TODO: Unimplemented...
-          NULL # Not doing this check...
-        }
-        Result <- do.call("+", Results_ls)
-      }
-    } else {
-      Result <- eval(parse(text = Expr), envir = Data_ls$Data[[1]])
+performQuery <- function( CompiledSpec, Data_ls, Geo_df ) {
+  #----------------------------------------------
+  #Calculate the Expression and Return the Result
+  #----------------------------------------------
+  if ( "By" %in% names(CompiledSpec) ) {
+    # There is a By argument, with one or two merged datasets
+    if ( length(Data_ls$Data) == 1 ) {
+      #If there is a By but only one merged dataset
+      calcResults <- calcWithBy(CompiledSpec,Data_ls$Data[[1]],Geo_df)
+      if ( length(calcResults$Errors)>0 && any(nzchar(calcResults$Errors)) ) {
+        return( list(Result=NA,Errors=calcResults$Errors) )
+      } # Fall through to do uniform return below
+    } else if (length(Data_ls$Data) > 1) {
+      return( list( Result=NA, Errors="Unsupported: Unmerged data in a single query" ) )
     }
-    # Return results
-    return(list(Result=Result,Errors=""))
+  } else {
+    # Scalar result for region
+    # Format as a 1-element data.frame with Region geography as its dimension
+    # It's a roundabout way to get the right format, but it works...
+    Result_df=reshape2::melt(
+      array(
+        eval(parse(text=CompiledSpec$Expr), envir = Data_ls$Data[[1]]),
+        dimnames=list(Region="Region")
+      ),
+      value.name = "Measure"
+    )
+    if ( ! "data.frame" %in% class(Result_df) ) {
+      return( Result=NA, Errors=as.character(Result_df) )
+    }
+    calcResults <- list( Result = Result_df, Errors=character(0) )
   }
-)
+  # Return list of Results (data.frame) and Errors (list of messages)
+  return(calcResults)
+}
 
 # #Examples of summarizing datasets
 # #================================
