@@ -29,9 +29,7 @@ Components:
     Path: sources/framework
     Test:
       Group: 0
-      Script:
-        - test.R            # relative to visioneval/tests
-#        - tests/scripts/test_spec.R  # relative to visioneval package root
+      Script: test.R            # relative to visioneval/tests
     CRAN: 
       - futile.logger
       - jsonlite
@@ -65,6 +63,14 @@ Components:
 #    To build properly, need to do externals after creating ve.lib!
 #    which requires a change to the Makefile sequencing.
 #    The CRAN version of packages should be used when possible.
+  VESnapshot: # Sample module
+     Type: module
+     Path: sources/framework
+     Test:
+       Group: 0
+       Script: test.R
+     CRAN:
+        - knitr
 
 # Core Modules for building models
 # Group 1

@@ -1,0 +1,9 @@
+Dynamic:
+  LogLevel: error # Let's be dramatic!
+  Message: Message from snap-dynamic configuration
+  RunBy: Region # Try with Marea or Azone instead of Region to see it differently...
+  Field:
+    Group: Year
+    Table: Household
+    Name:  HhSize
+    Operation: mean

@@ -1,0 +1,29 @@
+Notes:
+- VisionEval.cnf for VESnap model; illustrating Snapshot module
+- Model Structural Parameters: ScriptsDir, InputDir, ParamDir, Seed
+- Model Description: Model, Region, State, ModelStages
+- See individual ModelStages for scenario descriptions
+
+# Model Structural Parameters
+ScriptsDir  : scripts
+InputDir    : inputs # model_parameters.json is located here
+    # Full set of model inputs is included in model base directory
+    # InputPath in stages will look there first
+    # Stages include just the minimal input data they need to run
+ParamDir    : defs # default parameter location
+Seed        : 1  # Same seed used for all scenarios
+
+# Model description
+Model       : VESnap 1.0 (Snapshot Demo)
+Region      : RVMPO
+State       : OR
+
+# Scenario description
+ModelScript    : run_snapshot.R
+Scenario       : VESnap Demo model
+Description    : Runs a few modules and does a few snapshots
+BaseYear       : 2010
+Years          : [ 2010 ]
+
+# Dynamic configuration
+SnapshotDir    : snap-snapshot # uncomment to look in this folder for visioneval.cnf for Dynamic 

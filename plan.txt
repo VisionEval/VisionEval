@@ -1,8 +1,6 @@
 =======================================================
-Do queries with extra groups and test long/wide architecture, subsetting fields, and exportOnly
 
-The new query architecture appears to work. Run the other query tests. Add a test for
-BreakNames.
+Build and test VESnapshot.
 
 ===============================================
 
