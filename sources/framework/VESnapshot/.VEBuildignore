@@ -2,8 +2,7 @@
 runtime*
 .Renviron
 .Rhistory
-launch.bat
-dev-docs
-previous.scenarios
-NAMESPACE
+tests/
 data/
+launch.bat
+NAMESPACE

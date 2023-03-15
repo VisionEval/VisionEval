@@ -4,8 +4,7 @@
 #---------------------------------
 for(Year in getYears()) {
   runModule("CreateHouseholds", "VESimHouseholds", RunFor = "AllYears", RunYear = Year)
-  # runModule("Snapshot", "VESnapshot", RunFor = "AllYears", RunYear = Year)
-  runModule("Dynamic",          "VESnapshot",      RunFor = "AllYears", RunYear = Year)
+  runModule("Snapshot",         "VESnapshot",      Instance="HhSizeSnapshot", RunFor = "AllYears", RunYear = Year)
   runModule("PredictWorkers",   "VESimHouseholds", RunFor = "AllYears", RunYear = Year)
   runModule("AssignLifeCycle",  "VESimHouseholds", RunFor = "AllYears", RunYear = Year)
   runModule("PredictIncome",    "VESimHouseholds", RunFor = "AllYears", RunYear = Year)

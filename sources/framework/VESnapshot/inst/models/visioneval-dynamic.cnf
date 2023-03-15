@@ -14,7 +14,7 @@ ParamDir    : defs # default parameter location
 Seed        : 1  # Same seed used for all scenarios
 
 # Model description
-Model       : VESnap 1.0 (Snapshot Demo)
+Model       : VESnap 1.0 / Dynamic (Dynamic Spec Demo)
 Region      : RVMPO
 State       : OR
 
@@ -27,7 +27,6 @@ Years          : [ 2010 ]
 
 # Dynamic configuration
 # DynamicDir     : snap-dynamic # uncomment to look in this folder for visioneval.cnf for Dynamic 
-                              # sample model places it in the model "inputs" directory
-                              # Can be in model root, or in "defs"
+# Test model manipulates these in-core to try out 
 Dynamic:    # uncomment this and the following and comment DynamicDir to use inline configuration
   Message : Message for Dynamic from model root configuration; no field configured

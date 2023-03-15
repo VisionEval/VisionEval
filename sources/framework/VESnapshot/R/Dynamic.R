@@ -6,20 +6,21 @@
 #<doc>
 #
 ## Dynamic Module
-#### December 9, 2022
+#### March 14, 2023
 #
 #This module simply prints a message into the model run log file when it appears in a runModule directive.
 #It illustrates the basic structure of a VE module and specifically shows how to use visioneval.cnf to locate
-#module configuration information, and how to generate a module Specifications dynamically using a function.
+#module configuration information, and how to generate module Specifications dynamically using a function.
 #
 ### How the Module Works
 #
-#The user configures visioneval.cnf script through the Dynamic: block. The block can be in the model's
-#main visioneval.cnf or anywhere else in the configuration tree for the current model stage. It can also
-#be in a visioneval.cnf located in the parameter directory DynamicDir, which will be sought in the model root,
-#in the defs folder, or along the input path (so basically anywhere you like).
+#The user configures the visioneval.cnf script through the Dynamic: block. The block can be in the model's
+#main visioneval.cnf or anywhere else in the configuration tree for the current model stage (e.g. the model, or
+#just the stage). It can also be in a visioneval.cnf located in the parameter directory DynamicDir, which will
+#be sought in the model root, in the defs folder, or along the input path (so basically anywhere you like).
 #
-#Dynamic is configured and used in the the VESnap test model, along with Snapshot, so you can see how they work
+#Dynamic is configured and used in the the VESnap test model, along with the Snapshot module, so you can see
+#how they work.
 #
 ### Configuring Dynamic
 #
@@ -27,7 +28,7 @@
 #has these elements
 #
 #'''
-#DynamicDir: mydynamic # directory containing visioneval.cnf with a Dynamic specification (default: "dynamic")
+#DynamicDir: mydynamic # optional directory with a Dynamic specification in its visioneval.cnf (default: "dynamic")
 #Dynamic: # located somewhere in the model stage's configuration tree
 #  Message:     "An optional message printed to the model run Log"
 #  RunBy:       Region     # the default; you can also specify Marea, Azone or Bzone to see the difference at runtime
@@ -36,10 +37,10 @@
 #    Group:     Year       # replaced with current run year, or you can specify "Global" to look there
 #    Table:     Household  # or whatever
 #    Name:      HhSize     # or whatever
-#    Operation: mean       # a function applied to the Field values for the logging (default: length)
+#    Operation: mean       # a function applied to the Field values for the logging (default: length); must yield a scalar
 #'''
 #
-#If you play with the Field configuration, any Group/Table/Name object must already have been specified in an earlier
+#If you change the Field configuration, any Group/Table/Name object must already have been specified in an earlier
 #module call in the ModelScript (i.e. before the `runModule("Dynamic",...)` step). You'll get a framework error If Field
 #is specified, but there is no matching field when the Dynamic module runs.
 #
@@ -61,20 +62,21 @@
 # unless the Field block appears in its configuration
 DynamicSpecifications <- list(
   Function="getDynamicField", # name of the function (no need to export) that returns the specification
-  Specs=TRUE # Specs is only needed to support the Fields directive in Dynamic
-             # In general, it will only need to be TRUE when the module is going to "Get" fields from
-             # the Datastore. If this module is only doing "Set" specifications (plus, if you like
-             # "Inp" specifications that load .csv files into the Datastore), then Specs here can be
-             # left out, or explicity set to its default value of FALSE.
+  Specs=TRUE # Should the specifications from previous modules in the run script be passed to this function?
+             # Specs is only needed to support the Fields directive in Dynamic. Real-world dynamic
+             # specifications should make this TRUE if they are planning to "Get" fields from the Datastore
+
+             # If this Dynamic module is only doing "Set" or "Inp" specifications, then Specs here can be left
+             # out, or explicity set to its default value of FALSE.
 )
 
 #Save the data specifications list
 #---------------------------------
 # "DynamicSpecifications"
-#' Specifications list for the Dynamic module
+#' Specifications list for the Dynamic module (wrapper around dynamic specification function)
 #'
-#' Dynamic illustrates dynamic model specification (through a function). See the Dynamic entry in
-#' VESnapshot/model_docs, or R help for \code{VESnapshot::Dynamic}
+#' Dynamic module illustrates dynamic model specification (through a function). See the Dynamic
+#' entry in VESnapshot/model_docs, or R help for \code{VESnapshot::Dynamic}.
 #' @format a list with one or two elements (Function and Specs)
 #' @source Dynamic.R script
 #' @name DynamicSpecifications
@@ -84,15 +86,27 @@ visioneval::savePackageDataset(DynamicSpecifications, overwrite = TRUE)
 # loaded during the specification creation. Shows how to save "session" details during a model run.
 dynamic.env <- new.env()
 
-# Module Specification function, returning a list of "Get" and "Set" elements (and possibly "Inp") that will
-# be supplied to, and retrieved from, this module. This function is called internally and not
-# exported in the VESnapshot Namespace. The module function \code{Dynamic} is exported. The AllSpecs_ls is
-# required as a parameter if "Specs" is true in the DynamicSpecifications above (and in any case where you
-# expect to "Get" existing fields from the Datastore).
-# Even though this function is exported from this example, it does not need to be exported in the general case.
 #' Function to generate module specifications for Dynamic from visioneval.cnf
+#'
+#' Module Specification function, returning a list of "Get" and "Set" elements (and possibly "Inp") that will
+#' be supplied to, and retrieved from, this module.
+#'
+#' This function is called internally and need not be exported from the VESnapshot Namespace. The actual
+#' module function \code{Dynamic} (below) is exported. The AllSpecs_ls is required as a parameter if "Specs"
+#' is true in the DynamicSpecifications above (and in any case where you expect to "Get" existing fields from
+#' the Datastore). The Cache parameter can be used to avoid recomputing the statistics twice: the VisionEval
+#' framework calls the specification function twice and expects both results to be the same. The first call
+#' has Cache==FALSE (asking for the specification to be built) and the second has Cache==TRUE, which grants
+#' permission (but does not required) that the previously-built specifications be returned without recomputing
+#' them.
+#' 
+#' Even though this function is exported from this example, other modules implementing a dynamic
+#' specification function do not not need to export it: all that needs to be present is the specification
+#' stub tha names the function (see DynamicSpecifications above).
+#' 
 #' @param AllSpecs_ls a list of specifications for all known packages and modules defined up to this point
-#'    in the model run. Furnished by the framework if "Specs" is true (see DynamicSpecifications above)
+#'    in the model run. Furnished by the framework if "Specs" is true (see DynamicSpecifications above), and
+#'    furnished as NA otherwise.
 #' @param Cache a logical provided by the framework. FALSE when first building the specification; TRUE when
 #'    the specification is accessed during a model run.
 #' @return a "Get" specification if there is valid "Field:" block in the Dynamic configuration, otherwise
@@ -100,15 +114,21 @@ dynamic.env <- new.env()
 #' @export
 getDynamicField <- function(AllSpecs_ls=NA,Cache=FALSE) {
   # Used cached specification when calling from runModule
-  if ( Cache && "Specs_ls" %in% names(dynamic.env) ) return( dynamic.env$Specs_ls )
+  if ( Cache && "Specs_ls" %in% names(dynamic.env) ) {
+    # Use cache
+    return( dynamic.env$Specs_ls )
+  } else {
+    # Clear cache
+    rm(list=ls(dynamic.env),envir=dynamic.env)
+  }
 
   # General instructions for building a dynamic Specification function:
   
-  # In general, a specification function will take no parameters unless Specs is TRUE in the module specifications
-  # "list". If Specs IS TRUE, then AllSpecs_ls will be passed into the function so this module can see what other
-  # modules have specified. It is good practice to default AllSpecs_ls when defining the specification function so
-  # it can be called without AllSpecs_ls. If the function truly requires AllSpecs_ls (like this one), it needs to throw
-  # an error if AllSpecs_ls is not available.
+  # If Specs is TRUE in the module specification structure, then AllSpecs_ls will be passed into the function
+  # so this module can see what other modules have specified. It is good practice to default AllSpecs_ls when
+  # defining the specification function so it can be called without AllSpecs_ls. If the function truly
+  # requires AllSpecs_ls (like this one), it needs to throw an error if AllSpecs_ls is not available.
+
   # The Instance parameter can safely be ignored in most cases. It is there to support the Snapshot function
   #   (allowing multiple calls to Snapshot in a single model run, with possibly different fields being snapshotted
   #   each time. If you leave out "Specs" in the specification function description (see above in this file), you
@@ -123,17 +143,21 @@ getDynamicField <- function(AllSpecs_ls=NA,Cache=FALSE) {
   config <- visioneval::getRunParameter("Dynamic") # looking in the RunParam_ls for the current model stage
   Message <- if ( ! is.list(config) ) {
     # Could add any other directories you like
-    DynamicDir <- visioneval::getRunParameter("DynamicDir")
-    ModelDir   <- visioneval::getRunParameter("ModelDir")
-    ParamPath  <- visioneval::getRunParameter("ParamPath") # already expanded from ParamDir to absolute path
-    InputPath  <- visioneval::getRunParameter("InputPath") # already expanded to all the places to look for inputs
-    configDir  <- findFileOnPath( DynamicDir, c(ModelDir,ParamPath,InputPath) )
-    if ( !is.na(configDir) ) {
-      dynamicParam_ls <- readConfigurationFile(ParamDir=configDir) # look for visioneval.cnf or equivalent
-      config <- getRunParameter("Dynamic",Param_ls=dynamicParam_ls)
-      paste("Loaded:",configDir)
+    DynamicDir <- visioneval::getRunParameter("DynamicDir",Default=NA)
+    if ( is.character(DynamicDir) ) {
+      ModelDir   <- visioneval::getRunParameter("ModelDir")
+      ParamPath  <- visioneval::getRunParameter("ParamPath") # already expanded from ParamDir to absolute path
+      InputPath  <- visioneval::getRunParameter("InputPath") # already expanded to all the places to look for inputs
+      configDir  <- findFileOnPath( DynamicDir, c(ModelDir,ParamPath,InputPath) )
+      if ( !is.na(configDir) ) {
+        dynamicParam_ls <- readConfigurationFile(ParamDir=configDir) # look for visioneval.cnf or equivalent
+        config <- getRunParameter("Dynamic",Param_ls=dynamicParam_ls)
+        paste("Loaded:",configDir)
+      } else {
+        paste("Could not open Dynamic configuration file in",configDir)
+      }
     } else {
-      paste("Could not open Dynamic configuration file in",configDir)
+      paste("Dynamic or DynamicDir not provided in visioneval.cnf")
     }
   } else {
     if ( "Message" %in% names(config) ) config$Message else "No message supplied"
@@ -165,7 +189,12 @@ getDynamicField <- function(AllSpecs_ls=NA,Cache=FALSE) {
       fieldSpec <- NA
       for ( p in AllSpecs_ls ) {
         for ( spec in p$Specs$Set ) {
-          if ( all(spec$GROUP==field$Group && spec$TABLE==field$Table && spec$NAME==field$Name) ) {
+          if ( all
+            (
+              isTRUE(spec$GROUP==field$Group) &&
+              isTRUE(spec$TABLE==field$Table) &&
+              isTRUE(spec$NAME==field$Name)
+            ) ) {
             fieldSpec <- spec
             break
           }
@@ -207,8 +236,11 @@ getDynamicField <- function(AllSpecs_ls=NA,Cache=FALSE) {
 #' @return An empty list (a real module would "Set" some data in the Datastore - see Snapshot module)
 #' @export
 Dynamic <- function( L ) {
-  # L contains a master tree: Year, Global, BaseYear, plus the ModelState ("G")
-  # The only items populdated below those are what was requested in the Specification
+  # L contains a master tree of nested lists: Year, Global, BaseYear, plus the ModelState ("G")
+  # The only items populated in that tree are what was requested in the Specification
+  # This function does not "Set" parameters, but if there is a "Set" specification, the list
+  # that is returned should include those elements (which do NOT have to be in a nested list
+  # format - see the framework documentation).
   logLevel <- if ( "LogLevel" %in% names(dynamic.env) ) dynamic.env$LogLevel else "warn"
   
   Summary <- if ( "Field" %in% names(dynamic.env) ) {
@@ -217,7 +249,7 @@ Dynamic <- function( L ) {
       obj <- L[[dynamic.env$Field$Group]][[dynamic.env$Field$Table]][[dynamic.env$Field$Name]]
       summ <- with (dynamic.env, paste("Summarizing:",file.path(Field$Group,Field$Table,Field$Name)))
       summValue <- eval(parse(text=paste(operation,"(obj)")))
-      c(summ,paste("Operation",operation,"results:",summValue))
+      c(summ,paste("Operation",operation),paste("Results:",summValue))
     } else {
       "Field requested for Dynamic, but no Specification"
     }
@@ -232,9 +264,9 @@ Dynamic <- function( L ) {
   list() # Dynamic never Sets any fields in the Datastore
 }
 
-#===============================================================
-#SECTION 4: MODULE DOCUMENTATION AND AUXILLIARY DEVELOPMENT CODE
-#===============================================================
+#==============================================================
+#SECTION 4: MODULE DOCUMENTATION AND AUXILIARY DEVELOPMENT CODE
+#==============================================================
 #Run module automatic documentation
 #----------------------------------
 #' @importFrom visioneval documentModule

@@ -1124,9 +1124,6 @@ getRegisteredGetSpecs <- function(Names_, Tables_, Groups_, NameRegistryDir = NU
 #' Armed with the return from this function, you can manually source a module
 #' and then step through its function call with the debugger...
 #'
-#' TODO: Still to determine if this will work without explicitly pre-loading a
-#' modelEnvironment().
-#'
 #' @param ModuleName a string identifying the name of the module.
 #' @param PackageName a string identifying the name of the package that the
 #' module is in.
@@ -1344,6 +1341,7 @@ getModuleSpecs <- function(ModuleName, PackageName, AllSpecs_ls=NA, Instance=cha
     )
   }
   if ( "Function" %in% names(spec_ls) ) {
+    writeLog(paste("Processing Dynamic Specification for",paste(PackageName,ModuleName,sep="::")),Level="info")
     specFunc <- paste0(PackageName, "::", spec_ls$Function)
     specFormals <- names(eval(parse(text=paste0("formals(",specFunc,")"))))
     wantAllSpecs <- "AllSpecs_ls" %in% specFormals

@@ -26,4 +26,4 @@ BaseYear       : 2010
 Years          : [ 2010 ]
 
 # Dynamic configuration
-SnapshotDir    : snap-snapshot # uncomment to look in this folder for visioneval.cnf for Dynamic 
+SnapshotDir    : snap-snapshot

@@ -648,7 +648,7 @@ test_02_multicore <- function(model=NULL, log="info", workers=3) {
   configFile <- file.path("CORE-base","visioneval.cnf")
   yaml::write_yaml(stageConfig_ls,configFile)
   setwd(owd)
-  coreModel$configure(fromFile=TRUE) # Will load CORE-base stage
+  coreModel$configure(reloadFile=TRUE) # Will re-load CORE-base stage configuration from disk
   print(coreModel)
 
   testStep("Run the CORE-test model inline")
@@ -1582,7 +1582,7 @@ test_08_setup <- function(model=NULL) {
   getSetup(reload=TRUE) # Loaded an empty file
 
   testStep("View initial global runtime setup (empty list)")
-  viewSetup(fromFile=TRUE)
+  viewSetup()
 
   testStep("Install test model (based on runtime configuration)...")
   setup <- test_00_install("VERSPM","pop",installAs="Setting-Test",overwrite=TRUE)
@@ -1593,13 +1593,13 @@ test_08_setup <- function(model=NULL) {
   print(setup$setting("Seed",source=TRUE))
   
   testStep("Remove Seed parameter from model configuration file")
-  updateSetup(setup,inFile=TRUE,drop="Seed")
-  writeSetup(setup,overwrite=TRUE)
+  updateSetup(setup,drop="Seed")
+  writeSetup(setup,overwrite=TRUE) # changes model's visioneval.cnf - careful becuase it trashes comments
   cat("Notice: no Seed listed explicitly; will use global or default\n")
-  viewSetup(setup,fromFile=TRUE)
+  viewSetup(setup)
 
   testStep("Reload model, now without explicit Seed")
-  setup$configure() # or use openModel again; the latter is better if model has been run
+  setup$configure(reloadFile=TRUE) # or use openModel again; the latter is better if model has been run
   cat("Value of Seed:",setup$setting("Seed",defaults=TRUE),"\n")
   cat("Source of Seed setting...\n")
   print(setup$setting("Seed",defaults=TRUE,source=TRUE)) # Show source for Seed parameter: now default
@@ -1608,10 +1608,10 @@ test_08_setup <- function(model=NULL) {
   viewSetup(setup)
 
   testStep("Update Seed for global visioneval.cnf")
-  updateSetup(inFile=TRUE,Seed=2.5)
+  updateSetup(Seed=2.5)
 
   testStep("View runtime setup with changed Seed (what would be in the file)")
-  viewSetup(fromFile=TRUE)
+  viewSetup()
 
   testStep("Save new runtime visioneval.cnf")
   writeSetup() # creates a backup file if setup already exists
@@ -1622,9 +1622,10 @@ test_08_setup <- function(model=NULL) {
   cat("Runtime configuration after reloading from file (now has value):\n")
   getSetup(reload=TRUE) # force reload of runtime configuration
   viewSetup(fromFile=FALSE) # Now has reloaded file value in regular runtime
+  # could combine those two steps with viewSetup(fromFile=TRUE)
 
   testStep("Reopen model and see changed setup (Seed = 2.5) from global")
-  setup$configure() # Reopen the model from saved configuration
+  setup$configure(reloadFile=TRUE) # Reopen the model from saved configuration
   cat("Seed setting that will be used (global config):\n")
   print(setup$setting("Seed",defaults=TRUE,source=TRUE))
 
@@ -1633,7 +1634,7 @@ test_08_setup <- function(model=NULL) {
   getSetup(reload=TRUE)
 
   testStep("Reopen model one more time and Seed is now back to default")
-  setup$configure() # Reopen the model from saved configuration
+  setup$configure(reloadFile=TRUE) # Reopen the model from saved configuration
   cat("Seed setting that will be used (default):\n")
   print(setup$setting("Seed",defaults=TRUE,source=TRUE))
 

@@ -169,13 +169,13 @@ loadRuntimeConfig <- function() {
 #'   to retrieve. If not provided, return all defined parameters (but not any that are defaulted).
 #' @param object identifies which parameter set to get. NULL (default) returns runtime parameters.
 #'   Otherwise object should be a VEModel or a VEModelStage.
-#' @param fromFile a logical value; if TRUE, return configuration from file, otherwise parameters as
-#'   modified at runtime
+#' @param fromFile a logical value; if TRUE, return base configuration file (loadedParam_ls),
+#'   otherwise parameters as configured into model's RunParam_ls.
 #' @param reload a logical; if TRUE and retrieving ve.runtime configuration, re-read configuration
 #'   file
 #' @return A list of defined run parameters (possibly empty, if no parameters are defined)
 #' @export
-getSetup <- function(object=NULL,paramNames=NULL,fromFile=FALSE,reload=FALSE) {
+getSetup <- function(object=NULL,paramNames=NULL,fromFile=TRUE,reload=FALSE) {
   if ( is.list(object) ) { # assume its a Param_ls list
     RunParam_ls <- object
   } else if ( is.null(object) ) {
@@ -202,23 +202,49 @@ getSetup <- function(object=NULL,paramNames=NULL,fromFile=FALSE,reload=FALSE) {
 #' ve.runtime, Otherwise the object should be a VEModel, VEModelStage, or VEModelScenarios.
 #' @param Param_ls If provided (and object is NOT provided), view this list instead of looking up
 #'   via getSetup.
-#' @param fromFile if TRUE, shows only the parameters loaded from a visioneval.cnf file. If FALSE,
-#'   also shows parameters that were constructed when the model was loaded, or updated manually
-#'   after the configuration file was read.
+#' @param viewSource If TRUE inject the parameter source into the display as "pseudo YAML",
+#'   otherwise just name and value for each parameter (as YAML).
+#' @param shorten If TRUE pass over returned parameters and trim off the RuntimeDirectory path
+#' @param fromFile if TRUE, shows the parameters "loaded" from a visioneval.cnf file (i.e. the set
+#'   that the RunParam_ls gets built from during model$configure). If FALSE, you can view the
+#'   RunParam_ls itself, which is what the model would actually run with. Comparing these
+#'   (ViewSetup(...,fromFile=TRUE) and ViewSetup(...,fromFile=FALSE) will show what got built or changed
+#'   during the configure process.
+#' @param showParsedScript show the ParsedScript element in RunParam_ls (default FALSE; it's
+#'   usually not interesting)
 #' @param ... Additional arguments to \code{cat} used internally
 #' @importFrom yaml as.yaml
 #' @export
-viewSetup <- function(object=NULL,Param_ls=NULL,fromFile=FALSE,...) {
+viewSetup <- function(object=NULL,Param_ls=NULL,fromFile=FALSE,
+  shorten=TRUE,viewSource=FALSE,showParsedScript=FALSE,...) {
   if ( ! is.null(object) || is.null(Param_ls) ) {
     Param_ls <- getSetup(object=object,fromFile=fromFile)
   } # else view Param_ls from function parameters
-  Paraml <- yaml::as.yaml(Param_ls)
-  cat(Paraml,...)
-  # TODO: any way to add the parameter source as a comment to the YAML?
-  # Since only the top level YAML elements have a source (their inner components don't)
-  # we could just look at the top level names (pick them back out) line by line in the
-  # generated YAML, look up the item name, and then get its source...
-  # Add a "viewSource" parameter set to FALSE by default to trigger that deeper dive
+  if ( ! showParsedScript ) Param_ls <- Param_ls[ ! names(Param_ls) %in% "ParsedScript" ]
+  paramNames <- names(Param_ls)
+  for ( i in seq(Param_ls) ) { # format manually
+    nm <- paramNames[i]
+    param <- Param_ls[[i]]
+    cat(nm,":",sep="")
+    if ( is.list(param) ) {
+      if ( viewSource ) {
+        src <- attr(param,"source")
+        if ( shorten ) src <- sub( getRuntimeDirectory(),"", src ) # blunt brush to shorten directories
+        if ( ! is.null(src) ) {
+          cat("  #",src,"\n")
+        }
+      } else cat("\n")
+      cat( "  ",sub("  $","",gsub("\\n","\n  ",as.yaml(param))),sep="") 
+    } else {
+      yamlp <- as.yaml(param)
+      if ( shorten ) yamlp <- sub( getRuntimeDirectory(),"", yamlp )
+      if ( viewSource ) {
+        # change first newline plus name into a row with the src
+        cat( sub("\\n",paste0(" # ",src,"\n"),yamlp),sep="")
+      } else cat( yamlp )
+    }
+  }
+  # cat(Paraml,...)
 }
 
 #UPDATE SETUP
@@ -231,19 +257,21 @@ viewSetup <- function(object=NULL,Param_ls=NULL,fromFile=FALSE,...) {
 #'
 #' @param object identifies the parameter set to write. NULL (default) uses 
 #' ve.runtime. Otherwise the object should be a VEModel or VEModelStage.
-#' @param inFile a logical. If TRUE, alter the loadedParam_ls, otherwise alter runParam_ls
+#' @param inFile a logical. If TRUE, alter the loadedParam_ls, otherwise alter runParam_ls.
+#'   Generally, leave inFile=TRUE. If you alter runParam_ls you can re-run the model without
+#'   running model$configure, but that's risky since parameters can depend on each other in
+#'   sometimes unexpected ways
 #' @param Source a character string describing the source assigned to these parameters
 #' @param Param_ls a named list of parameters to add (or replace)
 #' @param drop a character vector of parameters names that will be dropped rather than replaced
 #' @param ... individual named parameters that will be added to (or replace) settings
 #' @import visioneval
 #' @export
-updateSetup <- function(object=NULL,inFile=FALSE,Source="interactive",Param_ls=list(),drop=character(0),...) {
-  # TODO: for purposes of model Run Status, change the LastUpdate time stamp of "object" to "now" so
-  # when we next run the model, stages with a "RunComplete" time stamp earlier than now will all be
-  # marked for reset.
+updateSetup <- function(object=NULL,inFile=TRUE,Source="interactive",Param_ls=list(),drop=character(0),...) {
+  # TODO: for purposes of model Run Status, change status of "object" to "now" so when we next run
+  # the model, stages with a "RunComplete" time stamp earlier than now will all be marked for reset.
 
-  # merge ... into Param_ls
+  # merge ... into Param_ls (expecting a named list of arbitrary parameters)
   Param_ls <- visioneval::mergeParameters(
     Param_ls,
     visioneval::addParameterSource(list(...),Source)
@@ -484,7 +512,7 @@ getModelIndex <- function(reset=FALSE) {
   for ( pkg.load in loaded.packages ) {
     pkg <- sub("package:","",pkg.load)
     if ( ! pkg %in% names(VE.pkgs) ) {
-      VE.pkg[pkg] <- pkg
+      VE.pkgs[pkg] <- pkg
     }
   }
   modelPaths <- sapply(VE.pkgs, function(p) system.file("models",package=p))

@@ -2,6 +2,11 @@
 
 Build and test VESnapshot.
 
+Dynamic module is now working.
+Snapshot module needs to be confirmed.
+
+Regression test needed on running models.
+
 ===============================================
 
 Data export functions (for full set of results)

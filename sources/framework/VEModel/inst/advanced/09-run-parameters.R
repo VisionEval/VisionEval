@@ -44,7 +44,7 @@ mini$setting("Seed",source=TRUE)     # Show where it came from
 
 viewSetup(fromFile=TRUE)             # The global visioneval.cnf (including defaults)
 updateSetup(Seed=2.3)                # update working set of parameters in memory
-mini$configure(fromFile=FALSE)       # use updated parameter to rebuild model
+mini$configure(reloadFile=FALSE)     # use updated parameter to rebuild model
 viewSetup(fromFile=TRUE)             # No settings since file didn't exist
 viewSetup()                          # Created Seed=2.3 in memory
 
@@ -61,7 +61,7 @@ getSetup(reload=TRUE)                # reload global parameter file
 viewSetup(fromFile=TRUE)
 
 # To apply the new setting from the configuration file, we need to re-open the model
-# Default is to revisit configuration file (see mini$configure(fromFile=FALSE) above
+# Default is to revisit configuration file (see mini$configure(reloadFile=FALSE) above
 mini$configure()
 mini$setting("Seed")
 

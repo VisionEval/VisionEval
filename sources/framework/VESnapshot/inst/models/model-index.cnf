@@ -17,11 +17,11 @@ VESnap:
       scripts: scripts-snapshot
       inputs: inputs
       defs: defs-snapshot
-      snapshot: snapshot
+      snap-snapshot: snapshot
     dynamic:  # tests a very simple dynamic specification
       description: VESnapshot Test Model
       config: visioneval-dynamic.cnf
       scripts: scripts-dynamic
       inputs: inputs
       defs: defs-dynamic
-      dynamic: dynamic
+      snap-dynamic: dynamic

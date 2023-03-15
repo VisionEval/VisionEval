@@ -6,3 +6,4 @@ data/
 VESnapshot.Rproj
 ^NAMESPACE$
 runtime*
+inst/module_docs

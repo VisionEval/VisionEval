@@ -15,20 +15,20 @@ NULL
 self=private=NULL
 
 # Build a scenario management object
-ve.scenario.init <- function( baseModel=NULL, fromFile=FALSE ) {
+ve.scenario.init <- function( baseModel=NULL, reloadFile=FALSE ) {
   self$baseModel <- baseModel
   self$scenarioDir <- self$baseModel$setting("ScenarioDir")
   self$scenarioPath <- normalizePath(file.path(self$baseModel$modelPath,self$scenarioDir))
   if ( dir.exists(self$scenarioPath) ) {
-    self$load(fromFile=fromFile)
+    self$load(reloadFile=reloadFile)
   } # else there are no scenarios apart from baseModel stages
 }
 
 # Load scenario's visioneval.cnf (constructing self$RunParam_ls and self$loadParam_ls)
 # Then build whatever model stages are defined there
-ve.scenario.load <- function(fromFile=FALSE) {
+ve.scenario.load <- function(reloadFile=FALSE) {
 
-  if ( ! fromFile && ! is.null(self$modelStages) ) return(NULL) # do not reload model stages
+  if ( ! reloadFile && ! is.null(self$modelStages) ) return(NULL) # do not reload model stages
 
   # Reload scenario configuration file and then build the scenario stages
   self$loadedParam_ls <- if ( dir.exists(self$scenarioPath) ) {

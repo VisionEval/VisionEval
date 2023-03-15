@@ -118,6 +118,7 @@ test_deep_copy <- function(modelName="Classic",log="info") {
   print(list.dirs(modelPath,recursive=TRUE))
 }
 
+# Not sure what this function is for!
 extract_bzone <- function(modelDir,Year) {
   # modelDir is the location that holds the model run Datastore
   # Years is the year to analyze (e.g. 2010 or "2050" - either number

@@ -354,8 +354,7 @@ ve.results.extract <- function(
     stop("Nothing selected to extract.")
   }
 
-  saving <- ( saveResults || ! missing(prefix) ) && is.character(saveTo) && nzchar(saveTo)[1]
-  if ( saving ) {
+  if ( saveResults ) {
     saveTo <- saveTo[1]
     outputPath <- if ( isAbsolutePath(saveTo) ) saveTo else file.path(self$resultsPath,saveTo)
     extractRoot <- visioneval::getRunParameter("ExtractRootName",Param_ls=private$RunParam_ls)
@@ -470,7 +469,7 @@ ve.results.extract <- function(
     # Process the table data.frames into results
     dataNames <- names(Data_ls$Data)
     newTableNames <- paste(group,dataNames,sep=".")
-    if ( saving ) {
+    if ( saveResults ) {
       # Push each data.frame into a file, and accumulate a list of file names to return
 
       # group and timeWritten must have one element, dataNames may have many
@@ -613,7 +612,6 @@ VEResults <- R6::R6Class(
     ModelState=ve.results.modelstate # Set/Get the model state for these results
   ),
   private = list(
-    queryObject=NULL,               # object to manage queries for this output
     outputPath=NULL,                # root for extract
     RunParam_ls=NULL,
     modelStateEnv=NULL
