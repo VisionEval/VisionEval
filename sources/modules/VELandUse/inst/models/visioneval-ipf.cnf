@@ -1,0 +1,37 @@
+Notes:
+- VisionEval.cnf for VERSPM IPF test (multi-stage)
+
+# Model structual parameters
+Seed           : 1  # Same seed used for all scenarios
+
+# Model description
+Model          : VERSPM 3.0 IPF Test Model
+BaseYear       : 2010
+Region         : RVMPO
+State          : OR
+
+# Scenario description (using default or runtime Seed parameter)
+ModelStages:
+    "stage-pop-synth":
+      Dir         : inputs-ipf # contains IPF-triggering input changes
+      Reportable  : false
+      ModelScript : run_popsyn.R
+      Scenario    : VERSPM RVMPO Population
+      Description : Pre-build Population for Base (2010) and Future (2038)
+      Years       : [ 2010, 2038 ]
+    "ipf-fixed":
+      Reportable  : true
+      ipfFix      : 1
+      StartFrom   : stage-pop-synth
+      ModelScript : run_ipf.R
+      Scenario    : IPF Fixed
+      Description : VERSPM RVMPO with IPF triggers and fixed behavior
+      Years       : [ 2038 ]
+    "ipf-broken":
+      Reportable  : true
+      ipfFix      : 0
+      StartFrom   : stage-pop-synth
+      ModelScript : run_ipf.R
+      Scenario    : IPF Broken
+      Description : VERSPM RVMPO with IPF triggers and original/broken behavior
+      Years       : [ 2038 ]

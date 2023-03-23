@@ -70,6 +70,7 @@
 #' Summary: the summary of the binomial model estimation results.
 #' @import visioneval stats VESimHouseholds
 #' @importFrom utils capture.output
+
 #Define function to estimate the income model
 estimateHousingModel <- function(Data_df, StartTerms_) {
   #Define function to prepare inputs for estimating model
@@ -135,6 +136,7 @@ estimateHousingModel <- function(Data_df, StartTerms_) {
 #Estimate the binomial logit model
 #---------------------------------
 #Load the household estimation data
+#'@import VESimHouseholds
 Hh_df <- loadPackageDataset("Hh_df","VESimHouseholds")
 #Select regular households
 Hh_df <- Hh_df[Hh_df$HhType == "Reg",]
@@ -625,10 +627,14 @@ PredictHousingValidateInputFile <- function( File, Data_df ) {
 #' @export
 ipf <-
   function(Seed_ar, MrgnVals_ls, MrgnDims_ls, RmseTarget = 1e-5, MaxIter = 100) {
+
+    ipfFix <- getRunParameter("fixIPF",Default=1) # 0 says don't fix
+    getZeroCells <- if ( ipfFix == 0 ) function(x){0} else function(x){x==0}
+
     #Eliminate zero values in margins
     MrgnVals_ls <-
       lapply(MrgnVals_ls, function(x) {
-        x[x = 0] <- 1e-6
+        x[getZeroCells(x)] <- 1e-6
         x
       })
     #Starting value for Units_ar

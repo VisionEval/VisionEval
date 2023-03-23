@@ -1,0 +1,14 @@
+# Test model for IPF fix
+# reproduces VERSPM from VEModel, but provides alternate run scripts
+# to exercise the IPF fix (before and after)
+VERSPM:
+  variants:
+    test-ipf:
+      private      : true # it's a test model; not for end user delivery
+      description  : VERSPM 3.0 "broken" to test IPF bug fix
+      defs         : defs
+      inputs       : inputs-base # direct copy of standard VERSPM inputs
+      scripts      : scripts-ipf
+      config       : visioneval-ipf.cnf
+      stages       : # directories to copy ("virtual stages" are fully defined in visioneval-ipf.cnf
+          - inputs-ipf # Just the files used to test IPF

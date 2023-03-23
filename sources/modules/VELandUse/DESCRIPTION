@@ -18,8 +18,7 @@ Description: This package contains several modules which establish land use
 License: file LICENSE
 LazyData: TRUE
 LazyDataCompression: bzip2
-Depends:
-    R (>= 3.6.0)
+Depends: R (>= 3.6.0)
 Imports:
     visioneval,
     geosphere,
