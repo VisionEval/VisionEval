@@ -385,7 +385,6 @@ listDatastoreRD <- function(DataListing_ls = NULL, ModelStateFile = NULL, envir=
 #' @import stats utils
 #' @export
 initDatastoreRD <- function(AppendGroups = NULL, envir=modelEnvironment()) {
-
   G <- getModelState(envir)
   DatastoreName <- G$DatastoreName;
   dsPath <- file.path(G$ModelStatePath,DatastoreName)
@@ -1523,6 +1522,8 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
   G <- getModelState(envir=envir)
   G$Year <- RunYear
   L$G <- G
+  BaseYear <- G$BaseYear
+
   for ( Spec_ls in GetSpec_ls ) { # unlike the original (1:length range), this works with empty GetSpec_ls
     Group <- Spec_ls$GROUP
     Table <- Spec_ls$TABLE
@@ -1533,7 +1534,7 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
       DstoreGroup <- "Global"
     }
     if (Group == "BaseYear") {
-      DstoreGroup <- G$BaseYear;
+      DstoreGroup <- BaseYear;
     }
     if (Group == "Year") {
       DstoreGroup <- RunYear;
@@ -1563,14 +1564,11 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
     # Pass envir and search DatastorePath if present
     Data_ <- readFromTable(Name, Table, DstoreGroup, Index,envir=envir)
     if (any(!is.na(Data_))) {
-      #Convert currency
-      if (Type == "currency") {
-        FromYear <- G$BaseYear
-        ToYear <- Spec_ls$YEAR
-        if (FromYear != ToYear) {
-          Data_ <- deflateCurrency(Data_, FromYear, ToYear)
-        }
-      }
+      #Prepare years for currency conversion
+      FromYear <- BaseYear
+      ToYear <- Spec_ls$YEAR
+      Years_ls <- list(FromYear=FromYear,ToYear=ToYear)
+
       #Convert units
       #  when getting the target units: BaseYear may not be present, for example.
       SimpleTypes_ <- c("integer", "double", "character", "logical")
@@ -1579,20 +1577,18 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
         AttrGroup <- switch(
           Group,
           Year = RunYear,
-          BaseYear = G$BaseYear,
+          BaseYear = BaseYear,
           Global = "Global"
         )
-        writeLog(
-          paste(
-            "Converting units for",file.path(DstoreGroup,Table,Name)
-          ), Level="trace"
-        )
         # Note: Pass envir rather than G$Datastore to getDatasetAttr because the target
-        #  Dataset may exist on virtual Datastore Path rooted at G (current ModelState_ls)
+        #  Dataset may exist on virtual Datastore Path rooted at G
+        #  (current ModelState_ls)
+        # message("Converting ",Spec_ls$UNITS," for ",Table,"/",Name," for ",paste(Years_ls,collapse=","))
         Conversion_ls <- convertUnits(
           Data_, Type,
           getDatasetAttr(Name, Table, AttrGroup, envir=envir)$UNITS,
-          Spec_ls$UNITS
+          Spec_ls$UNITS,
+          Years=Years_ls
         )
         Data_ <- Conversion_ls$Values
       }
@@ -1704,20 +1700,15 @@ setInDatastore <- function(Data_ls, ModuleSpec_ls, ModuleName, Year, Geo = NULL,
     Data_ <- Data_ls[[Group]][[Table]][[Name]]
     if (!is.null(Data_)) {
       #Convert currency
-      if (Type == "currency") {
-        FromYear <- Spec_ls$YEAR
-        ToYear <- BaseYear
-        if (FromYear != ToYear) {
-          Data_ <- deflateCurrency(Data_, FromYear, ToYear)
-          rm(FromYear, ToYear)
-        }
-      }
+      Years_ls <- list(Fromyear=Spec_ls$YEAR,ToYear=BaseYear)
+
       #Convert units
       SimpleTypes_ <- c("integer", "double", "character", "logical")
       ComplexTypes_ <- names(Types())[!(names(Types()) %in% SimpleTypes_)]
       if (Type %in% ComplexTypes_) {
         FromUnits <- Spec_ls$UNITS
-        Conversion_ls <- convertUnits(Data_, Type, FromUnits)
+        # message("Converting ",FromUnits," for ",Table,"/",Name," for ",paste(Years_ls,collapse=","))
+        Conversion_ls <- convertUnits(Data_, Type, FromUnits, Years=Years_ls)
         Data_ <- Conversion_ls$Values
         #Change units specification to reflect default datastore units
         Spec_ls$UNITS <- Conversion_ls$ToUnits
@@ -1993,6 +1984,7 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
   Flatten <- Flatten[1] && ( length(ModelState_ls$DatastorePath) > 1 || isTRUE(Flatten[2]) )
   # Always use Flatten machinery if source model is internally staged, or if Flatten is c(TRUE,TRUE)
 
+  
   # Don't flatten if already flat
   if ( ! Flatten ) {
     if ( ! convertDatastoreType ) {
@@ -2008,7 +2000,6 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
 
   if ( length(paths) > 0 ) { # if we did file.copy above, length(paths) will be zero - already done
     writeLog("Flattening and/or Converting Datastore takes a long time...",Level="warn")
-
     # Construct target ModelState_ls:
     #   Same as ModelState being copied, but ModelStatePath is updated and Datastore listing removed
     toModelState_ls <- ModelState_ls[ ! names(ModelState_ls) %in% "Datastore" ]
@@ -2018,6 +2009,7 @@ copyDatastore <- function( ToDir, Flatten=TRUE, DatastoreType=NULL, envir=modelE
     # Set up model state environment for writing the target Datastore
     writeDS <- new.env()
     writeDS$ModelState_ls <- toModelState_ls
+    writeDS$ModelStateFile <- file.path(toModelState_ls$ModelStatePath,getModelStateFileName())
     assignDatastoreFunctions(envir=writeDS)
     
     # Create the required basic elements: Datastore structure and geography from the source

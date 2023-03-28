@@ -1854,6 +1854,7 @@ loadModelParameters <- function(FlagChanges=FALSE,envir=modelEnvironment()) {
       } else {
         Value <- as.numeric(Param_df$VALUE[i])
       }
+      # WARNING: Model parameter TYPE and UNITS are not checked
       Spec_ls <-
       list(
         NAME    = Param_df$NAME[i],

@@ -323,6 +323,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
                 DsetUnits <- attributes(Dset_)$UNITS
                 ToUnits <- Tables_ls[[tb]][ds]
                 if ( !is.null(ToUnits) && is.na(ToUnits) ) ToUnits <- NULL # NULL and NA will mean the same
+                # NOTE: as written, will not defalte any currency units which is probably fine
                 Dset_ <- convertUnits(Dset_, DsetType, DsetUnits, ToUnits)$Values
                 attributes(Dset_)$TYPE <- DsetType
                 attributes(Dset_)$UNITS <- ToUnits
