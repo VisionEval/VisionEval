@@ -132,13 +132,15 @@ want to change them. They are documented here so you won't worry.
 # You can override VE_CONFIG, VE_RUNTESTS, VE_EXPRESS, VE_BRANCH and VE_R_VERSION
 # on the command line or export them from your environment
 # ve.build() handles useful defaults
+# Check the SHELL setup to ensure it is set correctly (helps on MacOS)
+SHELL?=/bin/bash
 VE_CONFIG?=config/VE-config.yml
 VE_VERSION?=3.0
 VE_RUNTESTS?=Default
 VE_EXPRESS?=YES # should be NO, or unset, for standard use
 VE_BRANCH?=$(shell git branch --show-current 2>/dev/null || echo visioneval)
 ifeq ($(OS),Windows_NT)
-  VE_R_VERSION?=4.1.2
+  VE_R_VERSION?=4.2.3
   RTERM:="$(shell scripts/find-R.bat $(VE_R_VERSION))"
   WINDOWS=TRUE
 else
