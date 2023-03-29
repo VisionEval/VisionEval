@@ -404,6 +404,7 @@ visioneval::savePackageDataset(SimulateTransitServiceSpecifications, overwrite =
 #' specifications for the module.
 #' @name SimulateTransitService
 #' @import visioneval
+#; @importFrom stats setNames
 #' @export
 SimulateTransitService <- function(L) {
   #Set up
@@ -477,8 +478,8 @@ SimulateTransitService <- function(L) {
   #Get estimated average D4c values where exist
   D4cModels_ls <- loadPackageDataset("D4cModels_ls","VESimTransportSupply")
 
-  UaName_Ma <- setNames(L$Global$Marea$UzaProfileName, Ma)
-  AveD4c_Ma <- setNames(numeric(length(Ma)), Ma)
+  UaName_Ma <- stats::setNames(L$Global$Marea$UzaProfileName, Ma)
+  AveD4c_Ma <- stats::setNames(numeric(length(Ma)), Ma)
   for (ma in Ma) {
     AveD4c_Ma[ma] <- D4cModels_ls$D4SupplyRatio_Ua[UaName_Ma[ma]]
   }
