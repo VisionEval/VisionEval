@@ -1,0 +1,348 @@
+Documentation:
+
+VisionEval Runtime Environment
+  - Map of VisionEval end-user runtime setup [diagram with narrative]
+    - alt text markdown: ![alt text](image url "image Title")
+    - runtime folder 
+  - VisionEval developer setup
+    - Out of the Github box
+    - After a build
+    - runtime versus runtime-test
+    - "load" folder (where we find ve-lib and VisionEval.R)
+VisionEval Configuration
+  - VisionEval global configuration (in runtime)
+    - Changing directory names (table, not recommended)
+    - Setting Global Parameters
+      - commonly set globals (Seed, DatastoreType, DatastoreName)
+      - visioneval.cnf in runtime visioneval directory
+    - "models" directory (ModelRoot)
+      - each model inhabits a subdirectory
+Creating a VisionEval Model
+  - installing sample models
+    - basic walkthrough
+  - creating your own model (easiest to start with a VERSPM or VE-State sample)
+    - pick model script and adjust
+      - copying a model
+    - set up model geograpny and years (include deflators)
+      - Bzone, Azone, Marea
+      - BaseYear, Years (must provide data for all Years in inputs)
+    - set up inputs (based on module requirements)
+    - adjust model configuration
+  - Configuring VisionEval Models
+    - Required Elements
+      - geography, units, deflators (ParamDir)
+      - model script
+      - model inputs (determined by modules in script)
+    - Parameters
+      - Required
+        - With Usable Defaults
+        - Must be set by user (Model, Year, BaseYear)
+      - Optional
+        - Behavioral (Seed, DatastoreType)
+        - Descriptive (Scenario, Description, State, Region)
+    - Converting a classic VE model
+      - just put it in a directory in the "models" folder (the directory name is the model name)
+      - run_parameters.JSON
+      - initializeModel (in run_model.R)
+      - scripts directory
+      - relocating input files
+      - creating a "results" directory
+Running a VisionEval Model
+  - Basic run
+    - "reset", "save" and "continue"
+    - configure versus reOpen
+  - Model outputs
+    - Results directory
+      - outputs subdirectory
+    - Results components
+      - Datastore
+      - ModelState.Rda
+      - Log*.txt
+  - Exploring the Datastore
+    - Listing what is in the Datastore
+    - Extracting outputs
+      - in R
+      - to a CSV file
+      - to other data locations (e.g. SQL)
+    - Extracting subsets of the results
+      - Conversion to sensible units
+    - Using queries
+      - Reportable stages
+      - Sample queries
+      - Writing additional query metrics (helps to understand the datastore elements)
+      - long versus wide format outputs (how to handle scenarios)
+Stages and Scenarios  
+  - Model Stage as "runnable" unit
+    - basic model has one stage
+    - additional stages can be configured
+  - Multiple Model Stages
+    - Share key elements with other stages in the same model:
+      - Parameters (geography, units, deflators, BaseYear, Years)
+      - Inputs
+      - "StartFrom"
+    - Stages can be stacked:
+      - Splitting base year and future year into stages
+    - Stages can be used for debugging
+      - Create a stage that runs the parts that work (script)
+      - Define a new stage that starts with the problem part (script)
+      - Using "LoadModel" to run additional stages on a finished (or crashed) model
+    - Stages could be entirely independent
+      - Warning: queries and data extraction presume same geography and final model output from "reportable" stages
+    - Stages inherit information
+      - Runtime environment
+      - Overall model
+      - Stage specific configuration
+        - may be in main model configuration ("ModelStages")
+        - may be in sub-directory of model ("Stage$Dir")
+    - Inputs for stages
+      - Overall model inputs
+      - Stage directories
+      - inputs within Stage directories (usually overkill)
+    - Outputs for stages
+      - if one stage, just goes in "results"
+      - if more than one, a subdirectory of results for each stage
+      - just the data associated with that stage (not its StartFrom)
+      - to pull out all the data, copy and "flatten" the Datastore
+  - Using stages
+    - To avoid redundant computations
+    - As scenarios (variant inputs):
+      - Best practice: base scenario in overall model "inputs", just put altered files in stage sub-directories
+  - Configuring stages explicitly as "scenarios"
+    - Scenario set is "standalone" in "scenarios" directory
+    - No need to change the base model - just populate a scenarios directory
+    - Basically identical to creating manual scenario model stages
+    - Also includes a combinatorial approach
+      - Configure scenario input sets (altered inputs for specific goals)
+      - Generate scenario stages automatically by creating all combinations of input sets
+  - Running multi-stage models
+    - "continue" redux
+    - out-of-date models
+    - using parallel processing
+  - Exploring output from multi-stage models
+    - "Reportable" stages
+    - Running queries on multi-stage models
+    - Visualizing multiple scenarios
+      - combinatorial: R visualizer
+      - using the Tableau output template
+        - setting up metric queries
+        - running the queries
+        - launching tableau
+      - extracting and exporting scenario data
+
+On deck:
+
+Tableau output format. Still TODO: Reorder the fields per F&P return example.
+
+Convert the VDOT model to VE 3.0 with scenario stages. Run and Query those.
+Look at performance metrics extracted for VDOT and use those for visualization.
+
+## EXPORT TO SQL
+
+Start with the query results.
+
+Need to build full table description for export by visiting the entire specification tree
+for each scenario and combining those, so there's a field constructed for every possible
+field in each of the scenario outputs (can't do that after the fact). Then we just iterate
+across everything and fill in the tables.
+
+So start with a simple field identification strategy (sweeping through the model state
+specifications). Each row has model,scenario, description, group, table, name...
+We'll use the model.list function and also check how "flatten" in the main framework
+identifies what to pull out. We need flat versions of each Reportable stage (which may
+end up duplicating some information...). 
+
+Identifying the tables:
+  Global
+    Azone - just crosswalks the geography
+    Bzone - just crosswalks the geography
+    Marea - includes Marea-based inputs not associated with a particular year
+    Model - Scalar Values (value of time)
+    OtherOpsEffectiveness - Additional parameters
+    Region - Some regional factors (possibly generated by the BaseYear)
+  Years (Year is a field in each table - so we end up with one set of tables for the year Group)
+    Azone
+    Bzone
+    Household
+    Marea
+    Region
+    Vehicle
+    Worker
+
+Groups can be identifieds table-prefixes or as separate databases
+If more than one group is specified, must have a prefix (prefix optional for a single type
+of group: Global versus YearGroup)
+
+Metadata for the columns needs to go into a table (just one table for Group/Table/Name plus metadata)
+Can do that or not...
+
+Need an existing Database (can create on the fly for SQLite). So instructions for doing that
+with MariaDB (e.g.) and how to set up a connection.
+
+Can we dish the whole huge thing into SQLite? Use HeidiSQL to move elsewhere (why are these
+programs all named after Austrian milk maids - Heidi, Maria?).
+
+Ideally create indexes and primary key / foreign key relationships...
+
+Should we allow filtering if we're exporting VEResultsList? Probably not. May be overkill
+even for standard result sets.
+
+Here's an idea:
+  - Two output avenues:
+    - VEResults(List) export/extract
+    - VEQuery export/extract
+  - The results output should be able to:
+    - Dump the Datastore
+    - Merge (optionally) into separate table set for each scenario, or use a single table set
+    - Year should be pushed as a column into the tables
+    - Scenario will either be a column in the table or 
+    - Have Datastore note the keys (primary and foreign) for each of its tables (that is
+      documentable as those fields do get added to the Datastore as it creates its tables)
+    - Need to identify structural differences in the outputs (Datastore index), since
+      scenarios are not required to have the same scripts or final Datastore structure
+      (though as a matter of good practice they should). Add to Table columns in DDL when
+      starting a new scenario and there's "something missing".
+    - Build the tables from the Datastore description.
+      Every field is Nullable and NULL by default.
+    - Populate the table by iterating across scenarios and then across years within the
+      scenarios. How to handle base year as "just one of the years" versus having it as
+      a separate stage/scenario? Pretty straightforward - just a different scenario name.
+      We also have an option for the internal visioneval.cnf stage name (each stage has to have
+      a name like that, different from what's in visioneval.cnf).
+    - Need to establish a convention of whether to name scenarios by the Model run parameter
+      or the Scenario run parameter (user-configurable option, ideally in export configuration).
+    - The Datastore index should also get pushed across as a metadata table
+      - Metadata is listed out by Scenario (which tables + fields are populated in which Scenario)
+        - Perhaps expand that to identify the hierarchy of models stages
+        - Would want to walk the DatastorePath and mark out the earlier stages and find the inputs
+      - Probably need a top-level model metadata, listing all scenarios and basic runparameters
+        - Might want that to drill down as far as the input files (connection source)
+        - Note that we have to walk the input path to find the input files, some of which may have
+          only been accessed through earlier StartFrom stages. As we implicitly flatten the
+          Datastore for export, we need to identify Input files in each of those stages.
+        - May need to include the StartFrom (which refers to another stage/scenario)
+        - Key things identifying and defining the overall reportable scenario
+        - Need to handle pushing non-reportable stages if the database structure hanges
+      
+  - For query export
+      - generate transposed table compared to what comes out now
+      - generate two SQL tables (data and metadata, much as we do now in CSV)
+      - include scenario name as field (which run parameter field?)
+      - include year as field
+      - include query geography field
+      - determine scenarios as rows or as columns (Mike/Tableau wants rows); metrics as columns/rows
+      - generate one row per scenario/year/geography results column (and additional break dimension)
+      - Refashion the visualizer use of these results so it can use the transposed table.
+
+  - create a master VEExportFormat class for ViEIO that understands VEResults(List)
+  - rewrap export/extract to use that object (or a data.frame version) to assemble and output the
+    results.
+  - iterating over a results list should track with what is done in query.R - scenario + year
+  - extract/export output of query results should also use the same format mechanism
+  - Then the optional ViEIO package will provide alternate format handlers to be used internally
+    by VEExportFormat. A format handler explains how to do basic things - create tables, decide
+    what is in them (flattening Year and Scenario), whether to create a Scenario metadata table
+    (could pare that down to just the items that are different in some of the Scenarios).
+  - Sequence would be to specify the output formatter (provide connection parameters - root
+    directory for outputs, SQL database connection) and identify the table "collapse" strategy which
+    can collapse on years or scenario or model slugs. The latter is independent of the connection
+    type. Need a table-naming format template consistent with the collapse strategy (uncollapsed
+    elements may get prepended to names). Format could be Parquet, or possibly JSON or even YAML.
+  - Connection is a place to write tables. Need functions to create table to specification, and
+    to write rows into a table. In CSV, creating a table just installs the column headers and
+    sets the output file to write. In SQL/DBI, we actually build the table
+    Include an overwrite (drop/create) option for tables already existing.
+    Could also include an "append" option to add to an existing table from current function call
+    (Columns must pre-exist in SQL)
+  - In overall processing for a model, each scenario is appended to the table (after creating any
+    missing table with the table specifier name) depending on the flattening strategy. Then we'll
+    iterate into the Datastore, finding tables and appending selected rows to the destination table.
+  - Things to do:
+    * generate column metadata optionally somewhere (default FALSE in SQL)
+    * generate model/scenario metadata (dump one row per reported model stage showing key
+      elements of runParams_ls). Key things would be stuff like the Seed, and the InputPath and
+      ideally the files found "most locally" on that path. Or in addition to the runParams_ls, keep
+      another table of input files, listing the folder they were pulled from.
+    * check that necessary columns are present before adding more rows (warn if not and only do
+      those present in both; add a flag to create an extra table if columns don't match, or to
+      stop in this case)
+    * append a table at a time (so if writing a CSV, append to it). For csv go lower level with
+      write.table rather than write.csv...
+  - Also allow writing out the input files (with the same flatten options for Scenario/Year, so
+      it could be one big table). How would one query differences in particular columns?
+
+Allow export of a complete result set from the model ( VEModel$export ) - just iterate over all the
+reportable stages (or whatever is named) and call results$extract for those. Default to CSV will
+create a sub-folder for each scenario, and then the tables within that. The resultlist uses a
+top-level output folder (versus doing a single stage which does output within that stage's results).
+And perhaps we never want to put "outputs" inside "results" - would imply changes to the dir function
+and how to locate outputs when exporting something.
+
+Explore whether we can run a scenario with different seeds and do a "combination" that lines up
+all the future year "levels" with the differente "seed" levels... Cool!
+
+Either create an export function, or add an "extractTo=..." to the VEModel$results function (or
+both). "export" defines an output format (and we can provide "csv" as a default) and perhaps let
+ViEIO provide more. See Sylvan's data schema and my email response for information on how to
+structure that. Option to do multiple tables or mash them up by Year and Model/Scenario. Also want a
+Scenario summary table (capture some of RunParams_ls).
+
+The input format will provide a connection setup that can be referred to in a mapping table (csv is
+a tag that looks up connection details in a mapping function that can work on a column by column
+basis). Can map elements of the name like Bzone to a field in the table.
+
+Then on the export function (for results) add in additional output format configurations (is this
+the moment for ViEIO?). So we can dump out tables in any format. But allow the remapping of
+Scenario and Year into fields within the master tables (Global is still its own thing), so we
+can get just one giant table. User can optionally specify how "flat" they want it.
+
+Possible development strategy for the new estimation architecture: wrap the top-level module code in
+a local() block - that will prevent creation of global variables in the package space and
+immediately call out (via failure or check messages) the hidden global variables.
+
+Look at making the Initialize function into a more nuanced set of names where we find these in the
+module specification and load it up based on a Validate element. Initialize 
+
+New Features:
+
+1. Allow mapping a package name specified in RequireModule or a RunModule directive to a different
+   package name (which is then sought on .libPaths()).
+
+Issues:
+
+1. Finish Dynamic Module specifications
+2. Check log-watching during multiprocessing if there are leftover/other logs in the results folder
+3. Check that model run stops during multiprocessing if one of the stages ended with an error
+   Do that by reviewing the RunGroup once it is complete (before starting next RunGroup)
+4. Check loading of a bazillion categories - should only load once "for real" when asking to view
+   details, or when starting a run.
+
+Old issues (to examine for fixes):
+
+192. TravelDemandMM Build problem
+191. Problems Re-Running Models (configuration check)
+188. Debug intermediate values (see Dynamic Module above - VESnapshot)
+181. Won't run with R 4.2
+177. Create VE-Developer package as RStudio Add-In (TBD - not done yet). Create a "test" runtime
+     Outside of built/visioneval/4.2.x ruhtime for during-development testing. We have all
+     the machinery, just need to fix ve.run() so it makes a temporary runtime for testing,
+     but loads VisionEval.R from the built runtime.
+173. AveVehPerDriver specification needs fix checked
+158. Strip trailing spaces from CSV input (especially for geo.csv)
+154. Module-checking (see specifics - TBD)
+153. Flag NA values in module "L" parameter (RunModule check) - issue warning. Alternatively,
+     could look when datastore is "Set".
+144. SplitInt fix
+142. VERPAT Output Structure needs fix
+125. Read geo data from Shapefile / geographic source
+ 89. More comprehensive repackaging of VE-State and VERPAT
+ 74. Fix Type for Model Year
+ 68. H5 Datastore for VERPAT
+ 61. Reduced VE-State model set (installable version)(TBD)
+ 28. Modules should pass R CMD Check
+ 24. Remove unused files from sample VERSPM/State example. Create examples with optional files.
+ 23. Consistent acres per dwelling unit (TBD, cross-check files, not just within file)
+ 19. Compound Currency (verify it works)
+ 18. Return UNITS from Datastore
+ 17. Add checks to ensure consistency of Datastore units
+ 16. Repository of sample Datastores... (documentation: use staged and LoadModel to resolve)
+
