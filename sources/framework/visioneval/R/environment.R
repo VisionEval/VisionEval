@@ -823,7 +823,14 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
     # files in ParamDir or InputPath can also screw things up
     # InputPath especially when developing scenarios
     filepaths <- dir(newRP$InputPath,full.names=TRUE)
+
+    # Eliminate ModelDir if there are other InputPath elements (so as
+    # not to pick up things like ResultsDir itself).
+    if ( length(filepaths) > 1 ) filepaths <- filepaths[ ! filepaths== ModelDir ]
+    
+    # Check for changes to files in key directory
     for ( filepath in filepaths ) changed <- changedFile(changed, "InputPath", filepath)
+
     filepaths <- dir(newRP$ParamPath,full.names=TRUE)
     # Might get display_units.csv or some other file that doesn't matter in ParamPath...
     filepaths <- filepaths[ sub("\\.(csv|json)$","",basename(filepaths)) %in% c("geo","units","deflators","run_parameters") ]
