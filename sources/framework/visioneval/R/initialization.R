@@ -1702,12 +1702,14 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
 
   extraFieldSpecs <- getExtraGeoFields(G$Geo_df) # names other than "Marea","Azone","Bzone","Czone"
 
-  writeExtraFields <- function(Geo_df,extraFieldSpecs,Table,envir) {
-    GroupTable <- paste0("Global/",Table)
+  # TODO: Fix this up so we write extra fields into the BZone Table
+  # Need to write into Bzione Global and Year groups
+  writeExtraFields <- function(Geo_df,extraFieldSpecs,GroupName,Table,envir) {
+    GroupTable <- file.path(GroupName,Table)
     for ( name in names(extraFieldSpecs) ) { # Geo_df column names
       Spec_ls <- extraFieldSpecs[[name]]
       Spec_ls$TABLE = Table # Might be Azone or Bzone depending on smallest geography
-      writeToTable(Geo_df[[name]], Spec_ls, Group = "Global", Index = NULL, envir=envir)
+      writeToTable(Geo_df[[name]], Spec_ls, Group = GroupName, Index = NULL, envir=envir)
       writeLog(paste("Adding Field",name,"to",GroupTable),Level="info")
     }
   }
@@ -1733,9 +1735,7 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
       writeToTable(G$Geo_df$Azone, AzoneSpec_ls, Group = GroupName, Index = NULL, envir=envir)
       MareaSpec_ls$TABLE = "Azone"
       writeToTable(G$Geo_df$Marea, MareaSpec_ls, Group = GroupName, Index = NULL, envir=envir)
-      if (GroupName=="Global") {
-        writeExtraFields(G$Geo_df,extraFieldSpecs,Table="Azone",envir=envir) # Writes to "Global/Azone" table
-      }
+      writeExtraFields(G$Geo_df,extraFieldSpecs,GroupName,Table="Azone",envir=envir) # Writes to "Azone" table
       #Write to Marea table
       MareaSpec_ls$TABLE = "Marea"
       writeToTable(Mareas_, MareaSpec_ls, Group = GroupName, Index = NULL, envir=envir)
@@ -1746,9 +1746,7 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
       writeToTable(G$Geo_df$Azone, AzoneSpec_ls, Group = GroupName, Index = NULL, envir=envir)
       MareaSpec_ls$TABLE = "Bzone"
       writeToTable(G$Geo_df$Marea, MareaSpec_ls, Group = GroupName, Index = NULL, envir=envir)
-      if (GroupName=="Global") {
-        writeExtraFields(G$Geo_df,extraFieldSpecs,Table="Bzone",envir=envir) # Writes to "Global/Bzone" table
-      }
+      writeExtraFields(G$Geo_df,extraFieldSpecs,GroupName,Table="Bzone",envir=envir) # Writes to "Bzone" table
       #Write to Azone table
       AzoneGeo_df <- G$Geo_df[!duplicated(G$Geo_df$Azone),]
       AzoneSpec_ls$TABLE = "Azone"
@@ -1768,6 +1766,7 @@ initDatastoreGeography <- function(GroupNames = NULL, envir=modelEnvironment()) 
       writeToTable(G$Geo_df$Azone, AzoneSpec_ls, Group = GroupName, Index = NULL, envir=envir)
       MareaSpec_ls$TABLE = "Czone"
       writeToTable(G$Geo_df$Marea, MareaSpec_ls, Group = GroupName, Index = NULL, envir=envir)
+      writeExtraFields(G$Geo_df,extraFieldSpecs,GroupName,Table="Czone",envir=envir) # Writes to "Czone" table
       #Write to Bzone table
       BzoneGeo_df <- G$Geo_df[!duplicated(G$Geo_df$Bzone), c("Azone", "Bzone")]
       BzoneSpec_ls$TABLE = "Bzone"
