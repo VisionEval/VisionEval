@@ -418,15 +418,22 @@ loadModelState <- function(FileName=NULL,envir=NULL) {
 #' parameters are passed (see \code{readModelState}).
 #'
 #' @param envir An R environment with assigned Datastore functions and a ModelState_ls
+#' @param stopOnError if TRUE (default) stop if model state is not initialized else return NULL
 #' @param ... If there are any parameters, this quietly becomes a call to readModelState(...) which
 #'    can subset, read a different file, load into an environment, etc.
 #' @return The model state list
 #' @export
-getModelState <- function(envir=NULL,...) {
+getModelState <- function(envir=NULL,stopOnError=TRUE,...) {
   if ( ! missing(...) ) return(readModelState(envir=envir,...))
   if ( is.null(envir) ) envir <- modelEnvironment()
-  if ( ! "ModelState_ls" %in% ls(envir=envir) ) stop("getModelState: ModelState is not initialized.")
-  return(envir$ModelState_ls)
+  if ( ! "ModelState_ls" %in% ls(envir=envir) ) {
+    if ( stopOnError ){
+      traceback(1)
+      browser()
+      stop("getModelState: ModelState is not initialized.")
+    }
+  }
+  return(envir$ModelState_ls) # Returns NULL if not stopOnError
 }
 
 #SET (UPDATE) MODEL STATE

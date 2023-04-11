@@ -897,10 +897,8 @@ applyLinearModel <- function(Model_ls,
 #' @param ModuleName a string identifying the module name.
 #' @param PackageName a string identifying the package name.
 #' @param NameRegistryList, if FALSE read and write the NameRegistryFile, if TRUE just compose a list for this module
-#' @param NameRegistryDir a string identifying the path to the directory
-#' where the name registry file is located.
-#' @return TRUE if successful. Has a side effect of updating the VisionEval
-#' name registry.
+#' @param NameRegistryDir a string identifying the path to the directory where the name registry file is located.
+#' @return TRUE if successful. Has a side effect of updating the VisionEval name registry if NameRegistryList is FALSE
 #' @export
 writeVENameRegistry <- function(ModuleName, PackageName, NameRegistryList = FALSE, NameRegistryDir = NULL) {
     if ( ! NameRegistryList ) {
@@ -1349,7 +1347,7 @@ getModuleSpecs <- function(ModuleName, PackageName, AllSpecs_ls=NA, Instance=cha
     if ( wantAllSpecs && ! is.list(AllSpecs_ls)  ) {
       # The provisional AllSpecs_ls is provided as an argument when getModuleSpecs is called while AllSpecs_ls is being built,
       # and it will contain all the specifications processed up to the point we encounter this module.
-      AllSpecs_ls <- getModelState(envir=envir)$AllSpecs_ls
+      AllSpecs_ls <- getModelState(envir=envir,stopOnError=FALSE)$AllSpecs_ls
     }
     wantInstance <- "Instance" %in% specFormals
 

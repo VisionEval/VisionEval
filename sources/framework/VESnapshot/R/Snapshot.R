@@ -154,9 +154,8 @@ getSnapshotFields <- function(AllSpecs_ls=NA,Instance=character(0), Cache=FALSE)
 
   # Check AllSpecs_ls
   if ( ! is.list(AllSpecs_ls) || length(AllSpecs_ls)==0 ) {
-    stop(
-      visioneval::writeLog( "Snapshot can only be run if items are created first by other modules",Level="error")
-    )
+    visioneval::writeLog( "Snapshot running without a model",Level="info" )
+    return( list() )
   }
 
   # Make sure Instance can be used as a list element name

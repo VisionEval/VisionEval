@@ -122,6 +122,13 @@ getDynamicField <- function(AllSpecs_ls=NA,Cache=FALSE) {
     rm(list=ls(dynamic.env),envir=dynamic.env)
   }
 
+  # If AllSpecs_ls is not a list, we're probably doing documentation,
+  # not a model run. Just return a list.
+  if ( ! is.list(AllSpecs_ls ) ) {
+    dynamic.env$Message <- "No AllSpecs_ls: not running within a model"
+    return( list() )
+  }
+
   # General instructions for building a dynamic Specification function:
   
   # If Specs is TRUE in the module specification structure, then AllSpecs_ls will be passed into the function
