@@ -482,7 +482,7 @@ initLog <- visioneval::initLog
 uniqueSources <- function(Param_ls,shorten=NULL) {
   sources <- sapply(Param_ls,function(p) attr(p,"source"))
   if ( is.null(sources) ) {
-    writeLog("'sources' attribute is null in uniqueSources",.traceback(1),Level="info")
+    writeLog(c("'sources' attribute is null in uniqueSources",.traceback(1)),Level="info")
     sources <- "NULL"
   } else {
     sources <- unique(sources)

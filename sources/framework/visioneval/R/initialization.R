@@ -428,8 +428,6 @@ getModelState <- function(envir=NULL,stopOnError=TRUE,...) {
   if ( is.null(envir) ) envir <- modelEnvironment()
   if ( ! "ModelState_ls" %in% ls(envir=envir) ) {
     if ( stopOnError ){
-      traceback(1)
-      browser()
       stop("getModelState: ModelState is not initialized.")
     }
   }
