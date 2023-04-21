@@ -173,7 +173,7 @@ Hh_df$Dvmt[IsMetro] <-
 Hh_df$Dvmt[!IsMetro] <-
   as.vector(eval(parse(text = DvmtModel_ls$NonMetro$Ave),
                  envir = Hh_df[!IsMetro,])) ^ (1 / DvmtModel_ls$NonMetro$Pow)
-Hh_df$LogDvmt <- log(Hh_df$Dvmt)
+Hh_df$LogDvmt <- ifelse(!is.na(Hh_df$Dvmt) & Hh_df$Dvmt!=0, log(Hh_df$Dvmt), -Inf)
 
 #Reduce size of dataset and remove incomplete cases
 #--------------------------------------------------
