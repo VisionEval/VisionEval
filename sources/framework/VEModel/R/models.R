@@ -496,7 +496,7 @@ ve.model.configure <- function(modelPath=NULL, reloadFile=FALSE, updateCheck=TRU
   # Call the modelStages by their Names
   names(modelStages) <- stageNames <- sapply(modelStages,function(s)s$Name)
   if ( length(stageNames) > 0 ) {
-    writeLog(paste("Model Stages:",stageNames,collapse=","),Level="info")
+    writeLog(paste("Model Stages:",paste(stageNames,collapse=",")),Level="info")
   }
 
   # Done with base stages (initialize everything below after scenarios are loaded)

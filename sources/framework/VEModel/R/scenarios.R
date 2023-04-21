@@ -28,7 +28,10 @@ ve.scenario.init <- function( baseModel=NULL, reloadFile=FALSE ) {
 # Then build whatever model stages are defined there
 ve.scenario.load <- function(reloadFile=FALSE) {
 
-  if ( ! reloadFile && ! is.null(self$modelStages) ) return(NULL) # do not reload model stages
+  if ( ! reloadFile && ! ( is.list(self$modelStages) || length(self$modelStages)==0 ) ) {
+    writeLog("Skipping scenario initialization due to existing modelStages and not reloading",Level="info")
+    return(NULL) # do not reload model stages
+  }
 
   # Reload scenario configuration file and then build the scenario stages
   self$loadedParam_ls <- if ( dir.exists(self$scenarioPath) ) {
@@ -41,12 +44,14 @@ ve.scenario.load <- function(reloadFile=FALSE) {
   # basis for the current scenarios. Otherwise, just load the parameters from the base model,
   # expecting to fill in the required missing ones here.
   if ( "StartFrom" %in% names(self$loadedParam_ls) ) {
+    writeLog("Getting scenario base parameters from StartFrom",Level="info")
     startFrom <- self$baseModel$modelStages[[ self$loadedParam_ls$StartFrom ]]
-    baseParam_ls <- startFrom$RunParam_ls
+    baseParam_ls <- startFrom$loadedParam_ls
     # Drop keys that we will force stages here to define
     baseParam_ls <- baseParam_ls[ - which( names(baseParam_ls) %in% c("Scenario","Description","ModelStages") ) ]
   } else {
-    baseParam_ls <- self$baseModel$RunParam_ls
+    writeLog("Getting scenario base parameters from BaseModel",Level="info")
+    baseParam_ls <- self$baseModel$loadedParam_ls
   }
 
   # Now add the loaded scenario parameters (scenarioParams, but possibly others)
