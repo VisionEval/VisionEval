@@ -17,4 +17,4 @@ Log_*.txt
 Test/
 make*out
 sources/**/*.zip
-
+plan.txt
