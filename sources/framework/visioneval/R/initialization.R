@@ -1837,7 +1837,7 @@ loadModelParameters <- function(FlagChanges=FALSE,envir=modelEnvironment()) {
       # Still Not Found: Throw an error
       ErrorMsg <- paste0(
         "Model parameters file (",
-        ParamFile,
+        ModelParamFile,
         ") could not be located in ",
         paste(RunParam_ls$ParamDir,RunParam_ls$InputDir,collapse=", ")
       )
