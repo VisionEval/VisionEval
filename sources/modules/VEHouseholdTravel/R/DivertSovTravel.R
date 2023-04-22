@@ -173,7 +173,7 @@ Hh_df$Dvmt[IsMetro] <-
 Hh_df$Dvmt[!IsMetro] <-
   as.vector(eval(parse(text = DvmtModel_ls$NonMetro$Ave),
                  envir = Hh_df[!IsMetro,])) ^ (1 / DvmtModel_ls$NonMetro$Pow)
-Hh_df$LogDvmt <- ifelse(!is.na(Hh_df$Dvmt) & Hh_df$Dvmt!=0, log(Hh_df$Dvmt), -Inf)
+Hh_df$LogDvmt <- ifelse(!is.na(Hh_df$Dvmt) & Hh_df$Dvmt>=0, log(Hh_df$Dvmt), -Inf)
 
 #Reduce size of dataset and remove incomplete cases
 #--------------------------------------------------
@@ -355,7 +355,7 @@ estimateSovPropModel <- function(Data_df, StartTerms_) {
     Out_df <- In_df
     Out_df$LogDensity <- log(In_df$Density)
     Out_df$LogIncome <- log(In_df$Income)
-    Out_df$LogDvmt <- ifelse(is.na(In_df$Dvmt)|In_df$Dvmt==0, -Inf, log(In_df$Dvmt))
+    suppressWarnings(Out_df$LogDvmt <- ifelse(is.na(In_df$Dvmt)|In_df$Dvmt<0, -Inf, log(In_df$Dvmt)))
     Out_df$NumChild <- In_df$Age0to14 + In_df$Age15to19
     Out_df$NumVehLtNumDvr <- as.numeric(In_df$Vehicles < In_df$Drivers)
     Out_df$IsSF <- as.numeric(In_df$HouseType == "SF")

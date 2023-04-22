@@ -1863,7 +1863,7 @@ CalculatePolicyVmt <- function(L) {
   ###CS Note this is problematic as actual density not calculated - need to use 5D density adjustment from average by place type
   Hh_df$LogDen <- log( Hh_df$Htppopdn )
   Hh_df$LogSize <- log( Hh_df$HhSize )
-  Hh_df$LogDvmt <- ifelse(!is.na(Hh_df$Dvmt) & Hh_df$Dvmt!=0, log(Hh_df$Dvmt), -Inf)
+  Hh_df$LogDvmt <- suppressWarnings(ifelse(!is.na(Hh_df$Dvmt) & Hh_df$Dvmt>0, log(Hh_df$Dvmt), -Inf))
   ModelVar_ <- c( "Income", "LogDen", "LogSize", "Urban", "LogDvmt", "Dvmt", "LtVehCnt",
                   "DrvAgePop" )
   #fix seed as allocation involves sampling
