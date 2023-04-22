@@ -632,23 +632,30 @@ readFromTableRD <- function(Name, Table, Group, Index = NULL, ReadAttr = TRUE, e
   # Dataset[Dataset == NAValue] <- NA
 
   #If there is an Index, check, and use to subset the dataset
+  # NOTE: changed to return NA if field lengths are incompatible
   if (!is.null(Index)) {
     #Save the attributes
     Attr_ls <- attributes(Dataset)
     TableAttr_ <-
       unlist(G$Datastore$attributes[G$Datastore$groupname == file.path(Group, Table)])
     AllowedLength <- TableAttr_["LENGTH"]
-    if (any(Index > AllowedLength)) {
+    if ( any(Index > AllowedLength) ) {
       Message <-
         c(
           paste0(
-            "One or more specified indices for reading data from ",
+            length(badIndices<-Index[Index>AllowedLength]),
+            " indices for reading data from ",
             paste(Group,Table,sep="/"), " exceed ", AllowedLength
           ),
-          paste("Indices:",Index[Index>AllowedLength],collapse=", ")
+          paste(" Indices:",min(badIndices),":",max(badIndices))
         )
-      writeLog(Message,Level="error")
-      stop(Message)
+      writeLog(Message,Level="debug")
+      Message <-
+        c(paste("Incompatible table length for existing",file.path(Group,Table,Name)),
+          "Treating table as non-existent"
+        )
+      writeLog(Message,Level="info")
+      return(NA) # Dataset is not available
     } else {
       # Re-apply attributes to the requested subset
       Dataset <- Dataset[Index]
@@ -1562,7 +1569,7 @@ getFromDatastore <- function(ModuleSpec_ls, RunYear, Geo = NULL, GeoIndex_ls = N
     }
 
     # Pass envir and search DatastorePath if present
-    Data_ <- readFromTable(Name, Table, DstoreGroup, Index,envir=envir)
+    Data_ <- readFromTable(Name, Table, DstoreGroup, Index, envir=envir)
     if (any(!is.na(Data_))) {
       #Prepare years for currency conversion
       FromYear <- BaseYear
