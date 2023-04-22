@@ -324,17 +324,17 @@ for ( module in seq_along(package.names) ) {
   check.dir <- file.path(build.dir,paste0(package.names[module],".Rcheck"))
   if ( debug ) cat( build.dir,"exists:",dir.exists(build.dir),"\n")
   if ( ve.binary.build ) {
-    # On Windows, the package is built if:
+    # On Windows, the package is already built if:
     #   a. Binary package is present, and
     #   b. Source package is present, and
     #   c. package source is not newer than ve.src copy of source
     #   d. check.dir exists (previous built test will verify age of check.dir)
     #   e. Binary package is newer than source package
-    me <- de <- ck <- nt <- vr <- as.logical(NA)
+    me <- sc <- de <- ck <- nt <- vr <- as.logical(NA)
     package.built <- (me <- moduleExists(package.names[module], built.path.binary)) &&
                      (sc <- moduleExists(package.names[module], built.path.src)) &&
                      (de <- ( dir.exists(build.dir) && ! newerThan(package.paths[module],build.dir,quiet=(!debug))) ) &&
-                     (ck <- ( ve.clear || dir.exists(check.dir) ) ) &&
+                     (ck <- ( ve.clear || ! ve.test.chk || dir.exists(check.dir) ) ) &&
                      (nt <- ! newerThan( quiet=(!debug),
                               package.paths[module], # don't use pkg.files here: file lists will be different
                               file.path(built.path.binary,
@@ -343,15 +343,15 @@ for ( module in seq_along(package.names) ) {
 #    if ( debug && ! package.built ) {
     if ( ! package.built ) {
       if( length(buildMessage) > 0 ) { cat(buildMessage); buildMessage <- character(0) }
-      cat("Status of unbuilt",package.names[module],"\n")
+      cat("Status of unbuilt",package.names[module],paste0("(",package.built,")"),"\n")
       cat("Module",me)
       # Some of the test results won't exist since && short-circuits
-      if ( exists("sc") ) cat(" Src",sc)
-      if ( exists("de") ) cat(" Dir",de)
-      if ( exists("ck") ) cat(" Chk",ck)
-      if ( exists("nt") ) cat(" Newer",nt)
+      if ( !is.na(sc) ) cat(" Src",sc)
+      if ( !is.na(de) ) cat(" Dir",de)
+      if ( !is.na(ck) ) cat(" Chk",ck)
+      if ( !is.na(nt) ) cat(" Newer",nt)
       cat(" Inst",(package.names[module] %in% pkgs.installed))
-      if ( exists("vr") ) cat(" Ver",vr)
+      if ( is.na(vr) ) cat(" Ver",vr)
       cat("\n")
       if ( exists("de") && ( is.na(de) || ! de ) ) {
         cat(build.dir,ifelse(dir.exists(build.dir),"Exists","Does not exist"),"\n")
