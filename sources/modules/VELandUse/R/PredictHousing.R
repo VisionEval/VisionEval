@@ -625,10 +625,12 @@ PredictHousingValidateInputFile <- function( File, Data_df ) {
 #' @name ipf
 #' @import visioneval
 #' @export
-ipf <-
-  function(Seed_ar, MrgnVals_ls, MrgnDims_ls, RmseTarget = 1e-5, MaxIter = 100) {
+ipf <- function(Seed_ar, MrgnVals_ls, MrgnDims_ls, RmseTarget = 1e-5, MaxIter = 100) {
 
-    ipfFix <- getRunParameter("fixIPF",Default=1) # 0 says don't fix
+    # TODO: consolidate package parameter defaults into one place (see HighDensityThreshold)
+    packageParams <- visioneval::getRunParameter("VELandUse",Default=list(fixIPF=1))
+    ipfFix <- if ( ! "ipfFix" %in% names(packageParams) ) 1 else packageParams$ipfFix
+      # packageParams might be set but contain only other parameters
     getZeroCells <- if ( ipfFix == 0 ) function(x){0} else function(x){x==0}
 
     #Eliminate zero values in margins

@@ -456,19 +456,28 @@ Calculate4DMeasures <- function(L) {
   #Population density
   D1B_ <- with(D_df, Pop / Area)
   #Check for high population density values and add warning
-  IsHighDensity_ <- D1B_ > 100
-  HighDensityBzones_ <- Bz[IsHighDensity_]
+  # IsHighDensity_ <- D1B_ > 100
+  
+  # TODO: consolidate package parameter defaults into one place (see HighDensityThreshold)
+  packageParams <- visioneval::getRunParameter("VELandUse",Default=list(HighDensityThreshold=100))
+  HighDensityThreshold_ <- if ( ! "HighDensityThreshold" %in% names(packageParams) ) {
+    100 # packageParams might be set but only contain other parameters
+  } else packageParams$HighDensityThreshold
+
+  IsHighDensity_ <- D1B_ > HighDensityThreshold_
   if (any(IsHighDensity_)) {
+    HighDensityBzones_ <- paste(Bz[IsHighDensity_],paste0("(",round(D1B_[IsHighDensity_],2),")"))
     Msg <- c(
       paste0("The following Bzones in the year ", L$G$Year, " ",
       "have high population densities (greater than ",
-      "100 persons per acre):"),
-      HighDensityBzones_ # This will be a potentially long list in large models...
+      HighDensityThreshold_," persons per acre):"),
+      HighDensityBzones_, # This will be a potentially long list in large models...
+      "Add 'HighDensityThreshold' to VElandUse section in visioneval.cnf to change warning threshold"
     )
     addWarningMsg(Msg) # Attaches to Out_ls in the current frame by default
-    rm(Msg)
+    rm(Msg,HighDensityBzones_)
   }
-  rm(IsHighDensity_, HighDensityBzones_)
+  rm(IsHighDensity_)
   #Employment density
   D1C_ <- with(D_df, TotEmp / Area)
   #Activity density
