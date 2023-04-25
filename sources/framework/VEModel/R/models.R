@@ -1143,7 +1143,7 @@ ve.stage.init <- function(modelParam_ls,Name=NULL,Model=NULL,ScenarioDir=NULL,st
   if ( ! is.null(self$Path) ) {
     if ( isAbsolutePath(self$Path) ) {
       if ( ! dir.exists(self$Path) ) {
-        writeLog(paste0("Stage input path does not exist: ",self$Path),Level="info")
+        writeLog(paste0("Stage path does not exist: ",self$Path),Level="info")
         self$Path <- NULL
       } else self$Path <- normalizePath(ModelDir,self$Path)
       if ( self$Path == ModelDir ) self$Path <- NULL
@@ -1228,6 +1228,7 @@ ve.stage.init <- function(modelParam_ls,Name=NULL,Model=NULL,ScenarioDir=NULL,st
 
   # Set stage InputPath
   # If InputPath defined explicitly for the stage, look no further
+  # Stage input path will be relative to StageDir
   # Otherwise:
   #   Add ModelDir/StageDir/InputDir if it exists
   #   Otherwise, add ModelDir/StageDir if it exists
@@ -1634,8 +1635,8 @@ ve.stage.run <- function(log="warn",UseFuture=TRUE) {
 
   # Set up run parameters
   run.env <- new.env()
-  run.env$runPath=self$RunPath
-  run.env$RunParam_ls=self$RunParam_ls
+  run.env$runPath <- self$RunPath
+  run.env$RunParam_ls <- visioneval::addRunParameter(Param_ls=self$RunParam_ls,Source="Stage Run",ModelStage=self$Name)
   run.env$log=log
 
   # Create a future (will block if no available processors)
@@ -2230,6 +2231,18 @@ ve.model.run <- function(run="continue",stage=character(0),watch=TRUE,dryrun=FAL
 
   # Identify the stages to run by their name rather than their position
   runStages <- names(self$modelStages)[ needToRun ]
+
+  # Destroy cached model state in each running stage.
+  #   Not doing this introduces a weird bug where previous versions of
+  #   script functions will be used from the cached model state rather
+  #   than the latest function version in the package (e.g. if the
+  #   cached state was from a run that quit in the middle of a
+  #   "browser" call, the browser would continue to be called...).
+  if ( ! dryrun ) {
+    sapply( runStages,function(s) {
+      self$modelStages[[s]]$ModelState_ls <- NULL
+    } )
+  }
 
   owd <- getwd()
   on.exit(setwd(owd))
