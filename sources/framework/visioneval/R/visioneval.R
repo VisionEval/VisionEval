@@ -1093,6 +1093,11 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, Instance=charact
   if (RunYear != BaseYear & RunFor == "BaseYear") {
     return()
   }
+
+  # Map to PackageName alias defined in model stage Package configuration
+  #----------------------------------------------------------------------
+  PackageName <- visioneval::getPackageAlias(PackageName)
+
   #Log and print starting message
   #------------------------------
   ModuleFunction <- paste0(PackageName, "::", ModuleName)
@@ -1168,12 +1173,6 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, Instance=charact
     funcCall <- paste0("M$Func(",paste(funcArgs,collapse=", "),")")
     R <- eval(parse(text=funcCall))
 
-#     if (exists("Call")) {             # Call functions do not get Instance or ... parameters
-#       R <- M$Func(L=L, M=Call$Func)
-#     } else {
-#       R <- M$Func(L=L)
-#     }
-
     #Save results in datastore if no errors from module
     if (is.null(R$Errors) ) {
       setInDatastore(R, M$Specs, ModuleName, Year = RunYear, Geo = NULL)
@@ -1182,19 +1181,25 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, Instance=charact
     Errors_ <- c(Errors_, R$Errors)
     Warnings_ <- c(Errors_, R$Warnings)
     #Handle errors
+    ModelStage <- visioneval::getRunParameter("ModelStage",Default="")
+    ProblemLocation <- if ( nzchar(ModelStage) ) {
+      paste("Module",ModuleFunction,"in stage",paste0("'",ModelStage,"'"))
+    } else {
+      paste("Module",ModuleFunction)
+    }
     if (!is.null(R$Errors)) {
       writeLog(Errors_,Level="error")
       Msg <-
-        paste0("Module ", ModuleFunction, " has errors. ",
-               "Check log for details.")
+      paste0(ProblemLocation, " has errors. ",
+        "Check log for details.")
       stop(Msg)
     }
     #Handle warnings
     if (!is.null(R$Warnings)) {
       writeLog(Warnings_,Level="error")
       Msg <-
-        paste0("Module ", ModuleFunction, " has warnings. ",
-               "Check log for details.")
+      paste0(ProblemLocation, " has warnings. ",
+        "Check log for details.")
       warning(Msg)
       rm(Msg)
     }
@@ -1238,17 +1243,23 @@ runModule <- function(ModuleName, PackageName, RunFor, RunYear, Instance=charact
       Errors_ <- c(Errors_, R$Errors)
       Warnings_ <- c(Errors_, R$Warnings)
       #Handle errors
+      ModelStage <- visioneval::getRunParameter("ModelStage",Default="")
+      ProblemLocation <- if ( nzchar(ModelStage) ) {
+        paste("Module",ModuleFunction,"in stage",paste0("'",ModelStage,"'"))
+      } else {
+        paste("Module",ModuleFunction)
+      }
       if (!is.null(R$Errors)) {
         writeLog(Errors_,Level="error")
         Msg <-
-          paste0("Module ", ModuleFunction, " has errors. ",
+          paste0(ProblemLocation, " has errors. ",
                  "Check log for details.")
         stop(Msg)
       }
       #Handle warnings
       if (!is.null(R$Warnings)) {
         Msg <-
-          paste0("Module ", ModuleFunction, " has warnings. ",
+          paste0(ProblemLocation, " has warnings. ",
                  "Check log for details.")
         writeLog(c(Msg,Warnings_),Level="warn")
       }

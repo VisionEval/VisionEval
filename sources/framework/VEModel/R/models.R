@@ -1538,12 +1538,16 @@ run.function <- function() {
 
   # Take ownership of ve.model
   ve.model <- visioneval::modelEnvironment(Clear="VEModelStage::run") # add Owner
+  stageName <- RunParam_ls$ModelStage # RunParam_ls is set in run.env
+  stageName <- if ( ! is.character(stageName) ) { character(0) } else {
+    paste(" for stage",paste0("'",stageName,"'"))
+  }
   RunStatus <- try (
     {
       # Initialize Log, create new ModelState
       ve.model$RunModel <- TRUE
       visioneval::initLog(Threshold=log,Save=TRUE,envir=ve.model) # Log stage (log set in run.env)
-      visioneval::loadModel(RunParam_ls) # Rebuild the ModelState_ls (RunParam_ls set in run.enf)
+      visioneval::loadModel(RunParam_ls) # Rebuild the ModelState_ls (RunParam_ls set in run.env)
       visioneval::setModelState()        # Save ModelState.Rda
       visioneval::prepareModelRun()      # Initialize Datastore
 
@@ -1551,7 +1555,7 @@ run.function <- function() {
       sys.source(RunParam_ls$ModelScriptPath,envir=new.env())
 
       # Report completion into model log
-      visioneval::writeLog("Model Run Complete",Level="warn")
+      visioneval::writeLog(paste0("Model Run Complete",stageName),Level="warn")
       # Use the following RunStatus if we got this far without error
       codeStatus("Run Complete")
     },
@@ -1656,7 +1660,7 @@ ve.stage.run <- function(log="warn",UseFuture=TRUE) {
     )
   } else {
     # Run inline
-    writeLog(paste("Running stage:",self$Name),Level="warn")
+    writeLog(c("\n",paste("Running stage:",self$Name)),Level="warn")
     environment(run.function) <- run.env
     runStatus <- run.function()
     self$completed( runStatus )

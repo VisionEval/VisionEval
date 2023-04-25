@@ -72,7 +72,7 @@ modelRunning <- function(envir=modelEnvironment()) {
 #' model or model stage named after the package. Then define an AliasFor: which is the
 #' name of the package to use instead. So something like this:
 #'
-#' \code {
+#' \code{
 #'    # In visioneval.cnf for model, stage, or scenario
 #'    VEPowertrainsAndFuels:
 #'       AliasFor: VEPowertrainsAndFuels_aP
@@ -92,8 +92,8 @@ modelRunning <- function(envir=modelEnvironment()) {
 #' @export
 getPackageAlias <- function(PackageName) {
   PackageConfig <- getRunParameter(PackageName,Default=list())
-  model.env <- getModelEnvironment()
-  if ( ! packageAlias %in% names(model.env) ) model.env$packageAlias <- character(0)
+  model.env <- modelEnvironment()
+  if ( ! "packageAlias" %in% names(model.env) ) model.env$packageAlias <- character(0)
   newPackageName <- if ( PackageName %in% names(model.env$packageAlias) ) {
     model.env$packageAlias[PackageName]
   } else {
@@ -753,11 +753,13 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
   }
 
   # Function to identify irrelevant parameters
-  # This is just "ParsedScript" for now (will have been built in a completed model
-  # but won't be present in one that was just loaded).
+  # "ParsedScript" will have been built in a completed model but not in one that was just
+  # loaded. "ModelStage" is likewise added to a model run, but won't exist if just loaded.
+  
   irrelevant <- function(nm) {
     nm %in% c(
-      "ParsedScript"
+      "ParsedScript",
+      "ModelStage"
     )
   }
 
