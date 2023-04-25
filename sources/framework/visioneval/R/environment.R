@@ -60,6 +60,52 @@ modelRunning <- function(envir=modelEnvironment()) {
     }
 }
 
+#GET VISIONEVAL PACKAGE ALIAS
+#============================
+#'
+#' \code{getPackageAlias} a visioneval control function to look up an alias for a package
+#' (e.g. alternate built version of PowertrainsAndFuels). The aliases are looked up at
+#' runtime (inside the runModule call) based on the package configuration in
+#' visioneval.cnf for the model or stage. This function maintains a package cache in the
+#' model environment. When an item is first added to the cache, a warning message is sent
+#' to the Log file. To configure an alias, create a section in visioneval.cnf for the
+#' model or model stage named after the package. Then define an AliasFor: which is the
+#' name of the package to use instead. So something like this:
+#'
+#' \code {
+#'    # In visioneval.cnf for model, stage, or scenario
+#'    VEPowertrainsAndFuels:
+#'       AliasFor: VEPowertrainsAndFuels_aP
+#' }
+#'
+#' When that model stage runs, every call to a module in \code{VEPowertrainsAndFuels} will be
+#' replaced by a call to the same module in \code{VEPowertrainsAndFuels_aP}.
+#' 
+#' Note that other modules may also use the "package block" to define runtime parameters
+#' See the VELandUse package for examples and the "HighDensityThreshold" setting in the
+#' Calculate4DMeasures module.
+#' 
+#' @param PackageName The name of the package in the runModule directive
+#' @return The alias to use for that package name, or the original package name if no
+#'   alias defined.
+#' defined.
+#' @export
+getPackageAlias <- function(PackageName) {
+  PackageConfig <- getRunParameter(PackageName,Default=list())
+  model.env <- getModelEnvironment()
+  if ( ! packageAlias %in% names(model.env) ) model.env$packageAlias <- character(0)
+  newPackageName <- if ( PackageName %in% names(model.env$packageAlias) ) {
+    model.env$packageAlias[PackageName]
+  } else {
+    definedAlias <- getRunParameter(PackageName,Default=list())$AliasFor
+    if ( is.character(definedAlias) ) {
+      writeLog(paste("Running with",paste0("'",definedAlias,"'"),"instead of",paste0("'",PackageName,"'")),Level="warn")
+    } else definedAlias <- PackageName
+    model.env$packageAlias[PackageName] <- definedAlias
+  }
+  return( newPackageName )
+}
+
 #GET VISIONEVAL RUN PARAMETER
 #============================
 #'
