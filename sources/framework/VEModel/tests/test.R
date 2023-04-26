@@ -252,7 +252,7 @@ test_01_classic <- function(modelName="VERSPM-classic",clear=TRUE,log="info") {
 
 test_01_run <- function(
   modelName="VERSPM-base",baseModel="VERSPM",variant="base",
-  reset=FALSE,log="info",confirm=FALSE
+  reset=FALSE,log="info",confirm=FALSE,multicore=FALSE
 ) {
   logLevel(log)
   model.dir <- dir("models")
@@ -284,6 +284,11 @@ test_01_run <- function(
   if (reset) {
     mod <- openModel(modelName,log=log)
     testStep(paste("Running model with 'reset'",mod$modelName))
+    if ( multicore ) {
+      if ( ! is.numeric(multicore) ) multicore <- 3
+      mod$plan(workers=multicore)
+      message("Running with ",multicore," workers")
+    }
     mod$run(run="reset",log=log) # clears results directory
   }
   return(mod)
@@ -1368,6 +1373,79 @@ test_06_fullquery <- function(Force=TRUE,runModel=FALSE,queryName="Full-Query",l
     qry$check(verbose=TRUE)
   }
   invisible(qry)
+}
+
+test_06_quickquery <- function(model=NULL,log="info",multicore=3) {
+  testStep
+  if ( is.null(model) ) {
+    model <- test_01_run(baseModel="VERSPM",variant="scenarios-ms",multicore=multicore,log="warn")
+  }
+  # Make quick queries following VDOT / NVTA model test
+  # Marea queries
+  Marea_Fields <- c(
+    'UrbanHhDvmt',
+    'TownHhDvmt',
+    'RuralHhDvmt',
+    'HvyTrkUrbanDvmt',
+    'ComSvcUrbanDvmt',
+    'ComSvcTownDvmt',
+    'ComSvcRuralDvmt',
+    'LdvTotDelay',
+    'HvyTrkTotDelay',
+    'BusTotDelay',
+    'ComSvcUrbanGGE',
+    'ComSvcNonUrbanGGE',
+    'HvyTrkUrbanGGE',
+    'ComSvcUrbanKWH',
+    'ComSvcNonUrbanKWH',
+    'HvyTrkUrbanKWH',
+    'ComSvcUrbanCO2e',
+    'ComSvcNonUrbanCO2e',
+    'HvyTrkUrbanCO2e',
+    'BusGGE',
+    'RailGGE',
+    'VanGGE',
+    'BusKWH',
+    'RailKWH',
+    'VanKWH',
+    'BusCO2e',
+    'RailCO2e',
+    'VanCO2e'
+  )
+  Household_Fields <- c(
+    'Dvmt',
+    'Income',
+    'OwnCost',
+    'WalkTrips',
+    'VehicleTrips',
+    'BikeTrips',
+    'TransitTrips',
+    'DailyGGE',
+    'DailyKWH',
+    'DailyCO2e'
+  )
+  
+  qry <- VEQuery$new(Model=model,QueryName="Quick-Query")
+
+  testStep("Construct specificatons")
+  Table <- "Marea"
+  for ( Field in Marea_Fields ) {
+    qry$quickSpec(Table,Field)
+  }
+  Table <- "Household"
+  Geography <- "Azone"
+  for ( Field in Household_Fields ) {
+    qry$quickSpec(Table,Field,Geography=Geography)
+  }
+  print(qry)
+  testStep("Run queries")
+  qry$run(Force=TRUE,log=log)
+  testStep("Generate results (wide format)")
+  wideResults <- qry$extract(longScenarios=FALSE)
+  testStep("Generate results (long format)")
+  longResults <- qry$extract(longScenarios=TRUE)
+  message("Returning invisible list of list(wide=,long=)")
+  invisible(list(query=qry,wide=wideResults,long=longResults))
 }
 
 # Construct programmatic stages, run the model, and query it

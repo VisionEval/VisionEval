@@ -31,7 +31,6 @@ self=private=NULL
 #  1. qry <- VEQuery$new() # Parameters forward to "self$attach" if present
 #  2. qry.attach() # Modified in place (R6 reference class!) to set up output file characteristics
 #  3. qry.load() # Parameters passed forward to "self$attach" if present; If file present, load contents
-
 # If $attach is called with load==TRUE, a matching file must be present
 # Need a better way of managing default parameters (e.g. via a model we're querying)
 # Some conventions:
@@ -1184,6 +1183,99 @@ ve.query.run <- function(
   return( invisible(QueryResults) )
 }
 
+# Quick Specification Generator (sum, mean, length of field by geography)
+
+# Helper functions for quick query
+geoList <- c("Region","Marea","Azone","Bzone")
+isGeography <- function(Geography) Geography %in% geoList
+rectifyTableGeography <- function(Table,Geography) {
+  if ( ! isGeography(Geography) ) stop(paste(Geography,"is not a Geography"))
+  if ( ! isGeography(Table) ) stop(paste(Table,"is not a Geography"))
+  tableIndex <- which(geoList==Table)
+  geoIndex <- which(geoList==Geography)
+  if ( tableIndex < geoIndex ) return(geoList[tableIndex]) else return(Geography)
+}
+
+# Create a quick summary specification and add it to the query
+ve.query.quick <- function( Table, Field, SpecName=NULL, Geography=NULL, FUN="sum") {
+  # Table is one of the Year Group Tables
+  # Field is a field to summarize within that Table
+  # Geography is one of c("Region","Marea","Azone","Bzone") and will be made consistent with Table
+  # SpecName, if not provided, is constructed from Field and Geography
+  # FUN must be one of c("sum","mean","length") - might add others later...
+
+  if ( missing(Table) || ! is.character(Table) ) stop("Missing Table for quick query")
+  if ( missing(Field) || ! is.character(Field) ) stop("Missing Field for quick query")
+  if ( ! inherits(self$Model,"VEModel") ) {
+    stop("Query must be attached to a model for quick query")
+  } else {
+    model <- self$Model
+    fullSpec <- model$list(outputs=TRUE,details=FALSE)
+    whichSpecs <- fullSpec$GROUP=="Year" & fullSpec$TABLE==Table & fullSpec$NAME==Field
+    modelSpec <- unique(fullSpec[whichSpecs,c("TABLE","NAME","UNITS","DESCRIPTION")])
+# Too many inconsistencies across modules where fields are rewritten...
+#    if ( nrow(modelSpec) > 1 ) {
+#      message("Model specifications are inconsistent across stages:")
+#      print(unique(fullSpec[whichSpecs,]))
+#      stop("Error locating field for quick query")
+#    }
+    FieldUnits <- modelSpec$UNITS[1]
+    FieldDescription <- modelSpec$DESCRIPTION[1]
+  }
+  if ( missing(Geography) || is.null(Geography) ) {
+    if ( isGeography(Table) ) Geography <- Table else Geography <- "Bzone"
+  }
+  if ( missing(SpecName) ) SpecName <- paste(Field,Geography,sep="_")
+  backstop <- 0
+  repeat {
+    if ( ! SpecName %in% self$names() ) break
+    SpecName <- paste0(SpecName,"x")
+    if ( (backstop <- backstop + 1) > 8 ) {
+      stop("Spec Name is repeated too many times in quickQuery")
+    }
+  }
+
+  # Construct Table join and Geography
+  Key <- NULL
+  TableList <- Table
+  if ( Geography != Table ) {
+    if ( isGeography(Table) ) {
+      # Geopgraphy can't be smaller than Table
+      Geography <- rectifyTableGeography(Table,Geography)
+    } else if ( Table != "Household" ) {
+      # Ignore any geography field already in Vehicle/Worker (just to simplify)
+      Key="HhId"
+      TableList <- list()
+      TableList[[Table]] <- Field
+      TableList[["Household"]] <- Geography
+    }
+  }
+  By <- if ( Geography == "Region" ) NULL else Geography
+  Units <- character(0)
+  Units[Field] <- FieldUnits
+  Units[Geography] <- ""
+    
+  if ( missing(FUN) || ! FUN %in% c("sum","mean","length") ) FUN = "sum"
+
+  # Build the full specification
+  newSpec <- list(
+    Name        = SpecName,
+    Units       = FieldUnits,
+    Description = paste(FUN,"over",Geography,"of",FieldDescription),
+    Summarize   = list(
+      Expr = paste0(FUN,"(",Field,")"),
+      Units = Units,
+      Table = TableList
+    )
+  )
+  # Add By and Key if required
+  if ( ! is.null(By) ) newSpec$Summarize$By <- By
+  if ( ! is.null(Key) ) newSpec$Summarize$Key <- Key
+
+  self$add(VEQuerySpec$new(newSpec),location=NULL)
+  return(self)
+}
+
 # One of these is constructed by VEModel$query or by opening a query specification file
 # Perhaps have some S3 generic functions defined...
 
@@ -1220,17 +1312,18 @@ VEQuery <- R6::R6Class(
     names=ve.query.names,               # List (or update) names on internal QuerySpec list
     subset=ve.query.subset,             # Return a new VEQuery with a subset (or reordered) list of specs
     `[`=ve.query.index,                 # Alternate notation for subset
-      spec=ve.query.spec,                 # Return a single VEQuerySpec from the list
-      print=ve.query.print,               # List names of Specs in order, or optionally with details
-      getlist=ve.query.getlist,           # Extract he QuerySpec list (possibly filtering geography) for $run)
-      results=ve.query.results,           # report results of last run (available stage files)
-      extract=ve.query.extract,           # get requested (or all) results into a data.frame
-      export=ve.query.export,             # Export query results to .csv or something else (uses $extract)
-      outputfile=ve.query.outputfile,     # expand the file name into which to save QueryResults
-      run=ve.query.run,                   # results are cached in self$QueryResults
-      visual=ve.query.visual,             # visualize query results: same as export(format="visual",...)
-      outputConfig=ve.query.outputconfig  # generate outputconfig for visualizer (using "Export" spec)
-    ),
+    spec=ve.query.spec,                 # Return a single VEQuerySpec from the list
+    print=ve.query.print,               # List names of Specs in order, or optionally with details
+    getlist=ve.query.getlist,           # Extract he QuerySpec list (possibly filtering geography) for $run)
+    results=ve.query.results,           # report results of last run (available stage files)
+    extract=ve.query.extract,           # get requested (or all) results into a data.frame
+    export=ve.query.export,             # Export query results to .csv or something else (uses $extract)
+    outputfile=ve.query.outputfile,     # expand the file name into which to save QueryResults
+    run=ve.query.run,                   # results are cached in self$QueryResults
+    quickSpec=ve.query.quick,           # create a quick QuerySpec to summarize a field by geography
+    visual=ve.query.visual,             # visualize query results: same as export(format="visual",...)
+    outputConfig=ve.query.outputconfig  # generate outputconfig for visualizer (using "Export" spec)
+  ),
   private = list(
     QuerySpec=list(),                   # access via public functions - list of VEQuerySpec objects
     reload=ve.query.reload              # recreate self$QueryResults
@@ -1592,7 +1685,7 @@ VEQuerySpec <- R6::R6Class(
   "VEQuerySpec",
   public = list(
     # Methods
-    initialize = ve.spec.init,      # Create a VEQuerySpec from a list or parmaeters
+    initialize = ve.spec.init,      # Create a VEQuerySpec from a list or parameters
     print = ve.spec.print,          # Display contents of this spec
     check = ve.spec.check,          # Validate the individual query
     update = ve.spec.update,        # Alter elements of the query spec (from a list or parameters)

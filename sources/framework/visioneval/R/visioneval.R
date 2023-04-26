@@ -305,6 +305,7 @@ getModelParameters <- function(DotParam_ls=list(),DatastoreName=NULL,LoadDatasto
 #'   results, if the specific character string "reset", update
 #'   ModelState_ls for existing results to be "Sys.time()"
 #' @param RunDir the directory in which to seek/create the model run
+#' @param log the log level at which to write the Message (above)
 #' @param envir The environment into which to load the ModelState
 #' @return The ModelState_ls that was constructed (or NULL if only loading a non-existent one)
 #' @export
@@ -314,6 +315,7 @@ loadModel <- function(
   onlyExisting = FALSE,
   updateCheck = TRUE, # but will only run if onlyExisting is also TRUE
   RunDir = getwd(),
+  log = "warn",
   envir = modelEnvironment()
 ) {
   # IMPORTANT: Do not write/re-write a model state or log until archiving is done.
@@ -528,7 +530,7 @@ loadModel <- function(
   }
 
   # Generate the model loading message
-  writeLog(Message,Level="warn")
+  writeLog(Message,Level=log)
 
   #===============================================
   # GET LIST OF PACKAGES FROM PREVIOUS MODEL STATE

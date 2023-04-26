@@ -1483,7 +1483,8 @@ ve.stage.load <- function(onlyExisting=TRUE,reset=FALSE, updateCheck=TRUE) {
       self$RunParam_ls,
       onlyExisting=onlyExisting,
       updateCheck=updateCheck,
-      Message=paste("Loading Model",self$modelName)
+      Message=paste("Loading Model Stage",self$Name),
+      log="info" # Don't need to see the Loading Model messge
     )
 
     if ( ! identical(ms,self$ModelState_ls) ) self$ModelState_ls <- ms
@@ -1781,11 +1782,11 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
   if ( reset || is.null(self$specSummary) ) {
     writeLog("Loading model specifications (may take some time)...",Level="warn")
     self$load(onlyExisting=FALSE,reset=TRUE) # Create new model states
-    for ( stage in self$modelStages ) {
-      writeLog(paste("Loading Stage specs for",stage$Name),Level="info")
-      AllSpecs_ls <- stage$ModelState_ls$AllSpecs_ls
+    for ( stg in self$modelStages ) {
+      writeLog(paste("Loading Stage specs for",stg$Name),Level="info")
+      AllSpecs_ls <- stg$ModelState_ls$AllSpecs_ls
       if ( ! is.null( AllSpecs_ls ) ) {
-        specFrame <- summarizeSpecs(AllSpecs_ls,stage$Name)
+        specFrame <- summarizeSpecs(AllSpecs_ls,stg$Name)
         if ( is.null(self$specSummary) ) {
           self$specSummary <- specFrame
         } else {
@@ -1793,7 +1794,7 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
         }
         writeLog(paste("Number of specs:",nrow(self$specSummary)),Level="info")
       } else {
-        writeLog(paste("No specifications for",stage$Name),Level="warn")
+        writeLog(paste("No specifications for",stg$Name),Level="warn")
       }
     }
     writeLog(paste("Loaded",nrow(self$specSummary),"Specifications"),Level="info")
@@ -1806,6 +1807,13 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
   outputRows <- if ( outputs ) which(self$specSummary$SPEC=="Set") else integer(0)
   usedRows <- if ( inputs == outputs ) which(self$specSummary$SPEC=="Get") else integer(0)
   listRows <- unique(c(inputRows,outputRows,usedRows))
+
+  # Determine which stages to return
+  if ( is.numeric(stage) ) stage <- names(self$modelStages)[stage]
+  if ( length(stage) > 0 ) {
+    whichStages <- which(self$specSummary$STAGE==stage)
+    listRows <- intersect(listRows,whichStages)
+  }
 
   # which fields to return
   listFields <- c("SPEC","STAGE","PACKAGE","MODULE","GROUP","TABLE","NAME")
