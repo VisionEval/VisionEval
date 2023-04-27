@@ -995,7 +995,7 @@ test_05_query_extract <- function(log="info") {
 test_05_build_query <- function(log="info",break.query=TRUE,reset=FALSE) {
   # Process the standard query list for the test model
   # If multiple==TRUE, copy the test model and its results a few times, then submit the
-  # list of all the copies to VEQuery. Each column of results will be the same (see
+  # list of all the columnopies to VEQuery. Each column of results will be the same (see
   # test_06_scenarios for a run that will generate different results in each column).
   # if break.query, do some deliberately bad stuff to see the error messages
 
@@ -1727,6 +1727,7 @@ test_06_scenarios <- function(
   run=useStages,
   querySpec="VERSPM-scenarios",
   install=FALSE,
+  multicore=TRUE, # or set to number of workers (default is 3)
   log="info"
 ) {
   logLevel(log)
@@ -1736,35 +1737,40 @@ test_06_scenarios <- function(
   testStep(paste("Selecting, installing, and running scenarios as",if(useStages)"Model Stages"else"Scenario Combinations"))
 
   existingModel <- dir.exists(modelPath <- file.path("models",scenarioModelName))
-  mod <- test_01_run(scenarioModelName,baseModel="VERSPM",variant=scenarioVariant,reset=install,log=log,confirm=FALSE)
+  if ( run ) {
+    mod <- test_01_run(scenarioModelName,baseModel="VERSPM",variant=scenarioVariant,reset=install,log=log,confirm=FALSE,multicore=multicore)
 
-  testStep("Loading scenario query")
-  qr <- mod$query(querySpec) # Fails if model has not been run
-  qf <- qr$QueryFile
-  print(qr)
-  cat("QueryFile:",qf,"\n")
+    testStep("Loading scenario query")
+    qr <- mod$query(querySpec) # Fails if model has not been run
+    qf <- qr$QueryFile
+    print(qr)
+    cat("QueryFile:",qf,"\n")
 
-  testStep("Running Query")
-  qr$run(Force=TRUE)
-  print(qr)
+    testStep("Running Query")
+    qr$run(Force=TRUE,log="info")
+    print(qr)
 
-  testStep("Examine Query Results")
-  qrr <- qr$results()
-  print(class(qrr))
-  print(length(qrr))
+    testStep("Examine Query Results")
+    qrr <- qr$results()
+    print(class(qrr))
+    print(length(qrr))
 
-  testStep("Extracting Query Results")
-  qrs <- qr$extract()
-  print(qrs)
+    testStep("Extracting Query Results")
+    qrs <- qr$extract()
+    print(qrs)
 
-  testStep("Exporting Query Results")
-  qr$export()
+    testStep("Exporting Query Results")
+    qr$export()
 
-  testStep("Returning scenario model")
-  print(mod,scenarios=TRUE)
-  return(invisible(list(
-    Model=mod, Query=qr, QueryFile=qf, QueryResults=qrs
-  )))
+    testStep("Returning scenario model")
+    print(mod,scenarios=TRUE)
+    return(invisible(list(
+      Model=mod, Query=qr, QueryFile=qf, QueryResults=qrs
+    )))
+  } else {
+    mod <- test_00_install("VERSPM",variant=scenarioVariant,installAs=scenarioModelName,log=log,confirm=FALSE)
+    return(mod)
+  }
 }
 
 test_07_extrafields <- function(reset=FALSE,installSQL=TRUE,log="info") {

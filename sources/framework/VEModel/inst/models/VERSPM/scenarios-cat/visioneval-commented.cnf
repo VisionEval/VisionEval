@@ -2,7 +2,8 @@ ConfigDocs:
   - "Intended to extend VERSPM-pop model variant"
   - "Adjust StartFrom to respect your model"
 
-StartFrom: "stage-pop-future"       # StartFrom stage for ModelStages (adjust for your model)
+StartFrom   : "stage-pop-base"       # StartFrom stage for ModelStages (adjust for your model)
+BaseScenario: "stage-pop-future"     # Stage providing InputPath (optional: if not present use StartFrom)
 
 ModelStagesDocs:
   ModelStages:

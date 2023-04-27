@@ -8,8 +8,11 @@ Notes:
     included. It is bad practice to include an unmodified file in the scenario ModelStages inputs
   - ScenarioCategories / ScenarioElements are auto-generated for the visualizer - a single Category,
     with one level mapping directly to each ModelStage
+  - StartFrom stage provides InputPath and Datastore (it is usually the Base Year stage)
+  - BaseScenario just provides InputPath (and it is the "null case" for Category Scenarios)
 
-StartFrom: "stage-pop-future"       # StartFrom stage for ModelStages (adjust for your model)
+StartFrom    : "stage-pop-base"       # Provides data elements
+BaseScenario : "stage-pop-future"     # Provides InputPath (optional: if not present use StartFrom or BaseModel)
 
 ModelStages:
   "Design-1":

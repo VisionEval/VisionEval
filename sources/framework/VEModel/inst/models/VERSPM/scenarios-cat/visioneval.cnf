@@ -1,4 +1,5 @@
-StartFrom: "stage-pop-future"       # StartFrom stage for ModelStages (adjust for your model)
+StartFrom   : "stage-pop-base"       # StartFrom stage for ModelStages (adjust for your model)
+BaseScenario: "stage-pop-future"     # Stage providing InputPath (optional: if not present use StartFrom)
 
 ScenarioElements:
   - Name: B

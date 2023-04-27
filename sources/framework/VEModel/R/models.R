@@ -582,26 +582,10 @@ ve.model.initstages <- function( modelStages, updateCheck=TRUE ) {
     # Also fix up scenario Elements (adding to base stage...)
     startFromNames <- unlist(sapply(modelStages,function(s) s$StartFrom))
     if ( length(startFromNames) > 0 ) {
-      startFromNames <- startFromNames[ nzchar(startFromNames) ]
+      startFromNames <- unique(startFromNames[ nzchar(startFromNames) ])
     }
     stageNames <- names(modelStages)
-    scenarios <- self$scenarios()
     reportable <- ! stageNames %in% startFromNames # default reportable to stages that are not ancestors (will include scenarios)
-    if ( length(scenarios$stages()) > 0 ) {
-      reportable <- reportable | sapply( stageNames, function(n) scenarios$reportable(n) ) # Add scenario StartFrom back in
-      sapply(
-        modelStages[reportable],
-        function(s) {
-          if ( ! s$IsScenario ) { # reportable stage is not associated with Scenarios
-            # Probably the StartFrom stage / Base scenario
-            elementNames <- names(scenarios$Elements) # may be NULL
-            s$ScenarioElements <- rep("0",length(elementNames))
-            names(s$ScenarioElements) <- elementNames
-          }
-          NULL
-        }
-      )
-    }
     for ( r in seq_along(stageNames) ) {
       stage <- modelStages[[r]]
       if ( ! isTRUE(stage$Reportable) ) {
