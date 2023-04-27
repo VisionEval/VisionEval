@@ -234,9 +234,9 @@ viewSetup <- function(object=NULL,Param_ls=NULL,fromFile=FALSE,
           cat("  #",src,"\n")
         }
       } else cat("\n")
-      cat( "  ",sub("  $","",gsub("\\n","\n  ",as.yaml(param))),sep="") 
+      cat( "  ",sub("  $","",gsub("\\n","\n  ",yaml::as.yaml(param))),sep="") 
     } else {
-      yamlp <- as.yaml(param)
+      yamlp <- yaml::as.yaml(param)
       if ( shorten ) yamlp <- sub( getRuntimeDirectory(),"", yamlp )
       if ( viewSource ) {
         # change first newline plus name into a row with the src
