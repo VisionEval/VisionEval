@@ -263,6 +263,41 @@ AssignLocTypesSpecifications <- list(
 "AssignLocTypesSpecifications"
 visioneval::savePackageDataset(AssignLocTypesSpecifications, overwrite = TRUE)
 
+AssignLocTypesValidateInputFile <- function(File, Data_df) {
+  FileValidation_ls <- list(Errors=character(0),Warnings=character(0))
+  if ( inherits(Data_df,"data.frame") && is.character(File) && nzchar(File[1]) ) {
+    if ( File == "bzone_urban-town_du_proportions.csv" ) {
+      SFProp <- Data_df$PropUrbanSFDU + Data_df$PropTownSFDU
+      SFValid <- ( SFProp <= 1 )
+      if ( ! isTRUE( all( SFValid ) ) ) {
+        Msg <- c(
+          "These Bzones have total SF dwelling unit proportions > 1:",
+          paste0(Data_df$Geo[!SFValid],Data_df$Year[!SFValid],SFProp[!SFValid])
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+      }
+      MFProp <- Data_df$PropUrbanMFDU + Data_df$PropTownMFDU
+      MFValid <- ( MFProp <= 1 )
+      if ( ! isTRUE( all( MFValid ) ) ) {
+        Msg <- c(
+          "These Bzones have total MF dwelling unit proportions > 1:",
+          paste0(Data_df$Geo[!MFValid],Data_df$Year[!MFValid],MFProp[!MFValid])
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+      }
+      GQProp <- Data_df$PropUrbanGQDU + Data_df$PropTownGQDU
+      GQValid <- ( GQProp <= 1 )
+      if ( ! isTRUE( all( GQValid ) ) ) {
+        Msg <- c(
+          "These Bzones have total GQ dwelling unit proportions > 1:",
+          paste0(Data_df$Geo[!GQValid],Data_df$Year[!GQValid],GQProp[!GQValid])
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+      }
+    }
+  }
+  return(FileValidation_ls)
+}
 
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
