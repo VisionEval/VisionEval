@@ -1786,6 +1786,7 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
     return(
       structure(
         NA,
+        ByFields=NULL,
         measureValid=FALSE
       )
     )
@@ -1839,7 +1840,8 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
   return(
     structure(
       measure,
-      Valid=measureValid
+      Valid=measureValid,
+      ByFields=byFields
     )
   )
 }
@@ -1873,6 +1875,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
   if ( "Function" %in% names(measureSpec) ) {
     # Function will compute an expression using Metrics computed earlier
     measure <- evaluateFunctionSpec(measureName, measureSpec, measureEnv)
+    measureBy <- attr(measure,"ByFields")
     measureValid <- isTRUE(attr(measure,"Valid")) # NULL works like FALSE
   } else if ( "Summarize" %in% names(measureSpec) ) {
     sumSpec <- measureSpec$Summarize;
