@@ -56,7 +56,7 @@ evalq(
       r.version=paste(R.version[c("major","minor")],collapse="."),
       config=character(0), # defaults to config/VE-config.yml
       express=TRUE, # if FALSE, will run devtools::check; otherwise build as rapidly as possible
-      flags=character(0), # flags for VE_CONFIG or VE_EXPRESS will override the direct flag 
+      flags=character(0), # flags for VE_CONFIG or VE_EXPRESS will override these direct flags
       use.git=FALSE
     ) {
       owd <- setwd(file.path(ve.root,"build"))
