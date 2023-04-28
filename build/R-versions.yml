@@ -60,3 +60,6 @@
 4.2.3:
     BioC:      https://www.bioconductor.org/packages/3.16/bioc
     CRAN:      https://cloud.r-project.org
+4.3.0:
+    BioC:      https://www.bioconductor.org/packages/3.17/bioc
+    CRAN:      https://cloud.r-project.org
