@@ -18,11 +18,6 @@ env.loc <- if ( ! "ve.env" %in% search() ) {
   as.environment("ve.env")
 }
 
-# Development environment may have set an alternate location
-if ( ! exists("ve.runtime",envir=env.loc) ) {
-  env.loc$ve.runtime <- Sys.getenv("VE_RUNTIME",getwd())
-}
-
 # Set up the load directory
 
 if ( ! exists("ve.load.dir",envir=env.loc,inherits=FALSE ) ) {
@@ -172,6 +167,11 @@ if ( .Platform$OS.type == 'windows' || install.success ) {
 # Load visioneval
 if ( install.success ) {
   require("VEModel") # load explicitly onto the search path
+  # Development environment may have set an alternate location
+  if ( ! exists("ve.runtime",envir=env.loc) ) {
+    env.loc$ve.runtime <- Sys.getenv("VE_RUNTIME",getwd())
+    VEModel::setRuntimeDirectory(env.loc$ve.runtime)
+  }
 
   # Load tools (helper functions) from their subdirectory in ve.load.dir
   env.loc$load.helpers <- function() {
