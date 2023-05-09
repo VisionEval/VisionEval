@@ -78,8 +78,20 @@ env.loc$checkVE <- function(lib.loc=NULL) {
 
 install.success <- env.loc$checkVE()
 
+# Start looking for ve-lib based on end-user runtime location
 if ( ! exists("ve.lib.name") ) ve.lib.name <- "ve-lib"
-ve.lib <- file.path(ve.load.dir,ve.lib.name)
+
+if ( ! install.success ) {
+  # starting point to seek the library
+  ve.lib <- file.path(ve.load.dir,ve.lib.name)
+} else {
+  # probably loaded from .Renviron
+  ve.lib <- grep(ve.lib.name,.libPaths(),value=TRUE)
+  install.success <- isTRUE(dir.exists(ve.lib))
+  # if not install.success here, visioneval packages got installed
+  # into a non "ve-lib" location, so we'll try to fix that with a
+  # new library search...
+}
 
 # Create function to check or perform installation
 env.loc$ve.install <- if ( ! install.success ) {
@@ -143,7 +155,7 @@ env.loc$ve.install <- if ( ! install.success ) {
     install.success <- env.loc$checkVE(ve.lib)
 
     if ( install.success ) {
-      # Set .libPaths()
+      # Set .libPaths(); slightly redundant with .Renviron
       .libPaths(c(ve.lib,.libPaths()))
       invisible(TRUE)
     } else {
@@ -153,7 +165,7 @@ env.loc$ve.install <- if ( ! install.success ) {
   }
 } else {
   function() {
-    # Set .libPaths()
+    # Set .libPaths(); harmless if ve.lib is already in .libPaths()
     .libPaths(c(ve.lib,.libPaths()))
     invisible(TRUE)
   }
@@ -168,10 +180,20 @@ if ( .Platform$OS.type == 'windows' || install.success ) {
 if ( install.success ) {
   require("VEModel") # load explicitly onto the search path
   # Development environment may have set an alternate location
-  if ( ! exists("ve.runtime",envir=env.loc) ) {
+  if ( ! exists("ve.runtime") ) {
     env.loc$ve.runtime <- Sys.getenv("VE_RUNTIME",getwd())
     VEModel::setRuntimeDirectory(env.loc$ve.runtime)
   }
+  # Write R_LIBS_USER into .Renviron to ve.load.dir and ve.runtime to
+  # expedite next startup; do not overwrite since the development
+  # environment or the user may have set them manually. This may also
+  # have the effect of copying the ve-lib location from a .Renviron
+  # set elsewhere (notably in the system or user's own .Renviron).
+  sapply(
+    file.path(c(ve.load.dir,ve.runtime),".Renviron"),
+    renv.txt = paste0("R_LIBS_USER=",paste(collapse=";",.libPaths()[-length(.libPaths())])), # ignore base library
+    FUN=function(renv.txt,renv.file) if ( ! file.exists(renv.file) ) writeLines(renv.txt,renv.file)
+  )
 
   # Load tools (helper functions) from their subdirectory in ve.load.dir
   env.loc$load.helpers <- function() {
