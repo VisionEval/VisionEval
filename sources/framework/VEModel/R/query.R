@@ -1490,21 +1490,23 @@ specSummarizeElements <- c(
 ve.spec.print <- function() {
   # If function, print its expression
   # If summarize, print its elements (nicely)
+
   if ( ! self$valid() ) {
-    cat("Specification is not valid:\n")
+    cat("Specification",self$Name,"is not valid:\n")
     cat(paste(self$CheckMessages,collapse="\n"),"\n")
   } else {
-    spec.print <- function(s,spec) { cat("   ",s,"= "); cat(deepPrint(spec[[s]]),"\n") }
+    cat(self$Name,"\n")
+    spec.print <- function(s,spec,suffix="") { cat("   ",s,suffix,"= "); cat(deepPrint(spec[[s]],suffix=suffix),"\n") }
     nm.req <- specRequiredElements[ specRequiredElements %in% names(self$QuerySpec) ]
+    nm.metadata <- self$QuerySpec$MetadataNames
+    nm.req <- nm.req[ ! nm.req %in% nm.metadata ]
     dummy <- lapply(nm.req,spec=self$QuerySpec,spec.print)
     nm.export <- specExportElements[specExportElements %in% names(self$QuerySpec)]
     if ( length(nm.export) > 0 ) {
       dummy <- lapply(nm.export,spec=self$QuerySpec,spec.print)
     }
-    nm.metadata <- self$QuerySpec$MetadataNames
-    if ( length(nm.metadata) ){
-      cat("Specification Metadata:\n")
-      dummy <- lapply(nm.metadata,spec=self$QuerySpec,spec.print)
+    if ( length(nm.metadata) ){ 
+      dummy <- lapply(nm.metadata,spec=self$QuerySpec,suffix="(Metadata)",spec.print)
     }
   }
 }
@@ -1796,7 +1798,7 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
   Expression <- attr(checkSymbols,"Expression")
 
   # Create a data.frame that just has the common denominator By fields for eventual return
-  # Slice out 
+  # Slice out
   nameFrames <- lapply(Names, function(n) measureEnv[[n,exact=TRUE]]) # don't allow partial matches
   names(nameFrames) <- Names
   byFields <- sapply(nameFrames, function(n) { meNames <- names(n); return(meNames[ meNames!="Measure" ]) })
@@ -1804,7 +1806,7 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
   for ( measureBy in byFields ) {
     smallest <- which( commonGeoFields %in% measureBy )[1] # smallest available geography
     if ( !is.na(smallest) ) {
-      if ( smallest > 1 ) commonGeoFields <- commonGeoFields[smallest:length(commonGeoFields)]
+      if ( smallest > 1 ) commonGeoFields <- commonGeoFields[smallest]
     } else {
       commonGeoFields <- "Region"
       break
