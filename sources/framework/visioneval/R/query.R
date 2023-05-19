@@ -935,7 +935,7 @@ function(
 
   # Perform the query computations
   # NOTE: only respects first DStoreLoc in QueryPrep_ls
-  calcResults <- performQuery( CompiledSpec, Data_ls, QueryPrep_ls$Listing[[1]]$Geo_df )
+  calcResults <- performQuery( CompiledSpec, Data_ls )
 
   # Check for errors in query computation
   if ( length(calcResults$Errors)>1 || any(nzchar(calcResults$Errors)) ) {
@@ -1051,7 +1051,8 @@ getQueryDatasets <- function(CompiledSpec, QueryPrep_ls) with ( CompiledSpec, {
       rm(Data_df)
     }
     #Prepare data if there is no key
-    # TODO: do we even want to support this? Seems pointless...
+    # TODO: do we even want to support this? Seems pointless since
+    # we'd need to run SQL or some other external interrogation...
     if (is.null(Key)) {
       #If no By variables, combine all datasets into one list
       if (is.null(By)) {
@@ -1081,7 +1082,7 @@ getQueryDatasets <- function(CompiledSpec, QueryPrep_ls) with ( CompiledSpec, {
 #-----------------------------------------------------------
 #Helper function to calculate measures if By is specified
 #-----------------------------------------------------------
-calcWithBy <- function(CompiledQuery, CalcData_ls, Geo_df) {
+calcWithBy <- function(CompiledQuery, CalcData_ls) {
   By_ls <- list() # Will become a list of factorized break columns in CalcData_ls
   #Check and process the By fields into a list of factors with the same names
   writeLog(paste("running calcWithBy..."),Level="info")
@@ -1135,30 +1136,9 @@ calcWithBy <- function(CompiledQuery, CalcData_ls, Geo_df) {
   # Melt into a data.frame
   Results_df <- meltResults(Results_ar,value.name="Measure")
 
-  # Add in enclosing geographies
-  # Attach enclosing geographies to calcResults$Result
-  byFields <- originalByFields <- names(Results_df)[ names(Results_df) != "Measure" ]
-  geoRank <- c("Bzone","Azone","Marea")
-  smallGeo <- which( geoRank %in% byFields)[1] # Smallest relevant geograpy
-  if ( ! is.na(smallGeo) ) {
-    # find the bigger geographies
-    biggerGeo <- geoRank[-(1:smallGeo)]
-    if ( length(biggerGeo) > 0 ) {
-      biggerGeo <- biggerGeo[ ! biggerGeo %in% byFields ] # eliminate geoFields that are already present
-    }
-    if ( length(biggerGeo) > 0 ) { # skip if enclosing geoFields are already there... (shouldn't happen)
-      geoMerge <- Geo_df[,c(geoRank[smallGeo],biggerGeo)]
-      geoMerge <- geoMerge[!duplicated(geoMerge),] # toss duplicates for unnecessary smaller geographies
-      Results_df <- merge(Results_df,geoMerge) # automatic use matching smallGeo field
-    }
-  }
-  if ( ! "Region" %in% byFields && nrow(Results_df)>0 ) {
-    Results_df$Region <- "Region" # add redundant flag for Region
-  } else {
-    Results_df$Region <- character(0) # make sure there's a field on the empty data.frame
-  }
-
-  Results_df <- structure(Results_df,byFields=originalByFields)
+  # Return results, including list of byFields
+  byFields <- names(Results_df)[ names(Results_df) != "Measure" ]
+  Results_df <- structure(Results_df,byFields=byFields)
   return(list(Result=Results_df,Errors=""))
 }
 
@@ -1179,12 +1159,11 @@ wtmean <- function(x, w) sum(x * w) / sum(w)
 #'
 #' @param CompiledSpec a list as returned from checkQuerySpec
 #' @param Data_ls a data specification as returned from getQueryDatasets
-#' @param Geo_df is the model geography from ModelState_ls$Geo_df
 #' @return a list with two elements, Result and Errors. Result is a data.frame with By
 #'   columns and a column called Measure, or NA. Errors is a character vector. If Result is
 #'   length zero or contains any non-empty strings, than an error condition has been specified.
 #' @export
-performQuery <- function( CompiledSpec, Data_ls, Geo_df ) {
+performQuery <- function( CompiledSpec, Data_ls ) {
   #----------------------------------------------
   #Calculate the Expression and Return the Result
   #----------------------------------------------
@@ -1192,7 +1171,7 @@ performQuery <- function( CompiledSpec, Data_ls, Geo_df ) {
     # There is a By argument, with one or two merged datasets
     if ( length(Data_ls$Data) == 1 ) {
       #If there is a By but only one merged dataset
-      calcResults <- calcWithBy(CompiledSpec,Data_ls$Data[[1]],Geo_df)
+      calcResults <- calcWithBy(CompiledSpec,Data_ls$Data[[1]])
       if ( length(calcResults$Errors)>0 && any(nzchar(calcResults$Errors)) ) {
         return( list(Result=NA,Errors=calcResults$Errors) )
       } # Fall through to do uniform return below

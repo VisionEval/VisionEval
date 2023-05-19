@@ -58,9 +58,13 @@ ve.scenario.load <- function(reloadFile=FALSE) {
   self$baseScenario <- if ( ! is.null(baseScenarioName) ) {
     if ( baseScenarioName %in% names(self$baseModel$modelStages) ) {
       self$baseModel$modelStages[[ baseScenarioName ]]
+    } else {
+      stop(
+        writeLog(paste("BaseScenario",paste0("'",baseScenarioName,"'"),"is not present in BaseModel"),Level="error")
+      )
     }
   } else NULL # No base scenario defined
-  
+
   # If StartFrom is defined in the scenario RunParam_ls, use the parameters from that stage as the
   # basis for the current scenarios. Otherwise, just load the parameters from the base model,
   # expecting to fill in the required missing ones here.
@@ -670,7 +674,7 @@ VEModelScenarios <- R6::R6Class(
     # Data elements
     baseModel = NULL,                     # Model object to which scenarios are attached
     scenarioDir = NULL,                   # Name of the current scenario directory (within baseModel$modelPath)
-    scenarioPath = NULL,                  # Normalized full path to scenaro directory
+    scenarioPath = NULL,                  # Normalized full path to scenario directory
     loadedParam_ls = NULL,                # Scenario parameters as loaded from configFile (or to be rewritten)
     RunParam_ls = NULL,                   # RunParam_ls for Scenarios (runtime)
     modelStages = list(),                 # list of VEModelStage object, built during $load, empty if undefined/invalid
