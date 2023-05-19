@@ -695,21 +695,32 @@ ve.query.extract <- function(
             # Data will then be attached below
             results.df <- theseResults[,c("Measure"),drop=FALSE]
           }
+          if ( any(row.names(results.df)!=results.df$Measure) ) {
+            stop(
+              writeLog("Program error: VEModel::query.R circa line 699: bad results row.names",Level="error")
+            )
+          }
         }
         if ( ! wantData ) break # Only gathering metadata
 
-        # Need to do the following via a merge...
-        byFields <- "Measure"
-        metadata <- attr(theseResults,"Metadata")
-        if ( !is.null(metadata) && length(metadata)>0 ) byFields <- c(byFields,metadata)
-        mergeResults <- theseResults[,byFields,drop=FALSE]
-        mergeResults[paste(ScenarioName,year,sep=".")] <- theseResults$Value
-        mergeResults["dfOrder.."] <- 1:nrow(mergeResults)
-        results.df <- merge(results.df,mergeResults,by=byFields,all=TRUE)
-        results.df <- results.df[ order(results.df$dfOrder..), ! names(results.df) %in% "dfOrder.." ]
-        rownames(results.df) <- results.df$Measure
+        # Now attach the data value (expects row.names to contain the expanded Measure name)
+        colName <- paste(ScenarioName,year,sep=".")
+        names(theseResults) <- sub("^Value$",colName,names(theseResults))
+        results.df <- cbind(
+          results.df  [order(row.names(results.df)),],
+          theseResults[order(row.names(theseResults)),colName,drop=FALSE]
+        )
+        # byFields <- "Measure"
+        # metadata <- attr(theseResults,"Metadata")
+        # if ( !is.null(metadata) && length(metadata)>0 ) byFields <- c(byFields,metadata)
+        # mergeResults <- theseResults[,byFields,drop=FALSE]
+        # mergeResults[paste(ScenarioName,year,sep=".")] <- theseResults$Value
+        # mergeResults["dfOrder.."] <- 1:nrow(mergeResults)
+        # results.df <- merge(results.df,mergeResults,by=byFields,all=TRUE)
+        # results.df <- results.df[ order(results.df$dfOrder..), ! names(results.df) %in% "dfOrder.." ]
+        # rownames(results.df) <- results.df$Measure
       } else {
-        # Long format always produces minimal metadata plus data...
+        # Long format always produces metadata plus data...
         theseResults <- makeLongMeasureDataframe(scenario[[year]],ScenarioName,year,metadata)
         results.df <- rbind(results.df,theseResults) # Columns should conform...
       }
@@ -895,7 +906,7 @@ ve.query.outputconfig <- function() {
     }
   )
   outputconfig <- structure(
-    names=NULL,
+s    names=NULL,
     outputconfig[ sapply(outputconfig,function(x) !is.null(x)) ]
   )
 }
@@ -1754,6 +1765,15 @@ checkFunctionSpec <- function(measureName, measureSpec, Names) {
   )
 }  
 
+commonGeoFields <- c("Bzone","Azone","Marea","Region")
+expandGeography(query,geo) {
+  # function is internal and used during query processing on a model
+  # geo is a data.frame with (possibly no) geography fields
+  # if a geography field does not exist, inject a column called "Region" with value "Region"
+  # if there is a geography field, check for presence of enclosing geographies and add those
+  #   from the models Geo_df table from its model state.
+  # Ignoring extra geography fields here - those are added during the longScenario extract
+  
 
 # FUNCTION: evaluateFunctionSpec
 #
@@ -1763,7 +1783,7 @@ checkFunctionSpec <- function(measureName, measureSpec, Names) {
 #   measureEnv is the environment containing prior specification names
 # measureEnv can be an actual environment (requesting evaluation) or a character vector
 #   consisting of names defined in earlier query specifications. If envir is an
-#   environment, attempt to devaluate the function; otherwise just check that the
+#   environment, attempt to evaluate the function; otherwise just check that the
 #   names are defined and return measureName. Attach diagnostics as appropriate.
 # Return the result of checking and evaluation
 #' @importFrom stats aggregate
@@ -1784,7 +1804,6 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
     } else FALSE
   }
   if ( environmentError ) {
-    # TODO: add additional metadata fields...
     return(
       structure(
         NA,
@@ -1797,11 +1816,13 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
   Names <- attr(checkSymbols,"Names")
   Expression <- attr(checkSymbols,"Expression")
 
-  # Create a data.frame that just has the common denominator By fields for eventual return
-  # Slice out
   nameFrames <- lapply(Names, function(n) measureEnv[[n,exact=TRUE]]) # don't allow partial matches
   names(nameFrames) <- Names
   byFields <- sapply(nameFrames, function(n) { meNames <- names(n); return(meNames[ meNames!="Measure" ]) })
+  # TODO: if measures arrive with nested geographies, need to preserve all those
+  # TODO: if measures arrive with extra By fields, need to use those to aggregate as well
+  # So we need to look at each measure's ByFields - if there are non-geography fields those
+  # need to be preserved...
   commonGeoFields <- c("Bzone","Azone","Marea","Region")
   for ( measureBy in byFields ) {
     smallest <- which( commonGeoFields %in% measureBy )[1] # smallest available geography
@@ -1809,19 +1830,23 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
       if ( smallest > 1 ) commonGeoFields <- commonGeoFields[smallest]
     } else {
       commonGeoFields <- "Region"
+      if ( ! "Region" %in% byFields ) byFields <- c(byFields,"Region")
       break
     }
   }
+  if ( length(commonGeoFields) > 1 ) stop("Error in VEModel::query.R line 1815; invalid common GeoFields")
   nameFrames <- lapply(Names,function(Name) {
     frame <- nameFrames[[Name]]
+    if ( commonGeoFields=="Region" && ! commonGeoFields %in% names(frame) ) frame$Region <- "Region"
     frame <- stats::aggregate(frame["Measure"],by=frame[commonGeoFields],sum)
     names(frame) <- sub("^Measure$",Name,names(frame))
     frame
   })
+  # WARNING: this will throw away non-geography breaks
   measureSet <- nameFrames[[1]]
   if ( length(nameFrames) > 1 ) for ( frame in nameFrames[2:length(nameFrames)] ) {
     measureSet <- merge(measureSet,frame) # By fields are common geographies, Measures have been given names
-  } # might have only one frame in measureSet if we're doing (e.g.) an average or sum for all Mreaas
+  } # might have only one frame in measureSet if we're doing (e.g.) an average for all Mareas
 
   # Now we can evaluate the expression
   measure <- try(
@@ -1876,6 +1901,8 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
   # Compute the measure based on the measureSpec
   if ( "Function" %in% names(measureSpec) ) {
     # Function will compute an expression using Metrics computed earlier
+    # and will aggregate the ByFields to the lowest common denominator present
+    # in all of them.
     measure <- evaluateFunctionSpec(measureName, measureSpec, measureEnv)
     measureBy <- attr(measure,"ByFields")
     measureValid <- isTRUE(attr(measure,"Valid")) # NULL works like FALSE
@@ -1902,6 +1929,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     # measure is a data.frame with a column called "Measure" (the numeric result)
     # and additional columns named after the By Fields (with "Region" at a minimum
     # and a full set of nested geographies if query was run for a smaller geography).
+    # TODO: Check the summarizeDatasets is appropriately adding the nested geographies.
 
     # Filter measure based on Filter list of values for selectable fields
     if ( "Filter" %in% names(sumSpec) ) {
@@ -1918,6 +1946,9 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     if ( ! is.null(measureBy) ) {
       measure <- measure[,c(measureBy,"Measure")]
     }
+
+    # TODO: if a geography field is in measureBy add larger geographies
+    # TODO: Always add "Region" column with value "Region" if it is not already present
 
     # Mark measure valid if we didn't filter it down to nothing
     measureValid <- is.data.frame(measure) && nrow(measure) > 0
@@ -1963,6 +1994,18 @@ makeWideMeasureDataframe <- function(Values,Scenario="",Year=NULL, wantMetadata=
   outputLength   <- 0 # to facilitate adding new metadata fields from later measures
 
   filterMetadata <- length(metadata)>0 # if metadata names not provided, show all
+
+  # Do two passes: the metadata pass, and then the data pass
+  # Add Year + Scenario pseudo-measures as measure names (with no additional metadata)
+  # Perhaps actually construct pseudo-measures and add them to the Values column?
+  # Metadata pass always creates data.frame with the Measure name encoding explicit ByFields
+  #   We will look at all the measures in that pass, not just the first one
+  #   If we're asking for metadata, add all the metadata fields from each measure
+  #   But filter them if a list is provided
+  #   Inject NA if we find a field not represented already or that is not present in new measure
+  #   Result is a data.frame with at least one column (the MeasureName)
+  # Then we do the second pass to add the data (wide measure always gets the data)
+  #   and Data
 
   # Values is a named list of data.frames
   for ( measureName in names(Values) ) {

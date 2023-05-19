@@ -1376,7 +1376,7 @@ test_06_fullquery <- function(Force=TRUE,runModel=FALSE,queryName="Full-Query",l
 }
 
 test_06_quickquery <- function(model=NULL,log="info",multicore=3) {
-  testStep
+  testStep("Set up scenarios-ms model for testing")
   if ( is.null(model) ) {
     model <- test_01_run(baseModel="VERSPM",variant="scenarios-ms",multicore=multicore,log="warn")
   }
@@ -1425,9 +1425,9 @@ test_06_quickquery <- function(model=NULL,log="info",multicore=3) {
     'DailyCO2e'
   )
   
+  testStep("Construct specifications")
   qry <- VEQuery$new(Model=model,QueryName="Quick-Query")
 
-  testStep("Construct specificatons")
   Table <- "Marea"
   for ( Field in Marea_Fields ) {
     qry$quickSpec(Table,Field)
