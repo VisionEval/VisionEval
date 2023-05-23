@@ -180,7 +180,7 @@ if ( .Platform$OS.type == 'windows' || install.success ) {
 if ( install.success ) {
   require("VEModel") # load explicitly onto the search path
   # Development environment may have set an alternate location
-  if ( ! exists("ve.runtime") ) {
+  if ( ! exists("ve.runtime",envir=env.loc,inherit=FALSE) ) {
     env.loc$ve.runtime <- Sys.getenv("VE_RUNTIME",getwd())
     VEModel::setRuntimeDirectory(env.loc$ve.runtime)
   }
