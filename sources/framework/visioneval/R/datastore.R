@@ -1707,7 +1707,7 @@ setInDatastore <- function(Data_ls, ModuleSpec_ls, ModuleName, Year, Geo = NULL,
     Data_ <- Data_ls[[Group]][[Table]][[Name]]
     if (!is.null(Data_)) {
       #Convert currency
-      Years_ls <- list(Fromyear=Spec_ls$YEAR,ToYear=BaseYear)
+      Years_ls <- list(FromYear=Spec_ls$YEAR,ToYear=BaseYear)
 
       #Convert units
       SimpleTypes_ <- c("integer", "double", "character", "logical")
