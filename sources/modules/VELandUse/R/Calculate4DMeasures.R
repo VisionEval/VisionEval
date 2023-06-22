@@ -497,8 +497,9 @@ Calculate4DMeasures <- function(L) {
   calcEntropyTerm <- function(ActName) {
     Act_ <- D_df[[ActName]]
     ActRatio_ <- Act_ / D_df$TotAct
-    LogActRatio_ <- ActRatio_ * 0
-    ValidRatio <- !is.na(Act_) & Act_ != 0
+    ActRatio_[is.na(ActRatio_)] <- 0
+    LogActRatio_ <- rep(0,length(Act_))
+    ValidRatio <- !is.na(Act_) & ActRatio_ > 0 & Act_ > 0
     LogActRatio_[ValidRatio] <- log(Act_[ValidRatio] / D_df$TotAct[ValidRatio])
     ActRatio_ * LogActRatio_
   }
