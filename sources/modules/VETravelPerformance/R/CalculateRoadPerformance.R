@@ -513,7 +513,7 @@ visioneval::savePackageDataset(CongestedProportions_ls, overwrite = TRUE)
 calculateCongestion <-
   function(RoadType, LaneMi, DVMT) {
     #Extract the lookup table
-    CongestedProportions_ls <- VETravelPerformance::CongestedProportions_ls
+    CongestedProportions_ls <- loadPackageDataset("CongestedProportions_ls","VETravelPerformance")
     Lookup_LvCl <-
       CongestedProportions_ls[[RoadType]]
     #Calculate roadway demand
@@ -883,7 +883,7 @@ visioneval::savePackageDataset(Access_df, overwrite = TRUE)
 #' @export
 calculateSpeeds <- function(OpsDeployment_, OtherOpsEffects_mx = NULL) {
   #Calculate recurring and non-recurring (incident-related) delay
-  BaseSpeeds_df <- VETravelPerformance::BaseSpeeds_df
+  BaseSpeeds_df <- loadPackageDataset("BaseSpeeds_df","VETravelPerformance")
   BaseTravelRate_mx <- 1 / as.matrix(BaseSpeeds_df)
   Delay_mx <-
     sweep(BaseTravelRate_mx, 2, BaseTravelRate_mx[1,], "-")
@@ -895,10 +895,10 @@ calculateSpeeds <- function(OpsDeployment_, OtherOpsEffects_mx = NULL) {
   )
   rm(Delay_mx)
   #Calculate operations management delay reduction effects
-  Ramp_df <- VETravelPerformance::Ramp_df
-  Incident_df <- VETravelPerformance::Incident_df
-  Signal_df <- VETravelPerformance::Signal_df
-  Access_df <- VETravelPerformance::Access_df
+  Ramp_df <- loadPackageDataset("Ramp_df","VETravelPerformance")
+  Incident_df <- loadPackageDataset("Incident_df","VETravelPerformance")
+  Signal_df <- loadPackageDataset("Signal_df","VETravelPerformance")
+  Access_df <- loadPackageDataset("Access_df","VETravelPerformance")
   RampFactor_mx <-
     1 - OpsDeployment_["RampMeterDeployProp"] * as.matrix(Ramp_df) / 100
   IncidentFactor_mx <-
@@ -1557,7 +1557,7 @@ CalculateRoadPerformance <- function(L) {
     LogPop = log1p(L$Year$Marea$UrbanPop),
     LnMiRatio = L$Year$Marea$FwyLaneMi / L$Year$Marea$ArtLaneMi
   )
-  DvmtSplit_LM <- VETravelPerformance::DvmtSplit_LM
+  DvmtSplit_LM <- loadPackageDataset("DvmtSplit_LM","VETravelPerformance")
   Lambda_Ma <- unname(predict(DvmtSplit_LM, newdata = DvmtSplitData_df))
   names(Lambda_Ma) <- Ma
   Lambda_Ma[Ma == "None"] <- NA
@@ -1855,7 +1855,7 @@ CalculateRoadPerformance <- function(L) {
   #---------------------------------------------------
   #Define function to calculate the rural to urban average road speed ratio
   calcUrbRurHhSpeedRatio <- function() {
-    UrbanRuralAveSpeed_ls <- VETravelPerformance::UrbanRuralAveSpeed_ls
+    UrbanRuralAveSpeed_ls <- loadPackageDataset("UrbanRuralAveSpeed_ls","VETravelPerformance")
     UHPU_ <- L$Year$Marea$UrbanHhPropUrbanDvmt
     RHPU_ <- L$Year$Marea$NonUrbanHhPropUrbanDvmt
     HSR <- UrbanRuralAveSpeed_ls$SpeedRatio

@@ -1842,7 +1842,7 @@ CalculatePolicyVmt <- function(L) {
                   "Age55to64", "Age65Plus", "VehPerDrvAgePop", "DrvAgePop" )
   #fix seed as allocation involves sampling
   set.seed(L$G$Seed)
-  LtVehOwnModels_ls <- VEHouseholdTravel::LtVehOwnModels_ls
+  LtVehOwnModels_ls <- loadPackageDataset("LtVehOwnModels_ls","VEHouseholdTravel")
   if( any( IsMetro_ ) ) {
     LtVehOwn_Hh[ IsMetro_ ] <- predictLightVehicles( Hh_df[ IsMetro_, ModelVar_ ],
                                                      LtVehOwnModels_=LtVehOwnModels_ls, Type="Metro",
@@ -1863,12 +1863,12 @@ CalculatePolicyVmt <- function(L) {
   ###CS Note this is problematic as actual density not calculated - need to use 5D density adjustment from average by place type
   Hh_df$LogDen <- log( Hh_df$Htppopdn )
   Hh_df$LogSize <- log( Hh_df$HhSize )
-  Hh_df$LogDvmt <- log( Hh_df$Dvmt )
+  Hh_df$LogDvmt <- suppressWarnings(ifelse(!is.na(Hh_df$Dvmt) & Hh_df$Dvmt>0, log(Hh_df$Dvmt), -Inf))
   ModelVar_ <- c( "Income", "LogDen", "LogSize", "Urban", "LogDvmt", "Dvmt", "LtVehCnt",
                   "DrvAgePop" )
   #fix seed as allocation involves sampling
   set.seed(L$G$Seed)
-  AveSovPropModels_ls <- VEHouseholdTravel::AveSovPropModels_ls
+  AveSovPropModels_ls <- loadPackageDataset("AveSovPropModels_ls","VEHouseholdTravel")
   if( any( IsMetro_ ) ) {
     LtVehDvmt_Hh[ IsMetro_ ] <- calcLtVehDvmt( Hh_df[ IsMetro_, ModelVar_ ],
                                                AveSovPropModels_ls,

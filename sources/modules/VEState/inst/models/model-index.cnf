@@ -1,0 +1,21 @@
+# Variant is selected when installing
+# Sample data is also installed
+# Eventually need to document or provide helper function for reducing to template
+VE-State:
+  variants:
+    base:
+      # "description" is used to echo back what is being installed
+      description: VE-State 3.0
+      # Configuration is all in the model root directory
+      config: visioneval-base.cnf
+      scripts: scripts-base
+      inputs: inputs
+      defs: defs
+      # queries: queries # TODO: Sample queries in 3.0 format
+    staged:
+      description: VE-Stage 3.0 Staged (Horizontal)
+      config: visioneval-staged.cnf
+      scripts: scripts-staged # contains stage scripts and visioneval.cnf files
+      inputs: inputs # Some files are overridden in stages
+      defs: defs
+      # queries: queries # TODO: Sample queries in 3.0 format

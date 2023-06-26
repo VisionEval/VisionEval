@@ -306,6 +306,49 @@ Calculate4DMeasuresSpecifications <- list(
 visioneval::savePackageDataset(Calculate4DMeasuresSpecifications, overwrite = TRUE)
 
 
+#Define a Validation Function for some of the input files
+#--------------------------------------------------------
+#' Validation function for checking input files (optional)
+#'
+#' Validation function takes a data.frame and a file name from which the data.frame was
+#' loaded and does basic sanity checks, returning a (possibly empty) report. see
+#' \code{visioneval::processModuleInputs}. The file name should be one listed in the
+#' "Inp" section of the module Specifications
+#'
+#' The specific check for Calculate4DMeasures will warn if there are zones with zero
+#' developable area. That's possibly recoverable, so it's a Warning not an Error, but
+#' such zones should be merged with other zones that "have something in them".
+#'
+#' @param File The name of the file from which Data_df was loaded (to select the test)
+#' @param Data_df A data.frame loaded from the named file
+#' @return A list of two lists, Errors and Warnings, which will be empty if no errors
+#    were encountered, and will have messages if there were problems.
+#' @export
+Calculate4DMeasuresValidateInputFile <- function( File, Data_df ) {
+  FileValidation_ls <- list(Errors=character(0),Warnings=character(0))
+  if ( inherits(Data_df,"data.frame") && is.character(File) && nzchar(File[1]) ) {
+    if ( File == "bzone_unprotected_area.csv" ) {
+      missingValues <- which(
+        {
+          # Error if Total area not specified or zero
+          TotalArea <- with( Data_df, UrbanArea + TownArea + RuralArea )
+          is.na(TotalArea) | TotalArea == 0
+        }
+      )
+      if ( any(missingValues) ) {
+        Msg <- paste(
+          c(
+            "These BZones have no developable land area:",
+            paste0(Data_df$Geo[missingValues],"(",Data_df$Year[missingValues],")")
+          )
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+      }
+    }
+  }
+  return(FileValidation_ls)
+}
+
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
 #=======================================================
@@ -413,21 +456,28 @@ Calculate4DMeasures <- function(L) {
   #Population density
   D1B_ <- with(D_df, Pop / Area)
   #Check for high population density values and add warning
-  IsHighDensity_ <- D1B_ > 100
-  HighDensityBzones_ <- Bz[IsHighDensity_]
+  # IsHighDensity_ <- D1B_ > 100
+  
+  # TODO: consolidate package parameter defaults into one place (see HighDensityThreshold)
+  packageParams <- visioneval::getRunParameter("VELandUse",Default=list(HighDensityThreshold=100))
+  HighDensityThreshold_ <- if ( ! "HighDensityThreshold" %in% names(packageParams) ) {
+    100 # packageParams might be set but only contain other parameters
+  } else packageParams$HighDensityThreshold
+
+  IsHighDensity_ <- D1B_ > HighDensityThreshold_
   if (any(IsHighDensity_)) {
-    Msg <- paste0(
-      "The following Bzones in the year ", L$G$Year, " ",
-      "have population densities greater than ",
-      "100 persons per acre: ", paste(HighDensityBzones_, collapse = ", "), ". ",
-      "This density is a relatively high level. ",
-      "Check your Bzone area and housing inputs for these Bzones and make ",
-      "sure that they are correct."
+    HighDensityBzones_ <- paste(Bz[IsHighDensity_],paste0("(",round(D1B_[IsHighDensity_],2),")"))
+    Msg <- c(
+      paste0("The following Bzones in the year ", L$G$Year, " ",
+      "have high population densities (greater than ",
+      HighDensityThreshold_," persons per acre):"),
+      HighDensityBzones_, # This will be a potentially long list in large models...
+      "Add 'HighDensityThreshold' to VElandUse section in visioneval.cnf to change warning threshold"
     )
-    addWarningMsg("Out_ls", Msg)
-    rm(Msg)
+    addWarningMsg(Msg) # Attaches to Out_ls in the current frame by default
+    rm(Msg,HighDensityBzones_)
   }
-  rm(IsHighDensity_, HighDensityBzones_)
+  rm(IsHighDensity_)
   #Employment density
   D1C_ <- with(D_df, TotEmp / Area)
   #Activity density
@@ -447,8 +497,10 @@ Calculate4DMeasures <- function(L) {
   calcEntropyTerm <- function(ActName) {
     Act_ <- D_df[[ActName]]
     ActRatio_ <- Act_ / D_df$TotAct
-    LogActRatio_ <- ActRatio_ * 0
-    LogActRatio_[Act_ != 0] <- log(Act_[Act_ != 0] / D_df$TotAct[Act_ != 0])
+    ActRatio_[is.na(ActRatio_)] <- 0
+    LogActRatio_ <- rep(0,length(Act_))
+    ValidRatio <- !is.na(Act_) & ActRatio_ > 0 & Act_ > 0
+    LogActRatio_[ValidRatio] <- log(Act_[ValidRatio] / D_df$TotAct[ValidRatio])
     ActRatio_ * LogActRatio_
   }
   E_df <- data.frame(
@@ -459,7 +511,7 @@ Calculate4DMeasures <- function(L) {
   )
   A_ <- rowSums(E_df)
   N_ = apply(E_df, 1, function(x) sum(x != 0))
-  D2A_EPHHM_ <- -A_ / log(N_)
+  D2A_EPHHM_ <- ifelse( is.na(N_)|N_==0, 0, -A_ / log(N_) )
   rm(E_df, A_, N_)
 
   #Calculate destination accessibilty term

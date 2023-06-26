@@ -1,0 +1,42 @@
+Notes:
+- VE-State "staged" implementation (still LONG to run, but each stage is shorter...)
+- Model Structural Parameters: ScriptsDir,InputDir,ParamDir
+- Model Description: Model, Region, Stage, ModelStages
+- Stages do not have their own directories - just individual configuration files that
+  are stored in the ScriptsDir
+- Scenario Description: Scenario, Description, BaseYear, Years
+- Seed parameter is defaulted in this model...
+
+# Model Structural Parameters
+ScriptsDir     : scripts
+InputDir       : inputs  # Each stage shares the same input files
+ParamDir       : defs    # Each stage shares the same defs files
+
+# Model description
+Model          : VE-State 3.0
+Region         : Oregon
+Stage          : OR
+ModelStages    :
+  Stage-1 : 
+    Dir : Stage-1
+    Config : scripts/visioneval-1.cnf
+    Reportable: false
+  Stage-2 : 
+    Dir : Stage-2
+    Config : scripts/visioneval-2.cnf
+    Reportable: false
+  Stage-3 : 
+    Dir : Stage-3
+    Config : scripts/visioneval-3.cnf
+    Reportable: false
+  Stage-4 : 
+    Dir : Stage-4
+    Config : scripts/visioneval-4.cnf
+    Reportable: true
+
+# Scenario description for Base Model
+# May be overridden in stage sub-directories
+Scenario       : VE-State Oregon
+Description    : Staged Base Year 2010 + Future 2040
+BaseYear       : 2010
+Years          : [ 2010, 2040 ]

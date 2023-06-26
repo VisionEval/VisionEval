@@ -59,8 +59,8 @@ UzaProfileNames_ls <- list()
 
 #Make a vector of acceptable urbanized area profile names
 #--------------------------------------------------------
-AllNames_ <- VESimLandUseData::SimLandUseData_df$UZA_NAME
-LocType_ <- VESimLandUseData::SimLandUseData_df$LocType
+AllNames_ <- loadPackageDataset("SimLandUseData_df","VESimLandUseData")$UZA_NAME
+LocType_ <- loadPackageDataset("SimLandUseData_df","VESimLandUseData")$LocType
 UzaNames_ <- sort(unique(AllNames_[LocType_ == "Urban"]))
 UzaNames_ <-
   c(UzaNames_,
@@ -238,7 +238,7 @@ InitializeSpecifications <- list(
       UNITS = "proportion",
       NAVALUE = -1,
       SIZE = 0,
-      PROHIBIT = c("NA", "< 0", "> 1"),
+      PROHIBIT = c("< 0", "> 1"), # NA is handled: if any NA's exist, will not use GQ proportions, with a warning
       ISELEMENTOF = "",
       UNLIKELY = "",
       TOTAL = "",
@@ -748,7 +748,7 @@ Initialize <- function(L) {
       if (Diff >= 0.01) {
         Msg <- paste0(
           "Error in input values for 'PropMetroJobs' for Marea ",
-          ma, " and Year ", Year,
+          ma, " and Year ", yr,
           ". The sum of values for Azones in the Marea is off by more than 1%. ",
           "They should add up to 1."
         )
@@ -757,7 +757,7 @@ Initialize <- function(L) {
         if (Diff != 0) {
           Msg <- paste0(
             "Warning regarding input values for 'PropMetroJobs' for Marea ",
-            ma, " and Year ", Year,
+            ma, " and Year ", yr,
             ". The sum of values for Azones in the Marea do not add up to 1 ",
             "but are off by less than 1%. ",
             "They have been adjusted to add up to 1."
@@ -778,7 +778,7 @@ Initialize <- function(L) {
   #Only check if no other errors identified
   if (length(Errors_) == 0) {
     #Calculate average density limits
-    SimBzone_ls <- VESimLandUse::SimBzone_ls
+    SimBzone_ls <- loadPackageDataset("SimBzone_ls","VESimLandUse")
     RuralActDenRng_ <- range(SimBzone_ls$RuProfiles$D1DGrp_ls$AveDensity)
     TownActDenRng_ <- range(SimBzone_ls$TnProfiles$D1DGrp_ls$AveDensity)
     UrbanActDenRng_ <- local({
@@ -803,11 +803,13 @@ Initialize <- function(L) {
     PopData_df <- data.frame(L$Data$Year$Azone[c("Year", "Geo", Ag, Gq, "AveHhSize")])
     PopData_df$Year <- as.character(PopData_df$Year)
     Re <- c("RelEmp15to19", "RelEmp20to29", "RelEmp30to54", "RelEmp55to64", "RelEmp65Plus")
+    ReValid <- TRUE
     for (re in Re) {
       if (!is.null(L$Data$Year$Azone[[re]])) {
         PopData_df[[re]] <- L$Data$Year$Azone[[re]]
       } else {
         PopData_df[[re]] <- 1
+        ReValid <- FALSE
       }
     }
     #Iterate through years and check values
@@ -826,7 +828,12 @@ Initialize <- function(L) {
         0
       )
       #Estimate number of workers
-      WkrPopAdj_AzRe <- as.matrix(data.frame(L$Data$Year$Azone)[IsYear, Re])
+      if ( ReValid ) {
+        WkrPopAdj_AzRe <- as.matrix(data.frame(L$Data$Year$Azone)[IsYear, Re])
+      } else {
+        # Create a dummy matrix with all proportions set to 1
+        MkrPopAdj_AzRe <- matrix(1,nrow=length(which(IsYear)),ncol=length(Re))
+      }
       rownames(WkrPopAdj_AzRe) <- L$Data$Year$Azone$Geo[IsYear]
       WkrProp_AzAg <- sweep(WkrPopAdj_AzRe, 2, WkrProp_Ag, "*")
       NumWkr_Az <- round(
@@ -1062,7 +1069,7 @@ Initialize <- function(L) {
 
   #Check each assigned UzaProfileName for consistency
   #--------------------------------------------------
-  UzaProfileNames_ls <- VESimLandUse::UzaProfileNames_ls
+  UzaProfileNames_ls <- loadPackageDataset("UzaProfileNames_ls","VESimLandUse")
   UzaNames_ <- UzaProfileNames_ls$Names
   Marea_ <- L$Data$Global$Marea$Geo
   UzaProfileName_ <- L$Data$Global$Marea$UzaProfileName
@@ -1090,15 +1097,15 @@ Initialize <- function(L) {
     "PropGQPopFringe")
   if (any(Names_ %in% names(Out_ls$Data$Year$Azone))) {
     if (all(Names_ %in% names(Out_ls$Data$Year$Azone))) {
-      if (all(is.na(unlist(Out_ls$Data$Year$Azone[Names_])))) {
+      if (any(is.na(unlist(Out_ls$Data$Year$Azone[Names_])))) {
         Out_ls$Data$Year$Azone[Names_] <- NULL
+        Msg <- "azone_gq_pop-prop_by_area-type.csv contains NA values: it will be ignored"
+        Warnings_ <- c(Warnings_, Msg)
       } else {
         Out_ls$Data$Year$Azone[Names_] <- checkProps(Names_, "Azone", "azone_gq_pop-prop_by_area-type.csv")
       }
     } else {
-      Msg <- paste0(
-        "azone_gq_pop-prop_by_area-type.csv input file is present but not complete"
-      )
+      Msg <- "azone_gq_pop-prop_by_area-type.csv input file is present but not complete"
       Errors_ <- c(Errors_, Msg)
     }
   }
@@ -1106,8 +1113,8 @@ Initialize <- function(L) {
 
   #Add Errors and Warnings to Out_ls and return
   #--------------------------------------------
-  Out_ls$Errors <- Errors_
-  Out_ls$Warnings <- Warnings_
+  addErrorMsg(Errors_)
+  addWarningMsg(Warnings_)
   Out_ls
 }
 

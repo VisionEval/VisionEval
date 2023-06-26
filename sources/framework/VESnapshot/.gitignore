@@ -1,0 +1,9 @@
+data/
+.Renviron
+.Rhistory
+.Rprofile
+.Rdata
+VESnapshot.Rproj
+^NAMESPACE$
+runtime*
+inst/module_docs

@@ -1,0 +1,89 @@
+From there, we can export into a variety of formats:
+  1. (export) Query metadata (row = metric, columns = metadata)
+  2. (export) Query values as CSV (row=flattened metric (zones,breaks), column=value)
+  3. (export) Query values as Tableau format (possibly multiple files, key structure)
+  4. (export) Visualizer (writes an entire local HTML hierarchy like VEScenario did)
+  5. (visualize) Query values as Visualizer javascript (single file defining Javascript data objects for
+     VisualVE plus function call to force the page). Visualizer uses a different base page
+     depending on whether it is looking at the VEQuery result for
+     a. one scenario
+     b. a set of manual (ModelStage or folder) scenarios, or
+     c. a set of Category/Level scenarios
+
+Make sure BreakNames are getting set up properly (once per query spec prior to doQuery).
+
+Additional visualizer tests:
+  1. Limiting to a subset of categories
+  2. Limiting to a subset of measures
+  3. Limiting to a subset of scenarios/model stages
+
+Query Punch List:
+
+  - Change Geography not to include specific zones (GeoValue). Just include GeoType - and only
+    process metrics compatible with that type (interior conversion). This will need clean-up
+    later.
+
+  - If we explicitly ask for stages, only those stages are updated (unless the index flag is TRUE;
+    it defaults to FALSE). If we do NOT ask for explicit stages, then the index flag is set to true
+    and an index of Query results is created in the attached model's ModelDir/ResultsDir.
+
+  - If we ask for stages explicitly when requesting results, we get a list of VEQueryResults objects
+    (each stage must be exported individually). If we ask for stages explicitly when running,
+    query results are only generated for those stages (and we get the list of VEQueryResults).
+    Otherwise, we run the query for all Reportable stages, the VEModel results gets a query index
+    and we get a single VEQueryResults object that can be exported or visualized.
+
+  - Return from VEQuery$results is either a VEQueryResults (from the VEModel) if we did not
+    request Stages or a list of VEQueryResults for each stage. That list of VEQueryResults
+    can be exported in tabular form but not visualized. Individual VEQueryResults can be
+    visualized.
+
+  - The VEQueryResults can be exported. We won't write an "export" function. Instead,
+    we'll set an export=format, with an optional "connection" parameter that describes
+    the file to save (defaulting variously for the different types). So then we can do
+    export="visualize" with the default connection being "jrc" with an option to specify
+    a different string naming the subdirectory or if "file" or "" as the connection then
+    use the default "visualizer".  For "data.frame", connection defaults to returning
+    a list of data.frames. For "csv", connection will be the folder into which the
+    exported data.frames will be written. For "sql", connection will be a database into
+    which the data.frame tables will be created (respecting an "overwrite" flag which
+    defaults to TRUE for .csv and visualize to a "file", and FALSE/ignored for data.frame
+    and SQL).
+
+  - Can $clear VEQueryResults for a stage (model$clear function)
+
+  - Can extract a VEQuery from a VEQueryResults ($query function recovers the original
+    query from the version saved in the results).
+
+  - Running just stores the raw values from SummarizeDatasets and saves them to the Query .Rdata.
+    Results are always saved. Do not do a timestamp, but we can keep a Timestamp internally:
+    Date on the VEQuery file versus Timestamp internally kept in QueryRun-<QueryName>.Rdata.
+    Warn user if Timestamp on run is older.
+
+  - A separate $export function will take the raw results and boil them down (including looking at
+    just a subset of Geographies - we don't do that up front, though we do set the geography level).
+    - Internally, we construct a list of one data.frame from the query by flattening the
+      Values for the query results and then doing cbind to join it into the data.frame.
+      - Values for an array value are flattened into a named vector that unrolls the dimension names
+      - Option on the data.frame generation to include the Scenario/Level columns for visualizing
+      - If exporting to data.frame or other tabular form, can filter by Category (all levels in
+        that category will be added to the table with one column per Level) - that will also work
+        for visualizing.
+    - Then we have the option to
+      - just return the data.frame
+      - write the data.frame to a .csv file
+      - write the "metadata" to a .VEqry file
+      - write the "visualizer.js" file into the "data" subdirectory of a "visualizer" directory
+        that gets created and populated with boilerplate inside ResultsDir. Also, visualizer.js
+        in the export case includes the $(document).ready() method to invoke "VisualVE" javascript
+        code.
+
+So here's the summary of running:
+  - for a VEModelStage, write just its Values+QuerySpec+Dimension into an .RData file in the
+    ResultsDir/StageDir output location.
+  - for a VEModel, develop a list of Reportable stages, identify whether we are doing discrete
+    scenarios or combinations, write that result into the Model ResultsDir (root) then visit each
+    ModelStage and run the query on that stage (generating its results).
+  - Key technical consideration is to load the ModelState for the stage and use its Datastore
+    path to find necessary data elements.
+

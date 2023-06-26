@@ -1,0 +1,76 @@
+## Next steps
+
+Unsatisfying display of results for single scenarios: the metric bar heights rescale as scenarios
+are added and removed from the filter. Some of the scenarios do not seem to have bars. The
+basic layout of the data works, but it's not at all legible... We'll call it quits for now
+on visualizing Model Stage Scenarios.
+
+Later, in the tests.R, modify those base model settings to introduce/handle some errors and
+  to do the partial specifications described below.
+
+#### Implement the Files function and "build" (to install default files for levels/scenarios)
+
+Can create both for manual scenarios and category scenarios.
+
+add nuance to "files" function; if we're doing manual scenarios, then we need
+  to add a Files key to visioneval.cnf for the manual scenario - those will be copied
+  if present when we build the scenario (but unchanged if they already exist - eventually
+  compare the files to the BaseModel/InputPath version).
+  Files key in visioneval.cnf will be loaded and saved.
+  If the Files key exists, those are the "scenario files" - so the files function
+    should have a flag to indicate what category or scenario we're getting the files
+    for (and which levels have files, and which are different from each other and the
+    BaseModel/StartFrom stage).
+
+###### Concrete steps
+
+These should be tested out in "test_scenarios" in tests/test.R.
+
+    Are ScenarioCategories defined:
+      No: Create a default ScenarioCategory called "Scenarios". Create a default ScenarioElement
+          called "Scenario". Create ScenarioCategory Levels keyed one-to-one to ScenarioElement
+          "Scenario" Levels, which are in turn built from each ModelStage plus StartFrom defined
+          in the scenario section.
+    If one ScenarioCategory is defined, does it have defined Category Levels?
+      No: Just like default, except we've named the Category (for the Visualizer)
+    If it has defined Category Levels, does each of those have a ScenarioElement Level
+      No: Error; each category level has to be associated with one or more ScenarioElement Levels
+      CategoryLevel can also include a Name (default is definition sequence) and Description
+      Level includes a list of one more more ScenarioElement/Level pairs. The ScenarioElement/Level
+      can only appear in one CategoryLevel.
+    If Category Level has ScenarioElement Levels, do we have a ScenarioElement structure
+      No: Just like default, but interpret ScenarioElement Levels as scenario ModelStage names,
+      and only include those explicitly named model stages in visualization (ignore the rest)
+    If the ScenarioElement structure is defined, are the ScenarioElements permutable
+      Requirement: has Files defined for each ScenarioElement. Directories attached to each
+        element have (error) all and only those Files and (warning) at least one directory
+        file differs among each of the levels.
+      No: If Files descriptor is missing, exactly one ScenarioELement Level is allowed. The Level
+          Name must belong to a scenario ModelStage. The ScenarioElement will supply descriptive
+          information (rather than interpolating ModelStage values)
+    Does each ScenarioElement Level appear in either zero or exactly one ScenarioCategory Level?
+      No: error
+    Permute the ScenarioCategory Levels and generate a summary of each resulting ModelStage
+      (including the StartFrom) - provides documentation of what is being run.
+      Permutation should work even if there is just one ScenarioCategory (permutations are based
+      on InputPaths associated with each ScenarioElement Level)
+      ModelStage must include ScenarioElement Name:Value pairs for each ScenarioElement Level
+        included in the permuted ModelStage. A Name:Value pair is added for each ScenarioElement, if
+        a non-zero Level for that ScenarioElement does not appear in the permutation (missing), then
+        the Value is zero. Might start by making them all zero, then just dropping in the permuted
+        non-zero values.
+
+VEModel Adjustments
+
+  - Need to update the "dir" and "clear" functions for the model to manage queries. QueryDir
+    contains query templates. They are not managed by "clear" which looks only at results.
+    Need to recognize queries in the ResultsDir and treat those like log files with respect to
+    listing and clearing. Clearing results will take out the QueryRun-*.Rda along with Logs.
+    The Query outputs are .Rda files called QueryRun-<QueryName>.Rda where the QueryName is
+    same one that was loaded to run the query.
+  - Copying a model has the option to copy its results and dataset. If we have the model name in
+    the results ModelState.Rda, it needs to change, as does the ModelDir and everything derived from
+    it - that's also the case with just archiving the results (make sure RunPath is correct - the
+    archive should look just like results that were genereated if ResultsDir = ArchiveDir).
+    - Suggests we need a function to operate on the ModelState and fix everything up (certain
+      parameters get replaced and rebuilt).

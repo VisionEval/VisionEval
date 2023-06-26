@@ -1,0 +1,11 @@
+Notes:
+- VE-State Stage 2 (Core Metrics for Base & Future Year)
+- Model Script varies by stage
+- Years, BaseYear set for the model
+- Scenario Description: ModelScript, Scenario, Description, StartFrom
+
+# Scenario description
+ModelScript    : run_stage_2.R
+Scenario       : VE-State Stage 2
+Description    : Core Transport Metrics for Base (2010) and Future (2038)
+StartFrom      : Stage-1

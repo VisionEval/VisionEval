@@ -1,0 +1,8 @@
+Components:
+  01-getting-started.Rmd:
+    Type: docs
+    Path: "user_guide"
+  user_guide:
+    Type: book
+    Path: "." # path within the ve.docbook repository root
+    # Target: user_guide # relative to ve.docs for output

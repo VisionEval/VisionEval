@@ -29,7 +29,7 @@ if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 if ( ! suppressWarnings(requireNamespace("Rd2md",quietly=TRUE)) ) {
-  install.packages("Rd2md", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+  install.packages("Rd2md", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
 }
 
 message("========== BUILD FRAMEWORK DOCS ==========")
@@ -121,13 +121,18 @@ if ( need.new.docs ) {
       control = length(grep("control", Description)) != 0,
       datastore = length(grep("datastore connection", Description)) != 0
     )
+    print(GroupCheck_)
     names(GroupCheck_)[GroupCheck_]
   }
   #Iterate through documentation files
   for (DocFile in DocFilePaths_) {
-    cat("Parsing file:",DocFile,"\n")
+    cat("Parsing file:",DocFile)
     ParsedRd_ls <- Rd2md::parseRd(tools::parse_Rd(DocFile))
     Group <- getGroup(ParsedRd_ls)
+    if ( length(Group)==0 ) {
+      Group <- "control"
+      cat(" (default)","\n")
+    } else cat("\n")
     ParsedRd_ls$group <- Group
     FunctionName <- ParsedRd_ls$name
     ParsedRd_ls$calls <- FunctionCalls_ls[[FunctionName]]

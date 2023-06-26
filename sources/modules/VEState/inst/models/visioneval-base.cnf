@@ -1,0 +1,25 @@
+Notes:
+- VE-State "all in one" implementation (takes a LONG time to run)
+- Model Structural Parameters: ScriptsDir,ModelScript,InputDir,ParamDir,GeoFile,ModelParamFile
+- Model Description: Model, Region, Stage
+- Scenario Description: Seed, Scenario, Description, BaseYear, Years
+
+# Model Structural Parameters (all are optional)
+ScriptsDir     : scripts
+ModelScript    : run_model.R
+InputDir       : inputs
+ParamDir       : defs
+GeoFile        : geo.csv
+ModelParamFile : model_parameters.json # Located in InputDir
+
+# Model-wide description
+Model          : VE-State 3.0
+Region         : Oregon
+Stage          : OR
+
+# Scenario description
+Seed           : 1
+Scenario       : VE-State Oregon
+Description    : Base Year 2010 + Future 2040
+BaseYear       : 2010
+Years          : [ 2010, 2040 ]

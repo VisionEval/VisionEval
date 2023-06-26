@@ -114,7 +114,7 @@ HhVars_ <-
   c("Houseid", "Hbppopdn", "Hhsize", "Age0to14", "Age15to19", "Hhsize",
     "Income", "Drvrcnt", "Wrkcount", "Hometype", "UrbanDev", "NumAuto",
     "NumLightTruck", "NumVeh")
-Hh_df <- VE2001NHTS::Hh_df[, HhVars_]
+Hh_df <- loadPackageDataset("Hh_df","VE2001NHTS")[, HhVars_]
 Hh_df <- Hh_df[complete.cases(Hh_df),]
 Hh_df <- Hh_df[Hh_df$NumVeh != 0,]
 Hh_df <- Hh_df[Hh_df$Drvrcnt >= 1,]
@@ -491,7 +491,7 @@ AssignVehicleType <- function(L) {
     Data_df$Density[Data_df$Density == 0] <- 1e-6
     Data_df$LogDensity <- log(Data_df$Density)
     #Run the model
-    VehicleTypeModel_ls <- VEHouseholdVehicles::VehicleTypeModel_ls
+    VehicleTypeModel_ls <- loadPackageDataset("VehicleTypeModel_ls","VEHouseholdVehicles")
     VehType_Hx <-
       applyBinomialModel(
         VehicleTypeModel_ls,

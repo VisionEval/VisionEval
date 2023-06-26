@@ -1103,7 +1103,7 @@ CalculateVehicleOperatingCost <- function(L) {
   #Proportion of vehicle DVMT on urban roads
   UrbanVmtProp_Ve <- L$Year$Household$UrbanDvmtProp[HhToVehIdx_Ve]
 
-  OpCosts_ls <- VETravelPerformance::OpCosts_ls
+  OpCosts_ls <- loadPackageDataset("OpCosts_ls","VETravelPerformance")
 
   #Calculate vehicle cost components
   #---------------------------------

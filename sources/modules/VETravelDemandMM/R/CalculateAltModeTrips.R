@@ -222,6 +222,15 @@ CalculateAltModeTripsSpecifications <- list(
       ISELEMENTOF = ""
     ),
     visioneval::item(
+      NAME = "Marea",
+      TABLE = "Household",
+      GROUP = "Year",
+      TYPE = "character",
+      UNITS = "ID",
+      PROHIBIT = "",
+      ISELEMENTOF = ""
+    ),
+    visioneval::item(
       NAME = "LocType",
       TABLE = "Household",
       GROUP = "Year",
@@ -554,15 +563,14 @@ CalculateAltModeTrips <- function(L) {
            AADVMT = Dvmt,
            LogIncome=log1p(Income),
            DrvAgePop=HhSize - Age0to14,
-           VehPerDriver=ifelse(Drivers==0 || is.na(Drivers), 0, Vehicles/Drivers),
+           VehPerDriver=ifelse(Drivers==0 | is.na(Drivers), 0, Vehicles/Drivers),
            LifeCycle = as.character(LifeCycle),
            LifeCycle = ifelse(LifeCycle=="01", "Single", LifeCycle),
            LifeCycle = ifelse(LifeCycle %in% c("02"), "Couple w/o children", LifeCycle),
            LifeCycle = ifelse(LifeCycle %in% c("00", "03", "04", "05", "06", "07", "08"), "Parents w/ children", LifeCycle),
            LifeCycle = ifelse(LifeCycle %in% c("09", "10"), "Empty Nester", LifeCycle)
     ) %>%
-    left_join(Bzone_df, by="Bzone") %>%
-    crossing(Marea_df)
+    left_join(Bzone_df, by="Bzone") %>% left_join(Marea_df, by="Marea")
   
   #D_df <- D_df %>%
   #  crossing(Marea_df, by="Marea")

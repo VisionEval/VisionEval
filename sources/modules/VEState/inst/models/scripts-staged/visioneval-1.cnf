@@ -1,0 +1,10 @@
+Notes:
+- VE-State State 1 (Population Synthesis)
+- Model Script varies by stage
+- Years, BaseYear set for the model
+- Scenario Description: ModelScript, Scenario, Description
+
+# Scenario description
+ModelScript    : run_stage_1.R
+Scenario       : VE-State Stage 1
+Description    : Population Synthesis for Base (2010) and Future (2038)

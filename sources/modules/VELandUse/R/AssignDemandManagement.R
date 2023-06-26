@@ -93,8 +93,8 @@ rm(Inp_ls, TdmParameters_df, PropDvmtReduce_)
 #by household including tabulations of total tour mileage, work tour mileage,
 #work tour mileage per worker, number of workers, and household size
 TourMiles_df <- local({
-  NhtsTours_df <- VE2001NHTS::HhTours_df
-  NhtsHouseholds_df <- VE2001NHTS::Hh_df
+  NhtsTours_df <- loadPackageDataset("HhTours_df","VE2001NHTS")
+  NhtsHouseholds_df <- loadPackageDataset("Hh_df","VE2001NHTS")
   IsHhVehTour_ <- with(NhtsTours_df, Mode %in% c("Auto", "LtTrk"))
   VehTours_df <- NhtsTours_df[IsHhVehTour_,]
   TourMiles_Hh <-
@@ -395,7 +395,7 @@ AssignDemandManagement <- function(L) {
   #-----------------------------------------------
   #Calculate the proportion of household DVMT that worker DVMT per
   #worker
-  if ( ! exists("TdmModel_ls") ) TdmModel_ls <- VELandUse::TdmModel_ls
+  if ( ! exists("TdmModel_ls") ) TdmModel_ls <- loadPackageDataset("TdmModel_ls","VELandUse")
   HhSizeIdx_ <- L$Year$Household$HhSize
   HhSizeIdx_[HhSizeIdx_ > 8] <- 8
   PropMilesPerWkr_Hh <- TdmModel_ls$PropMilesPerWkr[HhSizeIdx_]

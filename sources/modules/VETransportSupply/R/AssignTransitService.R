@@ -256,8 +256,6 @@ TransitParam_ls <- estimateTransitModel()
 BusEquivalents_df <- TransitParam_ls$BusEquivalents_df
 UZABusEqRevMile_df <- TransitParam_ls$UZABusEqRevMile_df
 VehMiFactors_df <- TransitParam_ls$VehMiFactors_df
-rm(AgencyInp_ls)
-rm(ServiceInp_ls)
 
 #Save the bus equivalency factors
 #--------------------------------
@@ -542,7 +540,7 @@ AssignTransitService <- function(L) {
   #Fix seed as synthesis involves sampling
   set.seed(L$G$Seed)
   #Define vector of modes
-  BusEquivalents_df <- VETransportSupply::BusEquivalents_df
+  BusEquivalents_df <- loadPackageDataset("BusEquivalents_df","VETransportSupply")
   Md <- as.character(BusEquivalents_df$Mode)
   #Define vector of Mareas
   Ma <- L$Year$Marea$Marea
@@ -571,7 +569,7 @@ AssignTransitService <- function(L) {
   #Calculate vehicle miles by vehicle type
   #---------------------------------------
   #Make vector of vehicle miles factors conforming with RevMi_df
-  VehMiFactors_df <- VETransportSupply::VehMiFactors_df
+  VehMiFactors_df <- loadPackageDataset("VehMiFactors_df","VETransportSupply")
   VehMiFactors_Md <- VehMiFactors_df$VehMiFactors
   names(VehMiFactors_Md) <- VehMiFactors_df$Mode
   VehMiFactors_Md <- VehMiFactors_Md[names(RevMi_df)]

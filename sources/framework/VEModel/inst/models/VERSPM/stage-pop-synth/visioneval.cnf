@@ -1,0 +1,9 @@
+Notes:
+- Descriptive elements of population synthesis stage
+
+# Scenario description
+ModelScript    : run_popsyn.R
+Scenario       : VERSPM RVMPO Population
+Description    : Pre-build Population for Base (2010) and Future (2038)
+BaseYear       : 2010
+Years          : [ 2010, 2038 ]

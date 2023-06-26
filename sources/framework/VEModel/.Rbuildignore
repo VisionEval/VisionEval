@@ -1,0 +1,8 @@
+^\.Rproj\.user$
+.VEbuildignore
+.Renviron
+.Rhistory
+tests/
+launch.bat
+extensions/
+previous.scenarios/

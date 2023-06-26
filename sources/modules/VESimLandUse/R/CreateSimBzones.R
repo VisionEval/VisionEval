@@ -465,7 +465,7 @@ visioneval::savePackageDataset(CreateSimBzonesSpecifications, overwrite = TRUE)
 #' amount of activity (households and jobs) in each SimBzone.
 #' @export
 allocateActivityToSimBzones <- function(Activity, LocType) {
-  SimBzone_ls <- VESimLandUse::SimBzone_ls
+  SimBzone_ls <- loadPackageDataset("SimBzone_ls","VESimLandUse")
   Size <- switch(LocType,
                  Rural = SimBzone_ls$RuProfiles$MedianSimBzoneSize,
                  Town = SimBzone_ls$TnProfiles$MedianSimBzoneSize,
@@ -590,7 +590,7 @@ calcDensityDistribution <-
 
     #Get initial values for density distribution, and average density by level
     #-------------------------------------------------------------------------
-    SimBzone_ls <- VESimLandUse::SimBzone_ls
+    SimBzone_ls <- loadPackageDataset("SimBzone_ls","VESimLandUse")
     Bz <- Bz_df$Bzone
     Activity_Bz <- setNames(Bz_df$Activity, Bz_df$Bzone)
     #If LocType is Rural
@@ -1145,7 +1145,7 @@ CreateSimBzones <- function(L) {
   #Set random seed
   set.seed(L$G$Seed)
   #Load model data
-  SimBzone_ls <- VESimLandUse::SimBzone_ls
+  SimBzone_ls <- loadPackageDataset("SimBzone_ls","VESimLandUse")
 
   #Allocate households to location types
   #-------------------------------------

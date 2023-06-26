@@ -1,0 +1,84 @@
+// Default VisionEval run parameters file
+// This file is in JSON format
+// Wrap everything in curly braces to create a single JSON object
+// The object has a series of attributes (names) which are are the configuration values
+//
+// This file lists all available VisionEval run parameters
+// Each parameter is described and listed with its default value
+// Alternate values are suggested in comments
+//
+// For you "old school VisionEvaluators", the only parameters currently nailed to initializeModel
+//   is the DatastoreName parameter, which triggers loading a Datastore (the LoadDatastore flag
+//   is optional; it will be set TRUE if DatastoreName is empty).
+// Also, configuration files are "cascading", and parameters will be sought in the following
+// places:
+//     - runtime root (this file, which is intended to establish the input and results directories)
+//     - "models" directory (possibly non-standard location if set here)
+//     - specific model directory
+//     - model defs directory from run_parameters.json (directory and filename configurable here)
+//     - parameters passed to initializeModel (from run_model.R, whose name is also configurable)
+//     - parameters set in a RunParam_ls list (R object) prior to running the model
+//
+// Configuration files can have the name of your choice from the following list:
+//     - visioneval.json
+//     - .visioneval (like a Linux/Unix profile - still in JSON format, however)
+//     - visioneval.cnf (still JSON format)
+//     - run_parameters.json (yes, you can put that at any level; it is required to exist by that
+//         name in 'defs')
+//
+// Files will be sought in that specific order, and the first one found in a particular directory
+// will be the one that is used, even if others exist. If you run a model with log="trace", it will
+// tell you which files it used, and which configuration parameters were loaded from each file, so
+// if something is "off" you can figure out exactly where it went wrong.
+//
+// Update list of available parameters by doing this from a unix-like shell:
+//     cd VE/sources; find sources -name '*.R' -exec grep "getRunParameter" \{\} \;
+// Or the equivalent in your capable text editor.
+//
+// This file defines everything sensibly with the default you will get if you
+//   remove the parameter from all configuration files.
+// Parameters commented out below are always overridden sensibly at runtime by the
+//   VEModel/VEScenario API
+{
+  // Runtime Environment Standard locations (relative to ve.runtime)
+  // These will rarely need to be changed
+  "ModelRoot"          : "models", // Location to look by default for VEModel::openModel, relative to ve.runtime
+
+  // Names of standard model files (could redefine for individual models)
+  // Rarely need to be changed (RunParamFile is for backward compatibility)
+  "ModelScriptFile"    : "run_model.R",
+  "ModelStateFileName" : "ModelState.Rda",
+  "DatastoreName"      : "Datastore",
+  "RunParamFile"       : "run_parameters.json",
+  "GeoFile"            : "geo.csv",
+  "UnitsFile"          : "units.csv",
+  "DeflatorsFile"      : "deflators.csv",
+  "ModelParamFile"     : "model_parameters.json", // sought in "inputs" first, then "defs"
+
+  // Structure of model inputs and outputs (set globally or on a per-model basis prior to running)
+  "InputDir"           : "inputs",   // Location of inputs, relative to InputPath
+  "ResultsDir"         : ".",        // location of Datastore and ModelState.rda relative to ModelDir
+  "OutputDir"          : "output",   // location of extracts and query results relative to ResultsDir
+                                     //  or ModelDir (multiple scenarios)
+  "ParamDir"           : "defs",     // Location of model definitions relative to InputPath
+
+  // Parameters that can be either global or set in a model
+  "DatastoreType"    : "RD",       // can redefine this model-by-model if desired
+  "SaveDatastore"    : true,       // often overridden at runtime
+  "Seed"             : 1           // Default is 1 if not overridden at runtime
+
+  // Parameters that should be set in visioneval.cnf for the model
+  // "Model"            : "VERSPM Test",
+  // "Region"           : "RVMPO",             // Could also set at model root
+  // "BaseYear"         : "2010",              // Could also set at model root
+
+  // Parameters that should be set for a model stage (or for the model, if only one stage)
+  // "InputPath"        : [], // This parameter exists but you should just let VEModel set it unless
+                              // building scenarios.
+                              // This is a vector of root locations to seek InputDirName.
+                              // When an input file is sought, the first version found in
+                              // InputPath/InputDirName is used (allows scenario overrides).
+  // "Years"            : ["2010", "2038"],    // Could also set at model root
+  // "Scenario"         : "Test",              // VEScenario overrides this
+  // "Description"      : "Test of VERSPM",    // VEScenario overrides this
+}

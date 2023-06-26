@@ -58,7 +58,7 @@
 #Create model estimation dataset
 #-------------------------------
 #Load selected data from VE2001NHTS package
-Hh_df <- VE2001NHTS::Hh_df
+Hh_df <- loadPackageDataset("Hh_df","VE2001NHTS")
 FieldsToKeep_ <-
   c("NumVeh", "Income", "Hbppopdn", "Hhsize", "Hometype", "UrbanDev", "FwyLnMiPC",
     "Wrkcount", "Drvrcnt", "Age0to14", "Age65Plus", "MsaPopDen", "BusEqRevMiPC")
@@ -221,6 +221,7 @@ AssignVehicleOwnershipSpecifications <- list(
       GROUP = "Year",
       TYPE = "compound",
       UNITS = "VEH/DRV",
+      SIZE = 0,
       NAVALUE = -1,
       PROHIBIT = c("NA", "< 0"),
       ISELEMENTOF = "",
@@ -443,6 +444,7 @@ visioneval::savePackageDataset(AssignVehicleOwnershipSpecifications, overwrite =
 #' specifications for the module.
 #' @name AssignVehicleOwnership
 #' @import visioneval ordinal
+#' @importFrom utils tail
 #' @export
 AssignVehicleOwnership <- function(L) {
   #Set up
@@ -470,7 +472,7 @@ AssignVehicleOwnership <- function(L) {
 
   #Make a vehicle probability matrix
   #---------------------------------
-  AutoOwnModels_ls <- VEHouseholdVehicles::AutoOwnModels_ls
+  AutoOwnModels_ls <- loadPackageDataset("AutoOwnModels_ls","VEHouseholdVehicles")
 
   #Identify Urban households
   IsUrban <- Hh_df$LocType == "Urban"
@@ -542,7 +544,7 @@ AssignVehicleOwnership <- function(L) {
         NumToChg <- ChgVehByCategory_[Cat]
         ChgProb_ <- VehicleProb_HhNv[HhIdxToChg_, Cat]
       }
-      IdxToChg_ <- tail(HhIdxToChg_[order(ChgProb_)], abs(NumToChg))
+      IdxToChg_ <- utils::tail(HhIdxToChg_[order(ChgProb_)], abs(NumToChg))
       VehiclesChg_[IdxToChg_] <- sign(NumToChg)
     }
     #Calculate the adjusted number of vehicles

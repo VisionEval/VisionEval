@@ -29,7 +29,6 @@ zip(installer.base,".",
     # No explanation, e.g., why "*.gitignore*" or "*.Rbuildignore" finds them in all subdirectories
     # but *.Rdata* only leaves them out of subdirectories and we need a second pattern for the root
     ".Renviron",        # This will get regenerated on install
-    "*.md",             # These have been built into 'docs'
     "*.gitignore*",     # Not relevant for installer
     "*.Rbuildignore*",
     "*/*.Rproj",        # Exclude in subdirectories
@@ -55,7 +54,7 @@ cat("Adding",basename(ve.docs),"to runtime base...")
 #   zip(installer.base,file.path(basename(dirname(f)),basename(f)),flags=c("-9Xq")) # originally -r9Xq: end user only gets root.
 # }
 setwd(ve.docs)
-docs <- dir(pattern="*\\.pdf")
+docs <- dir(pattern="\\.pdf$") # Pick up PDFs in the root of the "docs" directory
 for ( f in docs ) {
   zip(installer.base,f,flags=c("-9Xq"))
 }

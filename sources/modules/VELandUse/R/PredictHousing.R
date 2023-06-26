@@ -68,8 +68,9 @@
 #' PrepFun: a function that prepares inputs to be applied in the binomial model,
 #' OutFun: a function that transforms the result of applying the binomial model.
 #' Summary: the summary of the binomial model estimation results.
-#' @import visioneval stats
+#' @import visioneval stats VESimHouseholds
 #' @importFrom utils capture.output
+
 #Define function to estimate the income model
 estimateHousingModel <- function(Data_df, StartTerms_) {
   #Define function to prepare inputs for estimating model
@@ -135,7 +136,8 @@ estimateHousingModel <- function(Data_df, StartTerms_) {
 #Estimate the binomial logit model
 #---------------------------------
 #Load the household estimation data
-Hh_df <- VESimHouseholds::Hh_df
+#'@import VESimHouseholds
+Hh_df <- loadPackageDataset("Hh_df","VESimHouseholds")
 #Select regular households
 Hh_df <- Hh_df[Hh_df$HhType == "Reg",]
 Hh_df$Income[Hh_df$Income == 0] <- 1
@@ -508,6 +510,71 @@ PredictHousingSpecifications <- list(
 visioneval::savePackageDataset(PredictHousingSpecifications, overwrite = TRUE)
 
 
+#Define a Validation Function for some of the input files
+#--------------------------------------------------------
+#' Validation function for checking input files (optional)
+#'
+#' Validation function takes a data.frame and a file name from which the data.frame was
+#' loaded and does basic sanity checks, returning a (possibly empty) report. see
+#' \code{visioneval::processModuleInputs}. The file name should be one listed in the
+#' "Inp" section of the module Specifications
+#'
+#' The specific check for PredictHouseing warn if the income quartiles add up to more than
+#' 100% and if the total housing units of all types add up to zero.
+#'
+#' @param File The name of the file from which Data_df was loaded (to select the test)
+#' @param Data_df A data.frame loaded from the named file
+#' @return A list of two lists, Errors and Warnings, which will be empty if no errors
+#    were encountered, and will have messages if there were problems.
+#' @export
+# sources\modules\VELandUse\r\PredictHousing.R:       FILE = "bzone_dwelling_units.csv",
+# sources\modules\VELandUse\r\PredictHousing.R:       FILE = "bzone_hh_inc_qrtl_prop.csv",
+# -- Bzone_hhincquartile.csv:  that add up to more than 100%
+# -- Bzone_dwelling_units.csv: SFDU & MFDU & GQDU all = 0
+PredictHousingValidateInputFile <- function( File, Data_df ) {
+  FileValidation_ls <- list(Errors=character(0),Warnings=character(0))
+  if ( inherits(Data_df,"data.frame") && is.character(File) && nzchar(File[1]) ) {
+    if ( File == "bzone_hh_inc_qrtl_prop.csv" ) {
+      badPercent <- which(
+        {
+          # Error if total of all four quartiles is greater than 100%
+          IncProp <- with( Data_df, HhPropIncQ1 + HhPropIncQ2 + HhPropIncQ3 + HhPropIncQ4 )
+          is.na(IncProp) | IncProp > 100
+        }
+      )
+      if ( any(badPercent) ) {
+        Msg <- paste(
+          c(
+            "These BZones have income quartiles summing to more than 100%:",
+            paste0(Data_df$Geo[badPercent],"(",Data_df$Year[badPercent],")")
+          )
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+        # NOTE: this is reported as an error so the model will crash if there are any failed Bzones.
+        # Should it just be a warning? Should we create a VE run parameter to control behavior?
+      }
+    } else if ( File == "bzone_dwelling_units.csv" ) {
+      noHousing <- which(
+        {
+          # Error if there is not at least one housing unit of any type
+          TotDU <- with( Data_df, SFDU + MFDU + GQDU )
+          is.na(TotDU) | TotDU < 1
+        }
+      )
+      if ( any(noHousing) ) {
+        Msg <- paste(
+          c(
+            "These BZones have no housing units:",
+            paste0(Data_df$Geo[noHousing],"(",Data_df$Year[noHousing],")")
+          )
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+      }
+    }
+  }
+  return(FileValidation_ls)
+}
+
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
 #=======================================================
@@ -558,19 +625,25 @@ visioneval::savePackageDataset(PredictHousingSpecifications, overwrite = TRUE)
 #' @name ipf
 #' @import visioneval
 #' @export
-ipf <-
-  function(Seed_ar, MrgnVals_ls, MrgnDims_ls, RmseTarget = 1e-5, MaxIter = 100) {
+ipf <- function(Seed_ar, MrgnVals_ls, MrgnDims_ls, RmseTarget = 1e-5, MaxIter = 100) {
+
+    # TODO: consolidate package parameter defaults into one place (see HighDensityThreshold)
+    packageParams <- visioneval::getRunParameter("VELandUse",Default=list(fixIPF=1))
+    ipfFix <- if ( ! "ipfFix" %in% names(packageParams) ) 1 else packageParams$ipfFix
+      # packageParams might be set but contain only other parameters
+    getZeroCells <- if ( ipfFix == 0 ) function(x){0} else function(x){x==0}
+
     #Eliminate zero values in margins
     MrgnVals_ls <-
       lapply(MrgnVals_ls, function(x) {
-        x[x = 0] <- 1e-6
+        x[getZeroCells(x)] <- 1e-6
         x
       })
     #Starting value for Units_ar
     Units_ar <- Seed_ar
     #Function to sum up Units_ar by margin
     sumArray <- function(MrgnDims_) {
-      apply(Units_ar, MrgnDims_, sum)
+      apply(Units_ar, MrgnDims_, sum, na.rm=TRUE)
     }
     #Function to calculate RMSE error
     rmse <- function() {
@@ -580,13 +653,14 @@ ipf <-
       for (i in 1:length(MrgnDims_ls)) {
         MrgnSums_ <- c(MrgnSums_, as.vector(sumArray(MrgnDims_ls[[i]])))
       }
-      Err_ <- MrgnVals_ - MrgnSums_;
+      Err_ <- MrgnVals_ - MrgnSums_
       sqrt(sum(Err_^2) / (length(Err_)))
     }
     #Balance unit match or iterations exceeded
     NumIter <- 0
     RmseErr <- rmse()
-    while (RmseErr > RmseTarget & NumIter < MaxIter) {
+    writeLog( paste("RmseErr:",RmseErr,"; RmseTarget:",RmseTarget), Level="debug" )
+    while (all(RmseErr > RmseTarget & NumIter < MaxIter)) {
       for (i in 1:length(MrgnDims_ls)) {
         MrgnSum_ar <- sumArray(MrgnDims_ls[[i]])
         MrgnAdj_ar <- MrgnVals_ls[[i]] / MrgnSum_ar
@@ -647,12 +721,16 @@ PredictHousing <- function(L) {
       L$Year$Household$Azone[!IsGQ_Hh]
     )
   Az <- names(Hh_df_Az)
-  HouseTypeModel_ls <- VELandUse::HouseTypeModel_ls
+  HouseTypeModel_ls <- loadPackageDataset("HouseTypeModel_ls","VELandUse")
   for (az in Az) {
     #Calculate the single family housing proportion
     SFDU <- sum(L$Year$Bzone$SFDU[L$Year$Bzone$Azone == az])
     MFDU <- sum(L$Year$Bzone$MFDU[L$Year$Bzone$Azone == az])
-    PropSFDU <- SFDU / (SFDU + MFDU)
+    AllDU <- SFDU + MFDU
+    MissingHouseholds <- AllDU == 0
+    PropSFDU <- ifelse( ! MissingHouseholds,  SFDU / AllDU, 1.0 )
+    L$Year$Bzone$SFDU[ L$Year$Bzone$Azone == az & MissingHouseholds ] <- 1.0 # Force at least one household
+
     #Predict housing type
     HouseType_ <- applyBinomialModel(
       HouseTypeModel_ls,
@@ -662,8 +740,8 @@ PredictHousing <- function(L) {
     Hh_df_Az[[az]]$HouseType <- HouseType_
     names(HouseType_) <- Hh_df_Az[[az]]$HhId
     HouseType_Hh[names(HouseType_)] <- HouseType_
-    rm(SFDU, MFDU, PropSFDU, HouseType_)
   }
+  rm(SFDU, MFDU, PropSFDU, HouseType_)
   
   #Tabulate households by house type, income quartile, and Azone
   #-------------------------------------------------------------
@@ -711,7 +789,10 @@ PredictHousing <- function(L) {
   Bz <- L$Year$Bzone$Bzone
   rownames(HhIqProp_BzIq) <- Bz
   #Make sure that rows add to 1
-  HhIqProp_BzIq <- t(apply(HhIqProp_BzIq, 1, function(x) x / sum(x)))
+  HhIqProp_BzIq <- t(apply(HhIqProp_BzIq, 1, function(x) {
+    sumx <- sum(x)
+    if ( sumx > 0 ) x / sumx else rep(1/length(x),length(x))
+  }))
   
   #Balance housing units with housing demand and assign households to locations
   #----------------------------------------------------------------------------
@@ -749,6 +830,7 @@ PredictHousing <- function(L) {
     Bx <- L$Year$Bzone$Bzone[L$Year$Bzone$Azone == az]
     #If only one Bzone then all Azone households are in the Bzone
     if (length(Bx) == 1) {
+      writeLog( paste("Predict Housing for one Bzone in Azone",az), Level="warn" )
       Hh_df_Az[[az]]$Bzone <- rep(Bx, nrow(Hh_df_Az[[az]]))
       #Put results in Bzone_Hh
       Bzone_Hx <- Hh_df_Az[[az]]$Bzone
@@ -756,6 +838,7 @@ PredictHousing <- function(L) {
       Bzone_Hh[names(Bzone_Hx)] <- Bzone_Hx
       rm(Bzone_Hx)
     } else {
+      writeLog( paste("Predict Housing for",length(Bx),"Bzones in Azone",az), Level="info" )
       #Create matrices of margin totals
       #--------------------------------
       #Extract the unit demand by type and income quartile for households in Azone
@@ -795,7 +878,9 @@ PredictHousing <- function(L) {
       Ipf_ls <-
         ipf(Seed_BxHtIq,
             MrgnVals_ls = list(UnitDemand_BxHt, UnitDemand_HtIq),
-            MrgnDims_ls = list(c(1,2), c(2,3)))
+            MrgnDims_ls = list(c(1,2), c(2,3)),
+            RmseTarget=1.4e-5, MaxIter = 100
+            )
       Units_BxHtIq <- Ipf_ls$Units_ar
       if (Ipf_ls$NumIter == Ipf_ls$MaxIter) {
         Msg <-
@@ -805,15 +890,20 @@ PredictHousing <- function(L) {
                  " went to maximum number of iterations (", Ipf_ls$MaxIter,
                  ") without achieving RMSE criterion for margin control totals. ",
                  " RMSE error achieved was ", Ipf_ls$RmseErr, ".")
-        writeLog(Msg)
+        writeLog(Msg,Level="warn")
         rm(Msg)
+      } else if ( Ipf_ls$RmseErr > 1e-5 ) {
+        writeLog(paste("Undesirable RmseErr:",Ipf_ls$RmseErr,"after",Ipf_ls$MaxIter,"iterations in Azone",az),Level="info")
+      } else {
+        writeLog(paste("Total Iterations:",Ipf_ls$NumIter),Level="info")
       }
       rm(Seed_BxHtIq, UnitDemand_BxHt, Ipf_ls)
       #Convert allocation to whole numbers
       Units_BxHtIq <- round(Units_BxHtIq)
-      Units_HtIq <- apply(Units_BxHtIq, c(2,3), sum)
+      Units_HtIq <- apply(Units_BxHtIq, c(2,3), sum, na.rm=TRUE)
       UnitDiff_HtIq <-  UnitDemand_HtIq - Units_HtIq
       BxPropUnits_BxHtIq <- sweep(Units_BxHtIq, c(2,3), Units_HtIq, "/")
+      BxPropUnits_BxHtIq[is.na(BxPropUnits_BxHtIq)] <- 0
       for (ht in Ht) {
         for (iq in Iq) {
           UnitDiff_By <- table(
@@ -844,6 +934,8 @@ PredictHousing <- function(L) {
     }
   }
   
+  writeLog("Predict Housing Assigning Group Quarters",Level="info")
+  
   #Assign group quarters households to Bzones
   #------------------------------------------
   #Iterate through Azones to assign Bzones
@@ -856,6 +948,7 @@ PredictHousing <- function(L) {
     GQUnitDemand <- sum(IsGQ_Hh[L$Year$Household$Azone == az])
     #Continue calculating if any GQ demand
     if (GQUnitDemand >= 1) {
+      writeLog(paste("GQUnitDemand in Azone",az,"is",GQUnitDemand),Level="info")
       #If only one Bzone then all GQ households are in that Bzone
       if (length(Bx) == 1) {
         Bzone_Hx <- rep(Bx, GQUnitDemand)
@@ -864,6 +957,10 @@ PredictHousing <- function(L) {
         Bzone_Hh[names(Bzone_Hx)] <- Bzone_Hx
       } else {
         #Scale Bzone demand to match overall demand
+        if ( sum(GQUnits_Bx)<=0 ) {
+          writeLog(paste("GQUnitDemand",GQUnitDemand,"but no GQUnits_Bx in Azone",az,"- adding to first Bzone"),Level="error")
+          GQUnits_Bx[1] <- GQUnitDemand # Put them all in fhe first Bzone
+        }
         GQUnitDemand_Bx <- round(GQUnitDemand * GQUnits_Bx / sum(GQUnits_Bx))
         UnitDiff <- GQUnitDemand - sum(GQUnitDemand_Bx)
         UnitDiff_By <-
@@ -877,7 +974,7 @@ PredictHousing <- function(L) {
           L$Year$Household$HhId[IsGQ_Hh & L$Year$Household$Azone == az]
         Bzone_Hh[names(Bzone_Hx)] <- Bzone_Hx
       }
-    }
+    } else writeLog(paste("No GQUnitDemand in Azone",az),Level="warn")
   }
   
   #Tabulate households, population, workers, and units by Bzone

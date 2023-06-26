@@ -33,6 +33,9 @@
 #' @param ToUnits a string identifying the units of measure to convert the
 #' Values_ to. If the ToUnits are 'default' the Values_ are converted to the
 #' default units for the model.
+#' @param Years is a named list with FromYears and ToYears, either of which can be not present (or
+#'   set explicitly to NA). Default value is an empty list, so trying to access FromYears or ToYears
+#'   yields NA If Years is complete and any part of the From/To Units are currencies, deflate them.
 #' @return A list containing the converted values and additional information as
 #' follows:
 #' Values - a numeric vector containing the converted values.
@@ -42,142 +45,165 @@
 #' Warnings - a string containing a warning message or character(0) if no
 #' warning.
 #' @export
-convertUnits <-
-  function(Values_, DataType, FromUnits, ToUnits = "default") {
-    #Define return value template
-    Result_ls <- list(
-      Values = Values_,
-      FromUnits = FromUnits,
-      ToUnits = ToUnits,
-      Errors = character(0),
-      Warnings = character(0)
-    )
-    #Check FromUnits
-    FromUnits_ls <- checkUnits(DataType, FromUnits)
-    #Exit if there are errors in FromUnits
-    if (length(FromUnits_ls$Errors) != 0) {
+convertUnits <- function(Values_, DataType, FromUnits, ToUnits = "default",Years=list()) {
+  #Define return value template
+  Result_ls <- list(
+    Values = Values_,
+    FromUnits = FromUnits,
+    ToUnits = ToUnits,
+    Errors = character(0),
+    Warnings = character(0)
+  )
+  #Check FromUnits
+  FromUnits_ls <- checkUnits(DataType, FromUnits)
+  #Exit if there are errors in FromUnits
+  if (length(FromUnits_ls$Errors) != 0) {
+    Msg <- paste0(
+      "Can't convert units because of error in FromUnits argument (",
+      FromUnits, ") as follows: ",
+      FromUnits_ls$Errors)
+    Result_ls$Errors <- Msg
+    return(Result_ls)
+  }
+  #Exit if the FromUnits are simple
+  if (FromUnits_ls$UnitType == "simple") {
+    Msg <- paste0(
+      "Can't convert units because FromUnits (", FromUnits, ") ",
+      "are 'simple' type units. Only 'complex' and 'compound' units ",
+      "have specified units that may be converted.")
+    Result_ls$Errors <- Msg
+    return(Result_ls)
+  }
+  #Check ToUnits if not 'default'
+  if (ToUnits != "default") {
+    ToUnits_ls <- checkUnits(DataType, ToUnits)
+    #Exit if there are errors in ToUnits
+    if (length(ToUnits_ls$Errors) != 0) {
       Msg <- paste0(
-        "Can't convert units because of error in FromUnits argument (",
-        FromUnits, ") as follows: ",
-        FromUnits_ls$Errors)
+        "Can't convert units because of error in ToUnits argument (",
+        ToUnits, ") as follows: ",
+        ToUnits_ls$Errors)
       Result_ls$Errors <- Msg
       return(Result_ls)
     }
-    #Exit if the FromUnits are simple
-    if (FromUnits_ls$UnitType == "simple") {
+    #Exit if ToUnits are simple
+    if (ToUnits_ls$UnitType == "simple") {
       Msg <- paste0(
-        "Can't convert units because FromUnits (", FromUnits, ") ",
+        "Can't convert units because ToUnits (", ToUnits, ") ",
         "are 'simple' type units. Only 'complex' and 'compound' units ",
         "have specified units that may be converted.")
       Result_ls$Errors <- Msg
       return(Result_ls)
     }
-    #Check ToUnits if not 'default'
-    if (ToUnits != "default") {
-      ToUnits_ls <- checkUnits(DataType, ToUnits)
-      #Exit if there are errors in ToUnits
-      if (length(ToUnits_ls$Errors) != 0) {
-        Msg <- paste0(
-          "Can't convert units because of error in ToUnits argument (",
-          ToUnits, ") as follows: ",
-          ToUnits_ls$Errors)
-        Result_ls$Errors <- Msg
-        return(Result_ls)
-      }
-      #Exit if ToUnits are simple
-      if (ToUnits_ls$UnitType == "simple") {
-        Msg <- paste0(
-          "Can't convert units because ToUnits (", ToUnits, ") ",
-          "are 'simple' type units. Only 'complex' and 'compound' units ",
-          "have specified units that may be converted.")
-        Result_ls$Errors <- Msg
-        return(Result_ls)
-      }
+  }
+  #Get the ToUnits information if ToUnits is 'default'
+  if (ToUnits == "default") {
+    ToUnits_ls <- list(
+      DataType = DataType,
+      UnitType = FromUnits_ls$UnitType,
+      Units = character(0),
+      Elements = list(),
+      Errors = character(0)
+    )
+    if (ToUnits_ls$UnitType %in% c("currency","complex") ) {
+      ToUnits_ls$Units <- getUnits(ToUnits_ls$DataType)
     }
-    #Get the ToUnits information if ToUnits is 'default'
-    if (ToUnits == "default") {
-      ToUnits_ls <- list(
-        DataType = DataType,
-        UnitType = FromUnits_ls$UnitType,
-        Units = character(0),
-        Elements = list(),
-        Errors = character(0)
-      )
-      if (ToUnits_ls$UnitType == "complex") {
-        ToUnits_ls$Units <- getUnits(ToUnits_ls$DataType)
+    if (ToUnits_ls$UnitType == "compound") {
+      ToUnits_ls$Elements$Types <- FromUnits_ls$Elements$Types
+      ToUnits_ls$Elements$Units <- getUnits(FromUnits_ls$Elements$Types)
+      ToUnits_ls$Elements$Operators <- FromUnits_ls$Elements$Operators
+      makeUnitExpr <- function(Units_, Ops_) {
+        UnitIdx_ <- seq(1, 2*length(Units_) - 1, by = 2)
+        OpIdx_ <- seq(2, 2*length(Ops_), by = 2)
+        Result_ <- character(length(UnitIdx_) + length(OpIdx_))
+        Result_[UnitIdx_] <- Units_
+        Result_[OpIdx_] <- Ops_
+        paste(Result_, collapse = "")
       }
-      if (ToUnits_ls$UnitType == "compound") {
-        ToUnits_ls$Elements$Types <- FromUnits_ls$Elements$Types
-        ToUnits_ls$Elements$Units <- getUnits(FromUnits_ls$Elements$Types)
-        ToUnits_ls$Elements$Operators <- FromUnits_ls$Elements$Operators
-        makeUnitExpr <- function(Units_, Ops_) {
-          UnitIdx_ <- seq(1, 2*length(Units_) - 1, by = 2)
-          OpIdx_ <- seq(2, 2*length(Ops_), by = 2)
-          Result_ <- character(length(UnitIdx_) + length(OpIdx_))
-          Result_[UnitIdx_] <- Units_
-          Result_[OpIdx_] <- Ops_
-          paste(Result_, collapse = "")
-        }
-        ToUnits_ls$Units <-
-          makeUnitExpr(ToUnits_ls$Elements$Units, ToUnits_ls$Elements$Operators)
-      }
-      ToUnits <- ToUnits_ls$Units
-      Result_ls$ToUnits <- ToUnits
+      ToUnits_ls$Units <-
+      makeUnitExpr(ToUnits_ls$Elements$Units, ToUnits_ls$Elements$Operators)
     }
-    #If UnitType is "complex" convert units and exit
-    if (FromUnits_ls$UnitType == "complex") {
-      Factor <- Types()[[DataType]]$units[[FromUnits]][ToUnits]
-      Result_ls$Values <- Values_ * Factor
-      return(Result_ls)
+    ToUnits <- ToUnits_ls$Units
+    Result_ls$ToUnits <- ToUnits
+  }
+
+  #If UnitType is "complex" convert units and exit
+  if (FromUnits_ls$UnitType == "complex") {
+    Factor <- Types()[[DataType]]$units[[FromUnits]][ToUnits]
+    Result_ls$Values <- Values_ * Factor
+    return(Result_ls)
+  }
+
+  # If UnitType is "currency" deflate currency and exit
+  if (FromUnits_ls$UnitType == "currency") {
+    if (!is.null(Years$ToYear) && !is.null(Years$FromYear) && isTRUE(Years$FromYear != Years$ToYear)) {
+      Values_ <- deflateCurrency(Values_, Years$FromYear, Years$ToYear)
     }
-    #If UnitType is "compound", determine if conversion possible
-    #Return error if not.
-    compareCompoundUnits <- function(From_ls, To_ls) {
-      IsDiffLength <-
-        (length(From_ls$Elements$Units) != length(To_ls$Elements$Units)) |
-        (length(From_ls$Elements$Operators) != length(To_ls$Elements$Operators))
-      if (IsDiffLength) {
+    Result_ls$Values <- Values_
+    return(Result_ls)
+  }
+
+  #If UnitType is "compound", determine if conversion possible
+  #Return error if not.
+  compareCompoundUnits <- function(From_ls, To_ls) {
+    IsDiffLength <-
+    (length(From_ls$Elements$Units) != length(To_ls$Elements$Units)) ||
+    (length(From_ls$Elements$Operators) != length(To_ls$Elements$Operators))
+    if (IsDiffLength) {
+      return(FALSE)
+    } else {
+      IsDiffTypes <- !all(From_ls$Elements$Types == To_ls$Elements$Types)
+      IsDiffOps <- !all(From_ls$Elements$Operators == To_ls$Elements$Operators)
+      if (IsDiffTypes | IsDiffOps) {
         return(FALSE)
       } else {
-        IsDiffTypes <- !all(From_ls$Elements$Types == To_ls$Elements$Types)
-        IsDiffOps <- !all(From_ls$Elements$Operators == To_ls$Elements$Operators)
-        if (IsDiffTypes | IsDiffOps) {
-          return(FALSE)
-        } else {
-          return(TRUE)
-        }
+        return(TRUE)
       }
     }
-    CanConvert <- compareCompoundUnits(FromUnits_ls, ToUnits_ls)
-    if (!CanConvert) {
-      Msg <- paste0(
-        "Can't convert units because FromUnits (", FromUnits, ") ",
-        "and ToUnits (", ToUnits, ") are not comparable.")
-      Result_ls$Errors <- Msg
-      return(Result_ls)
-    }
-    #If is convertible, then convert values and return result
-    calcConversionFactor <- function(From_ls, To_ls) {
-      Num <- length(From_ls$Elements$Units)
-      Formula <- character(0)
-      for(i in 1:Num) {
-        Type <- From_ls$Elements$Types[i]
-        FromUnit <- From_ls$Elements$Units[i]
-        ToUnit <- To_ls$Elements$Units[i]
-        Factor <- Types()[[Type]]$units[[FromUnit]][ToUnit]
-        if (i != Num) {
-          Op <- From_ls$Elements$Operators[i]
-          Formula <- paste(Formula, Factor, Op)
-        } else {
-          Formula <- paste(Formula, Factor)
-        }
-      }
-      eval(parse(text = Formula))
-    }
-    Factor <- calcConversionFactor(FromUnits_ls, ToUnits_ls)
-    Result_ls$Values <- Values_ * Factor
-    Result_ls
   }
+  CanConvert <- compareCompoundUnits(FromUnits_ls, ToUnits_ls)
+  if (!CanConvert) {
+    Msg <- paste0(
+      "Can't convert units because FromUnits (", FromUnits, ") ",
+      "and ToUnits (", ToUnits, ") are not comparable.")
+    Result_ls$Errors <- Msg
+    return(Result_ls)
+  }
+
+  #If units are convertible, then convert values and return result
+  calcConversionFactor <- function(From_ls, To_ls) {
+    Num <- length(From_ls$Elements$Units)
+    Formula <- character(0)
+    for(i in 1:Num) {
+      Type <- From_ls$Elements$Types[i]
+      FromUnit <- From_ls$Elements$Units[i]
+      ToUnit <- To_ls$Elements$Units[i]
+      Factor <- Types()[[Type]]$units[[FromUnit]][ToUnit]
+      if (i != Num) {
+        Op <- From_ls$Elements$Operators[i]
+        Formula <- paste(Formula, Factor, Op)
+      } else {
+        Formula <- paste(Formula, Factor)
+      }
+    }
+    eval(parse(text = Formula))
+  }
+  Factor <- calcConversionFactor(FromUnits_ls, ToUnits_ls)
+  Values_ <- Factor * Values_
+
+  # If any of the From_ls$Elements are "currency" and Years are defined, deflate the Values_
+  # message("Deflating compound units; Line 196 of units.R::convertUnits; Units:",paste(FromUnits_ls$Elements$Types,collapse=","))
+  if ( ! is.null(Years$ToYear) &&
+    ! is.null(Years$FromYear) &&
+    isTRUE(Years$FromYear != Years$ToYear) &&
+    any( sapply( FromUnits_ls$Elements$Types,function(t) t=="currency") )
+  ) {
+    Values_ <- deflateCurrency(Values_, Years$FromYear, Years$ToYear)
+  }      
+
+  Result_ls$Values <- Values_
+  Result_ls
+}
 
 #Test
 # convertUnits(1:10, "energy", "M", "MI")
@@ -192,6 +218,8 @@ convertUnits <-
 # convertUnits(1:10, "mass", "MT")
 # convertUnits(1:10, "compound", "GM/MI")
 # convertUnits(1:10, "compound", "MT*KM/YR")
+# Note: needs ModelState_ls with currency Deflators configured
+# convertUnits(1:10, "currency", "USD", Years=list(FromYear=2010,ToYear=2008))
 
 
 #CONVERT BETWEEN DIFFERENT MEASUREMENT MAGNITUDES
@@ -231,8 +259,7 @@ convertUnits <-
 #' Converted attribute of the returned values is FALSE. Otherwise the conversion
 #' is done and the Converted attribute of the returned values is TRUE.
 #' @export
-convertMagnitude <-
-  function(Values_, FromMagnitude, ToMagnitude) {
+convertMagnitude <- function(Values_, FromMagnitude, ToMagnitude) {
     if (is.na(FromMagnitude) | is.na(ToMagnitude)) {
       Result_ <- Values_
       attributes(Result_) <- c(attributes(Values_), list(Converted = FALSE))
@@ -285,8 +312,7 @@ convertMagnitude <-
 #' Values_ are returned with a Converted attribute of FALSE. Otherwise the
 #' conversion is done and the Converted attribute of the returned values is TRUE.
 #' @export
-deflateCurrency <-
-  function(Values_, FromYear, ToYear) {
+deflateCurrency <- function(Values_, FromYear, ToYear) {
     Deflators_df <- getModelState()$Deflators
     Years_ <- as.character(Deflators_df$Year)
     Idx_ <- Deflators_df$Value
@@ -306,8 +332,7 @@ deflateCurrency <-
     }
     Result_
   }
-
-
+# Tests:
 # deflateCurrency(1:10, "1999", "2016")
 # deflateCurrency(1:10, 1999, 2016)
 # deflateCurrency(1:10, 2016, 1999)

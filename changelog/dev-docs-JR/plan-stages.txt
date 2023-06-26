@@ -1,0 +1,63 @@
+Configuration for stages [ DONE Pretty close to what was implemented ]
+
+stageParam_ls (not strictly a configuration file):
+  DONE: StageName identifies the Stage (unique within containing Model)
+  StageDir identifies the output location for the Stage
+    RunPath is built as ResultsDir/StageDir
+  StagePath is used for only for *inputs*
+    If set:
+      If absolute and does not exist, unset StagePath with warning (try the rest anyway)
+      If relative, set to ModelDir/StagePath
+    If not set (or unset) or StagePath does not exist or is identical to ModelDir
+      If StageDir is set, set to ModelDir/StageDir if that directory exists
+      If StageDir is not set but ModelDir/StageName exists, StagePath set to ModelDir/StageName
+    Arrive here with StagePath not set or set to absolute path of an existing directory
+  If StageDir is not set at this point:
+    if StagePath is set, StageDir is set to basename(StagePath)
+    if StagePath is not set, StageDir is set to StageName
+  Reportable:
+    TRUE/FALSE if provided
+    If not provided, TRUE if no other stage starts from this one
+  StageConfig
+    If StageConfig is not set:
+      If StagePath is set, set to StagePath/visioneval.cnf if that file exists
+    If StageConfig is set:
+      If relative
+        If StagePath is set, set to StagePath/StageConfig
+        Else set to ModelDir/StageConfig
+      If StageConfig is a directory:
+        Set to StageConfig/visioneval.cnf
+      If StageConfig is not now an existing file, unset StageConfig
+  If StageConfig is set
+    Load it into stage$loadedParam_ls
+  If StageConfig is not set
+    stage$loadedParam_ls <- list()
+  StartFrom:
+    If not set in stageParam_ls:
+      set to definition in stage$loadedParam_ls
+    If set, must name an earlier Stage within the containing Model (error otherwise)
+  Merge configuration parameters
+  Result is stageParameters_ls
+
+This to do when determining if stage is runnable (finalizes its RunParams_ls):
+    These parameters should be present in the startingParameters (warn if not)
+      Model, BaseYear, Region, State
+    These parameters should be present in stageParameters (and will be constructed if not provided explicitly):
+      Scenario, Description, InputPath
+    These parameters should be present in stageParameters (but will be inherited if not defined here):
+      Years
+    These parameters may, but need not, be present in stageParameters (and will be defaulted or inherited):
+      Seed, ModelScriptFile
+
+Stage Input Configuration Elements explicitly constructed:
+  InputPath
+    If not provided in stageParameters
+      If StagePath is set, set to StagePath
+    Add resulting InputPath (if any) to StartFrom/InputPath
+  Scenario
+    If not provided in stageParameters, set to StageName
+  Description
+    If not provided in stageParameters, set to StageName
+
+Then do all the remaining "Runnable" stuff
+

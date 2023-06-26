@@ -261,7 +261,7 @@ calcVehDepr <- function(Type_, Age_, Vmt_) {
     TypeToIndex[Type_]
   )
   #Apply the index to calculate base vehicle depreciation
-  if ( ! exists("VehOwnCost_ls") ) VehOwnCost_ls <- VEHouseholdVehicles::VehOwnCost_ls
+  if ( ! exists("VehOwnCost_ls") ) VehOwnCost_ls <- loadPackageDataset("VehOwnCost_ls","VEHouseholdVehicles")
   BaseDepr_Ve <- with(VehOwnCost_ls, Depr_AgVt[DeprIdx_mx])
   #Put depreciation adjustment model coefficients into matrix
   Coeff_mx <- rbind(
@@ -757,7 +757,7 @@ calcVehFin <- function(Type_, Age_) {
     TypeToIndex[Type_]
   )
   #Apply the index to calculate vehicle finance cost
-  VehOwnCost_ls <- VEHouseholdVehicles::VehOwnCost_ls
+  VehOwnCost_ls <- loadPackageDataset("VehOwnCost_ls","VEHouseholdVehicles")
   with(VehOwnCost_ls, FinCost_AgVt[FinIdx_mx])
 }
 
@@ -789,7 +789,7 @@ calcAdValoremTax <- function(Type_, Age_, TaxRate) {
     TypeToIndex[Type_]
   )
   #Apply the index to calculate vehicle finance cost
-  with(VEHouseholdVehicles::VehOwnCost_ls, Value_AgVt[ValueIdx_mx]) * TaxRate
+  with(loadPackageDataset("VehOwnCost_ls","VEHouseholdVehicles"), Value_AgVt[ValueIdx_mx]) * TaxRate
 }
 
 #Define function to assign PAYD propensity weights to households
@@ -828,7 +828,7 @@ idPaydHh <- function(Household, PaydHhProp) {
     HasPaydIns_Hh <- setNames(as.integer(Qualifies_Hh), Household$HhId)
   } else {
     #Otherwise calculate PAYD weights and choose based on weights
-    PaydWts_ <- VEHouseholdVehicles::PaydWts_
+    PaydWts_ <- loadPackageDataset("PaydWts_","VEHouseholdVehicles")
 
     Weight_Hh <- rep(1, length(Household$HhId))
     #Add weight for teenage drivers
@@ -929,7 +929,7 @@ CalculateVehicleOwnCost <- function(L,M) {
   AnnVmt_Ve <- AveAnnVmtPV_Hh[HhToVehIdx_Ve]
   AnnVmt_Ve[IsCarSvc] <- 0
 
-  VehOwnCost_ls <- VEHouseholdVehicles::VehOwnCost_ls
+  VehOwnCost_ls <- loadPackageDataset("VehOwnCost_ls","VEHouseholdVehicles")
 
   #Calculate annual depreciation cost
   DeprCost_Ve <-

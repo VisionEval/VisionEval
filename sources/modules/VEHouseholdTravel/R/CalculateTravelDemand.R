@@ -2142,7 +2142,7 @@ CalculateTravelDemand <- function(L) {
   EvRangePropYr_df <- EvRangePropYr_df[, c("AutoRange", "AutoPropEv", "AutoMpkwh", "LtTruckRange",
                                            "LtTruckPropEv", "LtTruckMpkwh")]
 
-  PhevModelData_ls <- VEHouseholdTravel::PhevModelData_ls
+  PhevModelData_ls <- loadPackageDataset("PhevModelData_ls","VEHouseholdTravel")
 
   PhevResults_ <- assignPHEV(Hh_df = Hh_df[HasVeh_Hh, HhVar_],
                              Veh_df = Vehicles_df[, VehVar_],
@@ -2223,7 +2223,7 @@ CalculateTravelDemand <- function(L) {
   # Calculate average electricity CO2e per KWh
   #---------------------------------------------
   if(!"Electricity" %in% L$Global$Fuel$Fuel){
-    TravelDemandDefaults_ls <- VEHouseholdTravel::TravelDemandDefaults_ls
+    TravelDemandDefaults_ls <- loadPackageDataset("TravelDemandDefaults_ls","VEHouseholdTravel")
 
     CI_df <- TravelDemandDefaults_ls$CarbonIntensity_df
     RegionName_ <- strsplit(L$G$Region, " ")[[1]]

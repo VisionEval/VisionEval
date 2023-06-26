@@ -1,0 +1,11 @@
+{
+  "Model": "Classic",
+  "Scenario": "Classic Test",
+  "Description": "Test source('run_model.R')",
+  "Region": "RVMPO",
+  "BaseYear": "2010",
+  "Years": ["2010", "2038"],
+  "DatastoreName": "Datastore",
+  "DatastoreType": "RD",
+  "Seed": 1
+}

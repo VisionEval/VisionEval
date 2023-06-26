@@ -538,7 +538,7 @@ Initialize <- function(L) {
     }
   } else {
     Msg <- paste0(
-      "marea_transit_fuel.csv input file is present but not complete"
+      "marea_transit_fuel.csv input file is present but not complete (missing VanProp...)"
     )
     Errors_ <- c(Errors_, Msg)
   }
@@ -560,7 +560,7 @@ Initialize <- function(L) {
     }
   } else {
     Msg <- paste0(
-      "marea_transit_fuel.csv input file is present but not complete"
+      "marea_transit_fuel.csv input file is present but not complete (missing BusProp...)"
     )
     Errors_ <- c(Errors_, Msg)
   }
@@ -582,7 +582,7 @@ Initialize <- function(L) {
     }
   } else {
     Msg <- paste0(
-      "marea_transit_fuel.csv input file is present but not complete"
+      "marea_transit_fuel.csv input file is present but not complete (missing RailProp...)"
     )
     Errors_ <- c(Errors_, Msg)
   }
@@ -604,7 +604,7 @@ Initialize <- function(L) {
     }
   } else {
     Msg <- paste0(
-      "marea_transit_fuel.csv input file is present but not complete"
+      "marea_transit_fuel.csv input file is present but not complete (Missing VanProp...ev)"
     )
     Errors_ <- c(Errors_, Msg)
   }
@@ -626,7 +626,7 @@ Initialize <- function(L) {
     }
   } else {
     Msg <- paste0(
-      "marea_transit_fuel.csv input file is present but not complete"
+      "marea_transit_fuel.csv input file is present but not complete (missing BusBrop...ev)"
     )
     Errors_ <- c(Errors_, Msg)
   }
@@ -648,15 +648,15 @@ Initialize <- function(L) {
     }
   } else {
     Msg <- paste0(
-      "marea_transit_fuel.csv input file is present but not complete"
+      "marea_transit_fuel.csv input file is present but not complete (missing RailProp...ev)"
     )
     Errors_ <- c(Errors_, Msg)
   }
 
   #Add Errors and Warnings to Out_ls and return
   #--------------------------------------------
-  Out_ls$Errors <- Errors_
-  Out_ls$Warnings <- Warnings_
+  addErrorMsg(Errors_)
+  addWarningMsg(Warnings_)
   Out_ls
 }
 

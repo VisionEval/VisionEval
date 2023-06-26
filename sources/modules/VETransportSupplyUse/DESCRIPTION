@@ -6,7 +6,6 @@ Date: 2020-08-14
 Author: Aditya Gore <aditya.gore@rsginc.com> [cre], Ben Stabler <ben.stabler@rsginc.com> [cre],  Brian Gregor <gregor@or-analytics.com> [auth]
 Maintainer: Aditya Gore <aditya.gore@rsginc.com>, Ben Stabler <ben.stabler@rsginc.com>
 Copyright: AASHTO
-URL: https://github.com/gregorbj/VisionEval/sources/modules/VETransportSupplyUse
 Description: This package contains modules that creates attributes for utilization of
       transportation supplies.
 License: file LICENSE

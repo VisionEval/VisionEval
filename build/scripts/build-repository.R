@@ -19,7 +19,7 @@ options(install.packages.compile.from.source="never")
 
 # Load required libraries
 if ( ! suppressWarnings(require("miniCRAN",quietly=TRUE)) ) {
-  install.packages("miniCRAN", lib=dev.lib, dependencies=NA, type=.Platform$pkgType)
+  install.packages("miniCRAN", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType)
 }
 
 require(tools)
@@ -130,6 +130,12 @@ if ( havePackages() ) {
   }
   if ( up.to.date ) {
     cat("VE dependency repository up to date with BioConductor\n")
+  }
+  if ( up.to.date ) {
+    cat("Updating CRAN dependency packages...\n")
+    miniCRAN::updatePackages(path=ve.dependencies, repos=CRAN.mirror, type=ve.build.type, oldPkgs=pkgs.CRAN.lst, ask=FALSE)
+    cat("Updating BioConductor dependency packages...\n")
+    ignore <- miniCRAN::updatePackages(path=ve.dependencies, repos=bioc, type=ve.build.type, oldPkgs=pkgs.BioC.lst, ask=FALSE)
   }
 } else {
   cat("Building VE repository from scratch from CRAN packages\n")

@@ -1,0 +1,207 @@
+For installing models
+
+  Add optional "package" argument to limit search for installable models to a particular package
+
+  Allow a module to have a "TestWith" specification, using when we "make tests" - auto-run one or
+  more models and keep track of when that run occurred relative to the most recent packages in
+  ve-lib. Create a "test" folder. TestWith specifies a model to install and run. May be a local
+  model within the package, or a general model (for standard module packages).
+
+  Create a "tests" target in the Makefile that runs build-tests.R script (new) that installs and
+  runs the test models. In build-config, need to parse the TestWith directive (and clean out the
+  prior testing). The tests target can only run after a successful module build.
+
+  Put the version number in VE-Config.yml and package version numbers in VEComponents.yml. Use
+  that version to mark the installer name. Use the package version numbers (if defined) to
+  replace the ones in the package DESCRIPTION.
+
+Implement the TestWith approach to system testing
+
+  Specify package as well as model + variant for installModel
+  Add a "private" indicator to a model configuration so it doesn't appear in the end user list
+    (but can still be found directly)
+  Ambiguous model variants (e.g. "test" in multiple modules)
+  Specify a model to use to test a module (or the framework)
+  De-duplicate if multiple modules use the same model variant
+  Load and run the model
+  Add "Stage" to model-index.cnf so we can locally just specify what is different.
+    Specify Package, Model, Variant
+    Then make everything that follows into a subdirectory stage for that model
+
+Multicore improvements for the build process itself
+
+  Allow the build process to be a "multi-core"/parallel activity (with the dependency groups of the
+  packages set up so we build independent modules in parallel) - how to handle logging the outputs
+  of each - possible enlarging how the build log is maintained - use sink to re-route standard output
+  and perhaps standard error (risky) to a file specific to each "future". Enable multi-tasking by setting
+  number of available workers (via environment/Makefile variable) to something more than one.
+    - Factor out the build steps into a function.
+    - Loop over the build creating futures (okay to block)
+    - With only one worker, skip the future - just run the function
+
+Issues for ve.build / Makefile / new Github architecture
+
+- Reorganize runtime libraries (set up for new module sequence below)
+
+  # Change the runtime build to have two libraries, not one:
+    1. the package dependencies (which can be auto-installed from the internet, if available, or
+    included in an offline installer), and
+    2. the VE package library (with just installed VE-packages).
+  # Could then give people three things they can install:
+    1. Bare VisionEval (just ve-lib, which will pull down dependencies from the internet into
+       runtime-lib if runtime-lib is not present)
+    2. Runtime library (which can be installed into local runtime-lib)
+    3. Src folder (installed into local 'src' folder for debugging)
+
+  # We're probably stuck still distributing vast datasets for (re-)estimation.
+    1. Could change the distribution so that users can download (into their ve.runtime/local folder)
+       the estimation data for packages so they only have to retrieve it if they expect to re-estimate.
+    2. So we leave that crap out of the ve-lib built package (just keep estimation results in data
+       directory). Local estimation always revolves around ve.runtime/local, even if using the
+       package data.
+    3. Change the build to create a zip file with ALL the estimation data (but nicer to allow users
+       to download only what they need).
+    4. So we bundle estimation data by package into the estimation zip deliverable (that will create
+       local/<packages>/estimation-data).
+
+- Module build sequence
+    
+  # Rething what is the "framework" versus "modules":
+    # Build visioneval (factor it back out as "framework" versus module)
+    # Build NHTS package
+      # Move it down into the "framework" directory (not a "module") on the Github
+      # Goes into the VEBase-lib (not distributed)
+      # Could provide alternate NHTS packages with different data, or let the user
+        inject their own package (with the same standard name).
+      # The package they supply gets installed under a standard name (altering Description, for
+        example) in VEBase-lib and then used later by all the other modules.
+      # Could expand this to also include a package for the Smart Location Database
+      # Could further extend to make
+    # Build VEModel package (used to run module tests)
+      # Move this into the "framework" directory as well (not a "module") so it can
+        be used to support the build (in particular the new build-test.R build script)
+      # Has its own "tests" moment (unit-testing during package build)
+      # But also gets exercised in the later build-test.R script
+    # all of those go into VEBase-lib (see above)
+    # VEBase-lib gets distributed
+      # User can override NHTS and SLD (which are "data only") by providing
+        local.data/NHTS or local.data/SLD
+  # .libPaths() includes dev-lib and build-lib when building modules
+  # Module packages have the following build elements:
+    # What is in the Github is NOT a buildable R package; instead it is a set of
+      materials that get copied/built into the built/visioneval/4.1.2/src folder.
+      Actual package building happens from the "src" folder.
+    # Process raw-data/ into src/data/
+      # Not stuck to that name: the data in the module is for raw estimation
+      # raw-data is optional; may cut straight to estimation data
+      # Key distinction is that raw-data generates stuff needed (possibly at runtime)
+        to run local data estimation: it is not specific to a locale
+    # Module scripts should be self-contained with standard function names
+      # Specify<Module>
+        Just creates the specifications in data/
+      # Estimate<Module>
+        Function can be called within VisionEval runtime if the user provides
+        local.data/Package/module/raw-data (compare dates and time and re-estimate if present and
+        newer) and builds into local.data/Package/module/data.
+        There should be VEModel function for that purpose.
+        Otherwise reads Github raw-data (estimation-data) and builds into src/data/
+      # <Module> (or perhaps even "Run<Module>" and let the Framwork spin up the name)
+        The code that gets called from RunModule
+      # Module must not create any global objects other than those three functions
+      # May have other functions:
+        # Format standard data source (puts results into ve.runtime/local.data)
+          ve.runtime/local.data is organized by Package and Module
+          Takes downloaded data and builds it into ve.runtime/local.data
+        # Change framework function to look up module data/ so it looks first for
+          local.data/Package/Module/dataset, then in the package's data/ folder
+          Use that consistently throughout the modules.
+        # Perhaps a shadow help system for VE that enables the user to browse
+          HTML documentation on the module. Or include a vignette
+        # Copy module R scripts into the "src/R" folder
+    # Should also have the option DURING THE GITHUB BUILD to inject local estimation data
+      # So if we have a "local-data" folder (like the optional runtime one) with Package
+        sub-directory, it will provide the estimation data to use rather than the stuff included in
+        raw-data/estimation-data. File names will be the same.
+      # That folder will be provided with a ReadMe file in the Github but populated in the
+        user's local computer (and perhaps committed to their fork).
+      # So buildx from local data has two places it can happen
+        # 
+    # Run module estimation function(s) to generate default module estimates in src/data/
+      # Do NOT put big data files into inst/extdata; they live in the Github in raw-data
+        May have 
+      # Can look at raw-data subdirectory for default materials
+      # Function has input directory parameter (looks in raw-data or estimation-data)
+      # Function has output directory (data/ during build; later the user's data location)
+    # Run module specification functions(s) to generate module specifications in data/
+`     # Need to rethink the role and content of the Package "Initialize" function
+    # Copy the models/ directory from the module on the Github to src/inst/models/
+    # Build documentation
+      # Build vignettes and function documentation
+        # Change the module_docs to build a vignette (src/docs) for the module
+        # should document:
+          Input data
+          Estimation mechanisms
+          Runtime requirements (Input/Output)
+          What the module does to transform Input to Output
+          Helper functions (format estimation data)
+          Functions available for module
+          (Note: can use the framework module_docs builder to do that)
+        # May also build from vignettes folder in the Github (e.g. for other
+          vignettes beyond the module documentation
+      # Build into src/docs and src/man
+      # Can be built around devtools::document
+    # Copy Github "tests/" directory into src/tests
+      # These will optionally run using VisionEval/VEModel as part of the package building
+      # Conducted if the TESTS build/Makefile flag is set, otherwise skipped
+      # Tests should be minimal for sanity - unit tests on the module
+      # Existing Framework testModule could be rewritten and used to do that
+      # Unit tests should only depend on the framework and current package code
+    # Run collate and namespace generation on src/ folder
+    # Check and build src/ into R source and binary package
+      # Load finished pacakges into the VE package reposotory
+      # Install the finished packages into ve-lib (for Windows binary installer)
+      # Run installed package tests, if provided, as optional part of package build
+        # Uses R package build test function, on src/tests constructed optionally above
+        # Tests are copied into src/tests from the Github package/tests/build
+        # Also (see next item) on Github is package/tests/runtime
+  # Distinct from building modules, have a "build-test-models.R" step
+    # Separate Makefile target "runtime-tests" depending on a full runtime having been built
+    # Optional step
+    # Finds each package that has "models/" folder, and uses VEModel to install and
+      run each model
+    # Gracefully handle "bare" model variants - put a flag in model-config that says
+      "Not-Run" like R examples.
+
+- RunScript directive implementation
+
+  # Looks for its resources in a magic "package" called LocalScripts that is built into
+    ve.runtime/local.data/LocalScripts/ScriptName
+    # Uses the "search for local.data" process that we will retrofit into existing modules
+  # Script has same structure as a Module
+    At a minimum, a function with the ModuleName
+    Can have a Specify<ModuleName> function
+    Can have an Estimate<ModuleName> function
+    The script will use the local.data/LocalScript/ScriptName directory to seek its raw-data/
+    and to generate is data/
+  # When performing RunScript:
+    # If there is an Estimate function make sure that local.data/.../data is up to date, using
+      local.data/.../raw-data as the input directory
+    # If there is a Specifications function, run that into local.data/.../data if the latter is
+      not up-to-date
+    # Look at a run parameter for a flag to force rebuild of local scripts (otherwise use them
+      if they are present and up-to-date).
+    # Then run the script in the framework, passing the "L" parameter and receiving the "Out_ls"
+      results.
+  # If we get that right, the module script can later just be picked up and dropped into a Github
+    source for a module package (along with its default raw-data) and it will "just work"
+  # However, there is no requirement that a script be complete - it doesn't have to use the L
+    parameter (though it must specify it) and without any Specifications, nothing comes out of
+    it (it returns an empty list() for Out_ls). Inside, it can call framework functions to
+    directly access the Datastore. It CANNOT call VEModel (since VEModel may not be available
+    when performing a low-level ModelStage run - the sole dependencies for that are (1) running in
+    the same file system; and (2) visioneval framework package is available.
+  # A RunScript will be sought in by <FunctionName>.R in the model's scripts directory
+  # It can do things entirely unrelated to the model (does not need to access the Datastore, but
+    it can, either through the Specification method or by dipping manually into the Datastore -
+    see the sample code in the proto-query development that created MedianHouseholdIncome based
+    on the household size).

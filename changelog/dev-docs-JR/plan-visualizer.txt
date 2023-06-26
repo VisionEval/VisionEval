@@ -1,0 +1,53 @@
+# Following describes the UI for launching the visualizer
+
+There's a likely bug in the visualizer in that it doesn't display scenarios correctly that are
+pinned at the ends of the horizontal axes. It's invisible in most cases with lots of scenarios that
+have a range of values.
+
+Subset visualization by selecting only certain categories at runtime (when the visualizer is generated).
+Probably should also identify a specific year (in case the scenarios have more than one).
+
+# Implement the following with new data format architecture
+
+If we're NOT doing Category scenarios: We could just generate one bar chart with an on/off column
+for each individual scenario. The output metrics show one column per scenario and the Y-Axis has
+the numeric results (so the output charts are rotated 90 degrees) so we can visually compare the
+results from each scenario on each metric.
+
+==== TECHNICAL VIEWER NOTES
+
+The VisionEval viewer is built on three interrelated Javascript libraries (all of which are probably
+pretty far out of date).
+
+Javascript => is an operator for creating a lambda function (without its own "this"):
+
+"s => s.length" is results-wise the same as "function(s){ return s.length }"
+
+D3-JS (https://d3js.org)
+
+D3 allows you to bind arbitrary data to a Document Object Model (DOM), and then apply data-driven
+transformations to the document. For example, you can use D3 to generate an HTML table from an array
+of numbers. Or, use the same data to create an interactive SVG bar chart with smooth transitions and
+interaction.
+
+Readers familiar with other DOM frameworks such as jQuery should immediately recognize similarities
+with D3. Yet styles, attributes, and other properties can be specified as functions of data in D3,
+not just simple constants. Despite their apparent simplicity, these functions can be surprisingly
+powerful; the d3.geoPath function, for example, projects geographic coordinates into SVG path data.
+D3 provides many built-in reusable functions and function factories, such as graphical primitives
+for area, line and pie charts.
+
+Crossfilter.js (http://crossfilter.github.io/crossfilter/)
+
+Crossfilter is a JavaScript library for exploring large multivariate datasets in the browser.
+Crossfilter supports extremely fast (<30ms) interaction with coordinated views, even with datasets
+containing a million or more records.
+
+The coordinated visualizations below (built with D3)...
+
+dc.js (https://dc-js.github.io/dc.js/)
+
+dc.js is a javascript charting library with native crossfilter support, allowing highly efficient
+exploration on large multi-dimensional datasets (inspired by crossfilter's demo). It leverages d3 to
+render charts in CSS-friendly SVG format. Charts rendered using dc.js are data driven and reactive
+and therefore provide instant feedback to user interaction.

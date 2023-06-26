@@ -14,8 +14,8 @@
 #' str(AADVMTModel_df)
 #' head(AADVMTModel_df)
 #' summary(AADVMTModel_df)
-#'
-"AADVMTModel_df"
+#' @name(AADVMTModel_df)
+NULL
 
 #' list-column data frame (tibble) with estimated model objects for household Biking PMT model
 #'
@@ -33,8 +33,8 @@
 #' str(BikePMTModel_df)
 #' head(BikePMTModel_df)
 #' summary(BikePMTModel_df)
-#'
-"BikePMTModel_df"
+#' @name(BikePMTModel_df)
+NULL
 
 #' list-column data frame (tibble) with estimated model objects for household Biking TFL model
 #'
@@ -52,8 +52,8 @@
 #' str(BikeTFLModel_df)
 #' head(BikeTFLModel_df)
 #' summary(BikeTFLModel_df)
-#'
-"BikeTFLModel_df"
+#' @name(BikeTFLModel_df)
+NULL
 
 #' list-column data frame (tibble) with estimated model objects for household drivers model
 #'
@@ -70,8 +70,8 @@
 #' str(DriversModel_df)
 #' head(DriversModel_df)
 #' summary(DriversModel_df)
-#'
-"DriversModel_df"
+#' @name(DriversModel_df)
+NULL
 
 #' list-column data frame (tibble) with estimated model objects for household Walking PMT model
 #'
@@ -89,8 +89,8 @@
 #' str(TransitPMTModel_df)
 #' head(TransitPMTModel_df)
 #' summary(TransitPMTModel_df)
-#'
-"TransitPMTModel_df"
+#' @name(TransitPMTModel_df)
+NULL
 
 #' list-column data frame (tibble) with estimated model objects for household Transit TFL model
 #'
@@ -108,8 +108,8 @@
 #' str(TransitTFLModel_df)
 #' head(TransitTFLModel_df)
 #' summary(TransitTFLModel_df)
-#'
-"TransitTFLModel_df"
+#' @name(TransitTFLModel_df)
+NULL
 
 #' list-column data frame (tibble) with estimated model objects for household vehicles model
 #'
@@ -126,8 +126,8 @@
 #' str(VehiclesModel_df)
 #' head(VehiclesModel_df)
 #' summary(VehiclesModel_df)
-#'
-"VehiclesModel_df"
+#' @name(VehiclesModel_df)
+NULL
 
 #' list-column data frame (tibble) with estimated model objects for household Walking PMT model
 #'
@@ -145,8 +145,8 @@
 #' str(WalkPMTModel_df)
 #' head(WalkPMTModel_df)
 #' summary(WalkPMTModel_df)
-#'
-"WalkPMTModel_df"
+#' @name(WalkPMTModel_df)
+NULL
 
 
 #' list-column data frame (tibble) with estimated model objects for household Walking TFL model
@@ -165,6 +165,6 @@
 #' str(WalkTFLModel_df)
 #' head(WalkTFLModel_df)
 #' summary(WalkTFLModel_df)
-#'
-"WalkTFLModel_df"
+#' @name(WalkTFLModel_df)
+NULL
 

@@ -6,7 +6,6 @@ Date: 2020-08-14
 Authors@R: person("Liming", "Wang", role=c("aut", "cre"), email="lmwang@pdx.edu")
 Maintainer: Liming Wang <lmwang@gmail.com>
 Copyright: Portland State University
-URL: https://github.com/cities-lab/VETravelDemandMM
 Description: This package contains a module for the VisionEval framework that simulates 
      multi-modal travel demand for individual households.
 License: file LICENSE
@@ -20,17 +19,24 @@ Imports:
     splines,
     tidyr,
     pscl,
-    rmarkdown,
-    data.table,
-    visioneval,
-    VE2001NHTS
+    visioneval
 Suggests:
     knitr,
+    VE2001NHTS,
     NHTS2009,
     SLD
 VignetteBuilder: knitr
-Roxygen: list(load="pkgload")
+Roxygen: list(load="source")
 RoxygenNote: 7.1.0
 Remotes:
     cities-lab/NHTS2009,
     cities-lab/SLD
+Collate:
+    VETravelDemandMM.R
+    CalculateHouseholdDvmt.R
+    CalculateAltModeTrips.R
+    data.R
+    DoPredictions.R
+    HouseholdDvmtQuantileEstimation.R
+    PredictDrivers.R
+    PredictVehicles.R

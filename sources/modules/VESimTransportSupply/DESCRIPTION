@@ -6,7 +6,6 @@ Date: 2020-08-14
 Author: Brian Gregor [aut, cre]
 Maintainer: Brian Gregor <gregorb@or-analytics.com>
 Copyright: AASHTO
-URL: https://github.com/gregorbj/VisionEval/sources/modules/VETransportSupply
 Description: This package contains several modules which attribute the
     metropolitan area and Bzones with transportation supply characteristics
     including freeway lane miles, public transportation revenue miles,

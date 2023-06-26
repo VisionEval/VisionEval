@@ -1,0 +1,24 @@
+Notes:
+- VERPAT is lightly supported in NextGen
+- It does egregious things like write table columns of different lengths into
+  the same Datastore table.
+- Model description: Model, Region, State
+- Model Scenario: Scenario, Seed, Description, BaseYear, Years
+- Structural Parameters: ScriptsDir, InputDir, ParamDir
+
+# Model description
+Model          : VERPAT
+Region         : Multnomah County
+State          : OR
+
+# Scenario description
+Scenario       : RPAT Example
+Seed           : 1
+Description    : Pilot RPAT module in VisionEval NextGen
+BaseYear       : 2005
+Years          : [ 2005, 2035 ]
+
+# Structural parameters
+ScriptsDir     : scripts # script name is default ("run_model.R")
+InputDir       : inputs # model_parameters.json located here
+ParamDir       : defs # default parameter location

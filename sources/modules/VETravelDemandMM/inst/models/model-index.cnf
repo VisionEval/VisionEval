@@ -1,0 +1,11 @@
+# Next Generation test model for MultiModal module
+# reproduces "base" VERSPM from VEModel, but provides alternate run script
+# to exercise the MultiModal features.
+VERSPM:
+  variants:
+    mm:
+      description: VERSPM 3.0 with MultiModal Travel Demand Module
+      config: visioneval-mm.cnf
+      scripts: scripts
+      inputs: inputs
+      defs: defs

@@ -1,0 +1,11 @@
+Notes:
+- VE-State Stage e (Cost Feedback Loop for Base & Future Year)
+- Model Script varies by stage
+- Years, BaseYear set for the model
+- Scenario Description: ModelScript, Scenario, Description, StartFrom
+
+# Scenario description
+ModelScript    : run_stage_4.R
+Scenario       : VE-State Stage 4
+Description    : Cost Feedback Loop for Base (2010) and Future (2038)
+StartFrom      : Stage-3

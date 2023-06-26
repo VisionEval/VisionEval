@@ -197,7 +197,7 @@
 #Set up data and functions to estimate models
 #--------------------------------------------
 #Load NHTS household data
-Hh_df <- VE2001NHTS::Hh_df
+Hh_df <- loadPackageDataset("Hh_df","VE2001NHTS")
 #Identify records used for estimating metropolitan area models
 IsMetro_ <- Hh_df$Msacat %in% c("1", "2")
 #Add variables to Hh_df

@@ -21,13 +21,13 @@ if ( ! exists("ve.installer" ) ) ve.installer <- getwd()
 source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 
 if ( ! suppressWarnings(requireNamespace("jsonlite",quietly=TRUE)) ) {
-  install.packages("jsonlite", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+  install.packages("jsonlite", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
 }
 if ( ! suppressWarnings(requireNamespace("Rd2md",quietly=TRUE)) ) {
-  install.packages("Rd2md", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+  install.packages("Rd2md", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
 }
 if ( ! suppressWarnings(requireNamespace("purrr",quietly=TRUE)) ) {
-  install.packages("purrr", lib=dev.lib, dependencies=NA, type=.Platform$pkgType )
+  install.packages("purrr", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
 }
 
 message("========== BUILD VISUAL FRAMEWORK DOCS ==========")
@@ -117,8 +117,13 @@ if ( need.new.docs ) {
   }
   #Iterate through documentation files
   for (DocFile in DocFilePaths_) {
+    cat("Parsing file:",DocFile)
     ParsedRd_ls <- Rd2md::parseRd(tools::parse_Rd(DocFile))
     Group <- getGroup(ParsedRd_ls)
+    if ( length(Group)==0 ) {
+      Group <- "control"
+      cat(" (default)","\n")
+    } else cat("\n")
     ParsedRd_ls$group <- Group
     FunctionName <- ParsedRd_ls$name
     ParsedRd_ls$calls <- FunctionCalls_ls[[FunctionName]]

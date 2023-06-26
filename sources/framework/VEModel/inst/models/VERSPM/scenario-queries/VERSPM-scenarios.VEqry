@@ -1,0 +1,313 @@
+# Queries to generate the classic VERSPM visualizer metrics
+QuerySpec <- list(
+  # All of these are Region queries
+  list(
+    # TotalPop <- sum(Bzone$Pop)  # Summarize
+    Name = "TotalPop",
+    Summarize = list(
+      Expr = "sum(Pop)",
+      Units = c(
+        Pop = "PRSN"
+      ),
+      Table = "Bzone"
+    ),
+    Units = "PRSN",
+    Description = "Total Population"
+  ),
+  list(
+    # HhDvmt <- sum(Household$Dvmt) # Summarize
+    Name = "HhDvmt",
+    Summarize = list(
+      Expr = "sum(Dvmt)",
+      Units = c(
+        Dvmt = "MI/DAY"
+      ),
+      Table = "Household"
+    ),
+    Units = "MI/DAY",
+    Description = "All DVMT"
+  ),
+  list(
+    # DVMTPerCapita <- HhDvmt/TotalPop # Function
+    Name = "DVMTPerCapita",
+    Function = "HhDvmt/TotalPop",
+    Units = "MI/DAY",
+    Description = "Per Capita DVMT",
+    Export = list(
+      DisplayName = "DVMT Per Capita",
+      Label = "Daily Vehicle Miles Traveled",
+      Description = "daily vehicle miles of travel of residents divided by population.",
+      Instructions = "daily vehicle miles of travel of residents divided by population.",
+      Metric = "Average",
+      Unit = "daily miles",
+      XTicks = 3
+    )
+  ),
+  list(
+    # HhWalkTrips <- sum(WalkTrips)
+    Name = "HhWalkTrips",
+    Summarize = list(
+      Expr = "sum(WalkTrips)",
+      Units = c(
+        WalkTrips = "TRIP"
+      ),
+      Table = "Household"
+    ),
+    Units = "TRIP",
+    Description = "All Walk Trips"
+  ),
+  list(
+    # DVMTPerCapita <- HhDvmt/TotalPop # Function
+    Name = "WalkTravelPerCapita",
+    Function = "HhWalkTrips/TotalPop",
+    Units = "TRIP/PRSN",
+    Description = "Per Capita Walk Trips",
+    Export = list(
+      Displayname =  "Walk Trips Per Capita",
+      Label =  "Walk Travel Per Capita",
+      Description =  "annual residents walk trips (not including recreation or walk to transit) divided by population",
+      Instructions =  "annual residents walk trips (not including recreation or walk to transit) divided by population",
+      Metric =  "Average",
+      Unit =  "annual trips",
+      Xticks =  3
+    )
+  ),
+  list(
+    # AirPollutionEm <- sum(Household$DailyCO2e) # Summarize
+    Name = "AirPollutionEm",
+    Summarize = list(
+      Expr = "sum(DailyCO2e)",
+      Units = c(
+        DailyCO2e = "GM/DAY"
+      ),
+      Table = "Household"
+    ),
+    Units = "GM/DAY",
+    Description = "Daily Household Air Pollution",
+    Export = list(
+      Displayname =  "Air Pollution Emissions",
+      Label =  "Air Pollution Emissions",
+      Description =  "daily metric tons of pollutants emitted from all light-duty vehicle travel (including hydrocarbons, carbon monoxide, nitrogen dioxide, and particulates).",
+      Instructions =  "daily metric tons of pollutants emitted from all light-duty vehicle travel (including hydrocarbons, carbon monoxide, nitrogen dioxide, and particulates).",
+      Metric =  "Average",
+      Unit =  "daily metric tons",
+      Xticks =  3
+    )
+  ),
+  list(
+    # HhDailyGGE <- sum(Household$DailyGGE) # Summarize
+    Name = "HhDailyGGE",
+    Summarize = list(
+      Expr = "sum(DailyGGE)",
+      Units = c(
+        DailyGGE = "GGE/DAY"
+      ),
+      Table = "Household"
+    ),
+    Units = "GGE/DAY",
+    Description = "Daily HH Greenhouse Gas Emissions"
+  ),
+  list(
+    # ComSvcUrbanGGE <- sum(Marea$ComSvcUrbanGGE) # Summarize
+    Name = "ComSvcUrbanGGE",
+    Summarize = list(
+      Expr = "sum(ComSvcUrbanGGE)",
+      Units = c(
+        ComSvcUrbanGGE = "GGE/DAY"
+      ),
+      Table = "Marea"
+    ),
+    Units = "GGE/DAY",
+    Description = "Daily Urban Vehicle Greenhouse Gas Emissions"
+  ),
+  list(
+    # ComSvcUrbanGGE <- sum(Marea$ComSvcUrbanGGE) # Summarize
+    Name = "ComSvcRuralGGE",
+    Summarize = list(
+      Expr = "sum(ComSvcNonUrbanGGE)",
+      Units = c(
+        ComSvcNonUrbanGGE = "GGE/DAY"
+      ),
+      Table = "Marea"
+    ),
+    Units = "GGE/DAY",
+    Description = "Daily NonUrban (Rural) Commercial Vehicle Greenhouse Gas Emissions"
+  ),
+  list(
+    # FuelUse <- 365 * ( HhDailyGGE + ComSvcUrbanGGE + ComSvcRuralGGE )  # Function
+    Name = "FuelUse",
+    Function = "365 * ( HhDailyGGE + ComSvcUrbanGGE + ComSvcRuralGGE )",
+    Units = "GGE/DAY",
+    Description = "Annual Fuel Use",
+    Export = list(
+      Displayname =  "Annual Fuel Use",
+      Label =  "Annual Fuel Use",
+      Description =  "annual million gallons of gasoline and other fuels consumed by all light-duty vehicle travel.",
+      Instructions =  "annual million gallons of gasoline and other fuels consumed by all light-duty vehicle travel.",
+      Metric =  "Average",
+      Unit =  "million gallons",
+      Xticks =  3
+    )
+  ),
+  list(
+    Name = "TotalCost",
+    Summarize = list(
+      Expr = "sum(OwnCost + (AveVehCostPM * Dvmt))",
+      Units = c(
+        OwnCost = "USD",
+        AveVehCostPM = "USD/MILE",
+        Dvmt = "MILE"
+      ),
+      Table = "Household"
+    ),
+    Units = "USD",
+    Description = "Daily Total Vehicle Cost"
+  ),
+  list(
+    # HhIncome <- sum(Household$Income) # Summarize
+    Name = "HhIncome",
+    Summarize = list(
+      Expr = "sum(Income)",
+      Units = c(
+        Income = "USD"
+      ),
+      Table = "Household"
+    ),
+    Units = "USD",
+    Description = "Total Regional Income"
+  ),
+  list(
+    # VehicleCost = TotalCost / HhIncome  # Function
+    Name = "VehicleCost",
+    Function = "100 * TotalCost / HhIncome",
+    Units = "",
+    Description = "Vehicle Cost as Percent of HhIncome ",
+    Export = list(
+      Displayname =  "Household Vehicle Cost as Percentage of Income",
+      Label =  "Vehicle Cost % (All Income)",
+      Description =  "average percentage of income spent by all households on owning and operating light-duty vehicles.",
+      Instructions =  "average percentage of income spent by all households on owning and operating light-duty vehicles.",
+      Metric =  "Average",
+      Unit =  "%",
+      Xticks =  5
+    )
+  ),
+  list(
+    Name = "HhIncomeLow",
+    Summarize = list(
+      Expr = "sum(Income[Income < 20000])",
+      Units = c(
+        Income = "USD"
+      ),
+      Table = "Household"
+    ),
+    Units = "USD",
+    Description = "Total Income of low-income households"
+  ),
+  list(
+    Name = "TotalCostLow",
+    Summarize = list(
+      Expr = "sum(OwnCost[Income < 20000]+( AveVehCostPM[Income<20000]*Dvmt[Income<20000] ) )",
+      Units = c(
+        Income = "USD",
+        OwnCost = "USD",
+        AveVehCostPM = "USD/MILE",
+        Dvmt = "MILE"
+      ),
+      Table = "Household"
+    ),
+    Units = "USD",
+    Description = "Vehicle Cost as Percent of HhIncome [Low Income Households]"
+  ),
+  list(
+    # VehicleCost = TotalCost / HhIncome  # Function
+    Name = "VehicleCostLow",
+    Function = "100 * TotalCostLow / HhIncomeLow",
+    Units = "",
+    Description = "Vehicle Cost as Percent of HhIncome [Low Income Households]",
+    Export = list(
+      Displayname =  "Low Income Household Vehicle Cost as Percentage of Income",
+      Label =  "Vehicle Cost % (Low Income)",
+      Description =  "average percentage of income spent by low-income (< $20,000 USD2005) households on owning and operating light-duty vehicles.",
+      Instructions =  "average percentage of income spent by low-income (< $20,000 USD2005) households on owning and operating light-duty vehicles.",
+      Metric =  "Average",
+      Unit =  "%",
+      Xticks =  5
+    )
+  )
+)
+
+# verspm_output_config_txt <-
+# '[
+# {
+#   Summarize expression: sum(Household$Dvmt)/sum(Bzone$Pop)
+#       Strategy: get the two parts HH_DVMT and POP and do a Function query
+#   "DISPLAYNAME": "DVMT Per Capita",
+#   "DESCRIPTION": "daily vehicle miles of travel of residents divided by population.",
+#   "METRIC": "Average",
+#   "UNIT": "daily miles",
+#   "NAME": "DVMTPerCapita"
+# },
+# {
+#   Summarize expression: sum(Household$WalkTrips)/sum(Bzone$Pop)
+#       Strategy: get the two parts HH_WalkTrips and POP and do a Function query
+#   "DISPLAYNAME": "Walk Trips Per Capita",
+#   "LABEL": "Walk Travel Per Capita",
+#   "DESCRIPTION": "annual residents walk trips (not including recreation or walk to transit) divided by population",
+#   "METRIC": "Average",
+#   "UNIT": "annual trips",
+#   "NAME": "WalkTravelPerCapita"
+#   },
+# {
+#   Summarize expression: sum(Household$DailyCO2e)
+#     Strategy: simple summation on Household table
+#   "DISPLAYNAME": "CO2 Emissions",
+#   "LABEL": "CO2 Emissions",
+#   "DESCRIPTION": "daily metric tons of CO2 emitted by all households.",
+#   "METRIC": "Average",
+#   "UNIT": "daily metric tons",
+#   "NAME": "AirPollutionEm"
+# },
+# {
+#   Summarize expression: (sum(Household$DailyGGE) +
+#                          sum(Marea$ComSvcUrbanGGE) +
+#                          sum(Marea$ComSvcRuralGGE)
+#                         ) * 365
+#       Strategy: get the three parts then do a Function query
+#   "DISPLAYNAME": "Annual Fuel Use",
+#   "LABEL": "Annual Fuel Use",
+#   "DESCRIPTION": "annual million gallons of gasoline and other fuels consumed by all light-duty vehicle travel.",
+#   "METRIC": "Average",
+#   "UNIT": "million gallons",
+#   "NAME": "FuelUse"
+# },
+# {
+#   Summarize expression:
+#     OperationCost <- Household$AveVehCostPM  * Household$Dvmt
+#     OwnCost <- Household$OwnCost
+#     TotalCost <- OwnCost+OperationCost
+#     VehicleCost <- sum(TotalCost)/sum(Household$Income) * 100
+#       Strategy: Since it's all in the Household table, can just do a Summarize query
+#   "DISPLAYNAME": "Household Vehicle Cost as Percentage of Income",
+#   "LABEL": "Vehicle Cost % (All Income)",
+#   "DESCRIPTION": "average percentage of income spent by all households on owning and operating light-duty vehicles.",
+#   "METRIC": "Average",
+#   "UNIT": "%",
+#     "NAME": "VehicleCost"
+# },
+# {
+#   Summarize expression:
+#     Income2005 <- deflateCurrency(Household$Income,BaseYear,"2005")
+#     IsLowIncome <- Household$Income < 20000
+#     VehicleCostLow <- sum(TotalCost[IsLowIncome])/sum(Household$Income[IsLowIncome]) * 100
+#       Strategy: We have no interest in Income2005 - just the BaseYear, so can just do a Summarize
+#                 Except that sum(TotalCost[IsLowIncome]) needs to be generated as a separate Summarize
+#                 Then we assemble the quotient as a Function
+#   "DISPLAYNAME": "Low Income Household Vehicle Cost as Percentage of Income",
+#   "LABEL": "Vehicle Cost % (Low Income)",
+#   "DESCRIPTION": "average percentage of income spent by low-income (< $20,000 USD BaseYear) households on owning and operating light-duty vehicles.",
+#   "METRIC": "Average",
+#   "UNIT": "%",
+#     "NAME": "VehicleCostLow"
+#   }
+# ]'

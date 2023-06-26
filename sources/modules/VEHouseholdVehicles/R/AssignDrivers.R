@@ -90,11 +90,12 @@ estimateDriverModel <- function(Data_df, StartTerms_, ValidationProp) {
 #Set up data estimate models
 #---------------------------
 #Load NHTS household data
-Hh_df <- VE2001NHTS::Hh_df
+Hh_df <- loadPackageDataset("Hh_df","VE2001NHTS")
 #Identify records used for estimating metropolitan area models
 Hh_df$IsMetro <- Hh_df$Msacat %in% c("1", "2")
 #Load NHTS person data to use for model estimation
-Per_df <- VE2001NHTS::Per_df[, c("Houseid", "Driver", "AgeGroup", "Worker")]
+Per_df <- loadPackageDataset("Per_df","VE2001NHTS")
+Per_df <- Per_df[, c("Houseid", "Driver", "AgeGroup", "Worker")]
 #Join person data with select household data
 ModelVars_ <-
   c("Houseid", "Hbppopdn", "Income", "Hhsize", "Hometype", "UrbanDev",
@@ -500,8 +501,7 @@ AssignDrivers <- function(L) {
 
   #Function to make a model dataset for an age bin
   #-----------------------------------------------
-  Hh_df <- VE2001NHTS::Hh_df
-  
+  loadPackageDataset("Hh_df","VE2001NHTS")  
   makeModelDataset <- function(Bin) {
     # Make data frame for households that have persons in the age group
     Hh_df <- data.frame(
@@ -552,14 +552,18 @@ AssignDrivers <- function(L) {
       NumDriverChg <- TargetNumDriver - NumDriver
       if (NumDriverChg > 0) {
         IsChgCandidate_ <- which(Driver_ == 0)
+        prob <- DriverProb_[IsChgCandidate_]
+        prob[which((prob/sum(prob))==0)] <- 1e-11
         AddDriverIdx_ <-
-          sample(IsChgCandidate_, NumDriverChg, prob = DriverProb_[IsChgCandidate_])
+          sample(IsChgCandidate_, NumDriverChg, prob = prob)
         Driver_[AddDriverIdx_] <- 1
       }
       if (NumDriverChg < 0) {
         IsChgCandidate_ <- which(Driver_ == 1)
+        prob <- 1 - DriverProb_[IsChgCandidate_]
+        prob[which((prob/sum(prob))==0)] <- 1e-11
         RmDriverIdx_ <-
-          sample(IsChgCandidate_, abs(NumDriverChg), prob = 1 - DriverProb_[IsChgCandidate_])
+          sample(IsChgCandidate_, abs(NumDriverChg), prob = prob)
         Driver_[RmDriverIdx_] <- 0
       }
       Driver_
@@ -567,7 +571,7 @@ AssignDrivers <- function(L) {
 
   #Assign drivers to households by age bin
   #---------------------------------------
-  DriverModel_ls <- VEHouseholdVehicles::DriverModel_ls
+  DriverModel_ls <- loadPackageDataset("DriverModel_ls","VEHouseholdVehicles")
   for (Bin in Bins_) {
     # Name the bin
     BinName <- paste0("Drv", Bin)

@@ -103,7 +103,7 @@ HtProb_HtAp <- calcHhAgeTypes(Hh_df)
 #' @source CreateHouseholds.R script.
 "HtProb_HtAp"
 visioneval::savePackageDataset(HtProb_HtAp, overwrite = TRUE)
-
+# rm(HtProb_HtAp,Hh_df) # Keep out of package R space
 
 #================================================
 #SECTION 2: DEFINE THE MODULE DATA SPECIFICATIONS
@@ -392,7 +392,6 @@ CreateHouseholdsSpecifications <- list(
 "CreateHouseholdsSpecifications"
 visioneval::savePackageDataset(CreateHouseholdsSpecifications, overwrite = TRUE)
 
-
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
 #=======================================================
@@ -452,7 +451,7 @@ createHhByAge <-
            TargetHhSize = NA,
            TargetProp1PerHh = NA) {
     #Dimension names
-    HtProb_HtAp <- VESimHouseholds::HtProb_HtAp
+    HtProb_HtAp <- loadPackageDataset("HtProb_HtAp","VESimHouseholds")
     Ap <- colnames(HtProb_HtAp)
     Ht <- rownames(HtProb_HtAp)
     #Place persons by age into household types by multiplying person vector
@@ -701,7 +700,7 @@ CreateHouseholds <- function(L) {
       "file include some non-integer values for the year", L$G$Year, ".",
       "These have been rounded to the nearest whole number."
     )
-    addWarningMsg("Out_ls", Msg)
+    addWarningMsg(Msg) # Attaches to Out_ls in the current frame by default
     rm(Msg)
   }
   rm(AllInt)
@@ -724,7 +723,7 @@ CreateHouseholds <- function(L) {
       "file include some non-integer values for the year", L$G$Year, ".",
       "These have been rounded to the nearest whole number."
     )
-    addWarningMsg("Out_ls", Msg)
+    addWarningMsg(Msg) # Attaches to Out_ls in the current frame by default
     rm(Msg)
   }
   rm(AllInt)

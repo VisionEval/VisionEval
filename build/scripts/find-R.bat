@@ -4,7 +4,7 @@ setlocal EnableExtensions
 setlocal EnableDelayedExpansion
 
 set R_VERSION=%1
-if [%R_VERSION%] == [] set R_VERSION=4.0.1
+if [%R_VERSION%] == [] set R_VERSION=4.2.2
 set ROOT_KEY=\Software\R-core\R\%R_VERSION%
 set MACHINE_KEY="HKLM%ROOT_KEY%"
 set USER_KEY="HKCU%ROOT_KEY%"

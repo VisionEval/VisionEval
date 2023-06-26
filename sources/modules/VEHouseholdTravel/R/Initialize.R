@@ -44,6 +44,7 @@ InitializeSpecifications <- list(
       TABLE = "Fuel",
       GROUP = "Global",
       FILE = "model_fuel_co2.csv",
+      OPTIONAL = TRUE,
       TYPE = "character",
       UNITS = "category",
       PROHIBIT = "NA",
@@ -56,6 +57,7 @@ InitializeSpecifications <- list(
       TABLE = "Fuel",
       GROUP = "Global",
       FILE = "model_fuel_co2.csv",
+      OPTIONAL = TRUE,
       TYPE = "double",
       UNITS = "multiplier",
       PROHIBIT = c("NA", "< 0"),
@@ -141,7 +143,7 @@ Initialize <- function(L) {
       Marea <- L$Data$Global$Marea$Geo[i]
       HasUzaName <- !(UzaNames_[i] %in% c(NA, ""))
       HasAllVals <- all(!(unlist(Values_df[i,]) %in% c(NA, "")))
-      Complete <- HasUzaName | HasAllVals
+      Complete <- HasUzaName || HasAllVals
       if (!Complete) {
         Msg <- paste0(
           "The 'marea_dvmt_split_by_road_class.csv' file has errors for ",
@@ -194,8 +196,8 @@ Initialize <- function(L) {
 
   #Add Errors and Warnings to Out_ls and return
   #--------------------------------------------
-  Out_ls$Errors <- Errors_
-  Out_ls$Warnings <- Warnings_
+  addErrorMsg(Errors_)
+  addWarningMsg(Warnings_)
   Out_ls
 }
 

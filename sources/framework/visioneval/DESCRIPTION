@@ -1,7 +1,7 @@
 Package: visioneval
 Type: Package
 Title: Software Framework for VisionEval Model System
-Version: 2.0.0
+Version: 3.0.1
 Date: 2020-08-14
 Author: Brian Gregor <gregorb@or-analytics.com>["aut", "cre"]
 Maintainer: Brian Gregor <gregorb@or-analytics.com>,
@@ -22,15 +22,18 @@ Description: This package defines all of the functions used to implement the
     initializing and managing the model run environment, managing the common
     datastore, and running modules.
 License: file LICENSE
-LazyData: TRUE
-Depends: R (>= 2.10)
+Depends: R (>= 3.5)
 Imports:
     jsonlite,
+    yaml,
     stringr,
-    filesstrings,
+    reshape2,
     rhdf5,
-    knitr
+    knitr,
+    futile.logger
+Suggests:
+    pkgload
 Encoding: UTF-8
 Roxygen: list(load='source')
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.2
 biocViews: Infrastructure

@@ -1,0 +1,6 @@
+Snapshot:
+  - Instance     : HhSizeSnapshot   # May be blank, could furnish SnapshotName
+    SnapshotName : HhSizeSnapshot   # Defaults to Instance, or paste0(Name,"Snapshot")
+    Group        : Year             # Field specified by Group/Table/Name must have been
+    Table        : Household        #   defined by an earlier runModule instruction.
+    Name         : HhSize

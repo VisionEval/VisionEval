@@ -628,7 +628,7 @@ BudgetHouseholdDvmt <- function(L, M) {
 
   #Calculate household budget proportion of income
   #-----------------------------------------------
-  OpPropModel_ls <- VETravelPerformance::OpPropModel_ls
+  OpPropModel_ls <- loadPackageDataset("OpPropModel_ls","VETravelPerformance")
   BudgetProp_Hh <- applyLinearModel(OpPropModel_ls, L$Year$Household$Income)
 
   #Calculate adjusted household income for calculating vehicle operations budget

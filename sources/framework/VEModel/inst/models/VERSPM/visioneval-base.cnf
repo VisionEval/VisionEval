@@ -1,0 +1,23 @@
+Notes:
+- VisionEval.cnf for VERSPM (single stage)
+- Model Structural Parameters: ScriptsDir, InputDir, ParamDir, GeoFile, ModelParamFile
+- Model Description: Model, Region, State
+- Scenario Description (single stage): Scenario, Description, BaseYear, Years
+
+# Model Structural Parameters
+ScriptsDir     : scripts
+InputDir       : inputs
+ParamDir       : defs
+GeoFile        : geo.csv
+ModelParamFile : model_parameters.json # Located in InputDir
+
+# Model description
+Model          : VERSPM 3.0
+Region         : RVMPO
+State          : OR
+
+# Scenario description (using default or runtime Seed parameter)
+Scenario       : VERSPM RVMPO
+Description    : Base Year 2010 + Future 2038
+BaseYear       : 2010
+Years          : [ 2010, 2038 ]

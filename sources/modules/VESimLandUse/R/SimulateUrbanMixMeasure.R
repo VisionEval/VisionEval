@@ -51,19 +51,17 @@
 #=============================================
 #SECTION 1: ESTIMATE AND SAVE MODEL PARAMETERS
 #=============================================
-#' @import visioneval
-#' @import VELandUse
 
 # TODO: it's bad practice to make a second dataset with the same name
 # as in another package. Is VELandUse ever not loaded when we do
-# VESimLandUse - the implication here is that it is, but there's no
-# way to enforce that. There's not evidence that is ever used except
-# locally.
+# VESimLandUse? - the implication here is that it is, but there's no
+# way to enforce that. There's not evidence the data set is ever used
+# except locally.
 
 #Load the urban mixed-use model estimated by the CalculateUrbanMixMeasure
 #module in the VELandUse package
 #------------------------------------------------------------------------
-UrbanMixModelSim_ls <- VELandUse::UrbanMixModel_ls
+UrbanMixModelSim_ls <- loadPackageDataset("UrbanMixModel_ls","VELandUse")
 
 #Save the urban mixed-use model
 #------------------------------
@@ -80,6 +78,9 @@ UrbanMixModelSim_ls <- VELandUse::UrbanMixModel_ls
 #'   \item{Summary}{the summary of the binomial logit model estimation results}
 #'   \item{SearchRange}{a two-element vector specifying the range of search values}
 #' }
+#' @import visioneval
+#' @import VELandUse
+#' @name UrbanMixModelSim_ls
 #' @source CalculateUrbanMixMeasure.R script.
 "UrbanMixModelSim_ls"
 visioneval::savePackageDataset(UrbanMixModelSim_ls, overwrite = TRUE)
@@ -303,7 +304,7 @@ idUrbanMixBzones <- function(Hh_BzHt, Den_Bz, Target) {
   Bz <- names(Den_Bz)
   Hh_BzHt <- Hh_BzHt[Bz,]
   Hh_Bz <- rowSums(Hh_BzHt)
-  UrbanMixModel_ls <- VESimLandUse::UrbanMixModelSim_ls # Avoid name conflict
+  UrbanMixModel_ls <- loadPackageDataset("UrbanMixModelSim_ls","VESimLandUse")  # Avoid name conflict
   #Calculate probabilities by Bzone for SF and Mf
   Prob_BzHt <- 0 * Hh_BzHt
   Prob_BzHt[,"SFDU"] <-

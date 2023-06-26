@@ -3,6 +3,7 @@
 .Rhistory
 .RData
 .Ruserdata
+*.R-text
 *.bak
 .DS_Store
 built/
@@ -11,4 +12,9 @@ build/*make*.out
 dev/
 docs/
 external/
+shared/
 Log_*.txt
+Test/
+make*out
+sources/**/*.zip
+plan.txt

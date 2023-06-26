@@ -1,0 +1,11 @@
+{
+  "Model": "Staged Model Test",
+  "Scenario": "Stage 1",
+  "Description": "Stage 1 for Load Datastore Test",
+  "Region": "RVMPO",
+  "BaseYear": "2010",
+  "Years": ["2010", "2038"],
+  "DatastoreName": "Datastore",
+  "DatastoreType": "RD",
+  "Seed": 1
+}

@@ -1,0 +1,173 @@
+# Test Query breaks, geography, filters...
+QuerySpec <- list(
+  
+  # Region query
+  # Urban area household DVMT
+  #--------------------
+  list(
+    Name = "TotalHhDvmt",
+    Summarize = list(
+      Expr = "sum(UrbanHhDvmt)",
+      Units = c(
+        UrbanHhDvmt = "MI/DAY",
+        Marea = ""
+      ),
+      Table = "Marea"
+    ),
+    Units = "Miles per day",
+    Description = "Daily vehicle miles traveled by households residing in the region"
+  ), # every specification (sub-list) has to have a comma after it, except the last one
+
+  # Marea query
+  # Urban area household DVMT by Marea (consider summing on Household table...)
+  #--------------------
+  list(
+    Name = "MareaHhDvmt",
+    Summarize = list(
+      Expr = "sum(UrbanHhDvmt)",
+      Units = c(
+        UrbanHhDvmt = "MI/DAY",
+        Marea = ""
+      ),
+      By = "Marea",
+      Table = "Marea"
+    ),
+    Units = "Miles per day",
+    Description = "Daily vehicle miles traveled by households residing in the region"
+  ), # every specification (sub-list) has to have a comma after it, except the last one
+
+  # Marea query with filter to one Marea
+  # TODO: check that a model with only one Marea works okay
+  list(
+    Name = "MareaHhDvmt_Filter",
+    Summarize = list(
+      Expr = "sum(UrbanHhDvmt)",
+      Units = c(
+        UrbanHhDvmt = "MI/DAY",
+        Marea = ""
+      ),
+      By = "Marea",
+      Filter = list(
+        Marea = c("RVMPO")
+      ),
+      Table = "Marea"
+    ),
+    Units = "Miles per day",
+    Description = "Daily vehicle miles traveled by households residing in the region"
+  ),
+
+  # Breakpoint query for Region
+  # break out dvmt by Income or household size
+  list(
+    Name = "UrbanHhPopByInc",
+    Summarize = list(
+      Expr = "sum(HhSize)",
+      Units = c(
+        HhSize = "",
+        Income = "USD"
+      ),
+      By = c("Income"),
+      Breaks = list(
+        Income = c(20000, 40000, 60000, 80000, 100000)
+      ),
+      BreakNames = list(
+        Income = c("20000", "40000", "60000", "80000", "100000")
+      ),
+      Table = "Household"
+    ),
+    Units = "Persons",
+    Description = "Number of persons by income strata"
+  ),
+
+  # Breakpoint query for Marea (population by income)
+  # break out dvmt by income
+  list(
+    Name = "UrbanHhPopIncMarea",
+    Summarize = list(
+      Expr = "sum(HhSize)",
+      Units = c(
+        HhSize = "",
+        Income = "USD",
+        Marea = ""
+      ),
+      By = c(
+        "Income",
+        "Marea"
+      ),
+      Breaks = list(
+        Income = c(20000, 40000, 60000, 80000, 100000)
+      ),
+      BreakNames = list(
+        Income = c("20000", "40000", "60000", "80000", "100000")
+      ),
+      Table = "Household"
+    ),
+    Units = "Persons",
+    Description = "Number of persons by income strata and Marea"
+  ),
+
+  # Breakpoint query for Marea with filter to one Breakpoint (all Mareas)
+  # Just add the "Marea" "By"
+  list(
+    Name = "UrbanHhPopIncMarea_FilterIncome",
+    Summarize = list(
+      Expr = "sum(HhSize)",
+      Units = c(
+        HhSize = "",
+        Income = "USD",
+        Marea = ""
+      ),
+      By = c(
+        "Income",
+        "Marea"
+      ),
+      Breaks = list(
+        Income = c(20000, 40000, 60000, 80000, 100000)
+      ),
+      BreakNames = list(
+        Income = c("20000", "40000", "60000", "80000", "100000")
+      ),
+      Filter = list(
+        Income = c("min","20000","40000")
+      ),
+      Table = "Household"
+    ),
+    Units = "Persons",
+    Description = "Number of persons in lowest income stratum"
+  ),
+  
+  # Breakpoint query for Marea with filter to one Breakpoint and one Marea
+  list(
+    Name = "UrbanHhPopIncMarea_FilterAll",
+    Summarize = list(
+      Expr = "sum(HhSize)",
+      Units = c(
+        HhSize = "",
+        Income = "USD",
+        Marea = ""
+      ),
+      By = c(
+        "Income",
+        "Marea"
+      ),
+      Breaks = list(
+        Income = c(20000, 40000, 60000, 80000, 100000)
+      ),
+      BreakNames = list(
+        Income = c("20000", "40000", "60000", "80000", "100000")
+      ),
+      Filter = list(
+        Income = c("20000"),
+        Marea = c("RVMPO")
+      ),
+      Table = "Household"
+    ),
+    Units = "Persons",
+    Description = "Number of persons in lowest income stratum in one Marea"
+  ) ### ,
+
+  # Function query performing scalar calculation e.g. regional fraction of average HH size at income
+  # Function query with vector calculation (All Mareas versus single breakpoint for one Marea)
+  # Second breakpoint query for Marea (dvmt by income)
+  # Function query with array calculation (dvmt per capita; Same Mareas / Breakpoints for each)
+)

@@ -437,8 +437,9 @@ Initialize <- function(L) {
       Marea <- L$Data$Global$Marea$Geo[i]
       if (Marea != "None") {
         HasUzaName <- UzaNames_[i] %in% Ua
+        HasUzaName <- length(HasUzaName)>0 && HasUzaName # handle UzaNames_[i] set to NA - not valid here
         HasAllVals <- all(!(unlist(Values_df[i,]) %in% c(NA, "")))
-        Complete <- HasUzaName | HasAllVals
+        Complete <- HasUzaName || HasAllVals
         if (!Complete) {
           Msg <- paste0(
             "The 'marea_dvmt_split_by_road_class.csv' file has errors for ",
@@ -447,7 +448,8 @@ Initialize <- function(L) {
             "must be provided in the 'marea_base_year_dvmt.csv file'."
           )
           Err_ <- c(Err_, Msg)
-          rm(Msg)      }
+          rm(Msg)
+        }
         if (HasAllVals) {
           SumDiff <- abs(1 - sum(Values_df[i,]))
           if (SumDiff >= 0.01) {
@@ -560,7 +562,7 @@ Initialize <- function(L) {
   #Check region and marea base year heavy truck DVMT and light-duty DVMT
   #---------------------------------------------------------------------
   #Identify which year values correspond to base year in Get data
-  IsBaseYear <- L$Get$Year$Marea$Year == getModelState("BaseYear")
+  IsBaseYear <- L$Get$Year$Marea$Year == getModelState()$BaseYear
   #Make a data frame of Marea data to use in checks and calculations
   Marea_df <- data.frame(
     Name = L$Data$Global$Marea$Geo,
@@ -797,8 +799,8 @@ Initialize <- function(L) {
   #--------------------------------------------
   #Add Errors and Warnings to Out_ls and return
   #--------------------------------------------
-  Out_ls$Errors <- Errors_
-  Out_ls$Warnings <- Warnings_
+  addErrorMsg(Errors_)
+  addWarningMsg(Warnings_)
   Out_ls
 }
 

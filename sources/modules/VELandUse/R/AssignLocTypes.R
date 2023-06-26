@@ -263,6 +263,41 @@ AssignLocTypesSpecifications <- list(
 "AssignLocTypesSpecifications"
 visioneval::savePackageDataset(AssignLocTypesSpecifications, overwrite = TRUE)
 
+AssignLocTypesValidateInputFile <- function(File, Data_df) {
+  FileValidation_ls <- list(Errors=character(0),Warnings=character(0))
+  if ( inherits(Data_df,"data.frame") && is.character(File) && nzchar(File[1]) ) {
+    if ( File == "bzone_urban-town_du_proportions.csv" ) {
+      SFProp <- Data_df$PropUrbanSFDU + Data_df$PropTownSFDU
+      SFValid <- ( SFProp <= 1 )
+      if ( ! isTRUE( all( SFValid ) ) ) {
+        Msg <- c(
+          "These Bzones have total SF dwelling unit proportions > 1:",
+          paste0(Data_df$Geo[!SFValid],Data_df$Year[!SFValid],SFProp[!SFValid])
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+      }
+      MFProp <- Data_df$PropUrbanMFDU + Data_df$PropTownMFDU
+      MFValid <- ( MFProp <= 1 )
+      if ( ! isTRUE( all( MFValid ) ) ) {
+        Msg <- c(
+          "These Bzones have total MF dwelling unit proportions > 1:",
+          paste0(Data_df$Geo[!MFValid],Data_df$Year[!MFValid],MFProp[!MFValid])
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+      }
+      GQProp <- Data_df$PropUrbanGQDU + Data_df$PropTownGQDU
+      GQValid <- ( GQProp <= 1 )
+      if ( ! isTRUE( all( GQValid ) ) ) {
+        Msg <- c(
+          "These Bzones have total GQ dwelling unit proportions > 1:",
+          paste0(Data_df$Geo[!GQValid],Data_df$Year[!GQValid],GQProp[!GQValid])
+        )
+        FileValidation_ls$Errors <- c(FileValidation_ls$Errors,Msg)
+      }
+    }
+  }
+  return(FileValidation_ls)
+}
 
 #=======================================================
 #SECTION 3: DEFINE FUNCTIONS THAT IMPLEMENT THE SUBMODEL
@@ -322,6 +357,7 @@ AssignLocTypes <- function(L) {
     SplitAll_ <- Props_ * Tot
     SplitInt_ <- round(SplitAll_)
     Rem <- sum(SplitAll_ - SplitInt_)
+    RemSign <- sign(Rem)
     
     Rem <- as.integer(round(abs(Rem))) # Eliminate floating point issues
     
@@ -330,19 +366,21 @@ AssignLocTypes <- function(L) {
         sample(1:length(Props_), Rem, replace = TRUE, prob = Props_)
       )
       SplitInt_[as.numeric(names(RemTab_))] <-
-        SplitInt_[as.numeric(names(RemTab_))] + sign(Rem) * RemTab_
+        SplitInt_[as.numeric(names(RemTab_))] + RemSign * RemTab_
     }
     
     SplitInt_
   }
   
   #Calculate dwelling units by Bzone and housing type
+  writeLog("Calculating dwelling units by Bzone and HH type",Level="info")
   DU_BzHt_full <- matrix(0, nrow = length(Bz), ncol = length(Ht), dimnames = list(Bz,Ht))
   DU_BzHt <- table(L$Year$Household$Bzone, L$Year$Household$HouseType)
   rowmatch <- match(rownames(DU_BzHt), rownames(DU_BzHt_full))
   colmatch <- match(colnames(DU_BzHt), colnames(DU_BzHt_full))
   DU_BzHt_full[rowmatch, colmatch] <- DU_BzHt
   # Calculate dwelling units by Bzone, housing type and location type
+  writeLog("Splitting dwelling units by Bzone, HH type, and Loc Type",Level="info")
   for(i in 1:nrow(Props_BzHtLt)){
     for(j in 1:ncol(Props_BzHtLt)){
       DU_BzHtLt[i,j,] <- splitInt(Props_BzHtLt[i,j,], Tot = DU_BzHt_full[i,j])
@@ -357,6 +395,7 @@ AssignLocTypes <- function(L) {
     LocType_
   }
   #Assign location type to all households
+  writeLog("Assign Loc Type to all households",Level="info")
   LocType_Hh <- rep(NA, length(L$Year$Household$HhId))
   names(LocType_Hh) <- L$Year$Household$HhId
   for (bz in Bz) {
@@ -370,6 +409,13 @@ AssignLocTypes <- function(L) {
   #Calculate population by Bzone and location type
   #-----------------------------------------------
   Pop_BzLt <- array(0, dim = c(length(Bz), length(Lt)), dimnames = list(Bz,Lt))
+  writeLog("Calculating population by Bzone and LocType",Level="info")
+  if ( length(L$Year$Household$HhSize)!=length(L$Year$Household$Bzone) ||
+       length(L$Year$Household$HhSize)!=length(LocType_Hh) ) {
+    writeLog(paste("len L$Year$Household$HhSize=",length(L$Year$Household$HhSize)),Level="info")
+    writeLog(paste("len L$Year$Household$Bzone=",length(L$Year$Household$Bzone)),Level="info")
+    writeLog(paste("len LocType_Hh=",length(LocType_Hh)),Level="info")
+  }
   Pop_BxLx <-
     tapply(L$Year$Household$HhSize, list(L$Year$Household$Bzone, LocType_Hh), sum)
   Pop_BzLt[rownames(Pop_BxLx), colnames(Pop_BxLx)] <- Pop_BxLx
