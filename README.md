@@ -1,11 +1,11 @@
 # VisionEval
 
 
-**IMPORTANT**: the `development` branch is no more! Yes, it looks like it is still here,
-but that is an **illusion**. This branch (aside from this one commit changing the
-README.md file) is identical to `master` at the `public-2.0` branch.
+**IMPORTANT**: As of 7/21/2023, the `development` branch should once again be the basis for development
+of new features and fixes to VisionEval. 'development-next` is a snapshot of this branch and will
+soon be retired.
 
-All new development should be based on the `development-next` branch.
+All new development should be based on this `development` branch.
 
 Thanks for your cooperation. If you have questions or complaints, please contact
 [info@visioneval.org](mailto:info@visioneval.org).
