@@ -1,6 +1,5 @@
 # Author: Jeremy Raw
-
-# VEModel Package Code
+# VEModel Package
 
 #' @include environment.R
 #' @import visioneval
@@ -264,7 +263,7 @@ ve.model.torun <- function() {
 
 # configure installs the model parameters (initializing or re-initializing)
 # `reloadFile` says to reload self$loadParam_ls from the model configuration in the file system,
-#  otherwise use self$runParam_ls; it is rarely desirable to change the default, which supports
+#  otherwise use self$RunParam_ls; it is rarely desirable to change the default, which supports
 #  in-memory modifications to self$loadedParam_ls
 # 
 ve.model.configure <- function(modelPath=NULL, reloadFile=FALSE, updateCheck=TRUE) {
@@ -798,13 +797,13 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, showRootDir=TRUE, all.files=F
     resultPaths <- c(baseResults,stagePaths)
     outputPath <- dir(resultPaths,pattern=self$setting("OutputDir"),full.names=TRUE)
     outputFiles <- dir(outputPath,full.names=TRUE,recursive=all.files)
-    outputFiles <- unique(c(outputPath,outputFiles))
     outputDirs <- dir.exists(outputFiles)
     if ( all.files ) {
       outputFiles <- outputFiles[ ! outputDirs ]
-    } else {
-      outputFiles <- outputFiles[ outputDirs ]
-    }
+    }# else {
+     # outputFiles <- outputFiles[ outputDirs ]
+     # }
+    if ( length(outputFiles)==0 ) outputFiles <- outputPath # Show OutputDir as stub
   } else outputFiles <- character(0)
 
   # Find archiveDirs (and if asked for, archiveFiles)
@@ -884,9 +883,9 @@ ve.model.dir <- function( stage=NULL,shorten=TRUE, showRootDir=TRUE, all.files=F
 ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL,show=10) {
   # Remove outputs and/or results, either interactively or in batch
   # 'show' controls maximum number of outputs to display for selection
-  # Can limit just to outputs or results in a certain 'stage'
-  # outputOnly=FALSE will show results as well as outputs for deletion;
-  #   if outputs exist, and outputOnly is NULL, we only show those by default
+  # Can limit just to outputs or to results in a certain 'stage'
+  # outputOnly=FALSE will show/clear results as well as outputs for deletion;
+  #   if outputs exist, and outputOnly is NULL, we only show/clear those by default
   # "archives" TRUE will offer to delete results archives
   #   archives FALSE will ignore results archives
   # By default, clear is interactive. If "force=TRUE", then it will
@@ -905,7 +904,8 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
     return( invisible(FALSE) )
   }
   
-  to.delete <- self$dir(outputs=TRUE,all.files=TRUE,stage=stage,showRootDir=FALSE)
+#  to.delete <- self$dir(outputs=TRUE,all.files=TRUE,stage=stage,showRootDir=FALSE)
+  to.delete <- self$dir(outputs=TRUE,stage=stage,showRootDir=FALSE)
   if ( is.null( outputOnly ) ) {
     # Can't force delete of results without explicit outputOnly=FALSE
     outputOnly <- ( length(to.delete)>0 || force )
@@ -923,10 +923,10 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
     on.exit(setwd(owd))
   }
 
-  # "stage" could be any vector of intermediate sub-directory names
-  if ( is.character(stage) && ! isTRUE(archives) ) {
-    # keep only files in subdirectories matching stage$Dir
-    stageDirs <- sapply(self$modelStages,function(s) s$Dir)
+  if ( ! isTRUE(outputOnly) && ! isTRUE(archives) && is.character(stage) ) {
+    # keep only files in subdirectories matching stage$Dir in results
+    # TODO: make this work so stages passed by name will have their results selected (only)
+    stageDirs <- sapply(self$modelStages[stage],function(s) s$Dir)
     stage <- stage[ stage!="." & stage %in% stageDirs ]
     if ( any(stages) ) {
       stages <- paste("/",stages,"/")
@@ -943,7 +943,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
     } else if ( ! force && length(to.delete)>0 ) {
       action = "h"
       start = 1
-      stop <- min(start+show-1,length(to.delete))
+      stop <- if (show>0) min(start+show-1,length(to.delete)) else length(to.delete)
       while ( action != "q" ) {
         print(to.delete[start:stop])
         cat("Enter an item number to delete it, or a selection (2,3,7) or range (1:5)\n")
@@ -959,7 +959,7 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
           response <- paste0(start,":",stop)
         } else {
           if ( grepl("[^hnpq0-9:, ]",response) ) { # if any illegal character, loop back to help
-            action = "h"
+            action <- "h"
             next
           }
           response <- sub("^ *","",response)
@@ -972,15 +972,15 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
             unlink(candidates[response],recursive=TRUE)
             cat("Deleted:\n",paste(candidates[response],collapse="\n"),"\n")
           }
-          to.delete <- self$dir(outputs=TRUE,all.files=TRUE,showRootDir=FALSE)
+          to.delete <- self$dir(outputs=TRUE,showRootDir=FALSE)
           if ( ! isTRUE(outputOnly) ) to.delete <- c(to.delete,self$dir(results=TRUE,showRootDir=FALSE))
           if ( length(to.delete) > 0 ) {
-            start = 1
-            stop <- min(start+show-1,length(to.delete))
-            action = "h"
+            start <- 1
+            stop <- if (show>0) min(start+show-1,length(to.delete)) else length(to.delete)
+            action <- "h"
           } else {
             cat("No files remaining to delete.\n")
-            action = "q"
+            action <- "q"
           }
         } else {
           action <- substr(response[1],1,1)
@@ -988,14 +988,14 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
             if ( action == "n" ) {
               start <- min(start + show,length(to.delete))
               if ( start == length(to.delete) ) start <- max(length(to.delete),1)
-              stop <- min(start+show-1,length(to.delete))
+              stop <- if (show>0) min(start+show-1,length(to.delete)) else length(to.delete)
             } else if ( action == "p" ) {
               start <- max(start - show,1)
               stop <- min(start+show-1,length(to.delete))
             }
           } else if ( action %in% c("h","q") ) {
             next
-          } else action = "h"
+          } else action <- "h"
         }
       }
     }
@@ -1036,12 +1036,11 @@ ve.stage.init <- function(modelParam_ls,Name=NULL,Model=NULL,ScenarioDir=NULL,st
       self$Name <- stageParam_ls$Name
     } else stop("No Name provided for model stage.")
   } else self$Name <- Name
-
   # Note that modelParam_ls should be provided during model initialization because
   #   RunParam_ls will not yet exist.
   # It can be missing if we're loading a model on the fly and RunParam_ls already exists
   if ( missing(modelParam_ls) || is.null(modelParam_ls) ) {
-    modelParam_ls <- Model$runParam_ls
+    modelParam_ls <- Model$RunParam_ls
     if ( is.null(modelParam_ls) ) modelParam_ls <- list()
   }
 
@@ -1823,7 +1822,7 @@ ve.model.list <- function(inputs=FALSE,outputs=FALSE,details=NULL,stage=characte
 ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
   if ( ! private$p.valid ) {
     cat("Model object is not valid\n")
-    return()
+    return(private$p.valid)
   }
   cat("Model:",self$modelName,"\n")
   if ( details ) {
@@ -1833,28 +1832,26 @@ ve.model.print <- function(details=FALSE,configs=FALSE,scenarios=FALSE) {
     cat(paste("  ",uniqueSources(self$RunParam_ls,shorten=self$modelPath)),sep="\n") # Generates one row for each unique source
   }
   cat("Status:", self$printStatus(),"\n")
-  if ( private$p.valid ) {
-    scenarios <- self$modelScenarios
-    scenarioStages <- sapply( self$modelStages, function(s) s$IsScenario )
-    cat("Model Stages:\n")
-    for ( s in self$modelStages[ ! scenarioStages ] ) {
-      s$print(details,configs)
-    }
-    scenarioCount <- length(which(scenarioStages))
-    if ( scenarioCount > 0 || ! is.null(self$modelScenarios) ) {
-      if ( ! details ) {
-        cat(scenarioCount,"Scenario stages defined in",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
-      } else {
-        cat("Scenario Stages from",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
-        for ( s in self$modelStages[ scenarioStages ] ) {
-          s$print(details,configs=FALSE) # don't show configs for scenarios...
-        }
-      }
-    } else if (scenarioCount > 0 && is.null(self$modelScenarios) ) {
-      cat("Program error: scenarioCount",scenarioCount,"but modelScenarios is NULL\n")
-    } else cat("No scenarios defined.\n")
+  scenarios <- self$modelScenarios
+  scenarioStages <- sapply( self$modelStages, function(s) s$IsScenario )
+  cat("Model Stages:\n")
+  for ( s in self$modelStages[ ! scenarioStages ] ) {
+    s$print(details,configs)
   }
-  private$p.valid
+  scenarioCount <- length(which(scenarioStages))
+  if ( scenarioCount > 0 || ! is.null(self$modelScenarios) ) {
+    if ( ! details ) {
+      cat(scenarioCount,"Scenario stages defined in",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
+    } else {
+      cat("Scenario Stages from",sub(self$modelPath,"",self$modelScenarios$scenarioPath),"\n")
+      for ( s in self$modelStages[ scenarioStages ] ) {
+        s$print(details,configs=FALSE) # don't show configs for scenarios...
+      }
+    }
+  } else if (scenarioCount > 0 && is.null(self$modelScenarios) ) {
+    cat("Program error: scenarioCount",scenarioCount,"but modelScenarios is NULL\n")
+  } else cat("No scenarios defined.\n")
+  return(private$p.valid)
 }
 
 # Return the log file location (shorten=FALSE appends full model path)
@@ -2165,7 +2162,7 @@ ve.model.run <- function(run="continue",stage=character(0),watch=TRUE,dryrun=FAL
     if ( all(alreadyRun) ) {
       self$overallStatus <- completeStatus
       writeLog("Model Run Complete",Level="warn")
-      return(invisible(self$printStatus()))
+      return(invisible(self$results()))
     }
 
     needToRun <- which( ! alreadyRun ) # numeric indices of stages needing to run
@@ -2417,7 +2414,7 @@ ve.model.run <- function(run="continue",stage=character(0),watch=TRUE,dryrun=FAL
   if ( ! dryrun ) {
     self$load(onlyExisting=TRUE,updateCheck=FALSE) # revisit all the run results and update the statuses
   }
-  return(invisible(self$overallStatus))
+  return(self$results())
 }
 
 ve.stage.watchlog <- function(stop=FALSE,delay=2) {
@@ -2484,7 +2481,7 @@ ve.model.addstage <- function(Name=NULL,...) {
   self$modelStages <- self$initstages(self$modelStages) # existing stages will be skipped
 
   # Report runnability error...
-  if ( ! self$modelStages[[stage$Name]]$runnable() ) {
+  if ( ! stage$Name %in% names(self$modelStages) ) {
     writeLog("The stage you tried to add cannot run and will be ignored!",Level="error")
   }
 
@@ -2562,83 +2559,26 @@ ve.model.findstages <- function(stage=character(0),Reportable=TRUE) {
 #                                Model Results                                 #
 ################################################################################
 
-# create a VEResults object or list of VEResults objects (possibly invalid/empty) from the model's
-# Reportable stages. Provide a vector of stage names or indices to filter the list.
+# create a VEResultsList object (possibly invalid/empty) from the model's Reportable stages. If
+# stages are named explicitly, the results for the named stages will be included even if they are
+# "StartFrom" stages or are otherwise not reportable.
+# This function will return even if the model has not been run, or has incomplete stages: the
+# stages with missing results will show up as "Not Run Yet" and will be ignored for export, etc.
 ve.model.results <- function(stage=character(0)) {
 
   if ( ! private$p.valid ) {
     writeLog(paste0("Invalid model: ",self$printStatus()),Level="error")
     return( NULL )
   }
-  stages <- self$findstages(stage)
+
+  stages <- self$findstages(stage) # empty vector (default) gets all Reportable stages
   if ( length(stages)==0 ) {
     writeLog(paste("Available stages:",names(self$modelStages),collapse=", "),Level="error")
     stop(
       writeLog(paste("Model stage(s) not found:",stage,collapse=","),Level="error")
     )
   }
-  results <- lapply(
-    stages,
-    function(stg) VEResults$new(stg$RunPath,ResultsName=stg$Name,ModelStage=stg)
-  )
-  names(results) <- names(stages)
-  valid <- sapply( results, function(r) r$valid() )
-  if ( any( ! valid ) ) {
-    writeLog(
-      paste("No results yet for stage(s): ",names(results)[!valid],collapse=", "),
-      Level="warn"
-    )
-    writeLog("Have you run the model?",Level="warn")
-  }
-  if ( length(results)>1 ) {
-    # Create a VEResultsList with two function elements: "extract" and "results"
-    # extract calls $extract on each element of "results"
-    # results returns the "results" list (a bare list of VEResults)
-    # The actual results are stored in an environment attached to each of those functions
-
-    results.env <- new.env()
-    results.env$results <- results # named list of VEResults objects
-    rm(results)
-
-    # Extract from the list - works for everything
-    # selections are problematic since they are tied to specific result sets
-    extract <- function(stage=character(0),...) {
-      # TODO: beef this up to handle an output format/destination
-      # Create output tables, append results to them so a single set of tables
-      #   can accumulate results from all reportable stages.
-      if ( length(stage)==0 ) stage<-names(results)
-      for ( stg in stage ) {
-        results[[stg]]$extract(...)
-      }
-      return(invisible(stage))
-    }
-    environment(extract)<-results.env
-
-    # Produce a bare named list of VEResults objects
-    results.func <- function() {
-      return( results ) # A list (for use by query or print)
-    }
-    environment(results.func)<-results.env
-
-    # Get the results path
-    results <- list(env=results.env$results,extract=extract,results=results.func,path=self$modelResults)
-    class(results) <- "VEResultsList" # print function defined below
-  } else if ( length(results)==1 ) {
-    results <- results[[1]]              # Just return the single VEResults object
-  }
-  return(results)
-}
-
-#' pretty print a list of VEResults objects
-#' 
-#' @param x a VEResultsList object
-#' @param ... Other parameters for generic print function
-#' @export
-print.VEResultsList <- function(x,...) {
-  results <- x$results()
-  for ( nm in names(results)) {
-    print(results[[nm]],name=nm,...) # Call VEResults$print
-  }
+  return(VEResultsList$new(stages=stages,model=self))
 }
 
 # open a Query object for the model from its QueryDir (or report a list
@@ -2670,6 +2610,33 @@ ve.model.query <- function(QueryName=NULL,FileName=NULL,load=TRUE) {
   )
 }
 
+ve.model.exportpath <- function() {
+  output.dir <- file.path(self$modelPath,self$setting("ResultsDir"),self$setting("OutputDir"))
+}
+
+ve.model.exporter <- function(file=NULL,tag=NULL,connection=NULL,partition=NULL) {
+  # If all arguments missing, print a list of available exports
+  output.dir <- self$exportPath()
+  if ( ! is.character(file) && is.null(tag) ) {
+    # Show list of available exports
+    return( dir(output.dir,pattern="\\.VEexport$") )
+  }
+  # If file provided, process that
+  if ( is.character(file) ) {
+    filepath <- file.path(output.dir,file)[1]
+    if ( ! any(grepl("\\.VEexport$",filepath)) ) filepath <- paste0(filepath,".VEexport")
+    if ( file.exists(filepath) ) {
+      return( VEExporter$new(Model=self,load=filepath) ) # Will report error if can't load
+    } else {
+      stop("Exporter file does not exist:",filepath)
+    }
+  }
+  if ( ! is.null(tag) || is.character(connection) ) {
+    return( VEExporter$new(Model=self,tag=tag,connection=connection,partition=partition) )
+  }
+  stop("Must provide file, tag, or connection to identify Exporter")
+}
+  
 ################################################################################
 #                          Exported Helper Functions                           #
 ################################################################################
@@ -3026,6 +2993,8 @@ VEModel <- R6::R6Class(
     copy=ve.model.copy,                     # copy a self$modelPath to another path (ignore results/outputs)
     archive=ve.model.archive,               # apply framework archive function if results exist
     results=ve.model.results,               # Create a VEResults object (if model is run); option to open a past result
+    exportPath=ve.model.exportpath,         # Where to save VEExporters associated with this Model
+    exporter=ve.model.exporter,             # Create an exporter for this model's results
     findstages=ve.model.findstages,         # Report the path to the model results for a stage
     query=ve.model.query                    # Create a VEQuery object (or show a list of queries).
   ),

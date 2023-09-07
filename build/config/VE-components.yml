@@ -47,6 +47,7 @@ Components:
       Group: 0
       Script: test.R
     CRAN:
+      - dplyr # simplifies export functions
       - futile.logger
       - jsonlite
       - yaml
@@ -56,8 +57,10 @@ Components:
       - future
       - future.callr
       - jrc
+      - methods
+      - DBI
       - RSQLite
-#       RSQLite is only needed for the walkthrough extract script
+      - data.table
 #    Github:
 #      - anders-biostat/jrc
 #    To build properly, need to do externals after creating ve.lib!
