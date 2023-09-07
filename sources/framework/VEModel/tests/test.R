@@ -35,7 +35,7 @@ testStep <- function(msg) {
 }
 
 stopTest <- function(msg="Stop Test") {
-  stop(msg)
+  stop(msg,call.=FALSE)
 }
 
 getModelDirectory <- function() { # hack to support pkgload which won't see the function as exported for some reason
@@ -43,7 +43,8 @@ getModelDirectory <- function() { # hack to support pkgload which won't see the 
   # no NAMESPACE by default. I added NAMESPACE to .gitignore, and setting up to do "live
   # development" with ve.test just requires that the package be built once and the NAMESPACE copied
   # back from /built/.../src/VEModel/NAMESPACE. As long as the development doesn't produce any new
-  # functions, we're fine.
+  # exported functions, we're fine. And if it does, we do one build and copy back NAMESPACE from
+  # built/.../src
   return(
     if ( ! "getModelDirectory" %in% getNamespaceExports("VEModel") ) {
       # Hack to support pkgload from source folder which does not have a Namespace
@@ -55,6 +56,10 @@ getModelDirectory <- function() { # hack to support pkgload which won't see the 
       VEModel::getModelDirectory()
     }
   )
+}
+
+listTests <- function() {
+  ls(envir=parent.env(environment()),pattern="^test_") # list defined tests
 }
 
 # Basic installer test - also used later to wrap model installations for other tests
@@ -70,7 +75,7 @@ test_00_install <- function(
     if ( all( nzchar(c(variant,modelName)) ) ) installAs <- paste0("test-",modelName,"-",variant)
   }
 
-  rs <- NULL
+  mod <- NULL
   if ( all( nzchar( c(modelName[1],variant[1],installAs[1]) ) ) ) {
     if ( dir.exists(existingModel <- file.path("models",installAs)) ) {
       if ( overwrite ) {
@@ -79,12 +84,12 @@ test_00_install <- function(
         overwrite <- TRUE
       } else {
         message("install opens existing model")
-        rs <- openModel(existingModel,log=log)
+        mod <- openModel(existingModel,log=log)
       }
     }
-    if ( overwrite || is.null(rs) ) {
+    if ( overwrite || is.null(mod) ) {
       testStep(paste("Installing",modelName,"model variant",variant,"from package as",installAs))
-      rs <- installModel(modelName,variant=variant,modelPath=installAs,log=log,confirm=confirm,overwrite=TRUE)
+      mod <- installModel(modelName,variant=variant,modelPath=installAs,log=log,confirm=confirm,overwrite=TRUE)
     }
   } else {
     if ( nzchar(modelName) ) {
@@ -92,17 +97,17 @@ test_00_install <- function(
     } else {
       testStep("Directory of available models")
     }
-    rs <- installModel(modelName=modelName,variant="",log=log,private=TRUE)
+    mod <- installModel(modelName=modelName,variant="",log=log,private=TRUE)
   }
   # NOTE: pkgload bug - print.VEAvailableModels/Variants not recognized for class dispatch...
-  if ( "VEAvailableModels" %in% class(rs) ) {
-    print.VEAvailableModels(rs)
-  } else if ( "VEAvailableVariants" %in% class(rs) ) {
-    print.VEAvailableVariants(rs)
+  if ( "VEAvailableModels" %in% class(mod) ) {
+    print.VEAvailableModels(mod)
+  } else if ( "VEAvailableVariants" %in% class(mod) ) {
+    print.VEAvailableVariants(mod)
   } else {
-    print(rs)
+    print(mod)
   }
-  return(invisible(rs))
+  return(invisible(mod))
 }
 
 test_00_install_all <- function(listonly=FALSE,private=FALSE,overwrite=FALSE,log="warn") {
@@ -218,12 +223,12 @@ test_01_classic <- function(modelName="VERSPM-classic",clear=TRUE,log="info") {
   }
   if ( needInstall ) {
     testStep(paste("Installing classic VERSPM model from package as",modelName))
-    rs <- test_00_install(
+    mod <- test_00_install(
       "VERSPM",variant="classic",installAs=modelName,
       log=log,overwrite=clear,confirm=FALSE
     )
-    modelName <- rs$modelName
-    rm(rs)  # Don't keep the VEModel around - will run manually below
+    modelName <- mod$modelName
+    rm(mod)  # Don't keep the VEModel around - will run manually below
   }
 
   testStep(paste("Running",modelName,"by sourcing scripts/run_model.R in",modelPath))
@@ -239,11 +244,11 @@ test_01_classic <- function(modelName="VERSPM-classic",clear=TRUE,log="info") {
   testStep("Reviewing model status (will get confused by incomplete RunParam_ls)")
 
   setwd(owd)
-  rs <- openModel(modelName)
-  cat("Model Status:",rs$printStatus(),"\n")
-  return(rs)
+  mod <- openModel(modelName)
+  cat("Model Status:",mod$printStatus(),"\n")
+  return(mod)
   # return model object for further analysis (can be re-run in VEModel environment)
-  # rs$run() will ignore classic results and construct a "results" directory,
+  # mod$run() will ignore classic results and construct a "results" directory,
   #   which makes the "classic" model slightly "post-modern"
 }
 
@@ -557,76 +562,340 @@ test_02_model <- function(modelName="VERSPM-Test", oldstyle=FALSE, log="info", b
   print(nrow(flds))
   print(flds[sample(nrow(flds),10),])
 
+  return(invisible(bare)) # Return model for additional processing
+}
+
+test_02_export_partitions <- function() {
+  # Note - doesn't work with models yet - see test_02_basic_export below
+  makeData <- function() {
+    # prepare a data set
+    df <- CO2 # standard R dataset
+    for ( i in 1:length(df) ) {
+      if ( is.factor(df[[i]]) ) df[[i]] <- as.character(df[[i]])
+    }
+    df$Scenario <- sample(paste("Scenario",1:2,sep="_"),nrow(df),replace=TRUE)
+
+    dfg <- df
+    dfg$Global <- "Global"
+    dfg$Group <- dfg$Global
+
+    dfy <- dfg
+    dfy$Year <- "2023"
+    dfy$Group <- dfy$Year
+    dfy[["Global"]] <- NULL
+
+    dfy2 <- dfy
+    dfy2$Year <- "2044"
+    dfy2$Group <- dfy2$Year
+    dfy2[["Global"]] <- NULL
+    
+    return(list(
+      Global=df,
+      Yr2023=dfy,
+      Yr2044=dfy2
+    ) )
+  }
+
+  # Try several partitions
+  message("Testing VEPartition")
+  dataSets <- makeData() # pseudo-data with various fields for reviewing output
+  part <- VEPartition$new(c(Global="folder",Year="folder",Type="path",Treatment="name"))
+  print(part)
+  testStep("Testing $location function")
+  loc <- part$location(dataSets$Global,"MyTable") # view location structure
+  print(loc)
+  testStep("Testing $partition function")
+  message("Fields in Global:")
+  print(names(dataSets$Global))
+  testStep("Testing Partitions")
+  message("Global\n")
+  partGlobal <- part$partition(dataSets$Global,"Global")
+  print(partGlobal)
+  message("Year 2023\n")
+  part2023 <- part$partition(dataSets$Yr2023,"CO2-data")
+  print(part2023)
+  message("Year 2044\n")
+  part2044 <- part$partition(dataSets$Yr2044,"CO2-data")
+  print(part2044)
+  testStep("Change partition to make Treatment a folder\n")
+  part <- VEPartition$new(c(Global="folder",Year="folder",Type="name",Treatment="folder"))
+  print(part$partition(dataSets$Yr2044,"RetryTreatment"))
+  testStep("Try with NA data in a partition field\n")
+  dftry <- dataSets$Yr2044$Global <- NA
+  print(part$partition(dataSets$Yr2044,"GlobalWithNA"))
+}
+
+test_dbname <- function(name=c("Junk.try.sqlite","Junk","Junk.csv","Junk.sqlite")) {
+  Timestamp = format(Sys.time(), )
+  results <- sapply( name, function(basename) {
+    dbname <- strsplit(basename, "\\.")[[1]] # now a vector with the extension
+    if ( length(dbname) == 1 ) dbname <- append(dbname,"sqlite")
+    dbname[1] <- paste("Model",dbname[1],sep="_") # prepend model name
+    dbname <- c(paste(dbname[-length(dbname)],collapse="."),dbname[length(dbname)])
+    dbname[1] <- paste(dbname[1],Timestamp<-format(Sys.time(),"%Y%m%d%H%M"),sep=TimeSeparator<-"_")
+    dbname <- paste(dbname,collapse=".")
+  } )
+  return(
+    data.frame(
+      original   = name,
+      configured = results
+    )
+  )
+}
+
+test_02_export_connections <- function(
+  testConnections=c("data.frame","csv","sql","mysql"),
+  mysql=FALSE,
+  reset=TRUE
+) {
+  # Run through the nameTable / createTable / writeTable elements
+  # Connections are initialized with defaults and exemplary settings
+  # We need a model to satisfy things like OutputDir used e.g. by CSV or SQLite
+  testStep("Set up a model for testing; just for output location")
+  Model <- test_01_run("VERSPM-export",reset=FALSE,log="warn")
+  print(Model)
+  if ( reset ) Model$clear(force=TRUE,outputOnly=TRUE)
+
+  # Really dumb data designed to be clearly readable
+  #   when we do the export. Note that we're writing
+  #   unpartitioned data here - plain table with limited
+  #   features. See test_02_basic_export for full test of
+  #   proper placement of partitioned data.
+  Data <- data.frame(
+    Marea = c("Marea1","Marea2"),
+    Azone = c("Azone1","Azone2"),
+    Value1 = 1:2,
+    Value2 = 3:4,
+    Value3 = letters[5:6],
+    Value4 = LETTERS[7:8]
+  )
+
+  writeMe <- function(Connection,Data) {
+    # Test a Connection by writing different things to it
+    # Exercise nameTable
+    cat("\nTesting Connection:\n")
+    message("Starting at ",Sys.time())
+    print(Connection$summary())
+    cat("Name Table:\n")
+    loc <- VETableLocator$new(Paths=c("path1","path2"),Names=c("name1","name2"),Table="TestTable")
+    cat("Table Locator:\n")
+    print(loc)
+    Table <- Connection$nameTable(loc)
+    print(Table) # Connection formatted
+    # We'll save actually writing to a Path for the basic_export test below
+    cat("Putting Data in bare table: ",Table,"\n") # in the real world, export will call nameTable
+    # Table goes into OutputDir
+    cat("Field Names:\n")
+    print( Connection$createTable(Data,Table) )
+    cat("Read back the created table contents:\n")
+    print( Connection$readTable(Table) )
+    cat("What's in the model outputs?\n")
+    print(Model$dir(outputs=TRUE,all.files=TRUE))
+    cat("Append the Data to the Table\n")
+    print( Connection$writeTable(Data,Table) )
+    cat("Should be two copies of the Data rows\n")
+    print( Connection$readTable(Table) )
+    cat("Re-create the table; should have one copy of Data\n")
+    print( Connection$createTable(Data,Table) )
+    print( Connection$readTable(Table) )
+    cat("Test adding Data with columns missing from Data compared to existing ",Table,"\n")
+    DataReduced <- Data[,-which( names(Data) == "Value2" )]
+    print( Connection$writeTable(DataReduced,Table) )
+    print( Connection$readTable(Table) )
+    cat("Test adding Data with columns missing from ",Table,"\n")
+    DataAugmented <- cbind(Data,Value5=paste0(Data$Value3,Data$Value4))
+    print( Connection$writeTable(DataAugmented,Table) )
+    print( Connection$readTable(Table) )
+    cat("Test connection summary:\n")
+    cat( Connection$summary(),"\n" )  # summary produces a single string, possibly with embedded newlines
+    cat("Test connection list:\n")
+    print( Connection$list() )               # The field names only
+    cat("Test connection list with full details (field names, not just tables):\n")
+    print( Connection$list(nameOnly=FALSE) ) # Tables with their names
+    message("Ended at ",Sys.time())
+  }
+
+  # We're doing the connection at a low level, so none of the defaults injected by
+  #  the exporter will apply. Need to fully specify config with the options
+  #  we want to test
+
+  # TODO: need to test model Exporters configuration setting
+  # Could add Exporters section but that might trigger a re-run (need to mark Exporters
+  # as irrelevant to "out of date").
+  if ( "data.frame" %in% testConnections ) {
+    # data.frame connection
+    cdf <- makeVEConnection(Model, config=list(driver="data.frame"))
+    writeMe(cdf,Data)
+  }
+  if ( "csv" %in% testConnections ) {
+    # ccsv <- makeVEConnection(Model) # default is csv
+    ccsv <- makeVEConnection(Model, config=list(driver="csv",Timestamp="database"))
+    writeMe(ccsv,Data)
+  }
+  if ( "sql" %in% testConnections ) {
+    csql <- makeVEConnection(Model,config=list(driver="sql",Timestamp="database")) # SQLite, default DB Name + Extension
+    writeMe(csql,Data)
+
+    sqlConfig <- list( # SQLite with explict DBName
+      driver="sql",
+      Database="ExplicitDBName",
+      Timestamp="none"
+      # Can add DBIConfig elements to deeply override the the database name
+    )
+    csql <- makeVEConnection(Model,sqlConfig) # Positional parameter work for configuration
+    writeMe(csql,Data)
+  }
+  if ( "mysql" %in% testConnections ) {
+    # Requires that the named database already be set up for user 'visioneval' password 'showme'
+    mysqlConfig <- list(
+      # In makeVEConnection, if "driver" is not present but "drv" is present, presume driver="sql"
+      # driver = "dbi",    # same as "sql" - uses low-level R DBI driver
+      # parameters in the connection DBIConfig sub-list will be passed to dbConnect using do.call
+      driver = "sql", # send into DBI driver
+      package = "RMariaDB",
+      drv = RMariaDB::MariaDB(), # or drv="RMariaDB::MariaDB()" - character string will be parsed
+      Timestamp = "prefix",
+      DBIConfig = list(
+        dbname = "visioneval",
+        user = "visioneval",
+        password = "showme"
+      )
+    )
+    # NOTE: better to do the following to keep the credentials out of the model script:
+    # mysqlConfig <- list(
+    #    driver="sql",
+    #    DBIConfig = list(
+    #      drv="RMariaDB::RMariaDB()",
+    #      group="visionevalDB"
+    #    )
+    # )
+    # Then in your "my.cnf" file, put this block:
+    #
+    # [visionevalDB]
+    # database=visioneval
+    # user=visioneval
+    # password=showme
+    #
+    requireNamespace("DBI")
+    mysql <- makeVEConnection(Model,mysqlConfig)
+    if ( reset ) {
+      # TODO: create a "reset" method for VEConnection generally?
+      # Could remove CSV/SQLite/other tables
+      con = mysql$raw() # for DBI/SQL connection, returns the DBI connection
+      # NOTE: Example SQL below for creating database/user presumes MariaDB; You might have to
+      #   tweak the syntax for original MySQL or other DB services
+      # In MySQL/MariaDB, the user permissions (once set) don't care if the the database is dropped
+      #   and re-created. Permissions are by name not by object.
+      # The specific syntax here might need to be tweaked for your database
+      DBI::dbExecute(con,"CREATE OR REPLACE DATABASE visioneval;")
+      DBI::dbExecute(con,"USE visioneval;")
+      # We won't build the user here, but you can set up the test user like the following,
+      #   presuming you're running MariaDB/MySQL on localhost
+      # con <- dbConnect(RMariaDB::MariaDB(),user='admin',password='$adminpassword')
+      # dbExecute(con,"CREATE USER 'visioneval'@localhost IDENTIFIED BY 'showme';")
+      # dbExecute(con,"GRANT ALL PRIVILEGES ON 'visioneval'.* TO 'visioneval'@localhost;")
+      # dbExecute(con,"FLUSH PRIVILEGES;")
+      # dbDisconnect(con); rm(con)
+    }
+    writeMe(mysql,Data)
+  }
+  return(Model) # to view Model$dir(output=TRUE,all.files=TRUE)
+}
+
+test_02_basic_export <- function(exporter="sql",reset=FALSE,log="warn",connection=list())
+{
+  modelReset <- is.character(reset) && reset=="model"
+  if ( modelReset || !is.logical(reset) ) reset=TRUE
+
+  testStep("Set up VERSPM-base model instance for export tests")
+  mod <- test_01_run("VERSPM-export",reset=modelReset,log="warn")
+  print(mod)
+
   testStep("extract model results, show directory")
-  br <- bare$results()
+  br <- mod$results()
   print(br)
-  br$extract(prefix="BareTest")
-  # Or use br$extract(saveResults=TRUE)
-  # Or use br$export, which does not require arguments to save
-  # br$extract() just returns a list of data.frames...
 
-  cat("Directory:\n")
-  print(bare$dir(output=TRUE,all.files=TRUE))
+  testStep("Set up connection")
+  if ( ! "TablePrefix" %in% names(connection) ) {
+    connection=c(connection,list( TablePrefix="ExportTest_" )) # NOTE: must include necessary delimiter, if any
+  }
+  if ( ! "Timestamp" %in% names(connection) ) {
+    connection=c(connection,Timestamp="database") # mostly for SQLite
+  }
 
-  testStep("clear the bare model extracts")
+  testStep(paste("Exporting to ",paste(exporter,collapse=", ")))
+  for ( format in exporter ) {
+    if ( format == "data.frame" ) {
+      testStep("Extract to data.frames")
+      R.data <- br$extract(connection=connection)  # Returns a list of R data.frames
+      str(R.data)
+      extractor <- attr(R.data,"Exporter")
+    } else if ( format == "default" ) {
+      testStep("Export to default format (usually CSV)")
+      extractor <- br$export(connection=connection) # Creates files and folders in OutputDir
+      cat("Directory:\n")
+      print(mod$dir(outputs=TRUE,all.files=TRUE))
+    } else if ( format == "csv" ) {
+      testStep("Export to CSV explicitly")
+      extractor <- br$export("csv",connection=connection) # Creates files and folders in OutputDir
+      cat("Directory:\n")
+      print(mod$dir(outputs=TRUE,all.files=TRUE))
+    } else if ( format == "mysql" ) {
+      testStep(paste0("Export to MySQL exporter"))
+      mysqlConnection<- list(
+        TablePrefix=connection$TablePrefix,
+        driver = "sql", # send into DBI driver
+        package = "RMariaDB",
+        drv = RMariaDB::MariaDB(), # or drv="RMariaDB::MariaDB()" - character string will be parsed
+        Timestamp = "prefix",
+        DBIConfig = list(
+          dbname = "visioneval", # Adjust for local mysel database / user / password
+          user = "visioneval",
+          password = "showme"
+        )
+      )
+      if ( reset ) {
+        mysqlConnection <- makeVEConnection(Model,mysqlConnection)
+        con <- mysqlConnectionxs$raw()
+        DBI::dbExecute(con,"CREATE OR REPLACE DATABASE visioneval;")
+        DBI::dbExecute(con,"USE visioneval;")
+      }
+      extractor <- br$export(exporter,connection=mysqlConnection) # returns a VEExporter object
+      cat("Exporter list of tables:\n")
+      print(extractor$list()) # names of tables
+      R.data <- extractor$data()
+      str(R.data)
+      extractor$close() # generally nice to do for DBI
+    } else {
+      testStep(paste0("Export to exporter '",format,"'"))
+      partition <- c(Global="path") # Merge scenarios and years
+      cat("Exporting...\n")
+      extractor <- br$export(exporter=exporter,partition=partition,connection=connection) # returns a VEExporter object
+      cat("Exporter list of tables:\n")
+      print(extractor$list())
+      cat("Database list of tables:\n")
+      R.data <- extractor$data()
+      # str(R.data) # may generate voluminous output
+      extractor$close() # if it's SQLite need to close the extractor to delete the file below
+    }
+  }
+
+  testStep("Test save function for exporter")
+  extractor$save("LastExporter")
+  ext2 <- mod$exporter("LastExporter")
+  testStep("Tables in loaded exporter")
+  print(tables <- ext2$list())
+  df <- ext2$data( tables[1] )
+  str(df)
+
+  testStep("clear the model extracts")
   cat("Interactive clearing of outputs (not results):\n")
-  bare$clear(force=!interactive())
+  mod$clear(force=!interactive())
 
   testStep("model after clearing outputs...")
-  print(bare$dir())
+  print(mod$dir())
 
-  testStep("clear results as well...")
-  bare$clear(force=!interactive(),outputOnly=FALSE) # default is FALSE if no outputs exist - delete results
-  print(bare$dir())
-
-  testStep("copy a model (includes results and outputs)")
-  cp <- bare$copy("BARE-COPY")
-  print(cp)
-  cat("Model directory of BARE-COPY")
-  print(cp$dir())
-
-  testStep("Forcibly clear results from model copy")
-  cp$clear(force=TRUE,outputOnly=FALSE) # forcibly removes outputs and results
-  print(cp$dir())
-
-  testStep("Break the run_model.R script in the copy and observe failure")
-  runModelFile <- file.path(cp$modelPath,"run_model.R")
-  runModel_vc[4] <- 'runModule("BorrowHouseholds","VESimHouseholds",RunFor="AllYears",RunYear=Year)'
-  cat(runModelFile,paste(runModel_vc,collapse="\n"),sep="\n")
-  writeLines(runModel_vc,con=runModelFile)
-  result <- try( cp$run() ) # Should throw error message about missing module...
-  print(result)
-
-  testStep("Display log from failed run...")
-  logs <- cp$log(shorten=FALSE)
-  for ( log in logs ) {
-    cat("Log file",log,"\n")
-    cat(readLines(log),sep="\n")
-  }
-  
-  testStep("remove model results")
-  cat("Directory before...\n")
-  print(cp$dir(all.files=TRUE))
-  cp$clear(force=TRUE,outputOnly=FALSE,archives=TRUE)
-  cat("\nDirectory after...\n")
-  print(cp$dir(all.files=TRUE))
-
-  testStep("Delete model in file system")
-  cat("The model:\n")
-  print(cp)
-  cat("All current models:\n")
-  print(dir("models"))
-  cat("Unlinking",cp$modelName,"\n")
-  unlink(file.path("models",cp$modelName),recursive=TRUE)
-  cat("Is",cp$modelName,"still present?\n")
-  print(dir("models"))
-
-  testStep("directory still accessible?")
-  print(cp$dir())
-  rm(cp)
-
-  testStep("return bare model")
-  return(bare)
+  return(mod)
 }
 
 test_02_multicore <- function(model=NULL, log="info", workers=3) {
@@ -670,9 +939,9 @@ test_02_multicore <- function(model=NULL, log="info", workers=3) {
   testStep("Add model stages (just duplicates) to run in parallel")
   # To run in parallel, different stages must have the same "StartFrom"
 
-  # For this test, we'll restructure the CORE-test model so it has three identical
-  # stages, each of which just runs the base model over and over. We'll get
-  # CORE-base, Stage-1, Stage-2, Stage-3 and Stage-4 as sub-directories of
+  # For this test, we'll restructure the CORE-test model so it has four more identical
+  # stages, each of which just runs the base model over and over. We'll get CORE-base,
+  # Stage-1, Stage-2, Stage-3 and Stage-4 as sub-directories of
   # coreModel$modelPath/ResultsDir.
   for ( newstage in 1:4 ) {
     coreModel$addstage(
@@ -685,7 +954,7 @@ test_02_multicore <- function(model=NULL, log="info", workers=3) {
   }
   cat("Show model with new stages\n")
   print(coreModel)
-
+  
   logLevel(log=log)
 
   testStep("Run model with callr")
@@ -709,10 +978,11 @@ test_02_multicore <- function(model=NULL, log="info", workers=3) {
   return(invisible(coreModel))
 }
 
-# results parameter if provided should be a VEResults object
-test_03_results <- function (existingResults=FALSE,log="info") {
+# existingResults parameter if provided should be a VEResultsList object
+# TODO: factor this into more granular parts.
+test_03_results <- function (existingResults=FALSE,testCopy=TRUE,log="info") {
 
-  testStep("Manipulate Model Results in Detail")
+  testStep("Manipulate Model Results in Detail, including export")
 
   # Use case is mostly for doing queries over a set of scenarios...
   # Return a list if mod$results(all.stages=TRUE) or mod$results(stages=c(stage1,stage2)) with
@@ -720,43 +990,46 @@ test_03_results <- function (existingResults=FALSE,log="info") {
   # An individual stage can also be called out explicitly (and in that case, it does not
   #   need to be Reportable).
 
-  rs <- if ( ! existingResults ) {
+  # Get some results
+  rs <- if ( missing(existingResults) || ! existingResults ) {
     logLevel("warn")
     mod <- test_01_run("VERSPM-pop","VERSPM",var="pop",log="warn") # use staged model to exercise DatastorePath
-    # Testing model copy
-    cat("Copying model...\n")
-    if ( "COPY" %in% dir("models") ) unlink("models/COPY",recursive=TRUE)
-    cp <- mod$copy("COPY") # Also copies results by default
-    cat("Directory before clearing...\n")
-    print(cp$dir())
-    cp$clear(force=TRUE,outputOnly=FALSE) # Blow away all outputs
-    cat("Directory after clearing...\n")
-    print(cp$dir())
-    cat("Results after clearing... (Generates error)\n")
-    rs <- cp$results()
-    print(rs)
-    cat("Selection after clearing...\n")
-    sl <- rs$select()
-    print(sl)
-    rm(cp) # Should be no results
 
+    if ( testCopy ) {
+      # Testing model copy, just because...
+      cat("Copying model...\n")
+      if ( "COPY" %in% dir("models") ) unlink("models/COPY",recursive=TRUE)
+      cp <- mod$copy("COPY") # Also copies results by default
+      cat("Directory before clearing...\n")
+      print(cp$dir())
+      cp$clear(force=TRUE,outputOnly=FALSE) # Blow away all outputs
+      cat("Directory after clearing...\n")
+      print(cp$dir())
+      rm(cp) # Should be no results 
+    }
     testStep("Pull out results and selection from VERSPM-pop test model...")
     cat("Results...\n")
-    mod$results()  # Gets results for final Reportable stage (only)
-  } else {
-    # Don't use the flatten test if you want to test DatastorePath changes
-    mod <- NULL
-    test_01A_flatten(useResults=TRUE,log="warn") # May take a while if we haven't flattened it yet
+    mod$results()  # Gets results for all stages as VEResultsList (default print lists scenarios)
   }
   logLevel(log)
 
-  cat("Results:\n")
+  # Selection can select Scenario=..., Stage=...,
+  # Group=ExplicitYears, Group=Years, Group=Global, or Table=c(name1,name2,...)
+
+  cat("Results:\n") # rs is a VEResultsList
   print(rs)
   cat("Selection...\n")
   sl <- rs$select() # Get full field list
   print(head(capture.output(print(sl)),n=12))
 
-  # Do some basic field extraction - list fields
+  # Do some basic extraction - list fields
+  # Note that scenarios can also be selected when the Results/rs is generated
+  cat("Scenarios\n")
+  print(sl$scenarios())  # Lists only reportable stages, implemented as sl$stages(Reportable=TRUE)
+  cat("Scenarios (identified as 'stages')\n")
+  # Note that results list will only contain reportable stages, unless
+  #  others are called for explicitly.
+  print(sl$stages())
   cat("Groups\n")
   print(sl$groups())
   cat("Tables\n")
@@ -766,7 +1039,8 @@ test_03_results <- function (existingResults=FALSE,log="info") {
   print(fld[sample(length(fld),20)])
   
   # Select some subsets by group, table or field name and extract those...
-  # Can we easily identify group names, table names, field names and zero in on selecting them?
+  # These will show all scenarios, which in the population model is only one
+  # See one of the multi-scenario tests for what happens with scenarios and selections
   testStep("Select some Groups")
   cat("Only the years...\n")
   sl$select( sl$find(Group="Years") )
@@ -783,50 +1057,56 @@ test_03_results <- function (existingResults=FALSE,log="info") {
   
   # Test display units, select speeds, create unit conversion
   testStep("Creating and Writing Display Units...")
-  sl$all() # Deselect everything
-  un <- rs$list(details=TRUE)[,c("Group","Table","Name","Units")]
+  sl$all() # Select everything
+  un <- rs$list(details=TRUE)[,c("Scenario","Group","Table","Name","Units")]
   spd <- un[ grepl("MI/",un$Units)&grepl("sp",un$Name,ignore.case=TRUE), ]
   spd$DisplayUnits <- "MI/HR"
   cat("Writing display_units.csv\n")
-  display_units_file <- if ( is.null(mod) ) {
-    # just write it into the runtime directory (getwd())
-    message("No model: display_units in runtime directory")
-    file.path(
-      runtimeEnvironment()$ve.runtime, # VEModel function
-      visioneval::getRunParameter("DisplayUnitsFile",Param_ls=mod$RunParam_ls)
-    )
-  } else {
-    message("Model provided: display_units in ParamDir")
-    file.path(
-      mod$modelPath,
-      visioneval::getRunParameter("ParamDir",Param_ls=mod$RunParam_ls),
-      visioneval::getRunParameter("DisplayUnitsFile",Param_ls=mod$RunParam_ls)
-    )
-  }
+#   if ( is.null(mod) ) {
+#     # just write it into the runtime directory (getwd())
+#     message("No model: saving display_units in runtime directory")
+#     display_units_file <- file.path(
+#       runtimeEnvironment()$ve.runtime, # VEModel function
+#       visioneval::getRunParameter("DisplayUnitsFile",Param_ls=mod$RunParam_ls)
+#     )
+#   } else {
+  message("Model provided: display_units in ParamDir")
+  display_units_file <- file.path(
+    mod$modelPath,
+    visioneval::getRunParameter("ParamDir",Param_ls=mod$RunParam_ls),
+    visioneval::getRunParameter("DisplayUnitsFile",Param_ls=mod$RunParam_ls)
+  )
+#   }
   cat(display_units_file,"\n")
   write.csv(spd,file=display_units_file)
 
   testStep("Selecting speed fields...")
   sl$all() # re-select everything
-  sl$select( with(spd,paste(Group,Table,Name,sep="/")) )
+  sl$select( with(spd,paste(Scenario,Group,Table,Name,sep="/")) )
   print(sl$fields())
 
-  testStep("Showing currently defined UNITS/DISPLAYUNITS (via sl$results)")
-  print(sl$results$units())
-  testStep("Showing currently defined UNITS/DISPLAYUNITS (directly from rs)")
+  testStep("Showing currently defined UNITS/DISPLAYUNITS (via sl$resultsList)")
+  print(sl$resultsList$units())
+  testStep("Showing currently defined UNITS/DISPLAYUNITS (directly from rs")
   print(rs$units())
 
   # Clean up the fields to add the geography fields in the Marea Table
   testStep("Adding geography fields to selection...")
-  sl$add( sl$find("^(Marea|Azone|Bzone)$",Group="Years",Table="Marea") )
+  sl$addkeys() # Forces tables to have basic geography fields plus "Id"
   print(sl$fields())
   print(rs$units())
 
+  exportPartition <- c(Global="name") # Put all scenarios in the same tables, make Global tables separate
+  unitsConnection <- list( Directory="UnitTest", TablePrefix="DisplayUnits", Timestamp="none" )
   testStep("Extracting speed fields using DISPLAY units")
-  sl$extract(prefix="DisplayUnits")                 # Using DISPLAY units
+  rs$export("csv",connection=unitsConnection,partition=exportPartition)
+  # Write to default output format using DISPLAY units
+  # sl$export also works - dispatches to results list
 
   testStep("Exporting speed fields using DATASTORE units")
-  sl$export(prefix="Datastore",convertUnits=FALSE)  # Using DATASTORE units
+  datastoreConnection <- list( Directory="UnitTest", TablePrefix="Datastore", Timestamp="none" )
+  rs$export("csv",connection=datastoreConnection,partition=exportPartition,convertUnits=FALSE)
+  # Default output format using DATASTORE units
 
   if ( ! is.null(mod) ) {
     testStep("Model directory")
@@ -853,6 +1133,7 @@ test_03_results <- function (existingResults=FALSE,log="info") {
   return(rs) 
 }
 
+# Test selection manipulation
 test_03_select <- function( log="info" ) {
 
   logLevel(log)
@@ -860,10 +1141,8 @@ test_03_select <- function( log="info" ) {
   testStep("Manipulate model selection to pick and retrieve fields")
   mod <- test_01_run("VERSPM-pop","VERSPM","pop")
   rs <- mod$results("stage-pop-future")
-  if ( "VEResultsList" %in% class(rs) ) {
-    rs <- rs$results()    # get an actual list
-    rs <- rs[length(rs)]  # get the last element of that list, as a list
-  }
+  # rs is a VEResultsList, which can perform export operations
+  # in this case, it just has one scenario/stage
 
   testStep("Directly access results using 'find'")
   cat("Result has",length(find <- rs$find()),"fields\n") # All the fields...
@@ -874,16 +1153,53 @@ test_03_select <- function( log="info" ) {
   cat("Fields to select from:",length(sl$fields()),"\n")
 
   testStep("Finding Worker table for 2038")
-  print(sl$find(Group="2038",Table="Worker"))
-
-  testStep("Finding Worker table for 2038 straight from the results")
-  wkr <- sl$find(Group="2038",Table="Worker") 
+  wkr <- sl$find(Group="2038",Table="Worker")
   print(wkr)
 
-  testStep("Selecting Worker table and extracting to a data.frame")
-  rs$select(wkr)
-  wrk.table <- rs$extract(saveTo=FALSE)[[1]] # only one table returned in a list
-  print(wrk.table[sample(nrow(wrk.table),10),])
+  testStep("Selecting Worker table")
+  sl$select(wkr)
+  rs$select(sl)
+  sl
+  testStep("Extracting Worker table only to data.frames")
+  # The extract function performs an export to data.frames in R (without saving them exernally).
+  wrk.table <- rs$extract()
+  print(class(wrk.table)) # should be list
+  print(names(wrk.table)) # should contain "Worker"
+  print(class(wrk.table[[1]])) # should be dataframe with worker elements
+  print(wrk.table[[1]][sample(nrow(wrk.table[[1]]),min(nrow(wrk.table[[1]]),10)),])
+  rm(wrk.table)
+
+  testStep("Export all data.frames to SQLite")
+  sl$all()
+  rs$select( sl ) # redundant if sl is attached to rs...
+  # NOTE: "sql" and "sqlite" are the same but may have different setups in visioneval.cnf
+  extr <- rs$export("sqlite",partition=c(Global="name")) # Break out Global tables from Year tables
+  message("List of output tables")
+  print(extr$list()) # List all the table identifiers
+
+  testStep("Extract some tables as data.frames from exporter")
+  table.list <- extr$list()
+  message("List of available tables")
+  print(class(table.list)) # should be a vector of table identifiers
+  locators <- table.list[sample(length(table.list),3)]
+  df <- extr$data(locators) # Reload the locator tables
+  
+  message("Extract list with details")
+  raw.list <- extr$list(namesOnly=FALSE)
+  print(class(raw.list))
+  message("A subset of locators:")
+  locators <- raw.list[sample(length(raw.list),3)]
+  print(locators)
+  testStep("Extract data.frames from tables in 'locators'")
+  df <- extr$data(locators) # list of data.frames...
+  print(class(df))       # Should be a list
+  message("locator names:")
+  print(names(locators))
+  message("names of extracted data.frames")
+  print(names(df))
+  message("class and first ten rows of first data.frame: ",names(df)[1]," with ",nrow(df[[1]])," rows")
+  print(class(df[[1]]))  # Should be a data.frame
+  print(df[[1]][1:min(10,nrow(df[[1]])),])
 
   return(rs)
 }
@@ -988,21 +1304,20 @@ test_05_query_extract <- function(log="info") {
   print(nrow(extr))
   print(extr[sample(nrow(extr),min(nrow(extr),20)),])
   testStep("Export the long format as .csv")
-  qry$export(longScenarios=TRUE,format="csv",SaveTo=paste0("ExportTest_%timestamp%",qry$Name))
+  qry$export("csv",longScenarios=TRUE)
   return(qry)
 }
 
 test_05_build_query <- function(log="info",break.query=TRUE,reset=FALSE) {
   # Process the standard query list for the test model
   # If multiple==TRUE, copy the test model and its results a few times, then submit the
-  # list of all the columnopies to VEQuery. Each column of results will be the same (see
+  # list of all the column copies to VEQuery. Each column of results will be the same (see
   # test_06_scenarios for a run that will generate different results in each column).
   # if break.query, do some deliberately bad stuff to see the error messages
 
   testStep("Set up Queries")
   testStep("Opening test model and caching its results...")
   mod <- test_01_run("VERSPM-query",baseModel="VERSPM",variant="pop",log="warn",reset=reset)
-  rs <- mod$results()
 
   testStep("Show query directory (may be empty)...")
   print(mod$query())
@@ -1089,7 +1404,6 @@ test_05_query <- function(log="info",Force=TRUE,runModel=FALSE) {
   testStep("Set up Queries and Run on Model Results")
   testStep("Opening test model and caching its results...")
   mod <- test_01_run("VERSPM-query",baseModel="VERSPM",variant="pop",log="warn",reset=runModel)
-  rs <- mod$results()
 
   testStep("Show query directory (may be empty)...")
   print(mod$query())
@@ -1282,13 +1596,13 @@ test_05_query <- function(log="info",Force=TRUE,runModel=FALSE) {
   print(ldf)
 
   testStep("Extract query results into .csv file (default name, wide format)")
-  df <- qry$export(format="csv")
+  df <- qry$export("csv")
   df <- qry$export() # Does the same thing again, possibly overwriting
   # Each extract creates a new file with a different timestamp, but
   # the timestamps only differ by minutes
 
   testStep("Export query results into explicitly named .csv file (long format)")
-  qry$export(format="csv",longScenarios=TRUE,SaveTo=paste0("LongFormat_%timestamp%",qry$Name))
+  qry$export("csv",longScenarios=TRUE)
 
   testStep("Show output files, which will include exports and queries")
   mod$dir(outputs=TRUE,all.files=TRUE)
@@ -1301,7 +1615,7 @@ test_05_query <- function(log="info",Force=TRUE,runModel=FALSE) {
   qry$run(rs,Force=TRUE) # Won't re-run if query is up to date
 
   testStep("Export just the data (wide format)...")
-  qry$export(format="csv",longScenarios=FALSE,SaveTo=paste0("WideDataOnly_%timestamp%",qry$Name))
+  qry$export("csv",longScenarios=FALSE)
 
   testStep("Extract just the metadata (long format)...")
   df <- qry$extract(wantMetadata=TRUE,wantData=FALSE,longScenarios=TRUE)
@@ -1350,6 +1664,7 @@ test_05_queryfilter <- function(runModel=FALSE,log="info") {
 
 # Torture test the query mechanism
 # Give it a non-existent query via queryName, for example...
+# TODO: need many more broken things to test...
 test_06_fullquery <- function(Force=TRUE,runModel=FALSE,queryName="Full-Query",log="info") {
   logLevel("warn")
   testStep("Test Full-Query.VEqry")
@@ -1375,10 +1690,10 @@ test_06_fullquery <- function(Force=TRUE,runModel=FALSE,queryName="Full-Query",l
   invisible(qry)
 }
 
-test_06_quickquery <- function(model=NULL,log="info",multicore=3) {
+test_06_quickquery <- function(model=NULL,log="info",multicore=3,reset=FALSE) {
   testStep("Set up scenarios-ms model for testing")
   if ( is.null(model) ) {
-    model <- test_01_run(baseModel="VERSPM",variant="scenarios-ms",multicore=multicore,log="warn")
+    model <- test_01_run(baseModel="VERSPM",variant="scenarios-ms",reset=reset,multicore=multicore,log="warn")
   }
   # Make quick queries following VDOT / NVTA model test
   # Marea queries
@@ -1734,8 +2049,8 @@ test_06_scenarios <- function(
 
   scenarioVariant <- if (useStages) "scenarios-ms" else "scenarios-cat"
   scenarioModelName <- paste0("VERSPM-",scenarioVariant)
-  testStep(paste("Selecting, installing, and running scenarios as",if(useStages)"Model Stages"else"Scenario Combinations"))
-
+  running <- if ( run) ", installing, and running" else " and installing"
+  testStep(paste(paste0("Selecting",running," scenarios as",if(useStages)"Model Stages"else"Scenario Combinations")))
   existingModel <- dir.exists(modelPath <- file.path("models",scenarioModelName))
   if ( run ) {
     mod <- test_01_run(scenarioModelName,baseModel="VERSPM",variant=scenarioVariant,reset=install,log=log,confirm=FALSE,multicore=multicore)
@@ -1771,6 +2086,72 @@ test_06_scenarios <- function(
     mod <- test_00_install("VERSPM",variant=scenarioVariant,installAs=scenarioModelName,log=log,confirm=FALSE)
     return(mod)
   }
+}
+
+test_06_scenario_results <- function(
+  install=FALSE,
+  full.extract = TRUE,
+  multicore=TRUE, # or set to number of workers (default is 3)
+  log="warn"
+) {
+  logLevel(log)
+
+  mod <- test_01_run("VERSPM-scenarios-ms",baseModel="VERSPM",variant="scenarios-ms",reset=install,log=log,confirm=FALSE,multicore=multicore)
+  testStep("Examine Model Results")
+  rs <- mod$results()
+  print(class(rs))
+
+  testStep("Printing scenario model")
+  print(mod)
+  testStep("Printing scenario model results")
+  print(rs)
+
+  if ( full.extract ) {
+    testStep("Extracting model Results for All Scenarios")
+    rs.extract <- rs$extract()
+    cat("Names of resulting tables:\n")
+    print(names(rs.extract))
+  }
+
+  testStep("Selecting Scenarios Design-1 and Design-2 with find")
+  select <- rs$select()
+  cat("Printing sample of selected fields...\n")
+  flds <- select$find(Scenario=c("Design-1","Design-2"),select=TRUE)$fields()
+  print(flds[sample(length(flds),20)])
+
+  testStep("Does the selection propagate to the results?")
+  print(rs$select()$scenarios())
+
+  testStep("Selecting Scenarios Design-1 and Design-2 indirectly")
+  select2 <- rs$select()$find(Scenario=c("Pricing-1","Pricing-2"))
+  print(select2$scenarios())
+
+  testStep("Does the selection propagate to the results? NO")
+  print(rs$select()$scenarios())
+
+  testStep("Select pricing again, this time with select=TRUE")
+  select2 <- rs$select()$find(Scenario=c("Pricing-1","Pricing-2"),select=TRUE)
+  print(select2$scenarios())
+
+  testStep("Does the selection propagate to the results? YES")
+  print(rs$select()$scenarios())
+
+  partition <- c(Global="path",Scenario="name",year="name")
+  
+  testStep("Exporting model Results with implicit selection")
+  rs$export(partition=partition,connection=list(Database="Pricing_Implicit"))
+
+  testStep("Exporting model Results from explicit selection")
+  rs$export(selection=select,partition=partition,connection=list(Database="Design_Explicit"))
+
+  testStep("Exporting model Results just for the Year groups") # implicit selection
+  select$find(Scenario=c("Design-1","Design-2"),Group="Year",select=TRUE)
+  rs$export(selection=select,partition=partition,connection=list(Database="Design_Years_Only"))
+  
+  testStep("Directory after export")
+  print(mod$dir(outputs=TRUE,all.files=TRUE))
+
+  invisible(list(Model=mod,Results=rs))
 }
 
 test_07_extrafields <- function(reset=FALSE,installSQL=TRUE,log="info") {
@@ -1825,10 +2206,10 @@ test_07_extrafields <- function(reset=FALSE,installSQL=TRUE,log="info") {
     install.packages("RSQLite",lib=install.into)
     require(RSQLite)
   }
-  testStep("Extract the Bzone table and review")
-  df <- sl$extract() # df is actually a list of data.frames, one for each table
+  testStep("Extract the Bzone tables and review")
+  df.list <- rs$extract() # df.list is a list of data.frames, one for each table
   print(names(df))
-  print(df[["Global.Bzone"]][sample(nrow(df[["Global.Bzone"]]),10),])
+  print(df.list[[1]][sample(nrow(df.list[[1]]),10),])
 
   testStep("Construct a query that does multi-level breakpoints on Azone + Field Tags")
 

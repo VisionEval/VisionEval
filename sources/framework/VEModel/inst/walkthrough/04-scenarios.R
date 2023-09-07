@@ -25,11 +25,20 @@ mod.scenarios <- installModel("VERSPM",var="scenarios-ms",modelPath="VERSPM-scen
 
 mod.scenarios$dir(scenarios=TRUE,all.files=TRUE) # Look at the elements of the setup
 
+# The visioneval.cnf configuration defines the base model
+# the scenarios\visioneval.cnf file defines additional scenarios
+# Setting up scenarios is beyond the scope of this walkthrough
+# See https://visioneval.org/docs for more information
+
 # Run the model
+
+# mod.scenarios$plan(workers=3) # Use three cores to run scenarios in parallel
+# RAM, not number of CPUs, is the limiting factor on efficiency.
 mod.scenarios$run()
 
 # Check that everything ran correctly
-print(mod.scenarios)
+print(mod.scenarios) # summary information
+print(mod.scenarios$results()) # More detailed information
 
 # Details can be interesting
 print(mod.scenarios,details=TRUE)

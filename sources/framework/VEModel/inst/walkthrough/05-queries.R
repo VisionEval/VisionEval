@@ -18,8 +18,10 @@ mod.scenarios <- if ( "VERSPM-scenarios" %in% dir("models") ) {
 } else {
   installModel("VERSPM",var="scenarios-ms",modelPath="VERSPM-scenarios",confirm=FALSE)
 }
-mod.scenarios$run()       # will do nothing if you just ran the model
+mod.scenarios$plan(workers=3)     # Adjust how many based on CPUs and RAM available
+mod.scenarios$run()               # will do nothing if you already ran the model
 print(mod.scenarios,details=TRUE) # without 'details' just says how many scenarios...
+mod.scenarios$clear(outputOnly=TRUE,force=TRUE)
 
 #######################
 # BASIC QUERY OPERATION
@@ -32,7 +34,7 @@ print(mod.scenarios$query())
 # and to read some basic documentation.
 
 # A query is just an R script that defines a list of query specifications.
-# Each specification describes one resulting metric to evaluate for each scenario (model stage).
+# Each specification describes one metric to evaluate for each scenario (model stage).
 
 # Open the query and run it on the scenario results
 qry <- mod.scenarios$query("VERSPM-scenarios") # open the query
@@ -65,40 +67,23 @@ print(
 # Still no outputs - extract produces a data.frame for further processing
 mod.scenarios$dir(output=TRUE)
 
-# Export (instead of, or in addition to, extract) to generate a file
-# Currently, only .csv is supported. But you can save earlier q.df in any
-# file format that supports tables and has an R package - see below
+###################
+# EXPORTING QUERIES
+###################
 
-qry$export(format="csv") # Default CSV file name in output directory
+# Export (instead of, or in addition to, extract) to generate a file with the query
+# results. The export works the same as for the raw data, except that the partition is
+# ignored and you get a single table (either Long or Wide format)
+
+qry$export() # Default CSV file name in output directory
 mod.scenarios$dir(outputs=TRUE,all.files=TRUE) # Now we have output in a .csv file
 
-#################################
-# WRITING TO AN EXTERNAL DATABASE
-#################################
+qry$export("sqlite") # Put the query extraction into an SQLite Database
 
-# You can also write the extract data.frame into an external database
-# See 03-extract.R for how to export raw model results to a database
-
-require(RSQLite)  # you may need to install RSQLite and its dependencies
-
-# Open DBI connection
-dbPath <- file.path(mod.scenarios$modelResults,mod.scenarios$setting("OutputDir"))
-if ( ! dir.exists(dbPath) ) dir.create(dbPath,recursive=TRUE)
-
-db.name <- paste0("VERSPM-scenarios_Database.sqlite")
-
-db.connection <- file.path(dbPath,db.name)
-
-mydb <- DBI::dbConnect(RSQLite::SQLite(), db.connection)
-
-# Make a table name for the query results
-table.name <- paste0("Query_",format(Sys.time(),"%Y_%m_%d-%H_%M"))
-
-# We could have used q.df from above, but we'll just regenerate it
-dbWriteTable( mydb, table.name , qry$extract(), overwrite=TRUE )
-
-# Finally, clean up the database connection
-DBI::dbDisconnect(mydb)
-
-# See that there is now an SQLite database
-mod.scenarios$dir(outputs=TRUE,all.files=TRUE)
+# Or put the query results into Excel directly:
+qry$export("data.frame")$data(
+  format=writexl::write_xlsx,
+  path=file.path(mod.scenarios$exportPath(),"Query-Output.xlsx")
+)
+# if you were paying close attention before, you don't need the "formatList" parameter for
+# Excel output here because queries generate a single data.frame in each case.

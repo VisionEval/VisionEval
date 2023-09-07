@@ -1,4 +1,4 @@
-### install.R
+### 01-install.R
 #   Walk through model installation
 
 # Load VEModel package (in effect, the visioneval environment)
@@ -67,7 +67,7 @@ rpat <- installModel("VERPAT",modelPath="MYRPAT",confirm=FALSE) # VERPAT base va
 
 # See what we've got
 message('\nExpect to see: "MYRPAT", "VERSPM-base", "VERSPM-pop", and "VERSPM-run"')
-print(dir("models"))
+openModel()
 
 # Installed these models:
 # Once a model is loaded you can 'print' it to get information about it
@@ -84,7 +84,7 @@ print(dir("models"))
 
 # And you can get rid of the extra model like this (careful that you're deleting the right one!)
 # It's probably better to use File explorer (Windows) or Finder (Mac)
-unlink("models/VERSPM-base(2)",recursive=TRUE)
+unlink("models/VERSPM-base(1)",recursive=TRUE)
 
 # opening models (e.g. in a new R session, after they are installed)
 # you can always re-open a model - it just creates a new R object for manipulating it

@@ -367,7 +367,7 @@ db.connection <- file.path(results$resultsPath,mwr$setting("OutputDir"),"my-db.s
 # if ( file.exists(db.connection) ) unlink(db.connection)
 # Alternatively, add overwrite=TRUE to dbWriteTable below
 
-mydb <- dbConnect(RSQLite::SQLite(), db.connection)
+mydb <- DBI::dbConnect(RSQLite::SQLite(), db.connection)
 
 # Put the extracted data into the new database
 for ( ve.table in names(extracted.df) ) {
