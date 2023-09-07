@@ -304,7 +304,7 @@ readDatastoreTables <- function(Tables_ls, Group, QueryPrep_ls) {
     for (Loc in DstoreLocs_) {
       # TODO: Though written for a vector, currently only supporting one Datastore
       # Streamline this to use DatastorePath from within root.
-      # DstoreLoc will then no longer be a list.
+      # DstoreLocs_ will then no longer be a list.
       query.env <- new.env()
       query.env$ModelState_ls <- MS_ls[[Loc]]
       assignDatastoreFunctions(envir=query.env) # uses modelstate type

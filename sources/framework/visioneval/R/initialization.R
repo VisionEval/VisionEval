@@ -226,7 +226,7 @@ archiveResults <- function(RunParam_ls,ResultsDir=getwd(),SaveDatastore=NULL) {
   ArchiveDirectory <- normalizePath(
     file.path(
       ModelDir,
-      fileTimeStamp(TimeStamp,Prefix=ResultsName)
+      fileTimestamp(TimeStamp,Prefix=ResultsName)
     ), winslash="/",mustWork=FALSE
   )
 

@@ -959,17 +959,17 @@ findRuntimeInputFile <- function(File,Dir="InputPath",Param_ls=NULL,StopOnError=
 #=============================
 #' Format a time into text suitable for use in a file name
 #'
-#' \code{textTimeStamp} will return a string suitable for use in a file name
+#' \code{textTimestamp} will return a string suitable for use in a file name
 #' from a standard text version of a time
 #'
-#' @param TimeStamp a time value (e.g. from Sys.time())
+#' @param Timestamp a time value (e.g. from Sys.time())
 #' @param Prefix An optional prefix to put ahead of the time
 #' @return A string representing date and time with all characters sanitized for use in a file or
 #'   directory name
 #' @export
-fileTimeStamp <- function( TimeStamp, Prefix=NULL ) {
-  TimeStamp <- gsub(":","-",gsub(" ", "_",TimeStamp))
-  LogNameParts <- unlist(strsplit(TimeStamp,split=" "))
+fileTimestamp <- function( Timestamp, Prefix=NULL ) {
+  Timestamp <- gsub(":","-",gsub(" ", "_",Timestamp))
+  LogNameParts <- unlist(strsplit(Timestamp,split=" "))
   if ( ! is.null(Prefix) ) LogNameParts <- c(Prefix,LogNameParts)
   LogNameParts <- gsub("[^-[:alnum:]._]","",LogNameParts) # filter illegal filename characters
   return( paste(LogNameParts,collapse="_") )
@@ -987,7 +987,7 @@ fileTimeStamp <- function( TimeStamp, Prefix=NULL ) {
 #' initialization date and '<time>' is the initialization time, and '<prefix>' is the Prefix
 #' parameter provided to the function.
 #'
-#' @param TimeStamp Force the log message time stamp to this value (default: \code{Sys.time()})
+#' @param Timestamp Force the log message time stamp to this value (default: \code{Sys.time()})
 #' @param Threshold Logging threshold to display (see \code{writeLog()} for available levels).
 #' Messages below the threshold will be ignored. Default is "info" which shows a lot. "warn" is
 #' typical for running a model, and "error" for only the worst.
@@ -1002,7 +1002,7 @@ fileTimeStamp <- function( TimeStamp, Prefix=NULL ) {
 #' @return A list containing the name of the constructed log file and the time stamp
 #' @import futile.logger
 #' @export
-initLog <- function(TimeStamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL,
+initLog <- function(Timestamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL,
   Clear=FALSE, Quiet=TRUE, envir=modelEnvironment()) {
 
   # Don't touch the log if it is already initialized
@@ -1016,10 +1016,10 @@ initLog <- function(TimeStamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL
   }
 
   if ( Save ) {
-    if (is.null(TimeStamp)) {
-      TimeStamp <- Sys.time()
+    if (is.null(Timestamp)) {
+      Timestamp <- Sys.time()
     }
-    LogFile <- paste0(fileTimeStamp(TimeStamp,Prefix=c("Log",Prefix)),".txt")
+    LogFile <- paste0(fileTimestamp(Timestamp,Prefix=c("Log",Prefix)),".txt")
   } else {
     LogFile <- "console"
   }
@@ -1040,12 +1040,12 @@ initLog <- function(TimeStamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL
   if ( Save ) saveLog(LogFile,envir) # Can always do so later...
 
   if ( ! Quiet && interactive() ) {
-    startMsg <- paste("Logging started at",TimeStamp,"for",toupper(Threshold),"to",LogFile)
+    startMsg <- paste("Logging started at",Timestamp,"for",toupper(Threshold),"to",LogFile)
     writeLogMessage(startMsg)
   }
 
-  # Save and return the Log status (e.g. to use TimeStamp or start saving later)
-  ve.model$LogStatus <- list(LogFile=LogFile,ModelStart=TimeStamp)
+  # Save and return the Log status (e.g. to use Timestamp or start saving later)
+  ve.model$LogStatus <- list(LogFile=LogFile,ModelStart=Timestamp)
 
   invisible(ve.model$LogStatus)
 }
@@ -1142,7 +1142,7 @@ log.function <- list(
 
 #WRITE LOG MESSAGE
 #================
-#' Write an unformatted messge to log (no timestamp, etc.)
+#' Write an unformatted messge to log (no Timestamp, etc.)
 #'
 #' \code{writeLogMessage} a visioneval framework control function that writes an unformatted message
 #' to the run log (without time stamp, etc.)

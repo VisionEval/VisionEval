@@ -1897,34 +1897,48 @@ inputsToDatastore <- function(Inputs_ls, ModuleSpec_ls, ModuleName, envir=modelE
 #' @export
 mergeDatastoreListings <- function(baseListing, addListing) {
   # The structure of the Datastore listing (ModelState_ls$Datastore) is as follows:
-  #   group            # character vector
-  #   name             # character vector
-  #   groupname        # character vector
+  #   group            # character vector (Group/Year)
+  #   name             # character vector (Field)
+  #   groupname        # character vector (Group-Table-Name)
   #   attributes       # list
-  # The listing is presented as either a data.frame or a list; we can access the elements
-  #   the same way just by using baseListing$group etc.
+  # The listing is presented as either a data.frame or a list
+  # If there are additional names in the listing (e.g. boolean ThisStage), those
+  #   will be merged as well (and NA values injected if addListing doesn't include that field)
   if ( ! is.list(baseListing) || !is.list(addListing) ) {
     stop(
       writeLog("Invalid listing types presented to mergeDatastoreListings",Level="error")
     )
   }
   asDF <- is.data.frame(baseListing) # if not a data.frame, it should be a list
-  newListing <- as.list(baseListing) # drop data.frame class
-  newItems <- which( ! addListing$groupname %in% baseListing$groupname ) # indexes into newListing
-  newListing$group <- c(baseListing$group,addListing$group[newItems])
-  newListing$name <- c(baseListing$name,addListing$name[newItems])
-  newListing$groupname <- c(baseListing$groupname,addListing$groupname[newItems])
-  # The following sad hack is required since attributes is a "list",
-  # which is not legitimately a valid column type for a data.frame.
-  for ( item in addListing$attributes[newItems] ) {
-    newListing$attributes[[length(newListing$attributes)+1]] <- item
+  baseListing <- newListing <- as.list(baseListing) # drop data.frame class
+  datastoreNames <- names(newListing)
+  namesPresent <- addListing$groupname %in% newListing$groupname
+  newItems    <- which( ! namesPresent ) # indexes into newListing
+  updateItems <- which( namesPresent )
+  # add new items to baseListing
+  if ( length(updateItems) > 0 ) {
+    # Attributes (especially Module) may have been updated
+    addListing$attributes[updateItems] <- newListing$attributes[updateItems]
+  }
+  if ( length(newItems) > 0 ) {
+    for ( fieldname in datastoreNames ) { # group, table, grouptable, attributes
+      if ( fieldname != "attributes" ) {
+        newListing[[fieldname]] <- c(newListing[[fieldname]],addListing[[fieldname]][newItems])
+      } else {
+        # Add new items individually for attributes "column"
+        # In principle, however, the standard strategy should work
+        for ( item in addListing$attributes[newItems] ) {
+          newListing$attributes[[length(newListing$attributes)+1]] <- item
+        }
+      }
+    }
   }
   if ( asDF ) {
-    df <- as.data.frame(newListing[1:3])
-    df$attributes <- newListing[[4]]
+    nonAttributes <- datastoreNames[ datastoreNames != "attributes" ]
+    df <- as.data.frame(newListing[nonAttributes])
+    df$attributes <- newListing[["attributes"]] # NOTE: requires "attributes" to be present or we'll crash here
     newListing <- df
   }
-
   return(newListing)
 }
 
