@@ -156,7 +156,6 @@ ve.resultslist.export <- function(
   # Apply a selection if provided, otherwise use entire list of outputs
   # Reduces the resultsIndex to a subset then figures out S/G/T/N from whatever is left
   # Default is everything available in the VEResultsList
-  # TODO: make sure list produces the full list...
   if ( ! is.null(selection) ) {
     self$select(selection) # just apply the selection, copying it
   }
@@ -263,9 +262,7 @@ ve.resultslist.list <- function(pattern="", selected=TRUE, details=FALSE, ...) {
   return(unique(ret.value))
 }
 
-# TODO: is this function ever used, or is it still relevant?
-# TODO: written to work on an individual VEResults - now should list all selected
-# TODO: could we just add the input files and directories to standard metadata?
+# TODO: this function may not be used. Do we still need it?
 # We won't necessarily know the input file until after the model is run (otherwise, this function should have been a
 #  member of VEModel)
 ve.resultslist.inputs <- function( fields=FALSE, module="", filename="" ) {
@@ -371,7 +368,7 @@ VEResultsList <- R6::R6Class(
     list=ve.resultslist.list,        # show the consolidated resultsIndex (used by export to develop metadata table)
     select=ve.resultslist.select,    # return the list's selection definition
     find=ve.resultslist.find,        # constructs but does not embed the selection definition
-    units=ve.resultslist.units,      # Set units on field list (modifies self$modelIndex) TODO: Move/wrap in VEResultsList
+    units=ve.resultslist.units,      # Set units on field list (modifies self$modelIndex)
     valid=function() self$isValid    # report state of validity
   )
 )
@@ -647,6 +644,7 @@ ve.results.index <- function() {
     self$RunParam_ls <- ms$RunParam_ls
   }
 
+  # Get information from all the StartFrom stages
   msList <- rev(visioneval::getModelStatePaths(dropFirst=FALSE,envir=private$modelStateEnv))
   Index <- data.frame()
   Inputs <- data.frame()
@@ -699,26 +697,31 @@ ve.results.index <- function() {
     Name        = fieldGTN$Name, # Should be identical to ds$name
     Description = Description,
     Units       = Units,
-    # TODO: May need some other specification fields in order to identify variable type for SQL or other export
     Module      = Module,
     Scenario    = scenario,
     File        = File,          # "" if not an Input
     InputDir    = InputDir       # "" if not an Input
   )
 
-  # GroupTableName is now a data.frame with nine columns
+  # Index is now a data.frame with nine columns
   # complete.cases blows away the rows that have any NA values
   # (each row is a "case" in stat lingo, and the "complete" ones have a non-NA value for each column)
   # Reduces the raw Datastore index to just the Fields ("Name"s) in the Datastore
   ccases <- stats::complete.cases(Index[,c("Group","Table","Name")])
   Index <- Index[ccases,]
+
+  # Clean up index so Global and BaseYear groups only appears in the Base scenario(s)
+  RunYears = as.character(self$RunParam_ls$Years)
+  BaseYear = as.character(self$RunParam_ls$BaseYear)
+  if ( ! BaseYear %in% RunYears ) {
+    Index <- Index[ ! Index$Group %in% c("Global",BaseYear), ] # Remove Global and BaseYear
+  }
   self$modelIndex <- Index
+
   invisible(self$modelIndex)
 }
 
 # Helper function to attach DisplayUnits to a list of Group/Table/Name rows in a data.frame
-# Need to do this in VEResults since we need access to the model state...
-# TODO: Move this to VEResultsList (using Param_ls from Model or first VEResults)
 addDisplayUnits <- function(GTN_df,Param_ls) {
   # GTN_df is a data.frame with "Group","Table","Name" rows for each Name/field for which display
   #  units are sought. Always re-open the DisplayUnits file, as it may have changed since the last
@@ -803,8 +806,8 @@ ve.results.elements <- function() {
 }
 
 # Wrapper for visioneval::copyDatastore
-# TODO: add a wrapper in VEResultsList that will copy all the model results to another
-#  ToDir - VEResultsList will need to manage the directories...
+# TODO: We won't ever want to do this one Result at a time - should
+# manage in VEResultsList
 ve.results.copy <- function(ToDir, Flatten=TRUE, DatastoreType=NULL, overwrite=FALSE) {
   if ( missing(ToDir) ) {
     stop(writeLog("Must provide target directory path.",Level="error"))

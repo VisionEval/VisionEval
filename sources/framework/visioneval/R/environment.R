@@ -874,7 +874,7 @@ checkUpToDate <- function( baseRP, newRP, lastRun=NULL ) {
 
     # Eliminate ModelDir if there are other InputPath elements (so as
     # not to pick up things like ResultsDir itself).
-    if ( length(filepaths) > 1 ) filepaths <- filepaths[ ! filepaths== ModelDir ]
+    if ( length(filepaths) > 1 ) filepaths <- filepaths[ filepaths != ModelDir$new ]
     
     # Check for changes to files in key directory
     for ( filepath in filepaths ) changed <- changedFile(changed, "InputPath", filepath)

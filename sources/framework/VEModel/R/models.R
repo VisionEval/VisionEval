@@ -925,7 +925,6 @@ ve.model.clear <- function(force=FALSE,outputOnly=NULL,archives=FALSE,stage=NULL
 
   if ( ! isTRUE(outputOnly) && ! isTRUE(archives) && is.character(stage) ) {
     # keep only files in subdirectories matching stage$Dir in results
-    # TODO: make this work so stages passed by name will have their results selected (only)
     stageDirs <- sapply(self$modelStages[stage],function(s) s$Dir)
     stage <- stage[ stage!="." & stage %in% stageDirs ]
     if ( any(stages) ) {
@@ -1117,7 +1116,6 @@ ve.stage.init <- function(modelParam_ls,Name=NULL,Model=NULL,ScenarioDir=NULL,st
     writeLog(paste("Stage",self$Name,"stageConfig_ls contains:"),Level="debug")
     writeLog(paste(names(stageConfig_ls),collapse=", "),Level="debug")
     writeLog(paste("Stage Input Path from stageConfig_ls:",stageConfig_ls$InputPath),Level="debug")
-    # TODO: stageConfig_ls$InputPath is correct here
   } else {
     writeLog("stageConfig_ls has no additional parameters",Level="debug")
   }
@@ -2018,11 +2016,6 @@ ve.model.fixRunStatus <- function(stage,outOfDate=integer(0)) {
 ################################################################################
 #                                 Running Models                               #
 ################################################################################
-
-# TODO: Consult SaveDatastore in self$ModelState_ls
-# TODO: Make sure a classic model (where SaveDatastore may be buried rather deep)
-#       can still be interpreted properly. We still need to pull out the "initializeModel"
-#       parameters...
 
 # Proxy some visioneval functions (things that might get called from
 # classic run_model.R without namespace resolution).

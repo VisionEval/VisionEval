@@ -138,7 +138,7 @@ ve.partition.partition <- function(theData,Table) {
       nValue <- locFields[[n]]
       locSelection <- locSelection & (theData[[n]] == nValue) # knock off rows not matching this value
     }
-    tableLoc <- VETableLocator$new(Paths=Paths,Names=Names,Table=Table,Range=which(locSelection))
+    tableLoc <- VETableLocator$new(Paths=Paths,Names=Names,Table=Table,Range=which(locSelection),hive=self$Hive)
     TableLocs[[tableLoc$tableString()]] <- tableLoc
   }
   return(TableLocs)
@@ -147,7 +147,7 @@ ve.partition.partition <- function(theData,Table) {
 ve.partition.locate <- function(theData,Table) {
   # Creates a TableLoc for an unpartitioned Table
   # Used in VEExporter$write for arbitrary data, including query results and metadata
-  tableLoc <- VETableLocator$new(Table=Table,Range=1:nrow(theData))
+  tableLoc <- VETableLocator$new(Table=Table,Range=1:nrow(theData)) # hive always false in this case
   locList <- list()
   locList[[ tableLoc$tableString() ]] <- tableLoc
   return( locList)
@@ -167,7 +167,8 @@ VEPartition <- R6::R6Class(
   "VEPartition",
   public = list(
     # public data
-    Partition = character(0),           # Describes fields to be partitioned into different output tables
+    Partition = character(0),         # Describes fields to be partitioned into different output tables
+    Hive = FALSE,                     # Set to TRUE to make folders be Field=Value when creating partitioned locations
 
     # methods
     initialize=ve.partition.init,     # initialize internal partition
@@ -209,7 +210,7 @@ VEPartition <- R6::R6Class(
 # @param pathSep a character string used to separate path elements when building the table name
 # @param nameSep a character string used to separate name elements when building the table name
 # @param tableSep a character string used to separate path elements from table plus name elements;
-#
+
 ve.locator.string <- function(
   pathSep="/", nameSep="_", tableSep=":"
 ) {
@@ -217,6 +218,7 @@ ve.locator.string <- function(
     paste(self$Table,paste(self$Names,collapse=nameSep),sep=nameSep)
   } else self$Table
   if ( length(self$Paths) > 0 ) {
+    Paths <- if ( self$Hive ) paste(names(self$Paths),self$Paths,sep="=") else self$Paths
     tableString <- paste(paste(self$Paths,collapse=pathSep),tableString,sep=tableSep)
   }
   return(tableString)
@@ -230,11 +232,12 @@ ve.locator.print <- function(...) {
 }
 
 # Initialize a VETableLocator
-ve.locator.init <- function(Table,Range=integer(0),Paths=character(0),Names=character(0)) {
-  self$Paths = Paths
+ve.locator.init <- function(Table,Range=integer(0),Paths=character(0),Names=character(0),hive=FALSE) {
+  self$Paths = Paths # For Hive to work, Paths must be a named character vector
   self$Names = Names
   self$Table = Table
   self$Range = Range
+  self$Hive  = hive
 }
 
 ve.locator.append <- function(Name) self$Names <- append(self$Names,Name)
@@ -249,6 +252,7 @@ VETableLocator <- R6::R6Class(
     Paths = character(0),
     Names = character(0),
     Table = NULL,
+    Hive  = FALSE,
 
     # methods
     initialize=ve.locator.init,    # Create the table location
@@ -405,6 +409,7 @@ ve.exporter.init <- function(Model,load=NULL,tag="default",connection=NULL,parti
   # either of the following may stop if the Configuration is inadequate
   self$Connection <- makeVEConnection(Model,self$Configuration$Connection) # Returns a VEConnection subclass
   self$Partition <- VEPartition$new(self$Configuration$Partition)
+  self$Partition$Hive <- self$Connection$Hive # True for Parquet, generally false otherwise
 }
 
 # subclasses will do more with Connection and Partition prior to saving them
@@ -561,7 +566,6 @@ ve.exporter.metadata <- function() {
   #  the Units actually written plus the N description. DBTableName is the locator encoded
   #  form (makeTableString with default parameters). Metadata is just intended to understand
   #  what is in TableName.
-  # TODO: actually build the full metadata (S/G/T/N/...) while writing tables
   metadatalist <- lapply( names(self$TableList), function(t) {
     metadata <- self$TableList[[t]]
   } )
@@ -687,7 +691,7 @@ ve.connection.missing <- function(dataFields,Table) {
 }
 
 # ve.connection.init        <- function(config) {} # initialize the connection from parameters
-ve.connection.init <- function(Model,config,reopen=FALSE) {
+ve.connection.init <- function(Model,config,reopen=FALSE,hive=FALSE) {
   # Add Timestamp if it is going to be part of the database name (or the CSV/Parquet folder)
   if ( ! reopen ) {
     if ( "Timestamp" %in% names(config) && isTRUE(config[["Timestamp"]]=="database") ) {
@@ -700,6 +704,7 @@ ve.connection.init <- function(Model,config,reopen=FALSE) {
     }
     # derived classes may then use Timestamp and TimeSeparator to create the Database/Folder name
   }
+  self$Hive <- hive # make sure hive gets saved and loaded...
 }
 
 # Generic implementation uses derived class functions to do the work
@@ -747,6 +752,8 @@ VEConnection <- R6::R6Class(
     # public data
     Timestamp     = NULL, # pull from config
     TimeSeparator = NULL, # defaults to "_" if Timestamp exists
+    Hive          = FALSE, # connection wants "hive" partitioning (Parquet sets in its constructor;
+                           # can be set manually for other connection types like CSV)
 
     # methods (each connecton type will implement its own version of these)
     initialize  = ve.connection.init,           # call from subclasses to establish internal connection and partition
@@ -783,7 +790,7 @@ VEConnection <- R6::R6Class(
     createTable = function(Data,Table) NULL,    # Create or re-create a Table from scratch (includes append)
     appendTable = function(Data,Table) NULL,    # perform low-level append data operation
     readTable   = function(Table) NULL,         # Read named table into a data.frame
-    save        = function() return(list()),    # Return private data for saving/reopening connnection
+    save        = function() return(list(Hive=self$Hive)),    # Return private data for saving/reopening connnection
     open        = function() NULL,              # Reopen the connection (optional for DBI)
     close       = function() NULL               # Close connection (needed for DBI)
     # 'Table' should be a TableLocator string built with nameTable for the Connection
@@ -851,9 +858,9 @@ VEConnection.Dataframe <- R6::R6Class(
 #################################
 
 #' @import data.table
-ve.connection.csv.init      <- function(Model,config,reopen=FALSE) {
+ve.connection.csv.init      <- function(Model,config,reopen=FALSE,hive=FALSE) {
   # CSV provides a default name for Directory
-  super$initialize(Model,config)
+  super$initialize(Model,config,hive)
   if ( ! reopen ) {
     if ( ! "Directory" %in% names(config) ) {
       if ( "Database" %in% names(config) ) {
@@ -943,7 +950,7 @@ VEConnection.CSV <- R6::R6Class(
     readTable     = ve.connection.csv.readTable,
 
     # methods
-    save          = function() return(private$Directory)
+    save          = function() return(c(super$save(),list(Directory=private$Directory)))
   ),
   private = list(
     Directory = NULL    # Default to "OutputDir/Export_CSV<TimeSeparator><Timestamp>" in initializer
@@ -959,8 +966,8 @@ VEConnection.CSV <- R6::R6Class(
 #' @import DBI
 #' @import RSQLite
 #' @importFrom methods new
-ve.connection.dbi.init <- function(Model,config,reopen=FALSE) {
-  super$initialize(Model,config)
+ve.connection.dbi.init <- function(Model,config,reopen=FALSE,hive=FALSE) {
+  super$initialize(Model,config,hive)
   # Two avenues here:
   # If we're missing a full DBI configuration, presume SQLite
   # If there is a full DBI configuration, fill in blanks like dbname from outside Database
@@ -1209,10 +1216,11 @@ connectionList <- list(
 #'    is the name of the connection specification block (either a built-in default or defined in the model
 #'    or global visioneval.cnf).
 #' @param reopen if TRUE will not create a new database name (using saved configuration), otherwise
-#''   build a new name (not all connection types will care - mostly to avoid Timestamp problems)
+#'    build a new name (not all connection types will care - mostly to avoid Timestamp problems)
+#' @param hive if TRUE will produce path elements as Field=Value, otherwise just Value
 #' @return A VEConnection (or derived) object giving access to the VisionEval results in `path`
 #' @export
-makeVEConnection <- function(Model,config=list(driver="csv"),reopen=FALSE) {
+makeVEConnection <- function(Model,config=list(driver="csv"),reopen=FALSE,hive=FALSE) {
   # Usually called from within VEExportef initialization, which will provide
   #   useful connection defaults
   # Find driver class from config (default is "csv")
@@ -1228,5 +1236,5 @@ makeVEConnection <- function(Model,config=list(driver="csv"),reopen=FALSE) {
     writeLog(paste("Creating Driver for ",driverClass$classname),Level="info")
   }
   # Create new driver object using "config"
-  return ( driverClass$new(Model,config,reopen) )
+  driverObject <- driverClass$new(Model,config,reopen,hive)
 }

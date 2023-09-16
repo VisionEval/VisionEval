@@ -581,34 +581,6 @@ ve.query.getlist <- function() {
 # "Name" is always included to support cbind
 defaultMetadata <- c("Units","Description")
 
-# TODO: In "Wide" format, keep the "By" fields in their own columns: that will be a bit more work if
-# different queries have different combinations of By fields, but the logic is already implemented
-# for Long format, and we'll want it for any extraction that is intended to be analyzed in a
-# database system.
-
-# TODO: Perhaps implement the same "Extractor" logic for queries as for regular data:
-# Generate metric vectors for each Scenario/Year and add those to a list of metric columns
-# that are then later formatted by the Extractor into "Long" and "Wide". That would simplify
-# injecting the By columms, because we could just review all the vectors at the end to figure
-# out how to make them conform for purposes of being in a data.frame (or some other output).
-
-# OutputReceiver:
-#   Connect to "table location" (identify a directory, open a DBI connection)
-#   Create table (given a set of data that will go into it)
-#   Append rows to table - Create/Recreate could just be an option on a single "writeToTable"
-#   function that the Extractor will process
-
-# Ahead of that, we'll assemble a list of unreconciled vectors, accumulate them in a list Review all
-# their column names and make sure all rows are present (with NAs if needed) then just "cbind" them
-# together. That's a lot easier if we don't have to preserve the data.frame structure along the way
-# (just make a list of conforming vectors, then magically wave the wand over it and *poof* it's a
-# data.frame). For long format, we make each row into vectors (and then conform the names at the
-# end), and then just "rbind" instead of "cbind".
-
-# "long" and "wide" will build different vectors and assemble them differently.
-
-# The logic will be to generate columns where each one is a set of metrics
-
 # make a data.frame of all (and only) the valid query results
 # the results is a single data.frame with attributes
 ve.query.extract <- function(
@@ -2296,9 +2268,7 @@ makeLongMeasureDataframe <- function(Values,Scenario="",Year=NULL,Metadata=chara
 
 # doQuery processes a list of VEResults, and generates QueryFile in their Path
 doQuery <- function (
-  # TODO: Results should be a VEResultsList
-  # TODO: iterating over Results should use Results$results()
-  Results,             # a list of VEResult object(s) corresponding to Reportable scenarios
+  Results,             # a list of VEResults object corresponding to Reportable scenarios
   Specifications,      # validated query specification to process
   QueryFile,           # Name of query file in which to save results
   Timestamp=Sys.time() # Pass as parameter since model calling doQuery will need it too
@@ -2333,7 +2303,7 @@ doQuery <- function (
     # Set up model state and datastore for framework query processing
     # TODO: Qprep_ls is overkill - should revise SummarizeDatasets to use
     #   just the ModelState (multiple Datastores are handled internally through
-    #   the virtual Datastore path).
+    #   the virtual DatastorePath).
     QPrep_ls <- results$queryprep()
 
     # Set up result structure for this scenario

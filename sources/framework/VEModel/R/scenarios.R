@@ -537,7 +537,6 @@ ve.scenario.print <- function(details=FALSE) {
 }
 
 # List available inputs for each scenario and (if details) whether it has a local version
-# TODO: do we need this? Verify should report deviant cases
 ve.scenario.inputs <- function(scenario=NULL,category=NULL,details=TRUE) {
   # if "scenario" is a character vector, only show those folder scenarios
   # if "category" is a character vector, only show scenarios in those categories
@@ -546,6 +545,7 @@ ve.scenario.inputs <- function(scenario=NULL,category=NULL,details=TRUE) {
   #   List each folder scenario, inspect its InputPath and if the file is present there, mark it as "Used"
   # Category scenarios list all files in Category StartFrom and tags them with the Category they
   #   are associated with (from the Categories configuration, only one possible Category per file)
+  message("Unimplemented: ve.scenario.inputs")
 }
 
 # TODO: use this list to give VEQuery a subset of categories to visualize
@@ -561,9 +561,10 @@ ve.scenario.categories <- function(category=NULL,details=FALSE) {
   #   if details is a character vector with both "levels" and "files", list files within each
   #     level and in addition to the file name, list out its directory, its size, and its
   #     modification date.
+  message("Unimplemented: ve.scenario.categories")
 }
 
-# TODO: do we need this? Lists available scenarios for getting lists of inputs or seeing what's out
+# Lists available scenarios for getting lists of inputs or seeing what's out
 # there. should also report their category.
 ve.scenario.list <- function(scenario=NULL, details=FALSE) {
   # TODO: list scenarios
@@ -577,6 +578,7 @@ ve.scenario.list <- function(scenario=NULL, details=FALSE) {
   #  TRUE == all details
   #  "status" == name plus run status
   #  "type" == folder/category
+  message("Unimplemented: ve.scenario.list")
 }
 
 ve.scenario.save <- function(overwrite=TRUE) {

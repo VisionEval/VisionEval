@@ -154,8 +154,7 @@ loadRuntimeConfig <- function() {
   # ParamDir defaults to ve.runtime
   ve.env <- runtimeEnvironment()
   if ( is.null(ve.env$ve.runtime) ) setRuntimeDirectory() # VE_RUNTIME or getwd()
-  # TODO: load/build VE package manifest (for installModel, plus list
-  # of modules).
+  # TODO: load/build VE package manifest (for installModel, plus list of modules).
   # buildPackageManifest() # file called .VE-packages.lst (hidden attribute like .REnviron).
   return( visioneval::loadConfiguration(ParamDir=ve.env$ve.runtime) )
 }
@@ -163,7 +162,6 @@ loadRuntimeConfig <- function() {
 #GET RUNTIME SETUP
 #=================
 
-# TODO: Add VEResults as a supported object type (and return the RunParam_ls from its model state.
 #' Return runtime base RunParam_ls (loading it if not present)
 #'
 #' \code{getSetup} gets a subset of the current runParameters by name. It does NOT
@@ -276,6 +274,7 @@ viewSetup <- function(object=NULL,Param_ls=NULL,fromFile=FALSE,
 updateSetup <- function(object=NULL,inFile=TRUE,Source="interactive",Param_ls=list(),drop=character(0),...) {
   # TODO: for purposes of model Run Status, change status of "object" to "now" so when we next run
   # the model, stages with a "RunComplete" time stamp earlier than now will all be marked for reset.
+  # Probably not a big deal since manual reset is better in any case.
 
   # merge ... into Param_ls (expecting a named list of arbitrary parameters)
   Param_ls <- visioneval::mergeParameters(
