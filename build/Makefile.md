@@ -194,7 +194,7 @@ if they are out of date).
 .PHONY: list-targets help show-defaults\
 	configure repository lib modules runtime docs\
 	build all dev\
-	installer installers installer-bin installer-full\
+	installer installer-bin installer-full\
 	configure-build repository-build lib-build modules-build runtime-build docs-build\
 	clean build-build all-build dev-build clean-build\
 	installer-build installer-bin-build installer-full-build\
@@ -457,10 +457,6 @@ $(VE_LOGS)/book.built:
 # 'bin' is the binary installer for the local architecture (e.g. Windows or MacOSX)
 #     (also package source as a separate zip file)
 # 'src' is install-from-source installer (source packages for everything, including dependencies)
-installers: installers-reset installers-build
-
-installers-build: installer-bin installer-full
-
 installer installer-bin: installer-reset installer-build
 
 installer-build installer-bin-build: $(VE_LOGS)/installer-bin.built
