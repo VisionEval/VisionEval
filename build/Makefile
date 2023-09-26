@@ -8,6 +8,8 @@ VE_CONFIG?=config/VE-config.yml
 VE_VERSION?=3.0
 VE_RUNTESTS?=Default
 VE_EXPRESS?=YES # should be NO, or unset, for standard use
+$(info $(shell git branch --show-current 2>/dev/null))
+$(info VE_BRANCH is $(VE_BRANCH))
 VE_BRANCH?=$(shell git branch --show-current 2>/dev/null || echo visioneval)
 ifeq ($(OS),Windows_NT)
   VE_R_VERSION?=4.3.1

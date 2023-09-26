@@ -79,7 +79,7 @@ findMissingPackages <- function( required.packages ) {
   # Returns:
 
   #   A character vector of package names that are missing from the
-  #   ve.built.type section of the pkg-repository compared to the
+  #   ve.build.type section of the pkg-repository compared to the
   #   required.packages
   
   apb <- available.packages(repos=ve.deps.url, type=ve.build.type)

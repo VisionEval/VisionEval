@@ -38,8 +38,12 @@ local({
 evalq(
   envir=as.environment("ve.bld"),
   expr={
-    # Get the local git branch (if use.git, else just "visioneval")
+    # Get the local git branch (if not use.git, else just "visioneval")
     getLocalBranch <- function(repopath,use.git) {
+      if ( is.null(use.git) ) {
+        # NOTE: set use.git = FALSE explicitly to force "visioneval" pseudo-branch in VE_BUILD
+        use.git <- ( dir.exists( ve.build <- Sys.getenv("VE_BUILD","") ) )
+      } 
       if ( use.git && suppressWarnings(requireNamespace("git2r",quietly=TRUE)) ) {
         localbr <- git2r::branches(repopath,flags="local")
         hd <- which(sapply(localbr,FUN=git2r::is_head,simplify=TRUE))
@@ -54,13 +58,14 @@ evalq(
     ve.build <- function(
       targets=character(0),
       r.version=paste(R.version[c("major","minor")],collapse="."),
-      config=character(0), # defaults to config/VE-config.yml
-      express=TRUE, # if FALSE, will run devtools::check; otherwise build as rapidly as possible
-      flags=character(0), # flags for VE_CONFIG or VE_EXPRESS will override these direct flags
-      use.git=FALSE
+      config=character(0),  # defaults to config/VE-config.yml
+      express=TRUE,         # if FALSE, will run devtools::check; otherwise build as rapidly as possible
+      flags=character(0),   # flags for VE_CONFIG or VE_EXPRESS will override these direct flags
+      use.git=NULL          # if FALSE, always use "visioneval" as branch. if TRUE, always use git branch
+                            # if NULL (default), use git branch if VE_BUILD is set, else "visioneval"
     ) {
       owd <- setwd(file.path(ve.root,"build"))
-      r.home <- Sys.getenv("R_HOME")
+      r.home <- Sys.getenv("R_HOME") # RStudio sets this for its configured R version
       tryCatch(
         { 
           if ( length(r.version)>0 ) {
@@ -79,7 +84,8 @@ evalq(
           } else {
             Sys.unsetenv("VE_EXPRESS")
           }
-          # Force our own version of VE_BRANCH
+          # Force our own version of VE_BRANCH, respecting VE_BUILD if set
+          # Will respect VE_BUILD, which is handled within the build system call
           Sys.setenv(VE_BRANCH = getLocalBranch(ve.root, use.git))
           make.me <- paste("make",paste(flags,collapse=" "),paste(targets,collapse=" "))
           if ( invisible(status <- system(make.me)) ) stop("Build exited with status: ",status,call.=FALSE)
@@ -93,7 +99,7 @@ evalq(
       )
     }
 
-    get.ve.runtime <- function(runtime=NULL, use.git=FALSE,use.env=TRUE) {
+    get.ve.runtime <- function(runtime=NULL, use.git=NULL,use.env=TRUE) {
       # Locate dthe working directory in which to look for the VisionEval.R initialization. Options are:
       #   1. if runtime is an existing directory (could be getwd()), establish that as ve.runtime
       #   2. Find load.runtime via the "built" tree (for loading VisionEval.R, walkthrough or tests)
@@ -104,7 +110,7 @@ evalq(
       #      3. Use VE_RUNTIME environment variable (if set, and use.env is TRUE)
       #      4. Issue warning about writing in build tree, then use load.runtime
       #      
-      # use.git will use git branch name if TRUE, otherwise "visioneval" for branch
+      # use.git will use git branch name if TRUE (or VE_BUILD set), otherwise "visioneval" for branch
       #   (must be consistent with ve.build(use.git=...)
       # use.env if TRUE to enable using system environment VE_RUNTIME
       # (otherwise VE_RUNTIME is ignored; see above)
@@ -124,7 +130,8 @@ evalq(
       # Load the build file created by last ve.build() (to find ve-lib)
       ve.branch <- getLocalBranch(ve.root,use.git)
       this.r <- paste(R.version[c("major","minor")],collapse=".")
-      build.file <- file.path(ve.root,"dev","logs",ve.branch,this.r,"dependencies.RData")
+      build.root <- Sys.getenv("VE_BUILD",ve.root)
+      build.file <- file.path(build.root,"dev","logs",ve.branch,this.r,"dependencies.RData")
       if ( file.exists(build.file) ) {
         load(build.file,envir=env.builder)
       } else {
@@ -180,7 +187,7 @@ evalq(
     #   "walkthrough"). The runtime will work as long as the original built runtime exists, even if the files are not
     #   copied. Copying the files creates a "standalone" runtime. Note that any models or other files in the runtime
     #   will also be copied.
-    ve.run <- function(runtime=NULL, use.git=FALSE,use.env=TRUE,changeDir=TRUE,copyFiles=FALSE) {
+    ve.run <- function(runtime=NULL, use.git=NULL,use.env=TRUE,changeDir=TRUE,copyFiles=FALSE) {
       ve.runtime <- get.ve.runtime(runtime, use.git=use.git,use.env=use.env)
       message("get.ve.runtime returned ",ve.runtime,": use.env ",use.env)
       if ( is.na(ve.runtime) ) stop("No runtime available. Have you run ve.build()")
@@ -252,7 +259,7 @@ evalq(
       return( invisible(structure(ve.runtime,load.runtime=load.runtime)) )
     }
 
-    ve.test <- function(VEPackage,tests="test.R",changeRuntime=TRUE,usePkgload=NULL,use.git=FALSE,use.env=TRUE) {
+    ve.test <- function(VEPackage,tests="test.R",changeRuntime=TRUE,usePkgload=NULL,use.git=NULL,use.env=TRUE) {
       # Run with the walkthrough if no package provided (or "walkthrough")
 
       # Then we'll redirect to other locations as needed

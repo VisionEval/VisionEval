@@ -117,7 +117,7 @@ for ( i in 1:nrow(ve.getdocs) ) {
   ############ Output Directory
   # For the "docs" type, output use ve.docs + docs$Target (Target may be "", which resolves to ve.docs)
   # For modules, models and script use ve.docs + docs$Type + docs$Package
-  #   Thus "docs/module/modulename...", "docs/model/modelname", "docs/script/scriptname [VEGUI,tools,VEScenarioViewer]
+  #   Thus "docs/module/modulename...", "docs/model/modelname", "docs/script/scriptname"
   # For framework use ve.docs + docs$Package, thus "docs/visioneval",
 
   if ( type=="docs" ) {

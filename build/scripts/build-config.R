@@ -2,11 +2,10 @@
 
 # Author: Jeremy Raw
 
-# uncomment the following line on Windows if you just want the pre-compiled
-# binaries otherwise, if RTools is installed the newer sources packages will be
-# compiled.  You should allow compilation to happen if there is discrepancy in
-# behavior between a Windows installation and a source (e.g. Linux/Docker)
-# installation
+# uncomment the following line on Windows if you just want the pre-compiled binaries. Otherwise, if
+# RTools is installed the newer sources packages will be compiled. You should comment out this line
+# to allow compilation to happen if there is discrepancy in behavior between a Windows installation
+# and a source (e.g. Linux/Docker) installation
 options(install.packages.compile.from.source="never")
 
 message("========== BUILD CONFIGURATION ==========")
@@ -35,10 +34,40 @@ evalq(
   }
   if ( ! exists("ve.build.dir") ) {
     cat("Setting build to current directory.\n")
-    ve.build.dir <- getwd()
+    ve.installer <- getwd()
+  }
+
+  # Identify the platform and supported binary package built types
+  ve.platform <- .Platform$OS.type # Used to better identify binary installer type
+  ve.platform <- paste(toupper(substring(ve.platform,1,1)),substring(ve.platform,2),sep="")
+  ve.mac.build.types <- c("mac.binary","mac.binary.el-capitan") # TODO: update to latest Mac OS binary...
+  ve.binary.build.types <- c("win.binary", ve.mac.build.types) 
+  ve.build.type <- .Platform$pkgType
+  ve.binary.build <- ve.build.type %in% ve.binary.build.types
+  if ( ! ve.binary.build ) {
+    ve.build.type <- "source"
+  }
+
+  # Locate the installer tree (used for boilerplate for visual docs)
+  # The following includes a hack to fix a common path problem if you are
+  # developing on Windows in a subfolder of "My Documents"
+  if ( ve.platform == "Windows" || ve.build.type == "win.binary" ) {
+    ve.installer <- sub("My Documents", "Documents", ve.installer)
+    ve.installer <- gsub("\\\\", "/", ve.installer)
+  } else if ( ve.platform == "Unix" && ve.build.type %in% ve.mac.build.types ) {
+    ve.platform <- "MacOSX"
+  }
+
+  if ( ! exists("ve.build") ) {
+    # VE_BUILD can gather builds from multiple worktrees
+    # Be sure not to force VE_BRANCH or they will all be overwritten with the latest
+    # Often set to a neighbor directory to VisionEval-dev, e.g. VisionEval-built
+    # the dir.exists test relies on dir.exists("") == FALSE
+    ve.build <- Sys.getenv("VE_BUILD","")
+    if ( ! dir.exists(ve.build) ) ve.build <- normalizePath(file.path(ve.installer,".."),winslash="/",mustWork=FALSE)
   }
   if ( ! exists("ve.dev") ) {
-    ve.dev <- normalizePath(file.path(ve.build.dir,"..","dev"),winslash="/",mustWork=FALSE)
+    ve.dev <- normalizePath(file.path(ve.build,"dev"),winslash="/",mustWork=FALSE)
   }
   if ( ! exists("dev.lib") ) {
     dev.lib <- normalizePath(file.path(ve.dev,"lib",this.R),winslash="/",mustWork=FALSE)
@@ -62,7 +91,7 @@ evalq(
   cat("Building VisionEval version",ve.version,"\n")
 
   # Specify dependency repositories for known R versions
-  rversions <- yaml::yaml.load_file(file.path(ve.build.dir,"R-versions.yml"))
+  rversions <- yaml::yaml.load_file(file.path(ve.installer,"R-versions.yml"))
 
   cat("Building for R version",this.R,"\n")
   if ( ! this.R %in% names(rversions) ) {
@@ -72,27 +101,6 @@ evalq(
   }
   CRAN.mirror <- rversions[[this.R]]$CRAN
   BioC.mirror <- rversions[[this.R]]$BioC
-
-  # Identify the platform and supported binary package built types
-  ve.platform <- .Platform$OS.type # Used to better identify binary installer type
-  ve.platform <- paste(toupper(substring(ve.platform,1,1)),substring(ve.platform,2),sep="")
-  ve.binary.build.types <- c("win.binary","mac.binary","mac.binary.el-capitan")
-  ve.build.type <- .Platform$pkgType
-  ve.binary.build <- ve.build.type %in% ve.binary.build.types
-  if ( ! ve.binary.build ) {
-    ve.build.type <- "source"
-  }
-
-  # Locate the installer tree (used for boilerplate for visual docs)
-  # The following includes a hack to fix a common path problem if you are
-  # developing on Windows in a subfolder of "My Documents"
-  ve.installer <- ve.build.dir
-  if ( ve.platform == "Windows" || ve.build.type == "win.binary" ) {
-    ve.installer <- sub("My Documents", "Documents", ve.installer)
-    ve.installer <- gsub("\\\\", "/", ve.installer)
-  } else if ( ve.platform == "Unix" && ve.build.type %in% c("mac.binary","mac.binary.el-capitan") ) {
-    ve.platform <- "MacOSX"
-  }
 
   # ========== CREATE HELPER FUNCTIONS ==========
 
@@ -306,6 +314,7 @@ evalq(
     stop("No roots in",ve.config.file,"- Check file format.",call.=FALSE)
   }
 
+  # ve.root is where we look for the raw materials to do the build
   if ( ! "ve.root" %in% ve.roots ) {
     cat("Default ve.root\n")
     if ( ! exists("ve.root") ) { # use existing one if available
@@ -333,7 +342,7 @@ evalq(
   }
 
   if ( ! "ve.output" %in% ve.roots || ! exists("ve.output") ) {
-    ve.output = normalizePath(file.path(ve.root,"built"),winslash="/",mustWork=FALSE)
+    ve.output = normalizePath(file.path(ve.build,"built"),winslash="/",mustWork=FALSE)
   }
 
   if ( ! exists("ve.logs") ) {
@@ -410,6 +419,7 @@ evalq(
      VE_R_VERSION      = this.R
     ,VE_VERSION        = ve.version
     ,VE_LOGS           = ve.logs
+    ,VE_BUILD          = ve.build
     ,VE_DEVLIB         = dev.lib
     ,VE_BRANCH         = ve.branch
     ,VE_RUNTIME_CONFIG = ve.runtime.config
@@ -638,6 +648,7 @@ evalq(
   cat("Saving runtime configuration to:\n",ve.runtime.config,"\n",sep="")
   ve.env.save <- c(ve.roots,locs.lst
     , "this.R"
+    , "ve.build"
     , "ve.dev"
     , "dev.lib"
     , "ve.roots"

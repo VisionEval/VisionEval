@@ -3,8 +3,7 @@
 # Author: Jeremy Raw
 
 # Copies boilerplate (e.g. end user installation script) source tree files to
-# the runtime - for things like the model data, run scripts and VEGUI app that
-# are not in packages.
+# the runtime - for end user startup
 
 # Load runtime configuration
 if ( ! exists("ve.installer" ) ) ve.installer <- getwd()

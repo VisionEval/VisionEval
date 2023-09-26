@@ -3,14 +3,13 @@ Date: 2019-04-26
 Description: Include a parallel draw-down of the wiki (and use VE-wiki-components.yml)
 Roots:                              # Require ve.root and ve.output at a minimum
     ve.root: ..                     # relative to "build" folder (should be git root for VisionEval-dev)
-    ve.output: ../built             # default ("built" adjacent to "build")
     ve.docbook: ../../VisionEval-docs  # path to clone of VisionEval-docs repository
-Components:                         # Where to find wiki components (right here)
+Components:                         # Where to find component configurations
     ve.root:
         Root: ve.installer          # refers to ve.root/build
         Config: config/VE-components.yml
-        Exclude:
-          - VEGUI
+#        Exclude:                   # can use to skip building a certain element in VE-components.yml
+#          - VEGUI                  # VEGUI is long-since gone
     ve.docbook:
         Root: ve.installer
         Config: config/VE-doc-components.yml
@@ -20,7 +19,8 @@ Components:                         # Where to find wiki components (right here)
 Locations: # "Root" elements are variables defined in "Roots" section
     # path is relative to "augmented" root (depending on "augment" element)
     ve.dependencies:  # Required
-        root: ve.output
+        root: ve.output   # ve.output is set to VE_BUILD/built
+                          # VE_BUILD is an environment variable that defaults to ve.root
         augment: version  # "root" uses "root + path" (clone point for external repos)
                           # "branch" uses "root + branch + path" (e.g. non-packages)
                           # "version" uses "root + branch + version + path"
