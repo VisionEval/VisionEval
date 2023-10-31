@@ -2651,11 +2651,6 @@ ve.model.exporter <- function(file=NULL,tag=NULL,connection=NULL,partition=NULL)
 #'   a relative modelPath will be sought in the user's runtime `models` directory.
 #'   An absolute path will be sought only in the user's file system.
 #'
-#' You can set an alternate location for the "models" subdirectory by providing an
-#'   a path using, for example, `options(VEModelPath='mymodels')`. Relative paths
-#'   will be sought below the VisionEval runtime directory. Absolute paths will
-#'   be sought in the user's file system.
-#'
 #' An error will be raised if a model cannot be found with the indicated
 #'   modelPath and modelName.
 #'

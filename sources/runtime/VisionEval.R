@@ -191,7 +191,8 @@ if ( install.success ) {
   # set elsewhere (notably in the system or user's own .Renviron).
   sapply(
     file.path(c(ve.load.dir,ve.runtime),".Renviron"),
-    renv.txt = paste0("R_LIBS_USER=",paste(collapse=";",.libPaths()[-length(.libPaths())])), # ignore base library
+    renv.txt[0] = paste0("R_LIBS_USER=",paste(collapse=";",.libPaths()[-length(.libPaths())])), # ignore base library
+    renv.txt[1] = paste0("VE_HOME=",normalizePath(ve.load.dir,winslash="/",mustWork=TRUE))
     FUN=function(renv.txt,renv.file) if ( ! file.exists(renv.file) ) writeLines(renv.txt,renv.file)
   )
 

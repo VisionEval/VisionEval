@@ -1962,7 +1962,7 @@ test_07_verpat <- function(run=TRUE) {
     verpat$run()
   }
   testStep("Extracting JRPAT results...")
-  verpat$results()$extract()
+  verpat$results()$export()
 }
 
 # Test the setup management functions

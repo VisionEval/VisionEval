@@ -880,6 +880,7 @@ documentModule <- function(ModuleName){
   if ( toupper(Sys.getenv("VE_BUILD_PHASE","SAVE")) != "SAVE" ) return()
 
   #Make vignettes directory if doesn't exist
+  #TODO: should put this output into /vignettes
   #-----------------------------------------
   if(!file.exists("inst/module_docs")) dir.create("inst/module_docs",recursive=TRUE)
 

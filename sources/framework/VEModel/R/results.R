@@ -448,6 +448,7 @@ ve.results.extract <- function(
     if ( ! is.list(Data_ls) ) stop("Data_ls is not a list")
 
     # Report Missing Tables from readDatastoreTables
+    writeLog("Checking for Missing Tables",Level="warn")
     HasMissing_ <- unlist(lapply(Data_ls$Missing, length)) != 0
     if (any(HasMissing_)) {
       WhichMissing_ <- which(HasMissing_)
@@ -474,10 +475,11 @@ ve.results.extract <- function(
     # Handle tables with different lengths of data elements ("multi-tables")
     # readDatastoreTables will have returned a ragged list rather than a data.frame
 
+    writeLog("Checking multitables...",Level="warn")
     if ( ! all(is.df <- sapply(Data_ls$Data,is.data.frame)) ) {
       # Unpack "multi-tables"
       MultiTables <- Data_ls$Data[which(! is.df)] # usually, there's just one of these...
-      writeLog(paste("Processing multitables: ",paste(MultiTables,collapse=",")),Level="warn")
+      writeLog(paste("Processing multitables: ",paste(names(MultiTables),collapse=",")),Level="warn")
       if ( length(MultiTables) > 0 ) {
         for ( multi in names(MultiTables) ) {
           # multi is a list of datasets not made into a data.frame by readDatastoreTables
@@ -526,6 +528,7 @@ ve.results.extract <- function(
       }
     )
     # Make sure Metadata includes added column descriptions
+    writeLog("Fixing up Metadata column descriptions",Level="warn")
     Metadata <- lapply(names(Metadata),function(tbl) {
       dfm <- Metadata[[tbl]]
       rnames <- names(dfm)
@@ -552,6 +555,7 @@ ve.results.extract <- function(
     names(Metadata) <- names(Data_ls$Data)
 
     # Process the table data.frames into results, adding Metadata as an attribute
+    writeLog(paste0("Adding Group '",group,"' to results"),Level="warn")
     results[[ group ]] <- structure(Data_ls$Data,Metadata=Metadata)
   }
   invisible(results) # results will be a named list of groups from the stage results, with each group being
