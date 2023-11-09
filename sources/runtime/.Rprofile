@@ -1,7 +1,7 @@
 # Run VisionEval
-# Set VE_HOME in .Renviron to the directory containing the VisionEval
-# installation. Can be either enduser (from installer) or developer
-# (from Github)
+
+# Set VE_HOME in .Renviron to the directory containing the VisionEval installation.
+# Can be either enduser (from installer) or developer (from Github)
 
 local( {
   this.R <- paste(R.version[c("major","minor")],collapse=".")
@@ -18,17 +18,22 @@ local( {
 
   setwd(VE.home) # get ready to run the startup file
   if ( VE.developer ) {
-    dev.lib <- file.path(VE.home,"dev/lib",this.R)
-    ve.lib  <- file.path(VE.home,"built/visioneval",this.R,"ve-lib")
-    source("build/VisionEval-dev.R")
+    VE.build <- Sys.getenv("VE_BUILD",VE.home)
+    dev.lib <- file.path(VE.build,"dev/lib",this.R)   #
+    ve.lib  <- file.path(VE.build,"built/visioneval",this.R,"ve-lib")
+    source("build/VisionEval-dev.R")  # Will return to VE_RUNTIME set above
     if ( ! dir.exists(dev.lib) || ! dir.exists(ve.lib) ) {
-      message("VisionEval in ",VE.home," has not been built yet")
-      message("Start R from within ",VE.home," and run ve.build()")
+      message("Seeking built VisionEval in ",VE.build)
+      message("However, VisionEval from ",VE.home," is not there.")
+      message("Please run ve.build()")
+      setwd(VE.home)
+      source("build/VisionEval-dev.R")
     } else {
-      .libPaths( c(dev.lib, ve.lib) )
-      ve.run()
+      ve.run()  # Ready to run
     }
-  } else source("VisionEval.R")
+  } else {
+    source("VisionEval.R")
+  }
   invisible(NULL)
 })
 

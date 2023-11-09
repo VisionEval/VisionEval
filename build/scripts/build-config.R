@@ -19,7 +19,7 @@ if ( length(grep("^ve.builder$",search()))==0 ) {
   attach(NULL,name="ve.builder")
 } else {
   blow.away <- ls("ve.builder")
-  blow.away <- setdiff(blow.away,c("ve.root","ve.build.dir","ve.dev","dev.lib","this.R"))
+  blow.away <- setdiff(blow.away,c("ve.root","ve.installer","ve.dev","dev.lib","this.R"))
   if ( length(blow.away) > 0 ) {
     rm(list=blow.away,pos=as.environment("ve.builder")) # blow away all but basic build elements
   }
@@ -32,7 +32,7 @@ evalq(
   if ( ! exists("this.R") ) {
     this.R <- paste(R.version[c("major","minor")],collapse=".")
   }
-  if ( ! exists("ve.build.dir") ) {
+  if ( ! exists("ve.installer") ) {
     cat("Setting build to current directory.\n")
     ve.installer <- getwd()
   }
@@ -62,10 +62,11 @@ evalq(
     # VE_BUILD can gather builds from multiple worktrees
     # Be sure not to force VE_BRANCH or they will all be overwritten with the latest
     # Often set to a neighbor directory to VisionEval-dev, e.g. VisionEval-built
-    # the dir.exists test relies on dir.exists("") == FALSE
+    # the dir.sexists test relies on dir.exists("") == FALSE
     ve.build <- Sys.getenv("VE_BUILD","")
     if ( ! dir.exists(ve.build) ) ve.build <- normalizePath(file.path(ve.installer,".."),winslash="/",mustWork=FALSE)
   }
+
   if ( ! exists("ve.dev") ) {
     ve.dev <- normalizePath(file.path(ve.build,"dev"),winslash="/",mustWork=FALSE)
   }
@@ -434,14 +435,17 @@ evalq(
     ,VE_SRC            = ve.src
     ,VE_DOCS           = ve.docs
     ,VE_DEPS           = ve.dependencies
-    ,VE_ROOT           = ve.root
+    ,VE_HOME           = ve.root
   )
 
   # Set up .Renviron for future runs
   r.environ <- file.path(ve.root,".Renviron")
   r.ve.lib <-gsub(this.R,"%V",ve.lib)
   r.dev.lib <- gsub(this.R,"%V",dev.lib)
-  r.libs.user <- paste0("R_LIBS_USER=",paste(r.ve.lib,r.dev.lib,sep=";"))
+  r.libs.user <- c(
+    paste0("R_LIBS_USER=",paste(r.ve.lib,r.dev.lib,sep=";")),
+    paste0("VE_HOME=",normalizePath(ve.root,winslash="/"))
+  )
   writeLines(r.libs.user,con=r.environ)
   rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib )
 

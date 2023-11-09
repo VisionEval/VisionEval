@@ -189,12 +189,13 @@ if ( install.success ) {
   # environment or the user may have set them manually. This may also
   # have the effect of copying the ve-lib location from a .Renviron
   # set elsewhere (notably in the system or user's own .Renviron).
-  sapply(
-    file.path(c(ve.load.dir,ve.runtime),".Renviron"),
-    renv.txt[0] = paste0("R_LIBS_USER=",paste(collapse=";",.libPaths()[-length(.libPaths())])), # ignore base library
-    renv.txt[1] = paste0("VE_HOME=",normalizePath(ve.load.dir,winslash="/",mustWork=TRUE))
-    FUN=function(renv.txt,renv.file) if ( ! file.exists(renv.file) ) writeLines(renv.txt,renv.file)
+  
+  renv.file <- file.path(c(ve.load.dir,ve.runtime),".Renviron")
+  renv.txt <- c(
+    paste0("R_LIBS_USER=",paste(collapse=";",.libPaths()[-length(.libPaths())])), # ignore base library
+    paste0("VE_HOME=",normalizePath(ve.load.dir,winslash="/",mustWork=TRUE))
   )
+  sapply( renv.file, FUN=function(r) if ( ! file.exists(r) ) writeLines(renv.txt,r) )
 
   # Load tools (helper functions) from their subdirectory in ve.load.dir
   env.loc$load.helpers <- function() {

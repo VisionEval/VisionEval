@@ -14,6 +14,9 @@ source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 if ( ! suppressWarnings(require("bookdown",quietly=TRUE)) ) {
   install.packages("bookdown", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
 }
+if ( ! suppressWarnings(require("servr",quietly=TRUE)) ) {
+  install.packages("servr", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
+}
 # Following is required to use bs4_book() function in bookdown
 if ( ! suppressWarnings(require("downlit",quietly=TRUE)) ) {
   install.packages("downlit", lib=dev.lib, repos=CRAN.mirror, dependencies=NA, type=.Platform$pkgType )
