@@ -85,6 +85,7 @@ visioneval::savePackageDataset(DvmtLmModels_ls, overwrite = TRUE)
 #------------------------
 #Load PHEV/HEV model data object
 if ( dir.exists("data-raw") ) {
+  # TODO: change this to load from true raw materials (CSV files)
   load("data-raw/PhevModelData_ls.rda")
 } else if ( file.exists("data/PhevModelData_ls.rda") ) {
   load("data/PhevModelData_ls.rda")
@@ -2144,12 +2145,33 @@ CalculateTravelDemand <- function(L) {
 
   PhevModelData_ls <- loadPackageDataset("PhevModelData_ls","VEHouseholdTravel")
 
+  # added the following to interpolate OptimProp for years not
+  # present. Eventually need to give control over contents of
+  # PhevModelData_ls...
+  getOptimPropForYear <- function(Year) {
+    prop_ar <- PhevModelData_ls$OptimPropYear_ar
+    years <- as.integer(names(prop_ar))
+    yr <- as.integer(Year)
+    if ( ! yr %in% years ) {
+      yr.less <- years[ years < yr ]
+      yr.more <- years[ years > yr ]
+      if ( length(yr.less) < 1 || length(yr.more) < 1 ) {
+        msg <- writeLog(paste0("Year is out of range in PhevModelData_ls: ",Year),Level="error")
+        stop(msg)
+      }
+      low <- yr.less[length(yr.less)]
+      hi <- yr.more[1]
+      optimProp <- prop_ar[as.character(low)] + ( (prop_ar[as.character(high)]-prop_ar[as.character(low)]) * ((yr-low)/(high-low)) )
+    } else optimProp <- PhevModelData_ls$OptimPropYear_ar[Year]
+    return( optimProp )
+  }
+
   PhevResults_ <- assignPHEV(Hh_df = Hh_df[HasVeh_Hh, HhVar_],
                              Veh_df = Vehicles_df[, VehVar_],
                              PhevRangePropYr_df = PhevRangePropYr_df,
                              PhevPropModel_ls = PhevModelData_ls$PhevMilePropModel_ls,
                              HevMpgPropYr_df = HevPropMpgYr_df,
-                             OptimProp = PhevModelData_ls$OptimPropYr_ar[L$G$Year],
+                             OptimProp = getOptimPropForYear(L$G$Year), # PhevModelData_ls$OptimPropYr_ar[L$G$Year],
                              CurrYear = L$G$Year)
 
   #Update vehicle data
