@@ -1,5 +1,8 @@
 # VisionEval
 
+**NOTE ON WEBSITE**: As of 11/15/2023, the VisionEval website can be found at [https://VisionEval.github.io/VisionEval.org](https://VisionEval.github.io/VisionEval.org)
+
+Sorry for the inconvenience. We are working on restoring https://visioneval.org as soon as possible.
 
 **IMPORTANT**: As of 7/21/2023, the `development` branch should once again be the basis for development
 of new features and fixes to VisionEval. 'development-next` is a snapshot of this branch and will
