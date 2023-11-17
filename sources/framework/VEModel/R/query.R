@@ -581,11 +581,26 @@ ve.query.getlist <- function() {
 # "Name" is always included to support cbind
 defaultMetadata <- c("Units","Description")
 
+interleave <- function(x,y) {
+  # x and y are two lists of Measure names
+  # Structure is <Metric>.ByLevels
+  leaf.x <- stringr::str_split_fixed(x,"\\.",2)                 # split the metric lists (Metric + Remainder)
+  leaf.y <- stringr::str_split_fixed(y,"\\.",2)
+  leaves <- rbind(data.frame(leaf.x),data.frame(leaf.y))        # build a data.frame of sortable parts
+  names(leaves) <- c("Metric","Remainder")
+  top.rows <- ifelse(leaves$Metric %in% c("Scenario","Year"),"A","B") # keep Scenario and Year at the top
+  leaves <- leaves[order(top.rows,leaves$Metric,leaves$Remainder),] # put them in order
+  leaves <- unique(leaves)                                      # clear out duplicates
+  leaves <- sub("\\.+$","",apply(leaves,1,paste,collapse="."))  # reassemble the names, removing trailing ".$" for empty Remainder  
+  return(leaves)
+}
+
 # make a data.frame of all (and only) the valid query results
 # the results is a single data.frame with attributes
 ve.query.extract <- function(
   Results=NULL, Measures=NULL, Years=NULL,
-  wantMetadata=TRUE, wantData=TRUE, longScenarios=FALSE, exportOnly=FALSE) {
+  wantMetadata=TRUE, wantData=TRUE, nameMeasureBy=TRUE,
+  longScenarios=FALSE, exportOnly=FALSE) {
   # "Results" is a list of VEResults (or a VEResultsList) from a VEModel
   # Visit each of the valid results in the Model (or Results list) and add its years as columns
   #  to the resulting data.frame, then return the accumulated result
@@ -594,6 +609,8 @@ ve.query.extract <- function(
   #   always included whether or not metadata is requested)
   # if "wantData" is TRUE, include data columns. If false, only generate metadata (used, e.g., by the
   #   visualizer JSON generation function)
+  # if "nameMeasureBy", incorporate By fields into the measure row name in Wide format, otherwise encode
+  #   into measure name
   # if "longScenarios" is TRUE, generate one scenario-year-metric per line with requested metaData;
   #   if "longScenarios" is FALSE (default=old style) generate one column per scenario-year and
   #   one row per metric By combination; Merge By fields onto metric name into a single name column;
@@ -687,8 +704,8 @@ ve.query.extract <- function(
     for ( year in names(scenario) ) {
       if ( ! longScenarios ) { # will also use wide format if we're only getting Metadata
         longScenarios <- FALSE # so we don't add extra geography at the end
-        # NOTE: removed wantMetadata parameter from makeWideMeasureDataFrame - always need it
-        theseResults <- makeWideMeasureDataframe(scenario[[year]],ScenarioName,year,metadata=metadata)
+        # NOTE: wantMetadata parameter for makeWideMeasureDataFrame defaults to TRUE
+        theseResults <- makeWideMeasureDataframe(scenario[[year]],ScenarioName,year,metadata=metadata,nameMeasureBy=nameMeasureBy)
         if ( is.null(results.df) ) { # first set of measures
           if ( wantMetadata ) {
             results.df <- theseResults[,c("Measure",attr(theseResults,"Metadata"))]
@@ -707,14 +724,21 @@ ve.query.extract <- function(
 
         # Now attach the data value (expects row.names to contain the expanded Measure name)
         # Need to use merge rather than cbind to ensure that missing values are handled (e.g. if we
-        # have BZone breaks but no values reported in certain years)
-        byFields <- "Measure"
+        # have BZone breaks but no values for certain breaks reported in certain years)
+        # Also make an effort to preserve original ordering
+        mergeBy <- "Measure"
         metadata <- attr(theseResults,"Metadata")
-        if ( !is.null(metadata) && length(metadata)>0 ) byFields <- c(byFields,metadata)
-        mergeResults <- theseResults[,byFields,drop=FALSE]
+        if ( !is.null(metadata) && length(metadata)>0 ) mergeBy <- c(mergeBy,metadata)
+        mergeResults <- theseResults[,mergeBy,drop=FALSE]
         mergeResults[paste(ScenarioName,year,sep=".")] <- theseResults$Value
-        results.df <- merge(results.df,mergeResults,by=byFields,all=TRUE)
+        ordering <- interleave(results.df$Measure,mergeResults$Measure) # interleave puts full set of names in a nice order
+        results.df <- merge(results.df,mergeResults,by=mergeBy,all=TRUE)
         rownames(results.df) <- results.df$Measure
+        if ( length(ordering) != nrow(results.df) || any(! ordering %in% results.df$Measure) || any(! results.df$Measure %in% ordering) ) {
+          msg <- writeLog("Program error with interleave - generated list of incorrect length; VEmodel::query.R line 735",Level="error")
+          stop(msg,call.=FALSE)
+        }
+        results.df <- results.df[ ordering, ] # Keep the original ordering (merge screws it up...)
       } else {
         # Long format always produces metadata plus data...
         theseResults <- makeLongMeasureDataframe(scenario[[year]],ScenarioName,year,metadata)
@@ -735,7 +759,7 @@ ve.query.extract <- function(
       ScenarioColumns <- paste(Scenarios,ScenarioYears,sep=".")
       if ( length(Scenarios) != length(results.df[,ScenarioColumns,drop=FALSE]) || length(Scenarios) != length(ScenarioYears) ) {
         stop(
-          writeLogMessage("Scenarios don't match up with number of Result columns (VEModel/query.R circa line 732)",Level="error")
+          writeLogMessage("Scenarios don't match up with number of Result columns (VEModel/query.R circad line 732)",Level="error")
         )
       }
     } else {
@@ -797,6 +821,7 @@ ve.query.extract <- function(
       results.df$Region[ is.na(results.df$Region) | results.df$Region!="Region" ] <- "Region"
     }
 
+    # TODO: Check that we have the following covered...
     # Clean up geographies (create look-up data.frames, with row.names = smaller geography and
     # value the larger geography) - for Bzones, have multiple columns and iterate over those.
     # Check if Bzone and ! is.na(Bzone)
@@ -1007,7 +1032,7 @@ ve.query.export <- function(
   LongWide <- attr(extract,"Format")
   if ( isTRUE(LongWide=="Long") ) ExtractName <- paste0(ExtractName,"_Long")
 
-  ExtractTable <- paste(self$Model$setting("QueryExtractTable"),ExtractName)
+  ExtractTable <- paste(self$Model$setting("QueryExtractTable"),ExtractName,sep="_")
 
   # The partitioning default should get the table into the the "root" of the exporter.
   # For file-system-based exporters like CSV or SQLite, the root will be the model's
@@ -1227,7 +1252,7 @@ ve.query.run <- function(
       Results=ResultsToUpdate,         # list of VEResults objects for which to generate results
       Specifications=self$getlist(),   # A list of VEQuerySpec
       QueryFile=self$outputfile(),     # File into which to save each query result (in Results$resultsPath)
-      Timestamp=Sys.time()             # Compared to ModelState last update to see if Query results are up to date
+      Timestamp=Sys.time()             # Compared later to ModelState last update to see if Query results are up to date
     )
     # Results of doQuery are written to the QueryFile in Results$resultsPath
     # self$results will reload them
@@ -1925,7 +1950,6 @@ evaluateFunctionSpec <- function(measureName, measureSpec, measureEnv=NULL) {
 #
 # Process a measureSpec for a Year
 # Return the measure for inclusion in the results
-# currentMeasures creates environment in which to evaluate Function specs
 makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
 
   measureName <- measureSpec$Name
@@ -1976,6 +2000,7 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     # and a full set of nested geographies if query was run for a smaller geography).
 
     # Filter measure based on Filter list of values for selectable fields
+    # TODO: verify (and document) operation of the Filter...
     if ( "Filter" %in% names(sumSpec) ) {
       filterFields <- names(sumSpec$Filter) # Filter is a list of vectors of values to select for each field
       filter <- rep(TRUE,nrow(measure)) # Start by selecting all the fields
@@ -1990,6 +2015,9 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
     if ( ! is.null(measureBy) ) {
       measure <- measure[,c(measureBy,"Measure")]
     }
+    # TODO: ensure that all possible By Field values are accounted for...
+    # TODO: May need to dig into summarizeDatasets... Made one change there to keep all merged
+    # rows, even non-matching...
 
     # Mark measure valid if we didn't filter it down to nothing
     measureValid <- is.data.frame(measure) && nrow(measure) > 0
@@ -2024,107 +2052,147 @@ makeMeasure <- function(measureSpec,thisYear,QPrep_ls,measureEnv) {
 # writing to the output file. This function is an export helper and should draw from the
 # result.env$Values list created for each scenario/ModelStage to build the resulting data.frame.
 
-makeWideMeasureDataframe <- function(Values,Scenario="",Year=NULL, wantMetadata=TRUE, metadata=character(0)) {
-  # Values is a named list of measures for a single scenario year (scenarios may have more than one
-  # year)
+makeWideMeasureDataframe <- function(Values,Scenario="",Year=NULL, wantMetadata=TRUE, metadata=character(0), nameMeasureBy=TRUE) {
+  # Values is a named list of measures for a single scenario year (scenarios may have more than one year)
   # Provide Year to get measure rows for the scenario year
   # WantMetadata will generally be TRUE
 
   outputNames    <- character(0)
   outputMeasures <- numeric(0)
   outputMetadata <- list()
+  outputByFields <- list()
   outputLength   <- 0 # to facilitate adding new metadata fields from later measures
 
   filterMetadata <- length(metadata)>0 # if metadata names not provided, show all
 
   # Values is a named list of data.frames
+  # Each data.frame contributes rows of measure data
   for ( measureName in names(Values) ) {
-
+    # Visit each measureName in Values (which are the query results for a single scenario)
     writeLog(paste("Adding",measureName,"to measure data frame"),Level="info")
-    measure      <- Values[[measureName]] # A data.frame with By columns plus Measure
+    measure      <- Values[[measureName]]     # A data.frame with By columns plus Measure
+    ByFields     <- attr(measure,"ByFields")  # Names of the By columns in "measure"
+    writeLog(paste(measureName,"All ByFields in measure: ",all(ByFields %in% names(measure))),Level="info")
+    if ( nrow(measure) > 1 ) {
+      # Will be true if the measure include breakpoints (i.e. length(ByFields)>0)
+      # NOTE: in wide format, By fields are encoded into the measure name if nameMeasureBy parameter is TRUE
+      # Generally you should not change "nameMeasureBy" unless you also wantMetadata or you'll get many copies
+      # of measure rows with no way to distinguish them.
+      nameFunc <- if ( nameMeasureBy ) function(x) paste(c(measureName,x),collapse=".") else function(x) measureName
+      measureNames <- as.character( apply(measure[,ByFields,drop=FALSE],1,nameFunc) )
+      # Yields Measure.By1.By2.etc (summarize names) unless nameMeaureBy=FALSE
+    } else {
+      measureNames <- measureName # single measure row
+    }
+    # Assemble vectors to add to resulting data.frame
+    # Can filter by setting for export, e.g., metadata=c("Bzone","Units","Description")
+    outputNames    <- c( outputNames, measureNames)           # Add this measure's name(s) to previously collected measure names
+    outputMeasures <- c( outputMeasures, measure$Measure )    # Add this measure's values to previously collected values
+    writeLog(paste(measureName,"Names and measures have the same length",length(outputNames)==length(outputMeasures)),Level="info")
+    if ( wantMetadata) priorOutputLength <- outputLength      # So we can handle new metadata for later measures
+    outputLength   <- length(outputMeasures)
+
     if ( wantMetadata ) {
-      metadataNames <- attr(measure,"MetadataNames") # The ones actually in this Measure
+      # First Measure gets one column for each of the metadata fields (usually Units and Description) and one
+      # additional column for each of the ByFields (filling in NA values for earlier measures the first time each
+      # uniqe ByField is encountered).
+      metadataNames <- attr(measure,"MetadataNames") # The ones actually in this Measure (usually Units and Description)
       if ( filterMetadata ) {
-        # leave out anything not explicitly requested, otherwise include all metadata
+        # if wanting specific fields (e.g. only Units), leave out anything not explicitly requested, otherwise include all metadata
         metadataNames <- metadataNames[ metadataNames %in% metadata ]
       }
       measureMetadata <- lapply(
         metadataNames,
         function(mn) {
-          mdata <- attr(measure,mn)
-          if ( is.null(mdata) ) mdata <- as.character(NA)
+          mdata <- attr(measure,mn) # The value of each metadata element is saved as an attribute on the measure
+          if ( is.null(mdata) ) mdata <- as.character(NA) # And it will default to NA rather than NULL if not present
+          if ( length(mdata) == 1 && length(measureNames) > 1 ) {
+            mdata <- rep(mdata,length(measureNames)) # And it will usually be a single row, which we duplicate here to the length of the measure
+          } else if ( length(mdata) != length(measure$Measure) ) {
+            msg <- writeLog(Level="error",paste(measureName,"attribute",mn,"has nonsensical length",length(mdata),"; should be 1 or",length(measure$Measure)))
+            stop(msg)
+          }
           mdata
         }
       )
-      names(measureMetadata) <- metadataNames
-    } else {
-      metadataNames <- character(0)
-      measureMetadata <- list()
-    }
-
-    if ( nrow(measure) > 1 ) {
-      # NOTE: in wide format, By fields are encoded into the measure name
-      byFields <- attr(measure,"ByFields")
-      measureNames <- as.character(
-        apply(
-          measure[,byFields,drop=FALSE],1,
-          function(x) paste(c(measureName,x),collapse=".")
-        )
-      ) # Yields Measure.By1.By2.etc (summarize names)
-    } else {
-      measureNames <- measureName # single measure row
-    }
-
-    # Assemble vectors to add to resulting data.frame
-    outputNames    <- c( outputNames, measureNames)
-    outputMeasures <- c( outputMeasures, measure$Measure )
-    if ( wantMetadata ) {
-      outputMetadata <- sapply( simplify=FALSE, USE.NAMES=TRUE,
-        metadataNames,
-        function(mname) {
-          if ( outputLength>0 && ! mname %in% names(outputMetadata) ) {
-            outputMetadata[[mname]] <- rep(as.character(NA),outputLength) # WARNING: presuming all metadata is character type
-          }
-          c( outputMetadata[[mname]], rep(measureMetadata[[mname]],length(measure$Measure)) )
+      names(measureMetadata) <- metadataNames # make sure the list has correct names
+      for ( mname in metadataNames ) {
+        if ( priorOutputLength>0 && ! mname %in% names(outputMetadata) ) {
+          # First time we've seen this metadata name, so add dummy values for the previous measures
+          outputMetadata[[mname]] <- rep(as.character(NA),priorOutputLength)
+          # WARNING: presuming all metadata is character type
         }
-      )
+        # Attach the current measure's metadata
+        outputMetadata[[mname]] <- c( outputMetadata[[mname]], measureMetadata[[mname]] )
+        writeLog(
+          paste(measureName,"metadata lengths are the same",length(outputMeasures),length(outputNames)==length(outputMetadata[[mname]])),
+          Level="info"
+        )
+      }
+
+      # Now do the same thing with the ByFields (except they will always have the same length as measure$Measure)
+      measureByFieldNames <- if ( filterMetadata ) ByFields[ ByFields %in% metadata ] else ByFields
+      if ( length(measureByFieldNames) > 0 ) {
+        # Assemble measureByFields including dummies for ByFields on earlier measures but not this one
+        measureByFields <- as.list(measure[,measureByFieldNames,drop=FALSE]) # get a list of columns of ByFields data
+
+        existingByFields <- setdiff(names(outputByFields),measureByFieldNames) # find ByFields from earlier measures but not on this one
+        if ( length(existingByFields) > 0 ) {
+          for ( bname in existingByFields ) { 
+            # Generate dummy ByField for ByFields from earlier measures but not this one
+            measureByFields[[bname]] <- c( measureByFields[[bname]], rep(as.character(NA),length(measureNames)) )
+          }
+        }
+        # Add MeasureByFields for this measure (including dummies) to the outputByFields
+        for ( bname in names(measureByFields) ) {
+          if ( priorOutputLength>0 && ! bname %in% names(outputByFields) ) {
+            # First time we've seen this ByField name, so add dummy values for the previous measures
+            outputByFields[[bname]] <- rep(as.character(NA),priorOutputLength)
+            # WARNING: presuming all metadata is character type
+          }
+          # Attach the current measure's ByFields data
+          outputByFields[[bname]] <- c( outputByFields[[bname]], measureByFields[[bname]] )
+          writeLog(paste(measureName,"Lengths are the same",length(outputMeasures),length(outputNames)==length(outputByFields[[bname]])),Level="info")
+        }
+      }
     }
-    outputLength <- length(outputMeasures)
   }
 
-  # Add the Year and Scenario as rows, if provided and we're doing the data
+  # Add the Year and Scenario as rows at the top of the measure lists, if those are provided and we want Data
   if ( ! is.null(Year)) {
     outputNames    <- c( "Year", outputNames )
     outputMeasures <- c( as.integer(Year), outputMeasures )
     if ( wantMetadata ) {
-      outputMetadata <- sapply( simplify=FALSE, USE.NAMES=TRUE,
-        metadataNames,
-        function(mname) {
-          metavalue <- if ( mname=="Units" ) {
-            "YR"
-          } else if ( mname=="Description" ) {
-            "Scenario Year"
-          } else as.character(NA)
-          c( metavalue, outputMetadata[[mname]] )
-        }
-      )
+      writeLog(paste("Adding Year metadata for",Year),Level="info")
+      for ( mname in names(outputMetadata) ) {
+        metavalue <- if ( mname=="Units" ) {
+          "YR"
+        } else if ( mname=="Description" ) {
+          "Scenario Year"
+        } else as.character(NA)
+        outputMetadata[[mname]] <- c( metavalue, outputMetadata[[mname]] )
+      }
+      for ( bname in names(outputByFields) ) {
+        outputByFields[[bname]] <- c( as.character(NA), outputByFields[[bname]] )
+      }
     }
   }
   if ( nzchar(Scenario[1]) ) {
     outputNames    <- c( "Scenario", outputNames )
     outputMeasures <- c( Scenario[1], outputMeasures )
     if ( wantMetadata ) {
-      outputMetadata <- sapply( simplify=FALSE, USE.NAMES=TRUE,
-        metadataNames,
-        function(mname) {
-          metavalue <- if ( mname=="Units" ) {
-            "character"
-          } else if ( mname=="Description" ) {
-            "Scenario Name"
-          } else as.character(NA)
-          c( metavalue, outputMetadata[[mname]] )
-        }
-      )
+      writeLog(paste("Adding Scenario metadata for",Scenario[1]),Level="info")
+      for ( mname in names(outputMetadata) ) {
+        metavalue <- if ( mname=="Units" ) {
+          "character"
+        } else if ( mname=="Description" ) {
+          "Scenario Name"
+        } else as.character(NA)
+        outputMetadata[[mname]] <- c( metavalue, outputMetadata[[mname]])
+      }
+      for ( bname in names(outputByFields) ) {
+        outputByFields[[bname]] <- c( as.character(NA), outputByFields[[bname]] )
+      }
     }
   }
 
@@ -2134,15 +2202,26 @@ makeWideMeasureDataframe <- function(Values,Scenario="",Year=NULL, wantMetadata=
   # Then manage tabular output by forcing each inner list element to character
 
   Data_df <- data.frame(Measure = outputNames)
-  if ( length(outputMetadata) > 0 ) Data_df <- cbind(Data_df, outputMetadata) # More than zero metadata fields requested
+  writeLog(paste(Scenario[1],"Data measure rows:",nrow(Data_df)),Level="info")
+  if ( wantMetadata ) {
+    if ( length(outputMetadata) > 0 ) {
+      writeLog(paste(Scenario[1],"scenario data.frame outputMetadata WRONG",wrong <- any(sapply(outputMetadata,length) != nrow(Data_df))),Level="info")
+      Data_df <- cbind(Data_df, outputMetadata) # More than zero metadata fields requested
+    }
+    if ( length(outputByFields) > 0 ) {
+      writeLog(paste(Scenario[1],"scenario data.frame outputByFields WRONG",wrong <- any(sapply(outputByFields,length) != nrow(Data_df))),Level="info")
+      Data_df <- cbind(Data_df, outputByFields) # More than zero ByFields requested
+    }
+  }
+  writeLog(paste(Scenario[1],"scenario data.frame outputMeasures WRONG",wrong <- any(sapply(outputMeasures,length) == nrow(Data_df))),Level="info")
   Data_df <- cbind(Data_df,Value=outputMeasures)
 
   rownames(Data_df) <- outputNames # rows are named after measures...
-  
+
   return(
     structure(
       Data_df,
-      Metadata=names(outputMetadata)
+      Metadata=c(names(outputMetadata),names(outputByFields))
     )
   )
 }

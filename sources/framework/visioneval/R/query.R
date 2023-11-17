@@ -911,7 +911,7 @@ function(
     CompiledSpec$Group <- Group
   }
 
-  # Obtain the Datasets needed to run the query
+  # Obtain the Datasets needed to run the query, joining as described in the CompiledSpec
   Datasets <- getQueryDatasets(CompiledSpec, QueryPrep_ls)
   if ( length(Datasets$Errors)>0 && any(nzchar(Datasets$Errors)) ) {
     writeLog(
@@ -958,6 +958,7 @@ meltResults <- function(byResults,...) reshape2::melt(unclass(byResults),...)
 
 getQueryDatasets <- function(CompiledSpec, QueryPrep_ls) with ( CompiledSpec, {
   # Process differently depending on whether we have one Table or a list of them
+  # Note that Table, Units etc are fields in CompiledSpec due to "with" structure
   if (!is.list(Table)) {
     #----------------------------------------------------------
     #Retrieve and format datasets if they are in a single table
@@ -1043,7 +1044,9 @@ getQueryDatasets <- function(CompiledSpec, QueryPrep_ls) with ( CompiledSpec, {
           Data_df <- merge(
             Data_df,
             Data_ls$Data[[MergeTables_[i]]],
-            MergeKeys_[i])
+            MergeKeys_[i],
+            all=TRUE  # Make sure no elements disappear (e.g. BZones without Households)
+          )
         }
       }
       Data_ls$Data <- list()
@@ -1062,9 +1065,9 @@ getQueryDatasets <- function(CompiledSpec, QueryPrep_ls) with ( CompiledSpec, {
         Data_ls$Data <- list()
         Data_ls$Data[[1]] <- CombiData_ls
         rm(CombiData_ls)
+      } else {
         #If is By variables, expand all tables to include all operands
         #assigning value of 0 to missing operands
-      } else {
         Data_ls$Data <- lapply(Data_ls[[1]], function(x) {
           Data_df <- x
           AddVars_ <- Operands_[!(Operands_ %in% names(Data_df))]
@@ -1083,16 +1086,22 @@ getQueryDatasets <- function(CompiledSpec, QueryPrep_ls) with ( CompiledSpec, {
 #Helper function to calculate measures if By is specified
 #-----------------------------------------------------------
 calcWithBy <- function(CompiledQuery, CalcData_ls) {
-  By_ls <- list() # Will become a list of factorized break columns in CalcData_ls
+  # CalcData_ls is a list with named elements for each query operand and the By fields
+  By_ls <- list() # Will become a list of named factorized break columns in CalcData_ls
   #Check and process the By fields into a list of factors with the same names
   writeLog(paste("running calcWithBy..."),Level="info")
+  #Geography hack - if nm is a geography field, use the levels as the full set of that geography
+  geo.df <- visioneval::modelEnvironment()$ModelState_ls$Geo_df
+  geoNames <- CompiledQuery$By[CompiledQuery$By %in% names(geo.df)]
   for (nm in CompiledQuery$By) {
     byData <- CalcData_ls[[nm]]
     if (! is.numeric(byData)) {
-      if (is.factor(byData)) {
+      if (is.factor(byData)) { # may not have any of these
         By_ls[[nm]] <- byData
       } else if (is.character(byData)) {
-        By_ls[[nm]] <- as.factor(byData)
+        By_ls[[nm]] <- if ( length(geoNames) > 0 && nm %in% geoNames ) {
+          factor(byData,levels=unique(geo.df[[nm]])) # just use existing values as possible levels
+        } else factor(byData)
       } else {
         msg <- paste0("Cannot evaluate By on field '",nm,"' due to invalid storage mode: ",mode(byData))
         return(list(Result=NA,Errors=msg))
@@ -1109,7 +1118,7 @@ calcWithBy <- function(CompiledQuery, CalcData_ls) {
         } else {
           # Each integer value is a break level
           # (careful - only intended for things like a numeric land use type; not
-          # something like HhID with a zillion records)`
+          # something like HhID with a zillion records)
           By_ls[[nm]] <- as.factor(byData)
         }
       } else { # non-integer data
@@ -1127,17 +1136,21 @@ calcWithBy <- function(CompiledQuery, CalcData_ls) {
 
   # Perform the query computation
   measureExpr <- parse(text=CompiledQuery$Expr)
-  measureFunc <- function(x) eval(measureExpr,envir=x) # x is "environmentable" e.g. a subsetted data.frame...
+  measureFunc <- function(x) eval(measureExpr,envir=x) # x is "environmentable" e.g. a list or subsetted data.frame...
   Results_ar <- by(CalcData_ls,By_ls,measureFunc) # Actually perform the query computation
   # Results_ar has same number of Dim's as By, Dimnames are the break values for
   # each By element, cells are the results of evaluating measureFunc
   # NA's are introduced automatically for missing groups
+  # Key problem is that breaks are set empirically for fields like Bzone so if there
+  #   are any missing from the corpus, they won't appear in the output. Workaround below.
 
-  # Melt into a data.frame
+  # Melt into a data.frame (one column for each By dimension)
+  # Values in each dimension row are the dim.names for that dimension present in results_ar
+  # Bzones and similar factors built on the fly may be missing values
   Results_df <- meltResults(Results_ar,value.name="Measure")
 
   # Return results, including list of byFields
-  byFields <- names(Results_df)[ names(Results_df) != "Measure" ]
+  byFields <- names(By_ls)
   Results_df <- structure(Results_df,byFields=byFields)
   return(list(Result=Results_df,Errors=""))
 }
@@ -1168,7 +1181,7 @@ performQuery <- function( CompiledSpec, Data_ls ) {
   #Calculate the Expression and Return the Result
   #----------------------------------------------
   if ( "By" %in% names(CompiledSpec) ) {
-    # There is a By argument, with one or two merged datasets
+    # There is a By argument, with one or two (or more) merged datasets
     if ( length(Data_ls$Data) == 1 ) {
       #If there is a By but only one merged dataset
       calcResults <- calcWithBy(CompiledSpec,Data_ls$Data[[1]])
@@ -1192,6 +1205,7 @@ performQuery <- function( CompiledSpec, Data_ls ) {
     if ( ! "data.frame" %in% class(Result_df) ) {
       return( Result=NA, Errors=as.character(Result_df) )
     }
+    # TODO: return to CompiledSpec$ 
     calcResults <- list( Result = Result_df, Errors=character(0) )
   }
   # Return list of Results (data.frame) and Errors (list of messages)
