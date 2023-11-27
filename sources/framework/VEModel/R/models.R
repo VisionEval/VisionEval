@@ -1043,7 +1043,7 @@ ve.stage.init <- function(modelParam_ls,Name=NULL,Model=NULL,ScenarioDir=NULL,st
     if ( is.null(modelParam_ls) ) modelParam_ls <- list()
   }
 
-  if ( is.null(Model) || ! "VEModel" %in% class(Model) ) {
+  if ( is.null(Model) || ! inherits(Model,"VEModel") ) {
     stop("No VEModel provided to own model stage ",Name)
   } else self$Model <- Model
 
@@ -2027,7 +2027,7 @@ requirePackage <- visioneval::requirePackage
 # Helper to get multitasking strategy name
 futureStrategyName <- function(strategy) {
   return (
-    if ( ! is.null(strategy) && "FutureStrategy" %in% class(strategy) ) {
+    if ( ! is.null(strategy) && inherits(strategy,"FutureStrategy") ) {
       # Hack from future::print.FutureStrategy
       # Get first class that is not one of the structural ones
       setdiff(class(strategy), c("FutureStrategy", "tweaked", "function"))[1]

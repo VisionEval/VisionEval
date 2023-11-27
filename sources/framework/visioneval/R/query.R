@@ -1202,7 +1202,7 @@ performQuery <- function( CompiledSpec, Data_ls ) {
       ),
       value.name = "Measure"
     )
-    if ( ! "data.frame" %in% class(Result_df) ) {
+    if ( ! inherits(Result_df,"data.frame") ) {
       return( Result=NA, Errors=as.character(Result_df) )
     }
     # TODO: return to CompiledSpec$ 

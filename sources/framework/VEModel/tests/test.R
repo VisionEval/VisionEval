@@ -100,9 +100,9 @@ test_00_install <- function(
     mod <- installModel(modelName=modelName,variant="",log=log,private=TRUE)
   }
   # NOTE: pkgload bug - print.VEAvailableModels/Variants not recognized for class dispatch...
-  if ( "VEAvailableModels" %in% class(mod) ) {
+  if ( inherits(mod,"VEAvailableModels") ) {
     print.VEAvailableModels(mod)
-  } else if ( "VEAvailableVariants" %in% class(mod) ) {
+  } else if ( inherits(mod,"VEAvailableVariants") ) {
     print.VEAvailableVariants(mod)
   } else {
     print(mod)
@@ -363,7 +363,7 @@ test_02_model <- function(modelName="VERSPM-Test", oldstyle=FALSE, log="info", b
     mod <- test_00_install(modelName="VERSPM",variant="base",installAs=modelName,overwrite=FALSE,confirm=FALSE,log=log)
   }
 
-  if (! "VEModel" %in% class(mod) ) {
+  if ( ! inherits(mod,"VEModel") ) {
     message("Hmm: ",modelName," is not a VEModel")
     return(mod)
   } else {

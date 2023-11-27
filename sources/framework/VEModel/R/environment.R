@@ -319,13 +319,13 @@ writeSetup <- function(object=NULL,filename=NULL,overwrite=FALSE) {
     ParamDir <- ve.env$ve.runtime
     ParamName <- "runtime"
   } else {
-    if ( "VEModel" %in% class(object) ) {
+    if ( inherits(object,"VEModel") ) {
       ParamName <- object$modelName
       ParamDir <- object$modelPath
-    } else if ( "VEModelStage" %in% class(object) ) {
+    } else if ( inherits(object,"VEModelStage") ) {
       ParamName <- object$Name
       ParamDir <- object$Path
-    } else if ( "VEModelScenarios" %in% class(object) ) {
+    } else if ( inherits(object,"VEModelScenarios") ) {
       ParamName <- object$scenarioDir
       ParamDir <- dirname(object$scenarioPath)
     } else if ( ! is.list(object) ) {

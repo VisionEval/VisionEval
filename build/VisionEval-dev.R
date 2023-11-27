@@ -395,7 +395,7 @@ evalq(
           repeat {
             message("trying to unload package ",pkg)
             try.unload <- try( unloadNamespace(pkg), silent=TRUE )
-            if ( "try-error" %in% class(try.unload) && backstop < 2 ) {
+            if ( inherits(try.unload,"try-error") && backstop < 2 ) {
               try.first <- sub("^.*imported by .([^']+). so cannot be unloaded","\\1",trimws(try.unload))
               message("Trying first to unload package ",try.first)
               try( unloadNamespace(try.first), silent=TRUE )

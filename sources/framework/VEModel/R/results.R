@@ -749,7 +749,7 @@ addDisplayUnits <- function(GTN_df,Param_ls) {
 #   cat("DisplayUnitsFile:\n")
 #   print(DisplayUnitsFile)
   displayUnits <- try(utils::read.csv(DisplayUnitsFile),silent=TRUE)   # May fail for various reasons
-  if ( ! "data.frame" %in% class(displayUnits) ) {
+  if ( ! inherits(displayUnits,"data.frame") ) {
     writeLog( Level="warn",
       c(
         "Error reading DisplayUnits file:",
@@ -773,10 +773,10 @@ addDisplayUnits <- function(GTN_df,Param_ls) {
   # Only look at relevant columns in displayUnits when merging
   displayUnits <- try( merge(GTN_df,displayUnits[,displayColumns],by=c("Group","Table","Name"),all.x=TRUE), silent=TRUE )
   if (
-    ! "data.frame" %in% class(displayUnits) ||
+    ! inherits(displayUnits,"data.frame") ||
     ! all( c("Group","Table","Name","DisplayUnits") %in% names(displayUnits) ) # it can have other fields, e.g. original Units
   ) {
-    if ( "data.frame" %in% class(displayUnits) ) {
+    if ( inherits(displayUnits,"data.frame") ) {
       displayUnits <- paste("Bad Fields - ",names(displayUnits),collapse=", ")
     } else {
       displayUnits <- conditionMessage(attr(displayUnits,"condition"))
@@ -1011,7 +1011,7 @@ ve.select.parse <- function(select) {
   # select can be another VESelection
   #   if it is the same model, just copy its selection
   #   if not the same model, get other selection's VEResults object and parse that
-  if ( "VESelection" %in% class(select) ) {
+  if ( inherits(select,"VESelection") ) {
     if ( select$resultsList$Model$modelResults != self$resultsList$Model$modelResults ) {
       # Selection came from a different set of results, so equate them via the fields list
       # Presumes the scenario names are the same.
@@ -1026,7 +1026,7 @@ ve.select.parse <- function(select) {
   #   if the other VEResultsList is not from the same model, use its $fields set of names
   #   then parse as a character vector
   #   if it is the same model, just copy its selection
-  if ( "VEResults" %in% class(select) ) {
+  if ( inherits(select,"VEResults") ) {
     if ( select$resultsPath != self$resultsList$resultsPath ) {
       select <- select$selection$fields()
     } else {

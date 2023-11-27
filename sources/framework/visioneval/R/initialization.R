@@ -378,7 +378,7 @@ loadModelState <- function(FileName=NULL,envir=NULL) {
     loaded <- try (silent=TRUE,
       load(FileName,envir=envir)
     )
-    if ( "try-error" %in% class(loaded) ) {
+    if ( inherits(loaded,"try-error") ) {
       # Something wrong with ModelState file - just ignore the attempt
       writeLog("Pre-existing ModelState.Rda is empty or invalid:",Level="warn")
       writeLog(as.character(loaded),Level="warn")

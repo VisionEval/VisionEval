@@ -62,10 +62,23 @@ ve.query.init <- function(
 ) {
   # Fill in useful filename default
   if ( !is.null(FileName) && is.null(QueryName) ) {
+    if ( ! is.character(FileName) ) {
+      msg <- writeLog("FileName needs to be a character string",Level="error")
+      stop(msg,call.=FALSE)
+    }
     QueryName <- sub("\\.[^.]*$","",basename(FileName))
+  } else if ( ! is.null(QueryName) && ! is.character(QueryName) ) {
+    if ( inherits(QueryName,"VEQuery") ) { # allow QueryName to stand in for OtherQuery
+      OtherQuery <- QueryName
+      QueryName <- NULL
+    } else {
+      msg <- writeLog("QueryName is not a character string; use OtherQuery=... instead",Level="error")
+      stop(msg,call.=FALSE)
+    }
   }
-  if ( ! is.null(QuerySpec) && ! is.list(QuerySpec) && ! "VEQuery" %in% class(QuerySpec) ) {
-    if ( "VEQuerySpec" %in% class(QuerySpec) ) {
+
+  if ( ! is.null(QuerySpec) && ! is.list(QuerySpec) && ! inherits(QuerySpec,"VEQuery") ) {
+    if ( inherits(QuerySpec,"VEQuerySpec") ) {
       QuerySpec <- list(QuerySpec) # a single query spec becomes a list of one
     } else if ( !is.null(QuerySpec) ) {
       writeLogMessage("Unrecognized QuerySpec:")
@@ -75,12 +88,12 @@ ve.query.init <- function(
   }
   otherValid <- TRUE
   if ( ! is.null(OtherQuery) ) {
-    if ( ! "VEQuery" %in% class(OtherQuery) ) {
+    if ( ! inherits(OtherQuery,"VEQuery") ) {
       if ( is.list(OtherQuery) && length(OtherQuery)>0 ) {
-        if ( ! "VEQuerySpec" %in% class(OtherQuery[[1]]) ) {
+        if ( ! inherits(OtherQuery[[1]],"VEQuerySpec") ) {
           OtherQuery <- list(VEQuerySpec$new(OtherQuery))
         }
-        if ( "VEQuerySpec" %in% class(OtherQuery[[1]]) ) {
+        if ( inherits(OtherQuery[[1]],"VEQuerySpec") ) {
           QuerySpec <- OtherQuery
           OtherQuery <- NULL
         } else {
@@ -258,7 +271,7 @@ ve.query.check <- function(verbose=FALSE) {
   self$CheckMessages <- character(0)
   query.names <- character(0)
   for ( spec in private$QuerySpec ) {
-    if ( ! "VEQuerySpec" %in% class(spec) ) {
+    if ( ! inherits(spec,"VEQuerySpec") ) {
       self$CheckMessages <- c(
         self$CheckMessages,
         "QuerySpec contains an unknown type of object:",
@@ -299,9 +312,9 @@ ve.query.add <- function(obj,location=0,before=FALSE,after=TRUE) {
   if ( is.list(obj) ) {
     spec <- asSpecList(obj)
     # Don't try to recover if the spec has invalid elements
-  } else if ( "VEQuery" %in% class(obj) ) {
+  } else if ( inherits(obj,"VEQuery") ) {
     spec <- obj$getlist() # Clone the spec list from obj (which is another query)
-  } else if ( "VEQuerySpec" %in% class(obj) ) {
+  } else if ( inherits(obj,"VEQuerySpec") ) {
     # Make a bare query spec into a one-element list
     spec <- list(obj)
     names(spec) <- obj$Name
@@ -432,12 +445,12 @@ asSpecList <- function(spec) {
 #' @return A VEQuery constructed from the obj parameter
 #' @export
 asQuery <- function(obj,QueryName="Temp-Query") {
-  if ( ! "VEQuery" %in% class(obj) ) {
+  if ( ! inherits(obj,"VEQuery") ) {
     # check if it's a query spec or a list of query specs
     if ( is.list(obj) ) {
       qry.spec <- asSpecList(obj)
       # TODO: may have errors that need to be reported... (relying on $check below...)
-      if ( ! all(sapply(qry.spec,function(s) { "VEQuerySpec" %in% class(s) && s$valid() } )) ) {
+      if ( ! all(sapply(qry.spec,function(s) { inherits(s,"VEQuerySpec") && s$valid() } )) ) {
         # Second, if it wasn't a list of specs, perhaps it is an individual spec
         qry.spec <- list()
         spec <- VEQuerySpec$new(obj) # Attempt to convert unknown list to a single spec
@@ -447,7 +460,7 @@ asQuery <- function(obj,QueryName="Temp-Query") {
           qry.spec[[loc]] <- spec;
         }
       }
-    } else if ( "VEQuerySpec" %in% class(obj) ) {
+    } else if ( inherits(obj,"VEQuerySpec") ) {
       # Make a bare query spec into a one-element list
       qry.spec <- list(obj)
       names(qry.spec) <- obj$Name
@@ -1046,9 +1059,9 @@ ve.query.export <- function(
 # data.frame
 # TODO: also use this function to locate the OutputDir/extract file name
 exportDir <- function(model=NULL,results=NULL) {
-  exportDir <- if ( class(model) == "VEModel" ) {
+  exportDir <- if ( inherits(model,"VEModel") ) {
     file.path(model$modelPath,model$setting("ResultsDir"))
-  } else if ( class(results) == "VEResults" ) {
+  } else if ( inherits(results,"VEResults") ) {
     dirname(dirname(normalizePath(results$resultsPath)))
   } else {
     stop( writeLogMessage("Cannot export: no model or results to locate output directory.",Level="error") )
@@ -1066,7 +1079,7 @@ exportDir <- function(model=NULL,results=NULL) {
 ve.query.results <- function(Results=NULL, Reload=FALSE) {
   # Figure out where to look for results
   if ( missing(Results) || is.null(Results) ) {
-    if ( "VEModel" %in% class(self$Model) ) {
+    if ( inherits(self$Model,"VEModel") ) {
       Results <- self$Model$results()
       # Output file was set when Model was attached
     } else {
@@ -1081,11 +1094,11 @@ ve.query.results <- function(Results=NULL, Reload=FALSE) {
     return( list() )
   }
 
-  if ( "VEResultsList" %in% class(Results) ) {
+  if ( inherits(Results,"VEResultsList") ) {
     # downshift to list of VEResults
     Results <- Results$results()
   }
-  if ( ! is.list(Results) && "VEResults" %in% class(Results) ) {
+  if ( ! is.list(Results) && inherits(Results,"VEResults") ) {
     # Handle pathological case of only one stage with Results
     Results <- list(Results)
   }
@@ -1161,27 +1174,27 @@ ve.query.run <- function(
     if ( is.null(Model) ) stop( writeLogMessage("No model results available to run query",Level="error") )
   }
   queryingModel <- FALSE # running with attached model
-  if ( "VEModel" %in% class(Model) ) {
+  if ( inherits(Model,"VEModel") ) {
     queryingModel <- TRUE
     self$model(Model)
     Results <- Model$results() # Convert model Reportable stages into a VEResults or VEResultsList if more than one
-    if ( "VEResultsList" %in% class(Results) ) { # downshift to a plain list
+    if ( inherits(Results,"VEResultsList") ) { # downshift to a plain list
       Results <- Results$results()
-    } else if ( "VEResults" %in% class(Results) ) { # upshift to a list
+    } else if ( inherits(Results,"VEResults") ) { # upshift to a list
       Results <- list(Results)
     } else {
       stop(
         writeLogMessage(paste("Unknown type for Model$results():",class(Results),collapse=","),Level="error")
       )
     }
-  } else if ( "VEResultsList" %in% class(Model) ) {
+  } else if ( inherits(Model,"VEResultsList") ) {
     Results <- Model$results() # Downshift to plain list of VEResults
-    if ( ! ("list" %in% class(Results)) || ! ("VEResults" %in% class(Results[[1]])) ) {
+    if ( ! (inherits(Results,"list")) || ! (inherits(Results[[1]],"VEResults")) ) {
       stop( writeLogMessage("Program error: VEResultsList won't convert to list of VEResults",Level="error") )
     }
-  } else if ( "VEResults" %in% class(Model) ) {
+  } else if ( inherits(Model,"VEResults") ) {
     Results <- list(Model) # Upshift a single VEResults object to a list of one
-    if ( ! ("list" %in% class(Results)) || ! ("VEResults" %in% class(Results[[1]])) ) {
+    if ( ! (inherits(Results,"list")) || ! (inherits(Results[[1]],"VEResults")) ) {
       stop( writeLogMessage("Program error: VEResultsList won't convert to list of VEResults",Level="error") )
     }
   } else {
@@ -1217,7 +1230,7 @@ ve.query.run <- function(
     writeLogMessage("Checking for cached query results",Level=log)
     upToDate <- sapply( private$reload(Results) ,
       function(r) {
-        if ( ! "VEQueryResults" %in% class(r) || ! r$valid() ) return(FALSE)
+        if ( ! inherits(r,"VEQueryResults") || ! r$valid() ) return(FALSE)
         tempEnv <- new.env()
         load(r$Path,envir=tempEnv)
         Timestamp <- tempEnv$Timestamp # Timestamp when query results were generated
@@ -1296,12 +1309,12 @@ ve.query.quick <- function( Table, Field, SpecName=NULL, Geography=NULL, FUN="su
     fullSpec <- model$list(outputs=TRUE,details=FALSE)
     whichSpecs <- fullSpec$GROUP=="Year" & fullSpec$TABLE==Table & fullSpec$NAME==Field
     modelSpec <- unique(fullSpec[whichSpecs,c("TABLE","NAME","UNITS","DESCRIPTION")])
-# Too many inconsistencies across modules where fields are rewritten...
-#    if ( nrow(modelSpec) > 1 ) {
-#      message("Model specifications are inconsistent across stages:")
-#      print(unique(fullSpec[whichSpecs,]))
-#      stop("Error locating field for quick query")
-#    }
+    # Too many inconsistencies across modules where fields are rewritten...
+    #    if ( nrow(modelSpec) > 1 ) {
+    #      message("Model specifications are inconsistent across stages:")
+    #      print(unique(fullSpec[whichSpecs,]))
+    #      stop("Error locating field for quick query")
+    #    }
     FieldUnits <- modelSpec$UNITS[1]
     FieldDescription <- modelSpec$DESCRIPTION[1]
   }
@@ -1337,7 +1350,7 @@ ve.query.quick <- function( Table, Field, SpecName=NULL, Geography=NULL, FUN="su
   Units <- character(0)
   Units[Field] <- FieldUnits
   Units[Geography] <- ""
-    
+
   if ( missing(FUN) || ! FUN %in% c("sum","mean","length") ) FUN = "sum"
 
   # Build the full specification
@@ -1395,18 +1408,18 @@ VEQuery <- R6::R6Class(
     names=ve.query.names,               # List (or update) names on internal QuerySpec list
     subset=ve.query.subset,             # Return a new VEQuery with a subset (or reordered) list of specs
     `[`=ve.query.index,                 # Alternate notation for subset
-    spec=ve.query.spec,                 # Return a single VEQuerySpec from the list
-    print=ve.query.print,               # List names of Specs in order, or optionally with details
-    getlist=ve.query.getlist,           # Extract he QuerySpec list (possibly filtering geography) for $run)
-    results=ve.query.results,           # report results of last run (available stage files)
-    extract=ve.query.extract,           # get requested (or all) results into a data.frame
-    export=ve.query.export,             # Export query results to .csv or something else (uses $extract)
-    outputfile=ve.query.outputfile,     # expand the file name into which to save QueryResults
-    run=ve.query.run,                   # results are cached in self$QueryResults
-    quickSpec=ve.query.quick,           # create a quick QuerySpec to summarize a field by geography
-    visual=ve.query.visual,             # visualize query results: same as export(format="visual",...)
-    outputConfig=ve.query.outputconfig  # generate outputconfig for visualizer (using "Export" spec)
-  ),
+      spec=ve.query.spec,                 # Return a single VEQuerySpec from the list
+      print=ve.query.print,               # List names of Specs in order, or optionally with details
+      getlist=ve.query.getlist,           # Extract he QuerySpec list (possibly filtering geography) for $run)
+      results=ve.query.results,           # report results of last run (available stage files)
+      extract=ve.query.extract,           # get requested (or all) results into a data.frame
+      export=ve.query.export,             # Export query results to .csv or something else (uses $extract)
+      outputfile=ve.query.outputfile,     # expand the file name into which to save QueryResults
+      run=ve.query.run,                   # results are cached in self$QueryResults
+      quickSpec=ve.query.quick,           # create a quick QuerySpec to summarize a field by geography
+      visual=ve.query.visual,             # visualize query results: same as export(format="visual",...)
+      outputConfig=ve.query.outputconfig  # generate outputconfig for visualizer (using "Export" spec)
+    ),
   private = list(
     QuerySpec=list(),                   # access via public functions - list of VEQuerySpec objects
     reload=ve.query.reload              # recreate self$QueryResults
@@ -1509,7 +1522,7 @@ ve.spec.init <- function(other=NULL) {
   # Create from another query spec, or a list object, or bare
   if ( ! is.null(other) ) {
     # A bare VEQuerySpec can be filled in with VEQuerySpec$update
-    if ( "VEQuerySpec" %in% class(other) ) {
+    if ( inherits(other,"VEQuerySpec") ) {
       # Get the list from the QuerySpec
       self$QuerySpec <- other$QuerySpec # it's just a standard R list
       self$check()
@@ -1722,7 +1735,7 @@ ve.spec.update <- function(
 ) {
   if ( ! is.null(Name) ) {
     self$QuerySpec[["Name"]] <- Name # replace query name if provided
-    
+
   }
   if ( ! missing(QuerySpec) ) {
     if ( inherits(QuerySpec,"VEQuerySpec") ) {
