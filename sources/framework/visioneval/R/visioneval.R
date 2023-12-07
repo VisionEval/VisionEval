@@ -852,8 +852,7 @@ prepareModelRun <- function(
     #=================================================
     # TODO: Key feature is to make sure all the geography is present for the new
     #  year. This will probably work for both virtual DatastorePath
-    #  and LoadDatastore
-    #  variations.
+    #  and LoadDatastore variations.
 
     # Each ModelStage needs to have groups available locally (i.e. materialized in its own
     # Datastore) for the years it is evaluating (even if those years might also be
@@ -864,7 +863,7 @@ prepareModelRun <- function(
     #  instead of (or in addition to) adding module calls.
     RunYears_ <- envir$ModelState_ls$Years
     LoadYears_ <- LoadDstore$ModelState_ls$Years
-    if (!all(RunYears_ == LoadYears_)) {
+    if (!all(RunYears_ %in% LoadYears_)) {
       NewYears_ <- RunYears_[!(RunYears_ %in% LoadYears_)]
       # NOTE: initDatastore and initDatastoreGeography are performed separately
       # as initDatastore depends on DatastoreType (RD vs H5), whereas

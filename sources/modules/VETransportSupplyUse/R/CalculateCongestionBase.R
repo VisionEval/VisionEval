@@ -1121,6 +1121,13 @@ CalculateCongestionBase <- function(L) {
     array(0,
           dim = c(length(CongestionLevel_vc), length(FunctionalClass_vc)),
           dimnames = list(CongestionLevel_vc, FunctionalClass_vc))
+  # TODO: need to interpolate the Sev/Ext values if L$G$Year is not a
+  # multiple of 5. Generalize the OptimProp interpolator developed in
+  # VEHouseholdTravel::CalculateTravelDemand.R
+  # Make a visioneval framework function to do that...
+  # There is a usable interpolation function here:
+  # n:\Git-Repos\VisionEval-dev-hive\sources\modules\VEPowertrainsAndFuels\r\CalculateCarbonIntensity.R
+  # This file also has an interpolate function defined above...
   CongPrice_ClFc["Sev", "Fwy"] <-
     CongModel_ls$CongPriceParmVa_ma$FwySev["Metro", L$G$Year]
   CongPrice_ClFc["Ext", "Fwy"] <-
@@ -1132,7 +1139,7 @@ CalculateCongestionBase <- function(L) {
 
   # Calculate the MPG adjustment, travel time and travel delay
   # JRaw: bug here - Value of Time should use L$Global$Model$ValueOfTime, but that's not
-  # defined for VERPAT (which is where this module is used)
+  # defined for VERPAT (which is where this module is used) and is hard-coded here
   CongResults_ls <- calcCongestion(Model_ls=CongModel_ls, DvmtByVehType=DvmtByVehType_vc,
                                   PerCapFwyLnMi=PerCapFwyLnMi_vc, PerCapArtLnMi=PerCapArtLnMi_vc,
                                   Population=Population_vc, BasePopulation=BasePopulation_vc,

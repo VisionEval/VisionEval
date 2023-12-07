@@ -281,7 +281,7 @@ DataPresent <- function(List, ComponentName) {
 #' \code{interpolate} finds a value for a specified year from a vector of
 #' values and a corresponding vector of years.
 #'
-#' Function determines determines the value for a specified year by
+#' Function determines the value for a specified year by
 #' interpolation using a vector of values and a corresponding vector of years.
 #' Smooth splines are used for interpolation.
 #'

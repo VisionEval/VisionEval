@@ -2149,20 +2149,21 @@ CalculateTravelDemand <- function(L) {
   # present. Eventually need to give control over contents of
   # PhevModelData_ls...
   getOptimPropForYear <- function(Year) {
-    prop_ar <- PhevModelData_ls$OptimPropYear_ar
+    prop_ar <- PhevModelData_ls$OptimPropYr_ar
     years <- as.integer(names(prop_ar))
     yr <- as.integer(Year)
     if ( ! yr %in% years ) {
       yr.less <- years[ years < yr ]
       yr.more <- years[ years > yr ]
       if ( length(yr.less) < 1 || length(yr.more) < 1 ) {
+        msg <- writeLog(paste0("Years: ",paste(years,collapse=",")),Level="error")
         msg <- writeLog(paste0("Year is out of range in PhevModelData_ls: ",Year),Level="error")
         stop(msg)
       }
       low <- yr.less[length(yr.less)]
       hi <- yr.more[1]
-      optimProp <- prop_ar[as.character(low)] + ( (prop_ar[as.character(high)]-prop_ar[as.character(low)]) * ((yr-low)/(high-low)) )
-    } else optimProp <- PhevModelData_ls$OptimPropYear_ar[Year]
+      optimProp <- prop_ar[as.character(low)] + ( (prop_ar[as.character(hi)]-prop_ar[as.character(low)]) * ((yr-low)/(hi-low)) )
+    } else optimProp <- PhevModelData_ls$OptimPropYr_ar[Year]
     return( optimProp )
   }
 
