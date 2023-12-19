@@ -745,6 +745,7 @@ calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi
 
   # Calculate fuel economy adjustment factors for speed smoothing and eco-driving
   #==============================================================================
+  writeLog("Wrapping up calcCongestion",Level="warn") # DEBUG
 
   # Put inputs and model in form for calculations
   #----------------------------------------------
@@ -760,6 +761,7 @@ calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi
   EcoDriverProp_Ty <- c( LtVeh=Model_ls$SmoothEcoDriveParmVa_ls$LtVehEco[ "Metro", CurrYear ],
                          Truck=Model_ls$SmoothEcoDriveParmVa_ls$TruckEco[ "Metro", CurrYear ] )
 
+  writeLog("Determine benefits for light vehicles",Level="warn") # DEBUG
   # Determine benefits for light vehicles with ICE engines
   #-------------------------------------------------------
   # Non-ecodriver benefits result from speed smoothing only
@@ -769,6 +771,7 @@ calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi
   LtVehEcoBenefit_SpFc[ LtVehNonEcoBenefit_SpFc > LtVehEcoBenefit_SpFc ] <-
     LtVehNonEcoBenefit_SpFc[ LtVehNonEcoBenefit_SpFc > LtVehEcoBenefit_SpFc ]
 
+  writeLog("Determine benefits for ICE trucks",Level="warn") # DEBUG
   # Determine benefits for trucks with ICE engines
   #-----------------------------------------------
   # Since trucks are dealt with in aggregate, smoothing and ecodriving benefits are averaged
@@ -782,7 +785,7 @@ calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi
   TruckCombBenefit_SpFc <- TruckEcoBenefit_SpFc * EcoDriverProp_Ty[ "Truck" ] +
     TruckNonEcoBenefit_SpFc * ( 1 - EcoDriverProp_Ty[ "Truck" ] )
 
-
+  writeLog("Calculate speed adjustments",Level="warn") # DEBUG
   # Calculate speed adjustments to fuel & power consumption
   #========================================================
 
@@ -798,6 +801,7 @@ calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi
   MpkwhAdj_Ty <- numeric( length( Ty ) )
   names( MpkwhAdj_Ty ) <- Ty
 
+  writeLog("Calculate fuel economy adjustments",Level="warn") # DEBUG
   # Function to Calculate the fuel economy adjustments from FSC coefficients and a reference speed
   #-----------------------------------------------------------------------------------------------
   calcFeAdj <- function( FscCoef_, Speed_, RefSpeed ) {
@@ -832,6 +836,7 @@ calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi
   # Initialize adjustment arrays
   FeAdj_ClFcAv <- array( 0, dim=c(length(Cl),length(Fc),length(Av)), dimnames=list(Cl,Fc,Av) )
   # Calculate freeway adjustments for light vehicles
+  writeLog("Calculate freeway adjustments for light vehicles",Level="warn") # DEBUG
   for( av in c( "LdIce", "LdHev", "LdEv", "LdFcv" ) ) { 		    # Cycle through vehicles
     FscRows_Ce <- which( Model_ls$AdvVehFsc..$FacilityType=="Fwy" & Model_ls$AdvVehFsc..$AdvVehType==av )
     names( FscRows_Ce ) <- Model_ls$AdvVehFsc..$CongEff[ FscRows_Ce ]
@@ -845,6 +850,7 @@ calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi
                  Speed_=SpdCalc_$LtVehCongSpeed_ClFc[,"Fwy"],
                  RefSpeed=Model_ls$FwyNormSpd )
   }
+  writeLog("Calculate freeway adjustments for trucks",Level="warn") # DEBUG
   # Calculate freeway adjustments for trucks
   for( av in c( "HdIce" ) ) { 		    # Cycle through vehicles
     FscRows_Ce <- which( Model_ls$AdvVehFsc..$FacilityType=="Fwy" & Model_ls$AdvVehFsc..$AdvVehType==av )
@@ -859,6 +865,7 @@ calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi
                  Speed_=SpdCalc_$TruckCongSpeed_ClFc[,"Fwy"],
                  RefSpeed=Model_ls$FwyNormSpd )
   }
+  writeLog("Calculate arterial adjustments",Level="warn") # DEBUG
   # Calculate arterial adjustments for light vehicles
   for( av in c( "LdIce", "LdHev", "LdEv", "LdFcv" ) ) { 		    # Cycle through vehicles
     FscRows_Ce <- which( Model_ls$AdvVehFsc..$FacilityType=="Art" & Model_ls$AdvVehFsc..$AdvVehType==av )
@@ -873,7 +880,8 @@ calcCongestion <- function(Model_ls, DvmtByVehType, PerCapFwyLnMi, PerCapArtLnMi
                  Speed_=SpdCalc_$LtVehCongSpeed_ClFc[,"Art"],
                  RefSpeed=Model_ls$ArtNormSpd )
   }
-  # Calculate freeway adjustments for trucks
+  # Calculate arterial adjustments for trucks
+  writeLog("Calculate arterial adjustments for trucks",Level="warn") # DEBUG
   for( av in c( "HdIce" ) ) { 		    # Cycle through vehicles
     FscRows_Ce <- which( Model_ls$AdvVehFsc..$FacilityType=="Art" & Model_ls$AdvVehFsc..$AdvVehType==av )
     names( FscRows_Ce ) <- Model_ls$AdvVehFsc..$CongEff[ FscRows_Ce ]
@@ -1108,8 +1116,6 @@ CalculateCongestionBase <- function(L) {
   PerCapFwyLnMi_vc <- L$Year$Marea$FwyLaneMiPC
   PerCapArtLnMi_vc <- L$Year$Marea$ArtLaneMiPC
 
-
-
   # Extract population and ITS factor for the metropolitan area
   Population_vc <- Pop_Ma #just a single value
   BasePopulation_vc <- BasePop_Ma
@@ -1120,22 +1126,46 @@ CalculateCongestionBase <- function(L) {
   CongPrice_ClFc <-
     array(0,
           dim = c(length(CongestionLevel_vc), length(FunctionalClass_vc)),
-          dimnames = list(CongestionLevel_vc, FunctionalClass_vc))
-  # TODO: need to interpolate the Sev/Ext values if L$G$Year is not a
-  # multiple of 5. Generalize the OptimProp interpolator developed in
-  # VEHouseholdTravel::CalculateTravelDemand.R
-  # Make a visioneval framework function to do that...
-  # There is a usable interpolation function here:
-  # n:\Git-Repos\VisionEval-dev-hive\sources\modules\VEPowertrainsAndFuels\r\CalculateCarbonIntensity.R
-  # This file also has an interpolate function defined above...
-  CongPrice_ClFc["Sev", "Fwy"] <-
-    CongModel_ls$CongPriceParmVa_ma$FwySev["Metro", L$G$Year]
-  CongPrice_ClFc["Ext", "Fwy"] <-
-    CongModel_ls$CongPriceParmVa_ma$FwyExt["Metro", L$G$Year]
-  CongPrice_ClFc["Sev", "Art"] <-
-    CongModel_ls$CongPriceParmVa_ma$ArtSev["Metro", L$G$Year]
-  CongPrice_ClFc["Ext", "Art"] <-
-    CongModel_ls$CongPriceParmVa_ma$ArtExt["Metro", L$G$Year]
+          dimnames = list(CongestionLevel_vc, FunctionalClass_vc)
+        )
+  # Need to interpolate the Sev/Ext values if L$G$Year is not a multiple of 5.
+
+  itpl <- function(table,year,pause=FALSE) { # linear interpolation
+    years <- as.integer(names(table))
+    yr <- as.integer(year)
+    if ( ! yr %in% years ) {
+      yr.less <- years[ years < yr ]
+      yr.more <- years[ years > yr ]
+      if ( length(yr.less) < 1 || length(yr.more) < 1 ) {
+        msg <- writeLog(paste0("Years: ",paste(years,collapse=",")),Level="error")
+        msg <- writeLog(paste0("Year is out of range in CalculateCongestionBase: ",year),Level="error")
+        stop(msg) 
+      }
+      low <- yr.less[length(yr.less)]
+      hi <- yr.more[1]
+      result <- as.numeric(table[as.character(low)]) + as.numeric( (table[as.character(hi)]-table[as.character(low)]) * ((yr-low)/(hi-low)) )
+    } else result <- as.numeric(table[year])
+    return( result )
+  }
+  
+  val                          <- itpl(CongModel_ls$CongPriceParmVa_ma$FwySev["Metro",],L$G$Year)
+  CongPrice_ClFc["Sev", "Fwy"] <- val
+  val                          <- itpl(CongModel_ls$CongPriceParmVa_ma$FwyExt["Metro",],L$G$Year,pause=TRUE)
+  CongPrice_ClFc["Ext", "Fwy"] <- val
+  val                          <- itpl(CongModel_ls$CongPriceParmVa_ma$ArtSev["Metro",],L$G$Year)
+  CongPrice_ClFc["Sev", "Art"] <- val
+  val                          <- itpl(CongModel_ls$CongPriceParmVa_ma$ArtExt["Metro",],L$G$Year)
+  CongPrice_ClFc["Ext", "Art"] <- val
+
+# Original, not interpolated
+#   CongPrice_ClFc["Sev", "Fwy"] <-
+#     CongModel_ls$CongPriceParmVa_ma$FwySev["Metro", L$G$Year]
+#   CongPrice_ClFc["Ext", "Fwy"] <-
+#     CongModel_ls$CongPriceParmVa_ma$FwyExt["Metro", L$G$Year]
+#   CongPrice_ClFc["Sev", "Art"] <-
+#     CongModel_ls$CongPriceParmVa_ma$ArtSev["Metro", L$G$Year]
+#   CongPrice_ClFc["Ext", "Art"] <-
+#     CongModel_ls$CongPriceParmVa_ma$ArtExt["Metro", L$G$Year]
 
   # Calculate the MPG adjustment, travel time and travel delay
   # JRaw: bug here - Value of Time should use L$Global$Model$ValueOfTime, but that's not
@@ -1149,10 +1179,15 @@ CalculateCongestionBase <- function(L) {
                                   UsePce=FALSE, CurrYear = L$G$Year)
 
   # Insert results in array
+  writeLog("Inserting Results into array, MpgMpk",Level="warn") # DEBUG
   MpgMpkwhAdjByMaPtType_vc[Marea_vc, ] <- CongResults_ls$MpgMpkwhAdj_Pt
+  writeLog("VehHr",Level="warn") # DEBUG
   VehHrByMaVehType_vc[Marea_vc, ] <- CongResults_ls$VehHr_Ty
+  writeLog("AveSpeed",Level="warn") # DEBUG
   AveSpeedByMaVehType_vc[Marea_vc, ] <- CongResults_ls$AveSpeed_Ty
+  writeLog("FfVehHr",Level="warn") # DEBUG
   FfVehHrByMaVehType_vc[Marea_vc, ] <- CongResults_ls$FfVehHr_Ty
+  writeLog("DelayVehHr",Level="warn") # DEBUG
   DelayVehHrByMaVehType_vc[Marea_vc, ] <- CongResults_ls$DelayVehHr_Ty
 
   # Clean up
@@ -1160,6 +1195,7 @@ CalculateCongestionBase <- function(L) {
 
   # Calculate MPG adjustment on a household basis
   # Assuming the household VMT outside of metropolitan area is uncongested
+  writeLog("HhMpgMpk",Level="warn") # DEBUG
   HhMpgMpkwhAdj_Ma <- ( MpgMpkwhAdjByMaPtType_vc[,PowertrainType_vc[1:5]] * LtVehDvmtFactor_Ma ) + ( 1 - LtVehDvmtFactor_Ma )
 
   #Return the results
