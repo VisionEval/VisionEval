@@ -58,17 +58,17 @@ evalq(
     ve.platform <- "MacOSX"
   }
 
-  if ( ! exists("ve.build") ) {
+  if ( ! exists("ve.build.dir") ) {
     # VE_BUILD can gather builds from multiple worktrees
     # Be sure not to force VE_BRANCH or they will all be overwritten with the latest
     # Often set to a neighbor directory to VisionEval-dev, e.g. VisionEval-built
     # the dir.sexists test relies on dir.exists("") == FALSE
-    ve.build <- Sys.getenv("VE_BUILD","")
-    if ( ! dir.exists(ve.build) ) ve.build <- normalizePath(file.path(ve.installer,".."),winslash="/",mustWork=FALSE)
+    ve.build.dir <- Sys.getenv("VE_BUILD","")
+    if ( ! dir.exists(ve.build.dir) ) ve.build.dir <- normalizePath(file.path(ve.installer,".."),winslash="/",mustWork=FALSE)
   }
 
   if ( ! exists("ve.dev") ) {
-    ve.dev <- normalizePath(file.path(ve.build,"dev"),winslash="/",mustWork=FALSE)
+    ve.dev <- normalizePath(file.path(ve.build.dir,"dev"),winslash="/",mustWork=FALSE)
   }
   if ( ! exists("dev.lib") ) {
     dev.lib <- normalizePath(file.path(ve.dev,"lib",this.R),winslash="/",mustWork=FALSE)
@@ -87,8 +87,8 @@ evalq(
     update.packages(lib=dev.lib,repos="https://cloud.r-project.org",type=.Platform$pkgType,ask=FALSE)
   }
 
-  # Get VisionEval release version (used in installer file.names
-  ve.version <- Sys.getenv("VE_VERSION","3.0")
+  # Get VisionEval release version (used in installer file.names)
+  ve.version <- Sys.getenv("VE_VERSION","3.1")
   cat("Building VisionEval version",ve.version,"\n")
 
   # Specify dependency repositories for known R versions
@@ -343,7 +343,7 @@ evalq(
   }
 
   if ( ! "ve.output" %in% ve.roots || ! exists("ve.output") ) {
-    ve.output = normalizePath(file.path(ve.build,"built"),winslash="/",mustWork=FALSE)
+    ve.output = normalizePath(file.path(ve.build.dir,"built"),winslash="/",mustWork=FALSE)
   }
 
   if ( ! exists("ve.logs") ) {
@@ -420,7 +420,7 @@ evalq(
      VE_R_VERSION      = this.R
     ,VE_VERSION        = ve.version
     ,VE_LOGS           = ve.logs
-    ,VE_BUILD          = ve.build
+    ,VE_BUILD          = ve.build.dir
     ,VE_DEVLIB         = dev.lib
     ,VE_BRANCH         = ve.branch
     ,VE_RUNTIME_CONFIG = ve.runtime.config
@@ -444,7 +444,8 @@ evalq(
   r.dev.lib <- gsub(this.R,"%V",dev.lib)
   r.libs.user <- c(
     paste0("R_LIBS_USER=",paste(r.ve.lib,r.dev.lib,sep=";")),
-    paste0("VE_HOME=",normalizePath(ve.root,winslash="/"))
+    paste0("VE_HOME=",normalizePath(ve.root,winslash="/")),
+    paste0("VE_BUILD=",normalizePath(ve.build.dir,winslash="/"))
   )
   writeLines(r.libs.user,con=r.environ)
   rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib )
@@ -652,7 +653,7 @@ evalq(
   cat("Saving runtime configuration to:\n",ve.runtime.config,"\n",sep="")
   ve.env.save <- c(ve.roots,locs.lst
     , "this.R"
-    , "ve.build"
+    , "ve.build.dir"
     , "ve.dev"
     , "dev.lib"
     , "ve.roots"

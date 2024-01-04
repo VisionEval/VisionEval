@@ -1,10 +1,10 @@
 Package: VEHouseholdTravel
 Type: Package
 Title: Calculate Household Walk, Bike, and Transit Trips
-Version: 2.0.0
+Version: 3.1.0
 Date: 2020-08-14
 Author: Brian Gregor [aut, cre], Aditya Gore <aditya.gore@rsginc.com> [cre]
-Maintainer: Brian Gregor <gregorb@or-analytics.com>, Aditya Gore <aditya.gore@rsginc.com>
+Maintainer: Jeremy Raw <jeremy.raw@dot.gov>, Aditya Gore <aditya.gore@rsginc.com>
 Copyright: AASHTO
 Description: Contains modules for predicting household average DVMT, trips by
     alternative modes (walking, biking, transit), household vehicle trips, and 

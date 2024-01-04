@@ -128,7 +128,7 @@ want to change them. They are documented here so you won't worry.
 </dl>
 
 ~~~
-# This is VisionEval Makefile Version 3.0 ("NextGen")
+# This is VisionEval Makefile Version 3.1 ("NextGen")
 # You can override VE_CONFIG, VE_RUNTESTS, VE_EXPRESS, VE_BRANCH and VE_R_VERSION
 # on the command line or export them from your environment
 # ve.build() handles useful defaults

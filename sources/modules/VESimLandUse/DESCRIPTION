@@ -1,10 +1,10 @@
 Package: VESimLandUse
 Type: Package
 Title: Create simulated Bzones (SimBzones) with attributes
-Version: 2.0.0
-Date: 2020-08-14
+Version: 3.1.0
+Date: 2023-01-04
 Author: Brian Gregor [aut, cre],
-Maintainer: Brian Gregor <gregorb@or-analytics.com>
+Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: AASHTO, ODOT
 Description: This package contains several modules which create simulated 
     Bzones (SimBzones), assign households and jobs to the SimBzones, attribute

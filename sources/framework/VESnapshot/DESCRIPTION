@@ -1,7 +1,7 @@
 Package: VESnapshot
 Type: Package
 Title: Sample Module to take a snapshot of Datastore fields
-Version: 1.0.0
+Version: 3.1.0
 Date: 2022-12-12
 Author: Jeremy Raw [aut, cre]
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>

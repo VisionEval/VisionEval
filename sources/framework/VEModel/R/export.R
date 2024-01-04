@@ -1019,7 +1019,10 @@ ve.connection.dbi.init <- function(Model,config,reopen=FALSE,hive=FALSE) {
 
       # Finally, prepend the directories
       # Force the file into ResultsDir/OutputDir
-      dbname <- file.path(Model$modelPath,Model$setting("ResultsDir"),Model$setting("OutputDir"),basename(dbname))
+      # Note that ResultsDir should already exist, but OutputDir may not
+      dbpath <- file.path(Model$modelPath,Model$setting("ResultsDir"),Model$setting("OutputDir"))
+      if ( ! dir.exists(dbpath) ) dir.create(dbpath,recursive=TRUE)
+      dbname <- file.path(dbpath,basename(dbname))
 
       private$DBIConfig <- list(dbname=dbname)
 

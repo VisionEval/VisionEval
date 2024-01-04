@@ -1,10 +1,10 @@
 Package: VETransportSupplyUse
 Type: Package
 Title: Create Transport Supply Utilization Characteristics for VE
-Version: 2.0.0
-Date: 2020-08-14
+Version: 3.1.0
+Date: 2023-01-04
 Author: Aditya Gore <aditya.gore@rsginc.com> [cre], Ben Stabler <ben.stabler@rsginc.com> [cre],  Brian Gregor <gregor@or-analytics.com> [auth]
-Maintainer: Aditya Gore <aditya.gore@rsginc.com>, Ben Stabler <ben.stabler@rsginc.com>
+Maintainer: Jeremy Raw <jeremy.raw@dot.gov>, Aditya Gore <aditya.gore@rsginc.com>
 Copyright: AASHTO
 Description: This package contains modules that creates attributes for utilization of
       transportation supplies.

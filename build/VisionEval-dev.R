@@ -42,7 +42,7 @@ evalq(
     getLocalBranch <- function(repopath,use.git) {
       if ( is.null(use.git) ) {
         # NOTE: set use.git = FALSE explicitly to force "visioneval" pseudo-branch in VE_BUILD
-        use.git <- ( dir.exists( ve.build <- Sys.getenv("VE_BUILD","") ) )
+        use.git <- ( dir.exists( Sys.getenv("VE_BUILD","") ) )
       } 
       if ( use.git && suppressWarnings(requireNamespace("git2r",quietly=TRUE)) ) {
         localbr <- git2r::branches(repopath,flags="local")
@@ -163,7 +163,7 @@ evalq(
           load.runtime
         }
       } else {
-        # "runtime.test" is created as a default "live" runtime by ve.run(0
+        # "runtime.test" is created as a default "live" runtime by ve.run()
         # if there is not better choice.
         runtime.test <- file.path(dirname(load.runtime),"runtime.test")
         if ( dir.exists(runtime.test) ) {

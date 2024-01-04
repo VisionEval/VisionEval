@@ -1,10 +1,10 @@
 Package: VEHouseholdVehicles
 Type: Package
 Title: Model household vehicles with driver and vehicle adjustments
-Version: 2.0.0
+Version: 3.1.0
 Date: 2020-08-14
 Author: Brian Gregor [aut, cre], Aditya Gore <aditya.gore@rsginc.com> [cre]
-Maintainer: Brian Gregor <gregorb@or-analytics.com>, Aditya Gore <aditya.gore@rsginc.com>
+Maintainer: Jeremy Raw <jeremy.raw@dot.gov>, Aditya Gore <aditya.gore@rsginc.com>
 Copyright: AASHTO
 Description: This package contains modules which predict household vehicle
     ownership, including the number owned, body types, and ages. It also

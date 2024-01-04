@@ -1,10 +1,10 @@
 Package: VESyntheticFirms
 TYPE: Package
 Title: VisionEval Synthetic Firms module for RPAT
-Version: 2.0.0
-Date: 2020-08-14
+Version: 3.1.0
+Date: 2023-01-04
 Author: Ben Stabler <ben.stabler@rsginc.com>, Peter Andrews <peter.andrews@rsginc.com>, Brian Gregor <gregor@or-analytics.com>
-Maintainer: Ben Stabler <ben.stabler@rsginc.com>
+Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: AASHTO
 Description: VisionEval Synthetic Firms module.
 License: file LICENSE

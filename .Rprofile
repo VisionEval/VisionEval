@@ -12,29 +12,42 @@ local( {
     stop("Cannot locate VisionEval startup file in ",VE.home)
   }
 
-  # VisionEval will run in VE_RUNTIME - generally leaving the default is preferred
-  ve.runtime <- Sys.getenv("VE_RUNTIME",unset=getwd()) # can also set VE_RUNTIME in .Renviron
-  Sys.setenv(VE_RUNTIME=ve.runtime)
-
   setwd(VE.home) # get ready to run the startup file
   if ( VE.developer ) {
-    VE.build <- Sys.getenv("VE_BUILD",VE.home)
-    dev.lib <- file.path(VE.build,"dev/lib",this.R)   #
-    ve.lib  <- file.path(VE.build,"built/visioneval",this.R,"ve-lib")
-    source("build/VisionEval-dev.R")  # Will return to VE_RUNTIME set above
-    if ( ! dir.exists(dev.lib) || ! dir.exists(ve.lib) ) {
-      message("Seeking built VisionEval in ",VE.build)
+    VE.build.dir <- Sys.getenv("VE_BUILD",VE.home)
+    cat("Build directory:",VE.build.dir,"\n")
+    dev.lib <- file.path(VE.build.dir,"dev/lib",this.R)
+    cat("Dev lib:",dev.lib,"\n")
+    loaded <- FALSE
+    if ( dir.exists(dev.lib) ) {
+      .libPaths(dev.lib)
+      VE.branch <- if ( git2r::in_repository() ) {
+        localbr <- git2r::branches(VE.home,flags="local")
+        hd <- which(sapply(localbr,FUN=git2r::is_head,simplify=TRUE))
+        localbr[[hd]]$name
+      } else Sys.getenv("VE_BRANCH","visioneval")
+      ve.lib  <- file.path(VE.build.dir,"built",VE.branch,this.R,"ve-lib")
+      cat("VE lib:",ve.lib,"\n")
+      if ( dir.exists(ve.lib) ) {
+        .libPaths(ve.lib)
+        source("build/VisionEval-dev.R")  # Will return to VE_RUNTIME set above
+        loaded <- TRUE
+      }
+    }      
+    if ( ! loaded ) {
+      message("Seeking built VisionEval in ",VE.build.dir)
       message("However, VisionEval from ",VE.home," is not there.")
       message("Please run ve.build()")
       setwd(VE.home)
-      source("build/VisionEval-dev.R")
     } else {
-      ve.run()  # Ready to run
+      ve.run()  # Ready to run development version
     }
   } else {
-    source("VisionEval.R")
+    # VisionEval will run in VE_RUNTIME - generally leaving the default is preferred
+    ve.runtime <- Sys.getenv("VE_RUNTIME",unset=getwd()) # can also set VE_RUNTIME in .Renviron
+    Sys.setenv(VE_RUNTIME=ve.runtime)
+    source("VisionEval.R") # Run end-user version
   }
   invisible(NULL)
 })
-
 

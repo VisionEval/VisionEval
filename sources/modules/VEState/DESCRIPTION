@@ -1,8 +1,8 @@
 Package: VEState
 Type: Package
 Title: Implement the VE-State base model
-Version: 2.0.0
-Date: 2021-11-16
+Version: 3.1.0
+Date: 2023-01-04
 Author: Aditya Gore <aditya.gore@rsginc.com> [cre], Ben Stabler <ben.stabler@rsginc.com> [cre],  Brian Gregor <gregor@or-analytics.com> [auth]
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: AASHTO, ODOT

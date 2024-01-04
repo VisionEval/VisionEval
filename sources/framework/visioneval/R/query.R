@@ -1140,9 +1140,7 @@ calcWithBy <- function(CompiledQuery, CalcData_ls) {
   Results_ar <- by(CalcData_ls,By_ls,measureFunc) # Actually perform the query computation
   # Results_ar has same number of Dim's as By, Dimnames are the break values for
   # each By element, cells are the results of evaluating measureFunc
-  # NA's are introduced automatically for missing groups
-  # Key problem is that breaks are set empirically for fields like Bzone so if there
-  #   are any missing from the corpus, they won't appear in the output. Workaround below.
+  # NA's are introduced automatically for missing groups (including missing geographies)
 
   # Melt into a data.frame (one column for each By dimension)
   # Values in each dimension row are the dim.names for that dimension present in results_ar

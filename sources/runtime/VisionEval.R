@@ -195,6 +195,8 @@ if ( install.success ) {
     paste0("R_LIBS_USER=",paste(collapse=";",.libPaths()[-length(.libPaths())])), # ignore base library
     paste0("VE_HOME=",normalizePath(ve.load.dir,winslash="/",mustWork=TRUE))
   )
+  # Using sapply in case we want to write multiple .Renviron files in different places
+  # (i.e. renv.file a vector of file paths)
   sapply( renv.file, FUN=function(r) if ( ! file.exists(r) ) writeLines(renv.txt,r) )
 
   # Load tools (helper functions) from their subdirectory in ve.load.dir
