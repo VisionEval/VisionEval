@@ -376,9 +376,10 @@ configure-build: $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG)
 # Note: build-config.R identifies VE_CONFIG via the exported environment variable
 $(VE_MAKEVARS) $(VE_RUNTIME_CONFIG): scripts/build-config.R $(VE_CONFIG) R-versions.yml
 	: Build Environment:
-	:     R Version = $(VE_R_VERSION)
-	: Configuration = $(VE_CONFIG)
-	:    Git branch = $(VE_BRANCH)
+	:     R Version   = $(VE_R_VERSION)
+	: Configuration   = $(VE_CONFIG)
+	:    Git branch   = $(VE_BRANCH)
+        : Build directory = $(VE_BUILD)
 	$(RSCRIPT) scripts/build-config.R
 
 # This rule and the following one rebuild the repository of dependencies for VE_R_VERSION

@@ -399,8 +399,6 @@ evalq(
   for ( loc in locs.lst ) dir.create( get(loc), recursive=TRUE, showWarnings=FALSE )
   ve.zipout <- dirname(ve.runtime) # Installer zip files always go next to ve.runtime
 
-  # Create the .Renviron file in ve.output so dev-lib is included
-  # That way we can have things like miniCRAN that are not needed by the runtime
   if ( ! exists("ve.lib") ) {
     stop("ve.lib must be defined in VE-config.yml")
   }
@@ -444,8 +442,10 @@ evalq(
   r.dev.lib <- gsub(this.R,"%V",dev.lib)
   r.libs.user <- c(
     paste0("R_LIBS_USER=",paste(r.ve.lib,r.dev.lib,sep=";")),
-    paste0("VE_HOME=",normalizePath(ve.root,winslash="/")),
-    paste0("VE_BUILD=",normalizePath(ve.build.dir,winslash="/"))
+    paste0("VE_HOME=",normalizePath(ve.root,winslash="/"))
+    # , paste0("VE_BUILD=",normalizePath(ve.build.dir,winslash="/"))
+    # don't write VE_BUILD since that will permanently cloak the system environment variable.
+    # User can set VE_BUILD manually, but they're responsible for maintaining it.
   )
   writeLines(r.libs.user,con=r.environ)
   rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib )

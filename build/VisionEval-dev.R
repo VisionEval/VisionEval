@@ -189,7 +189,7 @@ evalq(
     #   will also be copied.
     ve.run <- function(runtime=NULL, use.git=NULL,use.env=TRUE,changeDir=TRUE,copyFiles=FALSE) {
       ve.runtime <- get.ve.runtime(runtime, use.git=use.git,use.env=use.env)
-      message("get.ve.runtime returned ",ve.runtime,": use.env ",use.env)
+      # message("get.ve.runtime returned ",ve.runtime,": use.env ",use.env)
       if ( is.na(ve.runtime) ) stop("No runtime available. Have you run ve.build()")
       load.runtime <- attr(ve.runtime,"load.runtime")
       useWorkingDir <- ! changeDir
@@ -200,8 +200,9 @@ evalq(
           if ( ! dir.exists(runtime.test) ) {
             message("Creating runtime.test directory:")
             dir.create(runtime.test)
+          } else {
+            message("Using runtime test directory:",runtime.test)
           }
-          message("Using runtime test directory:",runtime.test)
           ve.runtime <- runtime.test
         } else if ( ! is.na(ve.runtime) && dir.exists(ve.runtime) ) {
           owd <- setwd(ve.runtime)
@@ -261,20 +262,31 @@ evalq(
 
     ve.test <- function(VEPackage,tests="test.R",changeRuntime=TRUE,usePkgload=NULL,use.git=NULL,use.env=TRUE) {
       # Run with the walkthrough if no package provided (or "walkthrough")
-
       # Then we'll redirect to other locations as needed
       walkthroughScripts = character(0)
       if ( missing(VEPackage) || tolower(VEPackage)=="walkthrough" ) { # load the walkthrough
         if ( changeRuntime ) {
           # If ve.runtime has not moved away from ve.root (i.e. ve.run() was not yet called)
           # then do the default ve.run first. Otherwise, we'll place the walkthrough in ve.runtime.
-          changeDir <- getwd()==ve.root
+          cur.dir <- getwd()
+          changeDir <- cur.dir==ve.root || ! grepl("walkthrough",cur.dir)
           # Do walkthrough below current runtime directory
-          ve.runtime <- ve.run(changeDir=changeDir,copyFiles="walkthrough",use.git=use.git,use.env=use.env)
-          setwd(file.path(ve.runtime,"walkthrough"))
+          if ( changeDir ) {
+            ve.runtime <- ve.run(changeDir=changeDir,copyFiles="walkthrough",use.git=use.git,use.env=use.env)
+            setwd(file.path(ve.runtime,"walkthrough"))
+          } else {
+            # Trying to avoid recursive creation of "walkthrough" subdirectories if we re-run ve.test
+            # in the same R session without first calling exit.walkthrough()
+            ve.runtime <- ve.run(changeDir=FALSE,use.git=use.git,use.env=use.env)
+          }
         } else {
           message("Running in VEModel source (for developing walkthrough)")
           setwd(file.path(ve.root,"sources/framework/VEModel/inst/walkthrough"))
+        }
+        if ( ! file.exists("00-setup.R") ) {
+          # Make sure directory is aligned right if user is restarting from within
+          # walkthrough runtime.
+          if ( file.exists("../00-setup.R") ) setwd("..")
         }
         if ( ! file.exists("00-setup.R") ) {
           stop("No walkthrough 00-setup.R in ",getwd())
@@ -284,7 +296,7 @@ evalq(
           source("00-setup.R") # will create shadow runtime directory in "walkthrough"
         }
         # Running now in temporary runtime of "walkthrough"
-        walkthroughScripts = dir("..",pattern="\\.R$",full.names=TRUE)
+        walkthroughScripts = grep("00-setup.R",invert=TRUE,value=TRUE,dir("..",pattern="^[01].*\\.R$",full.names=TRUE))
         if ( is.logical(usePkgload) && usePkgload ) {
           # Do a compatible test load of VEModel itself -- useful for using
           # walkthrough to test (and fix) VEModel.
@@ -297,7 +309,7 @@ evalq(
           # ve.test("VEModel",tests=character(0),changeRuntime=FALSE,usePkgload=NULL)
         } else {
           require(VEModel,quietly=TRUE)      # Walkthrough requires VEModel
-          VEModel::setRuntimeDirectory(ve.runtime)
+          VEModel::setRuntimeDirectory(ve.runtime<-getwd()) # shift ve.runtime to walkthrough runtime
           message("\nWalkthrough scripts:")
           print(walkthroughScripts)
           return(invisible(walkthroughScripts))

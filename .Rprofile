@@ -29,7 +29,7 @@ local( {
       ve.lib  <- file.path(VE.build.dir,"built",VE.branch,this.R,"ve-lib")
       cat("VE lib:",ve.lib,"\n")
       if ( dir.exists(ve.lib) ) {
-        .libPaths(ve.lib)
+        .libPaths(c(ve.lib,.libPaths()))
         source("build/VisionEval-dev.R")  # Will return to VE_RUNTIME set above
         loaded <- TRUE
       }
@@ -45,7 +45,7 @@ local( {
   } else {
     # VisionEval will run in VE_RUNTIME - generally leaving the default is preferred
     ve.runtime <- Sys.getenv("VE_RUNTIME",unset=getwd()) # can also set VE_RUNTIME in .Renviron
-    Sys.setenv(VE_RUNTIME=ve.runtime)
+    Sys.setenv(VE_RUNTIME=ve.runtime) # propagate into standard startup
     source("VisionEval.R") # Run end-user version
   }
   invisible(NULL)
