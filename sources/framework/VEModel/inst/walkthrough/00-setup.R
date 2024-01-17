@@ -32,6 +32,13 @@ local( {  # Wrapping in "local" will leave no new names in the user's environmen
   }
   if ( ! vePresent() ) stop("Cannot locate ve.lib - are you working in your VE runtime?")
 
+  # Access the runtime environment for variables like ve.runtime
+  env.loc <- if ( ! "ve.env" %in% search() ) {
+    attach(NULL,name="ve.env")
+  } else {
+    as.environment("ve.env")
+  }
+
   # Create (or find) a walkthrough runtime directory within the working directory
   # which is presumed to be "walkthrough"
   message("Setting up walkthrough in ",getwd())
@@ -45,6 +52,27 @@ local( {  # Wrapping in "local" will leave no new names in the user's environmen
     walkthroughRuntime <- normalizePath(walkthroughRuntime,winslash="/",mustWork=TRUE)
   }
   message(walkthrough.action," walkthrough runtime directory:")
+
+  # stash the existing ve.runtime, if any
+  if ( exists("ve.runtime",envir=env.loc,inherits=FALSE) ) {
+    if ( ! exists("orig.runtime",envir=env.loc) ) {
+      env.loc$orig.runtime <- env.loc$ve.runtime
+    }
+  }
+  env.loc$ve.runtime <- walkthroughRuntime
+
+  # add function to restore runtime after starting walkthrough
+  env.loc$exit.walkthrough <- function() {
+    if ( exists("orig.runtime",envir=env.loc,inherits=FALSE) ) {
+      env.loc$ve.runtime <- env.loc$orig.runtime
+      rm("orig.runtime",envir=env.loc)
+    }
+    setwd(env.loc$ve.runtime)
+    invisible(getwd())
+  }
+  message("exit.walkthrough() or quit R to exit walkthrough environment")
+
+  # Run in walkthrough runtime
   setwd(walkthroughRuntime)
   message(getwd())
   # Make sure there is a "Models" directory in the actual runtime folder

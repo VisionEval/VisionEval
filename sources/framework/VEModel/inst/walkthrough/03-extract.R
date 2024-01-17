@@ -70,7 +70,7 @@ print(outputs)
 # Inspect the Metadata file. Metadata is very basic: just the field
 # group/table/name plus description and units (plus display units if those are different, see below)
 outputs <- mwr$dir(output=TRUE,all.files=TRUE,shorten=FALSE) # full path name on files
-metadata.file <- grep("Metadata\\.csv",outputs,value=TRUE)
+metadata.file <- grep("Metadata\\.csv",outputs,value=TRUE)[1] # subscript to avoid problems if run multiple times
 metadata <- read.csv( file=metadata.file )
 metadata[1:10,]
 

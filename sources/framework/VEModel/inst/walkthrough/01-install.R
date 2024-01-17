@@ -34,11 +34,8 @@ print(vr)
 # DEMO INSTALLING OTHER STANDARD MODELS
 #######################################
 
-# The standard models are the same ones we distribute in the current VisionEval
-#  but they have been restructured into "Next Generation" model setups
-
 # install models
-# Show available models (VERSPM, VE-State, RPAT, etc.)
+# Show available models (VERSPM, VE-State, VERPAT, etc.)
 installModel()
 
 # Show avaialble variants for one of the models
@@ -79,7 +76,8 @@ rm(pop,rpat)
 
 # If you install a model again under the same name, it will add a number to it
 installModel("VERSPM",confirm=FALSE) # base model again
-message('\nExpect to see: "MYRPAT", "VERSPM-base", "VERSPM-base(1)" "VERSPM-pop", and "VERSPM-run"')
+message('\nExpect to see:")
+print(c("MYRPAT", "VERSPM-base", "VERSPM-base(1)", "VERSPM-pop", "VERSPM-run"')
 print(dir("models"))
 
 # And you can get rid of the extra model like this (careful that you're deleting the right one!)

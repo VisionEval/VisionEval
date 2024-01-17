@@ -1,5 +1,5 @@
 # 05-queries.R
-# More detailed walkthrough of using queries to summarize scenarios
+# Using queries to summarize scenarios
 
 require(VEModel)
 
@@ -72,11 +72,17 @@ mod.scenarios$dir(output=TRUE)
 ###################
 
 # Export (instead of, or in addition to, extract) to generate a file with the query
-# results. The export works the same as for the raw data, except that the partition is
-# ignored and you get a single table (either Long or Wide format)
+# results. The export works the same as exporting the raw data, except that the partition is
+# ignored and you get a single table (either "Long" or "Wide" format)
+
+# Default is "wide" format with one row per metric, and one column per scenario
 
 qry$export() # Default CSV file name in output directory
 mod.scenarios$dir(outputs=TRUE,all.files=TRUE) # Now we have output in a .csv file
+
+# "Long" format creates one row per metric per scenario, a format that plays
+# nicely with Tableau or other external analysis tools.
+qry$export(longScenarios=TRUE) # Default CSV file name in output directory
 
 qry$export("sqlite") # Put the query extraction into an SQLite Database
 
@@ -86,4 +92,4 @@ qry$export("data.frame")$data(
   path=file.path(mod.scenarios$exportPath(),"Query-Output.xlsx")
 )
 # if you were paying close attention before, you don't need the "formatList" parameter for
-# Excel output here because queries generate a single data.frame in each case.
+# Excel output here because query export generates a single data.frame in each case.

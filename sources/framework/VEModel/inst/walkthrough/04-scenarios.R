@@ -28,7 +28,7 @@ mod.scenarios$dir(scenarios=TRUE,all.files=TRUE) # Look at the elements of the s
 # The visioneval.cnf configuration defines the base model
 # the scenarios\visioneval.cnf file defines additional scenarios
 # Setting up scenarios is beyond the scope of this walkthrough
-# See https://visioneval.org/docs for more information
+# See https://github.visioneval.io/docs for more information
 
 # Run the model
 
@@ -46,3 +46,8 @@ print(mod.scenarios,details=TRUE)
 # Once the mod.scenarios model is run, move on to the 05-queries
 # walkthrough to find out how to use queries and extract scenario
 # results.
+# Or you can try any of the extract operations from the earlier walkthroughs
+# With the scenarios model, you'll get results for each scenario in the output
+# tables (which is where the advanced partitioning can come in handy - you can
+# put all the scenarios in single corresponding tables, or break them out by
+# year, etc)
