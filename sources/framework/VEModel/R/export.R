@@ -832,7 +832,7 @@ VEConnection.Dataframe <- R6::R6Class(
   inherit = VEConnection,
   public = list(
     # methods
-    initialize  = function(Model,config,reopen) { super$initialize(Model,config,reopen) },  # No initialization needed locally
+    initialize  = function(Model,config,reopen,hive) { super$initialize(Model,config,reopen,hive) },  # No initialization needed locally
     summary     = function() {
       paste( c("Tables:",
         if ( length(private$exportedData)>0 ) names(private$exportedData) else "None written yet"
@@ -860,7 +860,7 @@ VEConnection.Dataframe <- R6::R6Class(
 #' @import data.table
 ve.connection.csv.init      <- function(Model,config,reopen=FALSE,hive=FALSE) {
   # CSV provides a default name for Directory
-  super$initialize(Model,config,hive)
+  super$initialize(Model,config,reopen,hive)
   if ( ! reopen ) {
     if ( ! "Directory" %in% names(config) ) {
       if ( "Database" %in% names(config) ) {
@@ -967,17 +967,21 @@ VEConnection.CSV <- R6::R6Class(
 #' @import RSQLite
 #' @importFrom methods new
 ve.connection.dbi.init <- function(Model,config,reopen=FALSE,hive=FALSE) {
-  super$initialize(Model,config,hive)
+  super$initialize(Model,config,reopen,hive)
   # Two avenues here:
   # If we're missing a full DBI configuration, presume SQLite
   # If there is a full DBI configuration, fill in blanks like dbname from outside Database
-  # NOTE: the following evades build-time checks on available packages
+  # Also optionally install a DBI driver package
   if ( ! reopen ) {
     if ( "package" %in% names(config) ) {
       package <- config[["package"]]
-      loadError <- try( library(package,character.only=TRUE) )
-      if ( inherits(loadError,"try-error") ) {
-        stop("Package requested for DBI connection is not installed: ",config[["package"]])
+      if ( ! require(package,character.only=TRUE) ) { # driver package not installed
+        if ( "install.package" %in% names(config) && config[["install.package"]] ) {
+          install.packages(package) # installs into first element of .libPaths (probably ve-lib)
+        }
+        if ( ! require(package,character.only=TRUE) ) { # driver package failed to install (due to internet failure, misspelling, etc)
+          stop("Package requested for DBI connection is not installed: ",config[["package"]])
+        }
       }
     }
     if ( "drv" %in% names(config) ) {
@@ -995,7 +999,6 @@ ve.connection.dbi.init <- function(Model,config,reopen=FALSE,hive=FALSE) {
     if ( "DBIConfig" %in% names(config) ) {
       # presume DBIConfig has the full and correct set of parameters to call dbConnect
       # We're not going attempt to do anything else to it here, except adjust dbname
-      #   if it exists for Timestamp (if it is present, which it probably shouldn't be)
       private$DBIConfig <- config[["DBIConfig"]]
     } else {
       # SQLite will pre-package more stuff
@@ -1026,11 +1029,11 @@ ve.connection.dbi.init <- function(Model,config,reopen=FALSE,hive=FALSE) {
 
       private$DBIConfig <- list(dbname=dbname)
 
-      private$DBIConnector <- new("DBIConnector",
-        .drv = private$DBIDriver,
-        .conn_args = private$DBIConfig
-      )
     }
+    private$DBIConnector <- new("DBIConnector",
+      .drv = private$DBIDriver,
+      .conn_args = private$DBIConfig
+    )
   } else {
     # rehydrate private$DBIConnector
     private$DBIConnector <- config$ReopenData

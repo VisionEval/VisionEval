@@ -389,7 +389,7 @@ setRuntimeDirectory <- function(Directory=NULL) {
       Directory <- getwd()
     }
   }
-  # returns the working directory from before this call
+  # save the working directory from before this call
   ve.env$start.dir <- getwd()
   if ( getwd() != Directory ) {
     setwd(Directory)

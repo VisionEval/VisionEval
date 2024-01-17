@@ -609,7 +609,7 @@ interleave <- function(x,y) {
 }
 
 # make a data.frame of all (and only) the valid query results
-# the results is a single data.frame with attributes
+# the result is a single data.frame with attributes
 ve.query.extract <- function(
   Results=NULL, Measures=NULL, Years=NULL,
   wantMetadata=TRUE, wantData=TRUE, nameMeasureBy=TRUE,
@@ -1057,7 +1057,6 @@ ve.query.export <- function(
 
 # Helper function to locate OutputDir given Results (VEModel or VEResults) for exporting query
 # data.frame
-# TODO: also use this function to locate the OutputDir/extract file name
 exportDir <- function(model=NULL,results=NULL) {
   exportDir <- if ( inherits(model,"VEModel") ) {
     file.path(model$modelPath,model$setting("ResultsDir"))
