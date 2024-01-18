@@ -90,13 +90,6 @@ Makefile which R to use for those processes.
         VE_DELETE, it leaves behind the built packages). Useful if you are just removing
         some folders from the package build source.
      </dd>
-     <dt>VE_MCLEAR</dt>
-     <dd>This environment variable is used in the build-modules.R script, and does
-        not appear in the Makefile. Set it to "yes" or "no" (without the quotes). If set to
-        "yes", it will remove the package source folder prior to building (unlike
-        VE_DELETE, it leaves behind the built packages). Useful if you are just removing
-        some folders from the package build source.
-      </dd>
       <dt>VE_MDOCS</dt>
       <dd> Mutually exclusive options (strip everything from a comma on) that can be set
          to "all" (generate all documents), "init" (regenerate only NAMESPACE and
@@ -110,6 +103,8 @@ Makefile which R to use for those processes.
          CMD check with tests enabled) (unit testing); "run" says do runtime tests after
          the package has been built (good for developers); or "none"- do no tests (usually
          it is simplest to set `VE_MTEST="none"` indirectly by setting `VE_EXPRESS=yes`)
+         **Currently, none of VisionEval's modules have working unit tests, so this
+         option is mostly accessed internally by setting `VE_EXPRESS=yes`**
       </dd>
 </dl>
 
