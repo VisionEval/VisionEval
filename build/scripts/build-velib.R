@@ -22,7 +22,9 @@ source(file.path(ve.installer,"scripts","get-runtime-config.R"))
 # binaries otherwise, if RTools is installed the newer sources packages will be
 # compiled.  You should allow compilation to happen if there is discrepancy in
 # behavior between a Windows installation and a source (e.g. Linux/Docker)
-# installation
+# installation. Even if this line is commented, packages on Linux will always be
+# built from source. The Mac behavior is just like Windows and will use pre-compiled
+# packages only unless this line is commented out.
 options(install.packages.compile.from.source="never")
 
 message("========== ADD DEVELOPMENT PACKAGES ========")

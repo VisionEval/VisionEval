@@ -1096,8 +1096,21 @@ prepare_arg <- function(x) {
   return(x)
 }
 
+#' Do message layout
+#' @param level log level
+#' @param msg log message
+#' @param ... parameters for sprintf
+#' @return log message in simple layout
+#' @export
 log.layout.message <- function(level,msg,...) return(paste(msg,...,"\n",sep=""))
 
+#' Do simple log layout
+#' @param level log level
+#' @param msg log message
+#' @param id log message id
+#' @param ... parameters for sprintf
+#' @return log message in simple layout
+#' @export
 log.layout.simple <- function(level, msg, id='', ... ) {
   if (length(list(...)) > 0) {
     parsed <- lapply(list(...), prepare_arg)
@@ -1106,6 +1119,13 @@ log.layout.simple <- function(level, msg, id='', ... ) {
   return( sprintf("%s\n", msg) )
 }
 
+#' Do VE log layout
+#' @param level log level
+#' @param msg log message
+#' @param id log message id
+#' @param ... parameters for sprintf
+#' @return log message in simple layout
+#' @export
 log.layout.visioneval <- function(level, msg, id='', ...) {
   the.time <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   if (length(list(...)) > 0) {
