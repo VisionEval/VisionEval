@@ -1025,17 +1025,17 @@ initLog <- function(Timestamp = NULL, Threshold="warn", Save=TRUE, Prefix = NULL
   }
 
   # Create and provision the ve.logger
-  th <- which( log.threshold %in% toupper(Threshold) )
+  th <- which( VElog.threshold %in% toupper(Threshold) )
   if ( length(th)==0 ) Threshold <- "INFO"
 
   # ve.logger is for all messages from Threshold on up
   #  (so may include more or less than stderr)
   futile.logger::flog.threshold(Threshold, name="ve.logger")
-  futile.logger::flog.layout( log.layout.visioneval,name="ve.logger")
+  futile.logger::flog.layout( VElog.layout.visioneval,name="ve.logger")
 
   # stderr logger is for WARN, ERROR or FATAL (always)
   futile.logger::flog.threshold("WARN",name="stderr")
-  futile.logger::flog.layout( log.layout.visioneval, name="stderr")
+  futile.logger::flog.layout( VElog.layout.visioneval, name="stderr")
 
   if ( Save ) saveLog(LogFile,envir) # Can always do so later...
 
@@ -1096,22 +1096,9 @@ prepare_arg <- function(x) {
   return(x)
 }
 
-#' Do message layout
-#' @param level log level
-#' @param msg log message
-#' @param ... parameters for sprintf
-#' @return log message in simple layout
-#' @export
-log.layout.message <- function(level,msg,...) return(paste(msg,...,"\n",sep=""))
+VElog.layout.message <- function(level,msg,...) return(paste(msg,...,"\n",sep=""))
 
-#' Do simple log layout
-#' @param level log level
-#' @param msg log message
-#' @param id log message id
-#' @param ... parameters for sprintf
-#' @return log message in simple layout
-#' @export
-log.layout.simple <- function(level, msg, id='', ... ) {
+VElog.layout.simple <- function(level, msg, id='', ... ) {
   if (length(list(...)) > 0) {
     parsed <- lapply(list(...), prepare_arg)
     msg <- do.call(sprintf, c(msg, parsed))
@@ -1119,14 +1106,7 @@ log.layout.simple <- function(level, msg, id='', ... ) {
   return( sprintf("%s\n", msg) )
 }
 
-#' Do VE log layout
-#' @param level log level
-#' @param msg log message
-#' @param id log message id
-#' @param ... parameters for sprintf
-#' @return log message in simple layout
-#' @export
-log.layout.visioneval <- function(level, msg, id='', ...) {
+VElog.layout.visioneval <- function(level, msg, id='', ...) {
   the.time <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
   if (length(list(...)) > 0) {
     parsed <- lapply(list(...), prepare_arg)
@@ -1135,15 +1115,15 @@ log.layout.visioneval <- function(level, msg, id='', ...) {
   level <- names(level)[1]
   level <- paste(substring(level, 1, 1), tolower(substring(level, 2)), sep = "")
   if ( level=="Warn" ) { # Don't put level in "warnings"
-    log.msg <- sprintf("%s : %s\n", the.time, msg)
+    VElog.msg <- sprintf("%s : %s\n", the.time, msg)
   } else {
-    log.msg <- sprintf("%s [%s]: %s\n", the.time, level, msg)
+    VElog.msg <- sprintf("%s [%s]: %s\n", the.time, level, msg)
   }
-  return( log.msg )
+  return( VElog.msg )
 }
 
 # Internal log level translation table
-log.threshold <- c(
+VElog.threshold <- c(
   "TRACE",
   "DEBUG",
   "INFO",
@@ -1151,7 +1131,7 @@ log.threshold <- c(
   "ERROR",
   "FATAL"
 )
-log.function <- list(
+VElog.function <- list(
   TRACE = futile.logger::flog.trace,
   DEBUG = futile.logger::flog.debug,
   INFO  = futile.logger::flog.info,
@@ -1185,8 +1165,8 @@ writeLogMessage <- function(Msg = "", Logger="ve.logger", Level="") {
       "writeLogMessage(Msg): No message supplied\n",
     )
   } else {
-    on.exit(quote(futile.logger::flog.layout( log.layout.visioneval, name=Logger )))
-    futile.logger::flog.layout( log.layout.simple, name=Logger )
+    on.exit(quote(futile.logger::flog.layout( VElog.layout.visioneval, name=Logger )))
+    futile.logger::flog.layout( VElog.layout.simple, name=Logger )
     if ( nzchar(Level) ) {
       # This message won't get out if Level is below the Logger threshold
       writeLog(Msg,Level=Level,Logger=Logger)
@@ -1223,26 +1203,26 @@ writeLogMessage <- function(Msg = "", Logger="ve.logger", Level="") {
 #' It appends the time and the message text to the run log.
 #' @export
 writeLog <- function(Msg = "", Level="NONE", Logger="") {
-  noLevel <- ( missing(Level) || ! (Level <- toupper(Level) ) %in% log.threshold )
+  noLevel <- ( missing(Level) || ! (Level <- toupper(Level) ) %in% VElog.threshold )
   if ( noLevel ) Level <- "FATAL"
   if ( missing(Msg) || length(Msg)==0 || ! nzchar(Msg[1]) ) {
     message(
       "writeLog(Msg,Level,Logger): No message supplied\n",
       "Available Log Levels:\n",
-      paste(log.threshold,collapse=", ")
+      paste(VElog.threshold,collapse=", ")
     )
   } else {
     # Pick the logger
     if ( ! is.character(Logger) || ! nzchar(Logger[1]) ) {
-      Logger <- if ( which(log.threshold==Level) >= which(log.threshold=="WARN") ) "stderr" else "ve.logger"
+      Logger <- if ( which(VElog.threshold==Level) >= which(VElog.threshold=="WARN") ) "stderr" else "ve.logger"
     }
     # Pick the log format 
     if ( noLevel ) {
-      on.exit(quote(futile.logger::flog.layout( log.layout.visioneval, name=Logger )))
-      futile.logger::flog.layout( log.layout.simple, name=Logger )
+      on.exit(quote(futile.logger::flog.layout( VElog.layout.visioneval, name=Logger )))
+      futile.logger::flog.layout( VElog.layout.simple, name=Logger )
     }
     for ( m in Msg ) {
-      log.function[[Level]](m,name=Logger)
+      VElog.function[[Level]](m,name=Logger)
     }
   }
   invisible(Msg)
