@@ -1,12 +1,13 @@
-# VisionEval Changelog
+VisionEval Release Notes
+========================
 
 This directory includes .md files that describe changes that are made
-through pull requests and other feature updates.
+through releases, pull requests and other feature updates.
 
-Each pull request should place a unique document in this folder
-describing what the pull request means to accomplish. Pull requests
-will not be accepted if they do not contain a uniquely-named
-descriptive document in this directory.
+Each pull request should ideally place a unique document in this folder
+describing what the pull request means to accomplish. When the pull request
+is incorporated, release notes for the version receiving it should be
+updated here as well.
 
 Things that can usefully go into such a document are descriptions of
 build changes (e.g. unique build/config/VE-Components.yml or

@@ -1,118 +1,3 @@
-# VisionEval
-
-VisionEval is a model system and supporting software framework for building collaborative
-disaggregate strategic planning models. 
-
-**NOTE ON WEBSITE**:
-The VisionEval website can be found at
-[https://VisionEval.github.io](https://VisionEval.github.io)
-The previous domain name (visioneval.org) will continue to redirect to
-the new Github loacation but users and developers are encouraged to
-update their bookmarks.
-
-The `development` branch is the basis for development of new features
-and fixes to VisionEval. All new development should be based on the
-`development` branch.
-
-Thanks for your cooperation. If you have questions or complaints, please contact
-jeremy.raw at dot.gov.
-
-## Documentation
-
-Documentation for VisionEval is online at
-[https://visioneval.github.io/docs](https://visionveal.github.io/docs)
-
-## Release
-
-You can retrieve the current binary release of VisionEval from
-[https://visioneval.github.io/category/download.html](https://visioneval.github.io/category/download.html)
-
-Detailed release notes are found in the "release-notes" directory of repository.
-
-## VisionEval Repositories
-
-There are five repositories in the VisionEval organization to serve different purposes:
-
- - **[VisionEval](https://github.com/VisionEval/VisionEval)**: Public release version of VisionEval. There is one master branch only. If you have a bug report or other issue, create an issue instead in the VisionEval-Dev repository ([here](https://github.com/VisionEval/VisionEval-Dev/issues)).
- 
- - **[VisionEval-Dev](https://github.com/VisionEval/VisionEval-Dev)**: Main repository for
-   developers and power-users who want to contribute code improvements. There are multiple branches,
-   including `master` (which is can be considered the beta release) and `development` where active code
-   development happens. Additional branches can be used to evaluate new features or pull requests.
-   Developers / power-users should [create issues](https://github.com/VisionEval/VisionEval-Dev/issues)
-   and [pull requests](https://github.com/VisionEval/VisionEval-Dev/pulls) to this repository.
- 
- - **[VisionEval.org](https://github.com/VisionEval/VisionEval.org)**: Website repository. You can
-   [create issues](https://github.com/VisionEval/VisionEval.org/issues) here for website-related change
-   requests.
- 
- - **[VisionEval-Docs](https://github.com/VisionEval/VisionEval-Docs)**: Documentation respository. 
-
- - **[VisionEval-Extras](https://github.com/VisionEval/VisionEval-Extras)**: Additional tools and
-   module packages that may be added to core VisionEval.
-
-## Issues
-
-Please submit issues, bugs, or feature requests about VisionEval on the
-[VisionEval-Dev issues page](https://github.com/VisionEval/VisionEval-Dev/issues). 
-
-Please submit issues or content change requests about the VisionEval.org website on the
-[VisionEval.org issues page](https://github.com/VisionEval/VisionEval.org/issues).
-
-## For Developers: Building 
-
-To modify and rebuild the released VisionEval system, you can clone a suitable branch
-(either "main" or "development") from the "development" repository:
-[VisionEval-Dev repository](https://github.com/VisionEval/VisionEval-dev). 
-
-Here are the build steps:
-
-1. Clone the Github
-2. Start `VisionEval-dev.Rproj` in the root directory, or you can use `launch.bat` to start the
-   standard R GUI. You do *NOT* need RStudio to build or run VisionEVal, just a compatible
-   version of R. If you use `launch.bat`, you will need to set the R_HOME environment variable
-   or edit the script itself to point at your version of R. Supported R versions are listed in
-   `build/R-versions.yml`.
-3. Run ve.build() to construct the packages
-4. Run ve.run() to launch the runtime (note that the built "runtime" is only used indirectly)
-    1. VisionEval runs in the new "runtime.test" directory
-    2. You can set a directory of your choice selected either by passing it as a parameter
-       (`ve.run('myRuntimeDirectory")`) or by setting the VE_RUNTIME environment variable either
-       as a system or user environment variable, or by defining it in the `.Renviron` file that
-       is created in the repository root when you run `ve.build()`.
-       A complete working runtime will be created in VE_RUNTIME if it does not already exist
-5. Once running, do `walkthrough()` or run `ve.test()` (with no parameters) to get a list of
-   sample scripts illustrating basic functions (all to run in an additional temporary runtime to
-   avoid confusing them with real work).
-    1. `walkthrough()` is also available for ordinary users in the distributed runtime
-    2. Run `ve.test("VEModel")` to load more detailed API test functions (a comprehensive exercise of what works and how).
-    3. The walkthrough function creates a temporary runtime directory (to avoid trampling any real models you
-       may have). Run `exit.walkthrough()` (or quit and restart the R session) to return to regular VE_RUNTIME
-
-## For Developers: Submitting changes or bug requests
-
-If you intend to submit changes back to the VisionEval project, please clone the [VisionEval-Dev
-repository, `development` branch](https://github.com/VisionEval/VisionEval-Dev/tree/development).
-Pull requests against this branch are welcome (but make sure you have rebased the pull request on
-the current HEAD of `development`).
-
-Pre-built binary installers of recently released versions (the "main" branch) are available at
-[https://visioneval.org](https://visioneval.org) and as "releases" in the `development` branch of
-`VisionEval-dev`.
-
-You can install the directly from a copy (.zip) or clone of this VisionEval repository branch, using
-the instructions in the `build/Building.md` file in the repository, or in the detailed installation
-instructions at [https://visioneval.github.io/docs](https://visioneval.github.io/docs)
-
-You do *NOT* need to fork the repository unless you are planning to submit changes (pull requests)
-back to the VisionEval project.
-
-## Release Notes
-
-If we remember, the latest release notes follow. If you suspect a failure to update here, please
-look at the `release-notes` folder, which is more likely to be up to date, and which also includes
-the notes for earlier releases.
-
 Version 3.1.1 Release
 =====================
 
@@ -121,11 +6,9 @@ referred to here as VE-3. It includes updates from the previous releases (docume
 
 Please post any issues you encounter on the VisionEval/VisionEval-dev Github repository.
 
-Emerging documentation for this release is located at [https://visioneval.github.io/docs](https://visioneval.github.io/docs).
+Emerging documentation for this release is located at [docs.visioneval.org](docs.visioneval.org).
 You can build the documentation "book" using `ve.build('book')` from the Github development
-environment (start VisionEval-dev.Rproj from the VisionEval git root). You will firstt need to check
-out the [`VisionEval-docs`](https://github.com/visioneval/VisionEval-docs) repository (as
-`VisionEval-docs`) adjacent to the location of your VisionEval(-dev) installation.
+environment (start VisionEval-dev.Rproj from the VisionEval git root).
 
 Interactive quick start documentation is available by running the "walkthrough()" function and
 stepping through the various scripts provided there. The walkthrough provides a rudimentary view of
