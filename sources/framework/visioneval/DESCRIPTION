@@ -1,8 +1,8 @@
 Package: visioneval
 Type: Package
 Title: Software Framework for VisionEval Model System
-Version: 3.1.0
-Date: 2020-08-14
+Version: 3.1.1
+Date: 2024-01-23
 Author: Brian Gregor <gregorb@or-analytics.com>["aut", "cre"]
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: AASHTO, ODOT, Brian Gregor
@@ -21,7 +21,7 @@ Description: This package defines all of the functions used to implement the
     initializing and managing the model run environment, managing the common
     datastore, and running modules.
 License: file LICENSE
-Depends: R (>= 3.5)
+Depends: R (>= 4.0.0)
 Imports:
     jsonlite,
     yaml,
@@ -34,5 +34,5 @@ Suggests:
     pkgload
 Encoding: UTF-8
 Roxygen: list(load='source')
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
 biocViews: Infrastructure

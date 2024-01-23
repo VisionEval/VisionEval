@@ -1,8 +1,8 @@
 Package: VEPowertrainsAndFuels
 Type: Package
 Title: Default Powertrains And Fuels for ODOT Adopted Plans scenario (xAP)
-Version: 3.1.0
-Date: 2023-01-04
+Version: 3.1.1
+Date: 2024-01-23
 Author: Brian Gregor [aut, cre],
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: AASHTO, ODOT
@@ -16,7 +16,7 @@ Description: Contains modules for inputting default powertrain and fuel
     fuel consumption. This is the "xAP" version, 2020-07-24.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.6.0)
+Depends: R (>= 4.0.0)
 Imports:
     visioneval,
     VEHouseholdTravel
@@ -26,7 +26,7 @@ Suggests:
 Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(load='source')
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3
 Collate: 
     'LoadDefaultValues.R'
     'Initialize.R'

@@ -1,8 +1,8 @@
 Package: VE2001NHTS
 Type: Package
 Title: Create 2001 NHTS datasets for model estimation
-Version: 3.1.0
-Date: 2020-08-14
+Version: 3.1.1
+Date: 2024-01-23
 Author: Brian Gregor [aut, cre],
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: AASHTO
@@ -15,7 +15,7 @@ Description: This package creates and saves 3 data frames that are used to
 License: file LICENSE
 LazyData: TRUE
 LazyDataCompression: bzip2
-Depends: R (>= 3.6.0)
+Depends: R (>= 4.0.0)
 Imports:
     visioneval
 Suggests:
@@ -23,4 +23,4 @@ Suggests:
 VignetteBuilder: knitr
 Encoding: UTF-8
 Roxygen: list(load='source')
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3

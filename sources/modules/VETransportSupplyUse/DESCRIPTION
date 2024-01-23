@@ -1,8 +1,8 @@
 Package: VETransportSupplyUse
 Type: Package
 Title: Create Transport Supply Utilization Characteristics for VE
-Version: 3.1.0
-Date: 2023-01-04
+Version: 3.1.1
+Date: 2024-01-23
 Author: Aditya Gore <aditya.gore@rsginc.com> [cre], Ben Stabler <ben.stabler@rsginc.com> [cre],  Brian Gregor <gregor@or-analytics.com> [auth]
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>, Aditya Gore <aditya.gore@rsginc.com>
 Copyright: AASHTO
@@ -10,7 +10,7 @@ Description: This package contains modules that creates attributes for utilizati
       transportation supplies.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.6.0)
+Depends: R (>= 4.0.0)
 Imports:
     visioneval
 Suggests:
@@ -18,7 +18,7 @@ Suggests:
 VignetteBuilder: knitr
 Encoding: UTF-8
 Roxygen: list(load='source')
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3
 Collate:
         'CalculateCongestionBase.R'
         'CalculateCongestionFuture.R'

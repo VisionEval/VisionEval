@@ -966,6 +966,7 @@ VEConnection.CSV <- R6::R6Class(
 #' @import DBI
 #' @import RSQLite
 #' @importFrom methods new
+#' @importFrom utils install.packages
 ve.connection.dbi.init <- function(Model,config,reopen=FALSE,hive=FALSE) {
   super$initialize(Model,config,reopen,hive)
   # Two avenues here:

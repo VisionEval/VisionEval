@@ -1,8 +1,8 @@
 Package: VELandUse
 Type: Package
 Title: Create Land Use Attributes for VE
-Version: 3.1.0
-Date: 2023-01-04
+Version: 3.1.1
+Date: 2024-01-23
 Author: Brian Gregor [aut, cre], Aditya Gore <aditya.gore@rsginc.com> [cre]
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>, Aditya Gore <aditya.gore@rsginc.com>
 Copyright: AASHTO
@@ -18,7 +18,7 @@ Description: This package contains several modules which establish land use
 License: file LICENSE
 LazyData: TRUE
 LazyDataCompression: bzip2
-Depends: R (>= 3.6.0)
+Depends: R (>= 4.0.0)
 Imports:
     visioneval,
     geosphere,
@@ -30,4 +30,4 @@ Suggests:
 Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(load='source')
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3

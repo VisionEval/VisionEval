@@ -1,8 +1,8 @@
 Package: VETravelPerformance
 Type: Package
 Title: Balances cost and travel and calculates travel performance measures
-Version: 3.1.0
-Date: 2023-01-04
+Version: 3.1.1
+Date: 2024-01-23
 Author: Brian Gregor [aut, cre],
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: AASHTO
@@ -16,7 +16,7 @@ Description: Contains modules for calculating fuel consumption, emissions,
     vehicles, heavy trucks, and public transit modes.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.6.0)
+Depends: R (>= 4.0.0)
 Imports:
     visioneval,
     dplyr,
@@ -27,4 +27,4 @@ Suggests:
     VEHouseholdTravel
 Encoding: UTF-8
 Roxygen: list(load='source')
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3

@@ -1,18 +1,18 @@
 Package: VEState
 Type: Package
 Title: Implement the VE-State base model
-Version: 3.1.0
-Date: 2023-01-04
+Version: 3.1.1
+Date: 2024-01-23
 Author: Aditya Gore <aditya.gore@rsginc.com> [cre], Ben Stabler <ben.stabler@rsginc.com> [cre],  Brian Gregor <gregor@or-analytics.com> [auth]
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: AASHTO, ODOT
 Description: This package contains the VE-State model, sample data and tutorials.
 License: file LICENSE
 LazyData: TRUE
-Depends: R (>= 3.6.0)
+Depends: R (>= 4.0.0)
 Suggests:
     rmarkdown, knitr
 VignetteBuilder: knitr
 Encoding: UTF-8
 Roxygen: list(load='source')
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3

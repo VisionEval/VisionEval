@@ -1,15 +1,15 @@
 Package: VESnapshot
 Type: Package
 Title: Sample Module to take a snapshot of Datastore fields
-Version: 3.1.0
-Date: 2022-12-12
+Version: 3.1.1
+Date: 2024-01-23
 Author: Jeremy Raw [aut, cre]
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: None
 Description: Can be used in any VisionEval model to copy a Datastore
   field to a different field in the Datastore.
 License: file LICENSE
-Depends: R (>= 3.6.0)
+Depends: R (>= 4.0.0)
 Imports:
     visioneval
 Suggests:
@@ -19,7 +19,7 @@ LazyData: TRUE
 LazyDataCompression: xz
 Encoding: UTF-8
 VignetteBuilder: knitr
-RoxygenNote: 7.2.2
+RoxygenNote: 7.2.3
 Collate:
     parameters.R
     Snapshot.R

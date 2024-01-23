@@ -1,8 +1,8 @@
 Package: VETravelDemandMM
 Type: Package
 Title: Simulate Multi-Modal Travel Demand for Households
-Version: 3.1.0
-Date: 2023-01-04
+Version: 3.1.1
+Date: 2024-01-23
 Authors@R: person("Liming", "Wang", role=c("aut", "cre"), email="lmwang@pdx.edu")
 Maintainer: Liming Wang <lmwang@gmail.com>
 Copyright: Portland State University
@@ -11,7 +11,7 @@ Description: This package contains a module for the VisionEval framework that si
 License: file LICENSE
 LazyData: TRUE
 Encoding: UTF-8
-Depends:  R (>= 3.6.0)
+Depends:  R (>= 4.0.0)
 Imports:
     dplyr,
     purrr,
@@ -27,7 +27,7 @@ Suggests:
     SLD
 VignetteBuilder: knitr
 Roxygen: list(load="source")
-RoxygenNote: 7.1.0
+RoxygenNote: 7.2.3
 Remotes:
     cities-lab/NHTS2009,
     cities-lab/SLD

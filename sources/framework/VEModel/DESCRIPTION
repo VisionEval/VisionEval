@@ -1,8 +1,8 @@
 Package: VEModel
 Type: Package
 Title: Utilities for Managing VisionEval Models and Samples
-Version: 3.1.0
-Date: 2021-01-19
+Version: 3.1.1
+Date: 2024-01-23
 Author: Jeremy Raw [aut, cre]
 Maintainer: Jeremy Raw <jeremy.raw@dot.gov>
 Copyright: None
@@ -10,7 +10,7 @@ Description: Contains R6 object management code providing functions
   and objects to set up VisionEval models, run them, and query or extract
   their output.
 License: file LICENSE
-Depends: R (>= 3.6.0)
+Depends: R (>= 4.0.0)
 Imports:
     visioneval,
     R6,
