@@ -185,7 +185,7 @@ if ( install.success ) {
     VEModel::setRuntimeDirectory(env.loc$ve.runtime)
   }
   # Write R_LIBS_USER into .Renviron to ve.load.dir and ve.runtime to
-  # expedite next startup; do not overwrite since the development
+  # expedite next startup; do not overwrite other values since the development
   # environment or the user may have set them manually. This may also
   # have the effect of copying the ve-lib location from a .Renviron
   # set elsewhere (notably in the system or user's own .Renviron).
@@ -198,9 +198,6 @@ if ( install.success ) {
   )
   # Using sapply to write multiple .Renviron files in different places
   # (renv.file is a vector of file paths, each of which receives the .Renviron file
-  # NOTE: end user customizations of .Renviron will be overwritten, but in the context
-  # of VisionEval that's fine: configuring VE happens through visioneval.cnf and
-  # .Renviron is only used to set up the VE environment.
   sapply( renv.file, FUN=function(r) if ( ! file.exists(r) ) writeLines(renv.txt,r) )
 
   # Load tools (helper functions) from their subdirectory in ve.load.dir
@@ -303,7 +300,7 @@ if ( install.success ) {
   # Make sure there is a "Models" directory in the actual runtime folder
   env.loc$ModelRoot <- VEModel::getModelDirectory() # Uses runtime configuration or default value "models"
   if ( ! dir.exists(env.loc$ModelRoot) ) {
-    message("Creating runtime ",basename(env.log$ModelRoot)," directory")
+    message("Creating runtime ",basename(env.loc$ModelRoot)," directory")
     dir.create(env.loc$ModelRoot,recursive=TRUE,showWarnings=FALSE)
   }
 

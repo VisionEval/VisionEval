@@ -443,10 +443,13 @@ evalq(
   r.libs.user <- c(
     paste0("R_LIBS_USER=",paste(r.ve.lib,r.dev.lib,sep=";")),
     paste0("VE_HOME=",normalizePath(ve.root,winslash="/"))
-    # , paste0("VE_BUILD=",normalizePath(ve.build.dir,winslash="/"))
-    # don't write VE_BUILD since that will permanently cloak the system environment variable.
-    # User can set VE_BUILD manually, but they're responsible for maintaining it.
   )
+  if ( file.exists(r.environ) ) {
+    # Try to preserve user's changes to .Renviron
+    renv.text <- readLines(r.environ)
+    renv.text <- grep("R_LIBS_USER|VE_HOME",renv.text,invert=TRUE,value=TRUE) # remove lines we are replacing; keep the rest
+    if ( length(renv.text)>0 ) r.libs.user <- c(r.libs.user,renv.text)
+  }
   writeLines(r.libs.user,con=r.environ)
   rm( r.environ,r.libs.user,r.dev.lib,r.ve.lib )
 
